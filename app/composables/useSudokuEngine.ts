@@ -1335,59 +1335,96 @@ export function useSudokuEngine() {
   }
 
   function findUniqueRectangle(candidates: number[][][]): ComplexHint | null {
-    // Type 1: three corners have exactly {a,b}, fourth has {a,b,...} — eliminate a,b from fourth
     for (let r1 = 0; r1 < 8; r1++) {
       for (let r2 = r1 + 1; r2 < 9; r2++) {
-        if (Math.floor(r1 / 3) === Math.floor(r2 / 3)) continue; // must be different box-rows
+        if (Math.floor(r1 / 3) === Math.floor(r2 / 3)) continue;
         for (let c1 = 0; c1 < 8; c1++) {
           for (let c2 = c1 + 1; c2 < 9; c2++) {
-            if (Math.floor(c1 / 3) === Math.floor(c2 / 3)) continue; // must be different box-cols
+            if (Math.floor(c1 / 3) === Math.floor(c2 / 3)) continue;
             const corners = [
               { r: r1, c: c1 }, { r: r1, c: c2 },
               { r: r2, c: c1 }, { r: r2, c: c2 }
             ] as [CellCoord, CellCoord, CellCoord, CellCoord];
-
             if (corners.some(({ r, c }) => currentBoard.value[r]![c] !== 0)) continue;
             const cands = corners.map(({ r, c }) => candidates[r]![c]!);
 
-            // find corners with exactly 2 candidates all equal to same pair
-            const pairCorners = corners.filter((_, i) => cands[i]!.length === 2);
-            if (pairCorners.length !== 3) continue;
-
-            const ref = cands[corners.indexOf(pairCorners[0]!)]!;
-            if (ref.length !== 2) continue;
-            const [a, b] = ref as [number, number];
-            if (!pairCorners.every(({ r, c }) => {
-              const cd = candidates[r]![c]!;
-              return cd.length === 2 && cd.includes(a) && cd.includes(b);
+            // detect a common pair {a,b} shared by at least 2 corners
+            const pairCornerIdx = cands.reduce((acc, cd, i) => cd.length === 2 ? [...acc, i] : acc, [] as number[]);
+            if (pairCornerIdx.length < 2) continue;
+            const ref = cands[pairCornerIdx[0]!]!;
+            if (!pairCornerIdx.slice(1).every(i => {
+              const cd = cands[i]!;
+              return cd.length === 2 && cd[0] === ref[0] && cd[1] === ref[1];
             })) continue;
+            const [a, b] = ref as [number, number];
 
-            // find the "floor" corner (the one NOT in pairCorners)
-            const floorCorner = corners.find(({ r, c }) => !pairCorners.some(p => p.r === r && p.c === c))!;
-            const floorCands = candidates[floorCorner.r]![floorCorner.c]!;
-            if (!floorCands.includes(a) || !floorCands.includes(b)) continue;
+            // UR Type 1: exactly 3 corners are {a,b}, fourth has {a,b,+extras}
+            if (pairCornerIdx.length === 3) {
+              const floorIdx = [0,1,2,3].find(i => !pairCornerIdx.includes(i))!;
+              const floor = corners[floorIdx]!;
+              const floorCands = cands[floorIdx]!;
+              if (!floorCands.includes(a) || !floorCands.includes(b)) continue;
+              return {
+                title: "Jedinstveni Pravougaonik — Tip 1",
+                targetCell: floor,
+                targetNum: solvedBoard.value[floor.r]![floor.c]!,
+                steps: [
+                  {
+                    label: "Korak 1 — Pronađi UR Tip 1",
+                    description: `Tri ćelije pravougaonika imaju tačno [${a},${b}]. Četvrta ćelija [R${floor.r+1}K${floor.c+1}] ima i druge kandidate. Ako bi i ona imala samo ${a} i ${b}, sudoku bi imao više rješenja — što je nemoguće u valjanom sudokuu.`,
+                    highlightCoords: pairCornerIdx.map(i => ({ r: corners[i]!.r, c: corners[i]!.c, type: 'trigger' as const }))
+                  },
+                  {
+                    label: "Korak 2 — Eliminiši par iz četvrte ćelije",
+                    description: `${a} i ${b} se eliminišu iz [R${floor.r+1}K${floor.c+1}] kako bi se garantovalo jedinstvenost rješenja. Preostali kandidati određuju pravu vrijednost.`,
+                    highlightCoords: [{ r: floor.r, c: floor.c, type: 'elimination' }]
+                  }
+                ]
+              };
+            }
 
-            const eliminations: HintCoordinate[] = [
-              { r: floorCorner.r, c: floorCorner.c, type: 'elimination' }
-            ];
-
-            return {
-              title: "Jedinstveni Pravougaonik — Tip 1 (Unique Rectangle)",
-              targetCell: floorCorner,
-              targetNum: solvedBoard.value[floorCorner.r]![floorCorner.c]!,
-              steps: [
-                {
-                  label: "Korak 1 — Pronađi Jedinstveni Pravougaonik",
-                  description: `Četiri ćelije formiraju pravougaonik koji presijecaju dva reda i dvije kolone, svaka u drugoj 3×3 kutiji. Tri od četiri ćelije imaju tačno iste kandidate [${a},${b}]. Ako bi i četvrta ćelija imala samo ${a} i ${b}, sudoku bi imao više rješenja — što je nemoguće u ispravnom sudokuu.`,
-                  highlightCoords: pairCorners.map(({ r, c }) => ({ r, c, type: 'trigger' as const }))
-                },
-                {
-                  label: "Korak 2 — Eliminiši par iz četvrte ćelije",
-                  description: `Ćelija [R${floorCorner.r+1}K${floorCorner.c+1}] mora sadržavati nešto osim ${a} i ${b} kako bi se garantovalo jedinstvenost rješenja. Stoga ${a} i ${b} se eliminišu iz nje — ostatak kandidata daje pravo rješenje.`,
-                  highlightCoords: eliminations
+            // UR Type 2: exactly 2 corners are {a,b}, the other two each have {a,b,c} for the SAME extra c
+            if (pairCornerIdx.length === 2) {
+              const extraIdx = [0,1,2,3].filter(i => !pairCornerIdx.includes(i));
+              const cd0 = cands[extraIdx[0]!]!, cd1 = cands[extraIdx[1]!]!;
+              if (cd0.length !== 3 || cd1.length !== 3) continue;
+              if (!cd0.includes(a) || !cd0.includes(b) || !cd1.includes(a) || !cd1.includes(b)) continue;
+              const extra0 = cd0.find(v => v !== a && v !== b)!;
+              const extra1 = cd1.find(v => v !== a && v !== b)!;
+              if (extra0 !== extra1) continue;
+              const extraDigit = extra0;
+              const exCell0 = corners[extraIdx[0]!]!, exCell1 = corners[extraIdx[1]!]!;
+              // eliminate extraDigit from cells that see both extra corners
+              const eliminations: HintCoordinate[] = [];
+              for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                  if (currentBoard.value[r]![c] !== 0) continue;
+                  if ((r === exCell0.r && c === exCell0.c) || (r === exCell1.r && c === exCell1.c)) continue;
+                  if (seesCell(r, c, exCell0.r, exCell0.c) && seesCell(r, c, exCell1.r, exCell1.c) && candidates[r]![c]!.includes(extraDigit)) {
+                    eliminations.push({ r, c, type: 'elimination' });
+                  }
                 }
-              ]
-            };
+              }
+              if (eliminations.length === 0) continue;
+              const target = eliminations[0]!;
+              return {
+                title: "Jedinstveni Pravougaonik — Tip 2",
+                targetCell: { r: target.r, c: target.c },
+                targetNum: solvedBoard.value[target.r]![target.c]!,
+                steps: [
+                  {
+                    label: "Korak 1 — Pronađi UR Tip 2",
+                    description: `Dvije ćelije pravougaonika su tačno [${a},${b}]. Druge dvije su [${a},${b},${extraDigit}] — identičan ekstra kandidat ${extraDigit}. Ako ${extraDigit} nije u jednoj od tih ćelija, nastaje deadlock s više rješenja. Stoga ${extraDigit} mora biti u jednoj od njih.`,
+                    highlightCoords: [exCell0, exCell1].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
+                  },
+                  {
+                    label: "Korak 2 — Eliminiši ekstra digit iz zajedničkih vršnjaka",
+                    description: `Pošto ${extraDigit} mora biti u [R${exCell0.r+1}K${exCell0.c+1}] ili [R${exCell1.r+1}K${exCell1.c+1}], svaka ćelija koja vidi obje (crveno) ne može sadržavati ${extraDigit}.`,
+                    highlightCoords: eliminations
+                  }
+                ]
+              };
+            }
           }
         }
       }
