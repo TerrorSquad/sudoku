@@ -11,6 +11,7 @@ import Numpad from './components/Numpad.vue';
 import SideExplanationPanel from './components/SideExplanationPanel.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
+import confetti from 'canvas-confetti';
 
 const { t } = useI18n();
 
@@ -63,6 +64,9 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   isWinState.value = win;
   showModal.value = true;
   timer.stopTimer();
+  if (win) {
+    confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 }, colors: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#34d399'] });
+  }
 }
 
 function handleModalClose() {
