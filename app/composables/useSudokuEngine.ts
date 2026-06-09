@@ -905,6 +905,73 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findEmptyRectangle(candidates: number[][][]): ComplexHint | null {
+    // ER: within a box, val candidates all lie on one row OR one col (the "conjugate line")
+    // combined with a strong link on another row/col → elimination
+    for (let val = 1; val <= 9; val++) {
+      for (let box = 0; box < 9; box++) {
+        const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+        const boxCells: CellCoord[] = [];
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+          if (currentBoard.value[sr+i]![sc+j] === 0 && candidates[sr+i]![sc+j]!.includes(val))
+            boxCells.push({ r: sr+i, c: sc+j });
+        }
+        if (boxCells.length < 2) continue;
+
+        // check if all box candidates share a row
+        const boxRows = [...new Set(boxCells.map(x => x.r))];
+        const boxCols = [...new Set(boxCells.map(x => x.c))];
+        const erRow = boxRows.length === 1 ? boxRows[0]! : -1;
+        const erCol = boxCols.length === 1 ? boxCols[0]! : -1;
+
+        if (erRow === -1 && erCol === -1) continue;
+
+        // find a column (if erRow) or row (if erCol) with exactly 2 candidates for val
+        // where one sees the ER line and the other is the elimination target
+        if (erRow !== -1) {
+          // ER is on erRow inside box. Look for col with exactly 2 occurrences of val:
+          // one in erRow (outside the box) → strong link → the other is the elimination
+          for (let c = 0; c < 9; c++) {
+            if (c >= sc && c < sc + 3) continue; // must be outside the box
+            const colCands: number[] = [];
+            for (let r = 0; r < 9; r++) {
+              if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) colCands.push(r);
+            }
+            if (colCands.length !== 2) continue;
+            const [rA, rB] = colCands as [number, number];
+            // one of them must be erRow
+            const linkRow = rA === erRow ? rA : (rB === erRow ? rB : -1);
+            const otherRow = rA === erRow ? rB : (rB === erRow ? rA : -1);
+            if (linkRow === -1) continue;
+            // elimination: cell (otherRow, col-of-ER-in-box) where it sees the box col
+            for (let erBoxCol = sc; erBoxCol < sc + 3; erBoxCol++) {
+              if (currentBoard.value[otherRow]![erBoxCol] === 0 && candidates[otherRow]![erBoxCol]!.includes(val)) {
+                return {
+                  title: "Prazni Pravougaonik (Empty Rectangle)",
+                  targetCell: { r: otherRow, c: erBoxCol },
+                  targetNum: solvedBoard.value[otherRow]![erBoxCol]!,
+                  steps: [
+                    {
+                      label: "Korak 1 — Uoči Prazni Pravougaonik u kutiji",
+                      description: `U kutiji ${box+1}, svi kandidati za ${val} nalaze se u redu ${erRow+1} (plavo). Ovo stvara "prazni pravougaonik" — ostatak kutije nema ${val}. Kolona ${c+1} ima jaku vezu za ${val}: jedino u redovima ${rA+1} i ${rB+1}.`,
+                      highlightCoords: boxCells.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
+                    },
+                    {
+                      label: "Korak 2 — Eliminiši kombinacijom veza",
+                      description: `Jaka veza u koloni ${c+1} i poravnanje unutar kutije zajedno garantuju da ${val} mora biti u redu ${erRow+1} ili u koloni kutije koja sadrži ER. Ćelija [R${otherRow+1}K${erBoxCol+1}] vidi obje — stoga ${val} se eliminira iz nje.`,
+                      highlightCoords: [{ r: otherRow, c: erBoxCol, type: 'elimination' }]
+                    }
+                  ]
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findWWing(candidates: number[][][]): ComplexHint | null {
     // W-Wing: two bivalue cells [p,q] connected via a strong link on p → eliminate q from cells seeing both bivalue cells
     for (let r1 = 0; r1 < 9; r1++) {
@@ -1645,6 +1712,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
+    if (!hint) hint = findEmptyRectangle(candidates);
     if (!hint) hint = findWWing(candidates);
 
     // Fallback: fewest-candidates heuristic
