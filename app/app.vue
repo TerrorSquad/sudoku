@@ -15,6 +15,7 @@ import CustomImport from './components/CustomImport.vue';
 import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
 import { useGameSave } from './composables/useGameSave';
+import { useTechniqueStats } from './composables/useTechniqueStats';
 
 const { t } = useI18n();
 
@@ -51,6 +52,7 @@ const {
 } = engine;
 
 const gameSave = useGameSave();
+const techStats = useTechniqueStats();
 
 const notesMode = ref<boolean>(false);
 const showAllCandidates = ref<boolean>(false);
@@ -199,7 +201,10 @@ function handleInputNumber(num: number) {
 function handleNextStep() {
   const title = activeComplexHint.value?.title;
   nextHintStep(() => {
-    if (title && !techniqueLog.value.includes(title)) techniqueLog.value.push(title);
+    if (title) {
+      if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
+      techStats.record(title);
+    }
     hintsUsed.value++;
     if (checkWinCondition()) {
       triggerLocalModal(
@@ -227,6 +232,7 @@ function handleInstantApplyHint() {
   const name = activeComplexHint.value.title;
   hintsUsed.value++;
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
+  techStats.record(name);
   engine.applyComplexHint();
   if (checkWinCondition()) {
     triggerLocalModal(t('modal.win'), t('modal.winInstantMsg'), true);

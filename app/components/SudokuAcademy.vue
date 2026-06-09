@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useTechniqueStats } from '../composables/useTechniqueStats';
+
 const emit = defineEmits<{
   (e: 'back-to-menu'): void;
 }>();
+
+const techStats = useTechniqueStats();
 
 interface Technique {
   name: string;
@@ -229,9 +233,18 @@ function byTier(tier: string) {
           >
             <div class="flex items-start justify-between gap-3 mb-3">
               <h3 class="text-base font-black text-zinc-100 leading-tight">{{ tech.name }}</h3>
-              <span :class="tierMeta[tier]!.badge" class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0">
-                {{ tier }}
-              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span
+                  v-if="techStats.getCount(tech.name) > 0"
+                  class="text-[9px] font-bold px-1.5 py-0.5 bg-zinc-700/60 border border-zinc-600 text-zinc-400"
+                  :title="`Used ${techStats.getCount(tech.name)} time${techStats.getCount(tech.name) !== 1 ? 's' : ''}`"
+                >
+                  ×{{ techStats.getCount(tech.name) }}
+                </span>
+                <span :class="tierMeta[tier]!.badge" class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border">
+                  {{ tier }}
+                </span>
+              </div>
             </div>
 
             <div class="space-y-3">
