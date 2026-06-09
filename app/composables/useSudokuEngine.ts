@@ -905,6 +905,64 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findBUG(candidates: number[][][]): ComplexHint | null {
+    // BUG+1: all empty cells have exactly 2 candidates except one cell with 3.
+    // The extra candidate in that trivalue cell is the answer.
+    let trivialCell: CellCoord | null = null;
+    let triCands: number[] = [];
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (currentBoard.value[r]![c] !== 0) continue;
+        const cands = candidates[r]![c]!;
+        if (cands.length === 2) continue;
+        if (cands.length === 3) {
+          if (trivialCell) return null; // more than one trivalue cell — not BUG+1
+          trivialCell = { r, c };
+          triCands = cands;
+        } else {
+          return null; // cell with 0, 1, or 4+ candidates — not BUG
+        }
+      }
+    }
+    if (!trivialCell) return null;
+
+    // The "BUG digit" is whichever of the 3 candidates appears more than twice in its row, col, or box
+    const { r, c } = trivialCell;
+    let bugDigit = -1;
+    for (const val of triCands) {
+      let rowCount = 0, colCount = 0, boxCount = 0;
+      const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+      for (let i = 0; i < 9; i++) {
+        if (currentBoard.value[r]![i] === 0 && candidates[r]![i]!.includes(val)) rowCount++;
+        if (currentBoard.value[i]![c] === 0 && candidates[i]![c]!.includes(val)) colCount++;
+      }
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        if (currentBoard.value[br+i]![bc+j] === 0 && candidates[br+i]![bc+j]!.includes(val)) boxCount++;
+      }
+      if (rowCount > 2 || colCount > 2 || boxCount > 2) { bugDigit = val; break; }
+    }
+    if (bugDigit === -1) bugDigit = triCands[0]!; // fallback: pick first
+
+    return {
+      title: "BUG+1 (Bivalue Universal Grave)",
+      targetCell: trivialCell,
+      targetNum: bugDigit,
+      steps: [
+        {
+          label: "Korak 1 — Detektuj BUG+1 stanje",
+          description: `Gotovo svaka prazna ćelija ima tačno dva kandidata — to je "Bivalue Universal Grave" (BUG) stanje. Jedina iznimka je ćelija [R${r+1}K${c+1}] koja ima tri kandidata: [${triCands.join(',')}]. Ako ne unesemo pravi broj ovdje, sudoku bi pao u deadlock s više rješenja.`,
+          highlightCoords: [{ r, c, type: 'trigger' }]
+        },
+        {
+          label: "Korak 2 — Upiši BUG digit",
+          description: `Jedini kandidat koji narušava simetričnost BUG-a je ${bugDigit} — pojavljuje se neparno puta u svom redu, koloni ili kutiji. Upisivanjem ${bugDigit} se razrješava BUG i garantuje jedinstvenost rješenja.`,
+          highlightCoords: [{ r, c, type: 'trigger' }]
+        }
+      ]
+    };
+  }
+
   function findEmptyRectangle(candidates: number[][][]): ComplexHint | null {
     // ER: within a box, val candidates all lie on one row OR one col (the "conjugate line")
     // combined with a strong link on another row/col → elimination
@@ -1712,6 +1770,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
+    if (!hint) hint = findBUG(candidates);
     if (!hint) hint = findEmptyRectangle(candidates);
     if (!hint) hint = findWWing(candidates);
 
