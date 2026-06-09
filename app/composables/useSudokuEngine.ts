@@ -905,6 +905,84 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findXYChain(candidates: number[][][]): ComplexHint | null {
+    // XY-Chain: chain of bivalue cells where consecutive cells share a digit and see each other.
+    // The first and last cells share a digit q. Cells seeing both ends can have q eliminated.
+    const bivalueCells: CellCoord[] = [];
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.length === 2) bivalueCells.push({ r, c });
+      }
+    }
+
+    // BFS/DFS to find chains up to length 6 for performance
+    for (const start of bivalueCells) {
+      const startCands = candidates[start.r]![start.c]!;
+      for (const startDigit of startCands) {
+        // DFS: chain = list of cells, alternating which digit is "entering" the cell
+        const dfs = (chain: CellCoord[], enterDigit: number): ComplexHint | null => {
+          if (chain.length > 6) return null;
+          const last = chain[chain.length - 1]!;
+          const lastCands = candidates[last.r]![last.c]!;
+          const exitDigit = lastCands.find(v => v !== enterDigit)!;
+
+          if (chain.length >= 3) {
+            // check if start and last share exitDigit → can eliminate exitDigit from common peers
+            const startExitDigit = startCands.find(v => v !== startDigit)!;
+            if (exitDigit === startExitDigit) {
+              const eliminations: HintCoordinate[] = [];
+              for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                  if (currentBoard.value[r]![c] !== 0) continue;
+                  if (chain.some(ch => ch.r === r && ch.c === c)) continue;
+                  if (seesCell(r, c, start.r, start.c) && seesCell(r, c, last.r, last.c) && candidates[r]![c]!.includes(exitDigit)) {
+                    eliminations.push({ r, c, type: 'elimination' });
+                  }
+                }
+              }
+              if (eliminations.length > 0) {
+                const target = eliminations[0]!;
+                const chainDesc = chain.map(ch => `R${ch.r+1}K${ch.c+1}`).join('→');
+                return {
+                  title: `XY-Chain (Lanac dužine ${chain.length})`,
+                  targetCell: { r: target.r, c: target.c },
+                  targetNum: solvedBoard.value[target.r]![target.c]!,
+                  steps: [
+                    {
+                      label: "Korak 1 — Pronađi XY-Chain",
+                      description: `Lanac bivalentnih ćelija: ${chainDesc}. Svake dvije susjedne ćelije dijele jedan kandidat i "vide" jedna drugu. Bez obzira na smjer rješavanja lanca, broj ${exitDigit} mora biti na jednom od dva kraja lanca (plavo).`,
+                      highlightCoords: chain.map(ch => ({ r: ch.r, c: ch.c, type: 'trigger' as const }))
+                    },
+                    {
+                      label: "Korak 2 — Eliminiši zajednički kandidat",
+                      description: `Ćelije koje vide oba kraja lanca (crveno) nikad ne mogu imati ${exitDigit} — jedan kraj lanca uvijek sadrži ${exitDigit}. Ova eliminacija može otvoriti put do rješenja.`,
+                      highlightCoords: eliminations
+                    }
+                  ]
+                };
+              }
+            }
+          }
+
+          // continue chain
+          for (const next of bivalueCells) {
+            if (chain.some(ch => ch.r === next.r && ch.c === next.c)) continue;
+            if (!seesCell(last.r, last.c, next.r, next.c)) continue;
+            const nextCands = candidates[next.r]![next.c]!;
+            if (!nextCands.includes(exitDigit)) continue;
+            const result = dfs([...chain, next], exitDigit);
+            if (result) return result;
+          }
+          return null;
+        };
+
+        const result = dfs([start], startDigit);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+
   function findBUG(candidates: number[][][]): ComplexHint | null {
     // BUG+1: all empty cells have exactly 2 candidates except one cell with 3.
     // The extra candidate in that trivalue cell is the answer.
@@ -1770,6 +1848,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
+    if (!hint) hint = findXYChain(candidates);
     if (!hint) hint = findBUG(candidates);
     if (!hint) hint = findEmptyRectangle(candidates);
     if (!hint) hint = findWWing(candidates);
