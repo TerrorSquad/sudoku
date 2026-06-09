@@ -12,6 +12,8 @@ import SideExplanationPanel from './components/SideExplanationPanel.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
 
+const { t } = useI18n();
+
 const engine = useSudokuEngine();
 const timer = useTimer();
 
@@ -45,10 +47,10 @@ const {
 const notesMode = ref<boolean>(false);
 const showAllCandidates = ref<boolean>(false);
 const mistakes = ref<number>(0);
-const hintStatus = ref<string>('Spreman za igru');
+const hintStatus = ref<string>(t('game.ready'));
 const hintBody = ref<string>('');
 const currentScreen = ref<'menu' | 'difficulty' | 'game'>('menu');
-const activeDifficulty = ref<Difficulty>('srednje');
+const activeDifficulty = ref<Difficulty>('medium');
 
 const showModal = ref<boolean>(false);
 const modalTitle = ref<string>('');
@@ -72,7 +74,7 @@ function handleModalClose() {
 function handleStartGame(level: Difficulty) {
   activeDifficulty.value = level;
   mistakes.value = 0;
-  hintStatus.value = 'Nova tabla učitana!';
+  hintStatus.value = t('game.newBoard');
   hintBody.value = '';
   startNewGame(level);
   timer.resetTimer();
@@ -105,17 +107,14 @@ function handleInputNumber(num: number) {
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
         mistakes.value++;
         if (mistakes.value >= 3) {
-          triggerLocalModal(
-            'Kraj Igre',
-            'Napravili ste 3 greške. Sistem je blokirao dalji unos. Pokušajte ponovo!'
-          );
+          triggerLocalModal(t('modal.gameOver'), t('modal.gameOverMsg'));
         }
       } else {
         clearRelationalNotes(r, c, num);
         if (checkWinCondition()) {
           triggerLocalModal(
-            'Nevjerovatan Uspjeh!',
-            `Riješili ste Sudoku težine ${activeDifficulty.value.toUpperCase()} u vremenu ${timer.formatTime(timer.timerSeconds.value)}.`,
+            t('modal.win'),
+            t('modal.winMsg', { difficulty: activeDifficulty.value, time: timer.formatTime(timer.timerSeconds.value) }),
             true
           );
         }
@@ -128,12 +127,12 @@ function handleNextStep() {
   nextHintStep(() => {
     if (checkWinCondition()) {
       triggerLocalModal(
-        'Nevjerovatan Uspjeh!',
-        `Riješili ste Sudoku uz pomoć analizatora u vremenu ${timer.formatTime(timer.timerSeconds.value)}.`,
+        t('modal.win'),
+        t('modal.winHintMsg', { time: timer.formatTime(timer.timerSeconds.value) }),
         true
       );
     } else {
-      hintStatus.value = 'Polje uspješno popunjeno!';
+      hintStatus.value = t('game.cellFilled');
       hintBody.value = '';
     }
   });
@@ -151,9 +150,9 @@ function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   engine.applyComplexHint();
   if (checkWinCondition()) {
-    triggerLocalModal('Nevjerovatan Uspjeh!', 'Riješili ste Sudoku uz pomoć analizatora!', true);
+    triggerLocalModal(t('modal.win'), t('modal.winInstantMsg'), true);
   } else {
-    hintStatus.value = 'Rješenje instant upisano!';
+    hintStatus.value = t('game.instantApplied');
     hintBody.value = '';
   }
 }
@@ -172,7 +171,7 @@ function handleAutoFillNotes() {
       }
     }
   }
-  hintStatus.value = 'Bilješke automatski popunjene!';
+  hintStatus.value = t('game.notesFilled');
 }
 
 function exitToMenu() {
@@ -201,21 +200,27 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <template>
-  <div class="text-zinc-100 h-screen w-screen overflow-hidden flex flex-col justify-between antialiased p-3.5 no-select bg-[#0c0a09]">
+  <div class="min-h-screen w-full text-zinc-100 antialiased bg-[#0c0a09] flex flex-col">
 
-    <div v-if="currentScreen === 'menu'" class="flex flex-col justify-center items-center h-full w-full max-w-md mx-auto gap-8">
+    <!-- MENU -->
+    <div v-if="currentScreen === 'menu'" class="flex flex-col justify-center items-center flex-1 px-6 py-12 gap-10">
       <div class="text-center">
-        <h1 class="text-5xl font-black bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">SUDOKU PRO</h1>
-        <p class="text-[10px] text-zinc-400 mt-2 uppercase tracking-widest font-black">Vue 3 / Nuxt Component Architecture</p>
+        <h1 class="text-5xl sm:text-6xl font-black bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
+          {{ $t('menu.title') }}
+        </h1>
+        <p class="text-[11px] text-zinc-500 mt-3 uppercase tracking-widest font-semibold">
+          {{ $t('menu.subtitle') }}
+        </p>
       </div>
-
-      <div class="flex flex-col gap-3.5 w-full">
-        <button @click="currentScreen = 'difficulty'" class="p-4 bg-zinc-900 border border-zinc-800 text-left font-bold hover:bg-zinc-800 transition-all rounded-none">
-          Pokreni Novu Igru
-        </button>
-      </div>
+      <button
+        @click="currentScreen = 'difficulty'"
+        class="w-full max-w-xs py-4 px-6 bg-zinc-900 border border-zinc-700 font-bold text-sm hover:bg-zinc-800 hover:border-zinc-600 transition-all active:scale-95"
+      >
+        {{ $t('menu.start') }}
+      </button>
     </div>
 
+    <!-- DIFFICULTY -->
     <DifficultySelector
       v-else-if="currentScreen === 'difficulty'"
       :active-difficulty="activeDifficulty"
@@ -223,9 +228,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       @back-to-menu="currentScreen = 'menu'"
     />
 
-    <div v-else-if="currentScreen === 'game'" class="w-full max-w-7xl mx-auto grid grid-cols-12 gap-6 items-start py-2">
+    <!-- GAME -->
+    <div v-else-if="currentScreen === 'game'" class="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 w-full max-w-7xl mx-auto px-3 sm:px-5 py-3 flex-1 items-start">
 
-      <div class="col-span-7 flex flex-col gap-y-3">
+      <!-- Left / main column -->
+      <div class="lg:col-span-7 flex flex-col gap-3">
         <GameDashboard
           :formatted-time="timer.formatTime(timer.timerSeconds.value)"
           :is-paused="timer.isPaused.value"
@@ -250,7 +257,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           :show-all-candidates="showAllCandidates"
           :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
           @select-cell="handleSelectCell"
-          class="sudoku-grid-animated"
         />
 
         <div class="flex gap-2 w-full">
@@ -262,26 +268,23 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
             @trigger-hint="handleTriggerHint"
             class="flex-grow"
           />
-
           <button
             @click="handleAutoFillNotes"
-            title="Automatski popuni sve preostale kandidate"
-            class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-black uppercase tracking-wider transition-all active:scale-95 text-violet-400 flex items-center gap-1.5 rounded-none"
+            :title="$t('game.autoNotes')"
+            class="px-3 sm:px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold uppercase tracking-wider transition-all active:scale-95 text-violet-400 flex items-center gap-1.5"
           >
-            <svg class="w-4 h-4 text-violet-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
-            <span>Auto Bilješke</span>
+            <span class="hidden sm:inline">{{ $t('game.autoNotes') }}</span>
           </button>
         </div>
 
-        <Numpad
-          :counts="numberCounts"
-          @input-number="handleInputNumber"
-        />
+        <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
       </div>
 
-      <div class="col-span-5 h-[580px] text-sm font-medium">
+      <!-- Right / hint panel -->
+      <div class="lg:col-span-5 lg:sticky lg:top-3 text-sm font-medium">
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"
@@ -294,12 +297,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-      <div class="bg-zinc-900 border border-zinc-800 w-full max-w-sm p-6 shadow-2xl text-center rounded-none border-t-4 animate-fade-in" :class="isWinState ? 'border-t-emerald-500' : 'border-t-rose-500'">
+    <!-- MODAL -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+      <div
+        class="bg-zinc-900 border w-full max-w-sm p-6 shadow-2xl text-center"
+        :class="isWinState ? 'border-emerald-500/60 border-t-4 border-t-emerald-500' : 'border-rose-500/40 border-t-4 border-t-rose-500'"
+      >
         <h3 class="text-xl font-black mb-2 text-zinc-100 uppercase tracking-tight">{{ modalTitle }}</h3>
-        <p class="text-xs text-zinc-450 mb-6 leading-relaxed">{{ modalMessage }}</p>
-        <button @click="handleModalClose" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-bold uppercase transition-all rounded-none border border-zinc-700">
-          U redu, zatvori
+        <p class="text-sm text-zinc-400 mb-6 leading-relaxed">{{ modalMessage }}</p>
+        <button
+          @click="handleModalClose"
+          class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-sm font-bold uppercase transition-all border border-zinc-700"
+        >
+          {{ $t('modal.close') }}
         </button>
       </div>
     </div>
@@ -308,50 +318,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </template>
 
 <style scoped>
-/* ================= PREMIUM ANIMACIJE I TRAPLJUĆI STILOVI ================= */
-
-@keyframes pulse-scale {
-  0%, 100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
-  50% {
-    transform: scale(1.05);
-    filter: brightness(1.3);
-  }
-}
-
 @keyframes trigger-glow {
-  0%, 100% {
-    background-color: rgba(99, 102, 241, 0.25);
-    box-shadow: inset 0 0 10px rgba(99, 102, 241, 0.4);
-  }
-  50% {
-    background-color: rgba(99, 102, 241, 0.5);
-    box-shadow: inset 0 0 18px rgba(99, 102, 241, 0.8);
-  }
+  0%, 100% { background-color: rgba(99,102,241,0.25); box-shadow: inset 0 0 10px rgba(99,102,241,0.4); }
+  50%       { background-color: rgba(99,102,241,0.5);  box-shadow: inset 0 0 18px rgba(99,102,241,0.8); }
 }
-
 @keyframes elimination-blink {
-  0%, 100% {
-    background-color: rgba(244, 63, 94, 0.2);
-    box-shadow: inset 0 0 8px rgba(244, 63, 94, 0.3);
-  }
-  50% {
-    background-color: rgba(244, 63, 94, 0.55);
-    box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.7);
-  }
+  0%, 100% { background-color: rgba(244,63,94,0.2);  box-shadow: inset 0 0 8px rgba(244,63,94,0.3); }
+  50%       { background-color: rgba(244,63,94,0.55); box-shadow: inset 0 0 16px rgba(244,63,94,0.7); }
 }
-
-:deep(.bg-indigo-500\/30) {
-  animation: trigger-glow 1.2s infinite ease-in-out !important;
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%       { transform: scale(1.05); filter: brightness(1.3); }
 }
-
-:deep(.bg-rose-500\/30) {
-  animation: elimination-blink 1.2s infinite ease-in-out !important;
-}
-
-:deep(.ring-violet-500) {
-  animation: pulse-scale 1.8s infinite ease-in-out !important;
-}
+:deep(.bg-indigo-500\/30) { animation: trigger-glow    1.2s infinite ease-in-out !important; }
+:deep(.bg-rose-500\/30)   { animation: elimination-blink 1.2s infinite ease-in-out !important; }
+:deep(.ring-violet-500)   { animation: pulse-scale      1.8s infinite ease-in-out !important; }
 </style>

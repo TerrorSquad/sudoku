@@ -19,4 +19,4 @@ export interface HintResult {
   explanationBody: string;
 }
 
-export type Difficulty = 'lako' | 'srednje' | 'tesko' | 'ekspert' | 'custom';
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'custom';

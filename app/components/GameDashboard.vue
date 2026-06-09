@@ -16,34 +16,44 @@ defineEmits<{
 
 <template>
   <div class="flex flex-col gap-2 w-full">
-    <div class="flex justify-between items-center py-0.5">
-      <button @click="$emit('exit-game')" class="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-wider">
+    <div class="flex justify-between items-center">
+      <button
+        @click="$emit('exit-game')"
+        class="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-wider"
+      >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         </svg>
-        <span>Izlaz u Meni</span>
+        <span>{{ $t('game.exitToMenu') }}</span>
       </button>
 
-      <span class="px-2.5 py-0.5 text-[10px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 uppercase">
+      <span class="px-2.5 py-0.5 text-[10px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 uppercase tracking-wide">
         {{ difficulty }}
       </span>
     </div>
 
-    <div class="flex justify-between items-center bg-zinc-900/50 border border-zinc-800 px-3.5 py-2.5 text-xs rounded-none">
-      <div class="flex items-center gap-2 text-zinc-300">
-        <span class="font-mono font-bold text-sm text-zinc-200">{{ formattedTime }}</span>
-        <button @click="$emit('toggle-pause')" class="p-1 hover:bg-zinc-800 transition-colors">
-          <svg v-if="!isPaused" class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <svg v-else class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
+    <div class="flex items-center justify-between bg-zinc-900/60 border border-zinc-800 px-3.5 py-2.5 gap-3">
+      <!-- Timer -->
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="font-mono font-bold text-base text-zinc-100 tabular-nums">{{ formattedTime }}</span>
+        <button @click="$emit('toggle-pause')" class="p-1 hover:bg-zinc-800 transition-colors rounded">
+          <svg v-if="!isPaused" class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <svg v-else class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+          </svg>
         </button>
       </div>
 
-      <div class="text-[11px] text-amber-400 font-black tracking-wide uppercase">
+      <!-- Hint status -->
+      <div class="text-[11px] text-amber-400 font-bold tracking-wide uppercase truncate text-center flex-1 min-w-0">
         {{ hintStatus }}
       </div>
 
-      <div class="flex items-center gap-1 text-zinc-400">
-        <span>Greške:</span>
+      <!-- Mistakes -->
+      <div class="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+        <span>{{ $t('game.mistakes') }}:</span>
         <span class="font-bold text-rose-400">{{ mistakes }}</span>
         <span>/ {{ maxMistakes }}</span>
       </div>

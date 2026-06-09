@@ -1,0 +1,59 @@
+{
+  "menu": {
+    "title": "SUDOKU PRO",
+    "subtitle": "Vue 3 / Nuxt · Step-by-step hint system",
+    "start": "Start New Game"
+  },
+  "difficulty": {
+    "title": "Choose a Challenge",
+    "subtitle": "Pick your difficulty level:",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "expert": "Expert",
+    "easyDesc": "Simple eliminations — great for beginners.",
+    "mediumDesc": "Requires pointing pairs and basic techniques.",
+    "hardDesc": "Naked pairs, hidden singles and more.",
+    "expertDesc": "X-Wing, XY-Wing and advanced chains.",
+    "back": "Back to Menu"
+  },
+  "game": {
+    "exitToMenu": "Exit",
+    "mistakes": "Mistakes",
+    "ready": "Ready to play",
+    "newBoard": "New board loaded!",
+    "notesFilled": "Notes auto-filled!",
+    "cellFilled": "Cell filled!",
+    "instantApplied": "Answer instantly applied!",
+    "autoNotes": "Auto Notes"
+  },
+  "controls": {
+    "undo": "Undo",
+    "erase": "Erase",
+    "notes": "Notes",
+    "hint": "Hint"
+  },
+  "hint": {
+    "panelTitle": "Analysis Panel",
+    "panelDesc": "Click the Hint button during the game to activate deep logical analysis and step-by-step deconstruction of complex solving techniques.",
+    "detectedTechnique": "Detected Technique",
+    "step": "Step {n}",
+    "targetCell": "Target cell (the cell being solved)",
+    "triggerCells": "Evidence cells (logic rule triggers)",
+    "eliminations": "Eliminations (clearing conflicting candidates)",
+    "prev": "Previous",
+    "next": "Next",
+    "apply": "Apply Answer",
+    "cancel": "Cancel"
+  },
+  "modal": {
+    "gameOver": "Game Over",
+    "gameOverMsg": "You made 3 mistakes. Try again!",
+    "win": "Puzzle Solved!",
+    "winMsg": "You solved the {difficulty} puzzle in {time}.",
+    "winHintMsg": "You solved the puzzle with the analyzer in {time}.",
+    "winInstantMsg": "You solved the puzzle with the analyzer!",
+    "close": "Close",
+    "noMoves": "No empty cells!"
+  }
+}

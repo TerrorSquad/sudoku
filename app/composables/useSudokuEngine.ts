@@ -128,9 +128,9 @@ export function useSudokuEngine() {
   // --- GAME MANAGEMENT ---
   function startNewGame(difficulty: string) {
     let removeCount = 42;
-    if (difficulty === 'lako') removeCount = 30;
-    if (difficulty === 'tesko') removeCount = 52;
-    if (difficulty === 'ekspert') removeCount = 58;
+    if (difficulty === 'easy') removeCount = 30;
+    if (difficulty === 'hard') removeCount = 52;
+    if (difficulty === 'expert') removeCount = 58;
 
     const basePuzzle = solvedTemplate.map(row => [...row]);
     let removed = 0;
@@ -265,18 +265,18 @@ export function useSudokuEngine() {
           }
 
           return {
-            title: "Jedini Kandidat (Naked Single)",
+            title: "Naked Single",
             targetCell: { r, c },
             targetNum,
             steps: [
               {
-                label: "Korak 1 — Pronađi blokirajuće ćelije",
-                description: `Ćelija [Red ${r+1}, Kol ${c+1}] je okružena svim ostalim brojevima. Plavo označene ćelije u njenom redu, koloni i kutiji blokiraju svaki broj osim ${targetNum}. Naked Single znači da je samo jedan kandidat ostao — direktno vidljiv bez dodatne analize.`,
+                label: "Step 1 — Find blocking cells",
+                description: `Cell [R${r+1}C${c+1}] is surrounded by all other digits. The blue-highlighted cells in its row, column, and box block every digit except ${targetNum}. A Naked Single means only one candidate remains — visible directly without further analysis.`,
                 highlightCoords: triggers
               },
               {
-                label: "Korak 2 — Upiši jedini preostali broj",
-                description: `Pošto su svi ostali brojevi (1–9, osim ${targetNum}) eliminirani iz ove ćelije konfliktima u njenom redu, koloni i kutiji, ${targetNum} je jedina ispravna vrijednost.`,
+                label: "Step 2 — Enter the only remaining digit",
+                description: `Since all other digits (1–9 except ${targetNum}) are eliminated from this cell by conflicts in its row, column, and box, ${targetNum} is the only valid value.`,
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -302,18 +302,18 @@ export function useSudokuEngine() {
             if (currentBoard.value[r]![i] !== 0) triggers.push({ r, c: i, type: 'trigger' });
           }
           return {
-            title: "Skriveni Samac (Hidden Single) — Red",
+            title: "Hidden Single — Row",
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Korak 1 — Skeniraj cijeli red",
-                description: `Pregledaj sve prazne ćelije u redu ${r+1}. Broj ${val} nije moguć ni u jednoj drugoj ćeliji toga reda — blokiraju ga njihove kolone ili kutije. Popunjene ćelije (plavo) otkrivaju zašto. Ovo se zove Hidden Single jer je ${val} "skriven" unutar reda — ne vidi ga se odmah.`,
+                label: "Step 1 — Scan the full row",
+                description: `Check all empty cells in row ${r+1}. Digit ${val} is not possible in any other cell of that row — blocked by their columns or boxes. Filled cells (blue) show why. This is called Hidden Single because ${val} is "hidden" inside the row — not immediately obvious.`,
                 highlightCoords: triggers
               },
               {
-                label: "Korak 2 — Jedino slobodno mjesto za taj broj",
-                description: `Budući da ${val} može stati samo u ćeliju [Red ${r+1}, Kol ${c+1}] unutar čitavog reda, to je jedino ispravno mjesto. Upisujemo ${val}.`,
+                label: "Step 2 — Only valid placement for this digit",
+                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire row, that is the only valid placement. Enter ${val}.`,
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -334,18 +334,18 @@ export function useSudokuEngine() {
             if (currentBoard.value[i]![c] !== 0) triggers.push({ r: i, c, type: 'trigger' });
           }
           return {
-            title: "Skriveni Samac (Hidden Single) — Kolona",
+            title: "Hidden Single — Column",
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Korak 1 — Skeniraj cijelu kolonu",
-                description: `Pregledaj sve prazne ćelije u koloni ${c+1}. Broj ${val} nije moguć ni u jednoj drugoj ćeliji te kolone — blokiraju ga njihovi redovi ili kutije. Popunjene ćelije (plavo) pokazuju zašto su ostale pozicije isključene.`,
+                label: "Step 1 — Scan the full column",
+                description: `Check all empty cells in column ${c+1}. Digit ${val} is not possible in any other cell of that column — blocked by their rows or boxes. Filled cells (blue) show why the other positions are ruled out.`,
                 highlightCoords: triggers
               },
               {
-                label: "Korak 2 — Jedino slobodno mjesto za taj broj",
-                description: `Budući da ${val} može stati samo u ćeliju [Red ${r+1}, Kol ${c+1}] unutar čitave kolone ${c+1}, to je jedino ispravno mjesto. Upisujemo ${val}.`,
+                label: "Step 2 — Only valid placement for this digit",
+                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire column ${c+1}, that is the only valid placement. Enter ${val}.`,
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -374,18 +374,18 @@ export function useSudokuEngine() {
             }
           }
           return {
-            title: "Skriveni Samac (Hidden Single) — Kutija",
+            title: "Hidden Single — Box",
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Korak 1 — Skeniraj 3×3 kutiju",
-                description: `Pogledaj kutiju ${box+1} (redovi ${startRow+1}–${startRow+3}, kolone ${startCol+1}–${startCol+3}). Broj ${val} nije moguć ni u jednoj drugoj praznoj ćeliji te kutije — blokiraju ga okolni redovi i kolone. Popunjene ćelije (plavo) to potvrđuju.`,
+                label: "Step 1 — Scan the 3×3 box",
+                description: `Look at box ${box+1} (rows ${startRow+1}–${startRow+3}, cols ${startCol+1}–${startCol+3}). Digit ${val} is not possible in any other empty cell of that box — blocked by surrounding rows and columns. Filled cells (blue) confirm this.`,
                 highlightCoords: triggers
               },
               {
-                label: "Korak 2 — Jedino slobodno mjesto u kutiji",
-                description: `Budući da ${val} može stati samo u ćeliju [Red ${r+1}, Kol ${c+1}] unutar čitave kutije ${box+1}, to je jedino ispravno mjesto. Upisujemo ${val}.`,
+                label: "Step 2 — Only valid placement in the box",
+                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire box ${box+1}, that is the only valid placement. Enter ${val}.`,
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -423,21 +423,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Goli Par (Naked Pair) — Red",
+                title: "Naked Pair — Row",
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Goli Par",
-                    description: `U redu ${r+1}, ćelije u kolonama ${a.c+1} i ${b.c+1} imaju isključivo iste kandidate [${a.v1}, ${a.v2}]. Goli Par znači: ova dva broja moraju ući u jednu od tih dviju ćelija — niti koji drugi broj ne može tamo, a ${a.v1} i ${a.v2} ne mogu nigdje drugdje u redu.`,
+                    label: "Step 1 — Find the Naked Pair",
+                    description: `In row ${r+1}, the cells in columns ${a.c+1} and ${b.c+1} share exactly the same candidates [${a.v1}, ${a.v2}]. A Naked Pair means these two digits must go into one of those two cells — no other digit can go there, and ${a.v1} and ${a.v2} cannot appear elsewhere in the row.`,
                     highlightCoords: [
                       { r, c: a.c, type: 'trigger' },
                       { r, c: b.c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Korak 2 — Eliminiši par iz ostatka reda",
-                    description: `Pošto su ${a.v1} i ${a.v2} "zaključani" u te dvije ćelije, sigurno ne mogu biti ni u jednoj drugoj ćeliji reda ${r+1}. Crveno označene ćelije mogu imati ${a.v1} ili ${a.v2} uklonjene iz liste kandidata, što otvara nove mogućnosti.`,
+                    label: "Step 2 — Eliminate pair from the rest of the row",
+                    description: `Since ${a.v1} and ${a.v2} are "locked" into those two cells, they cannot appear in any other cell of row ${r+1}. Red-highlighted cells can have ${a.v1} or ${a.v2} removed from their candidate lists, opening new possibilities.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -474,21 +474,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Goli Par (Naked Pair) — Kolona",
+                title: "Naked Pair — Column",
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Goli Par u koloni",
-                    description: `U koloni ${c+1}, ćelije u redovima ${a.r+1} i ${b.r+1} imaju isključivo iste kandidate [${a.v1}, ${a.v2}]. Ta dva broja moraju ući u jednu od tih dviju ćelija — niti koji drugi nije moguć tamo, a ${a.v1} i ${a.v2} ne mogu biti nigdje drugdje u toj koloni.`,
+                    label: "Step 1 — Find the Naked Pair in the column",
+                    description: `In column ${c+1}, the cells in rows ${a.r+1} and ${b.r+1} share exactly the same candidates [${a.v1}, ${a.v2}]. Those two digits must go into one of those two cells — no other digit is possible there, and ${a.v1} and ${a.v2} cannot appear elsewhere in the column.`,
                     highlightCoords: [
                       { r: a.r, c, type: 'trigger' },
                       { r: b.r, c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Korak 2 — Eliminiši par iz ostatka kolone",
-                    description: `Pošto su ${a.v1} i ${a.v2} "zaključani" u te dvije ćelije u koloni ${c+1}, mogu se ukloniti iz svih ostalih ćelija iste kolone (crveno). Ovo sužava kandidate i olakšava sljedeće korake.`,
+                    label: "Step 2 — Eliminate pair from the rest of the column",
+                    description: `Since ${a.v1} and ${a.v2} are "locked" into those two cells in column ${c+1}, they can be removed from all other cells in the same column (red). This narrows candidates and simplifies further solving.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -531,21 +531,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Goli Par (Naked Pair) — Kutija",
+                title: "Naked Pair — Box",
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Goli Par u kutiji",
-                    description: `U kutiji ${box+1}, ćelije [Red ${a.r+1}, Kol ${a.c+1}] i [Red ${b.r+1}, Kol ${b.c+1}] dijele iste kandidate [${a.v1}, ${a.v2}]. To znači da ${a.v1} i ${a.v2} moraju ući u jednu od tih dviju ćelija, bez izuzetka.`,
+                    label: "Step 1 — Find the Naked Pair in the box",
+                    description: `In box ${box+1}, cells [R${a.r+1}C${a.c+1}] and [R${b.r+1}C${b.c+1}] share the same candidates [${a.v1}, ${a.v2}]. This means ${a.v1} and ${a.v2} must go into one of those two cells, without exception.`,
                     highlightCoords: [
                       { r: a.r, c: a.c, type: 'trigger' },
                       { r: b.r, c: b.c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Korak 2 — Eliminiši par iz ostatka kutije",
-                    description: `Budući da su ${a.v1} i ${a.v2} ekskluzivno vezani za te dvije ćelije u kutiji ${box+1}, mogu se ukloniti iz svih ostalih praznih ćelija iste kutije (crveno). Ovo može otvoriti nove Naked Single ili Hidden Single mogućnosti.`,
+                    label: "Step 2 — Eliminate pair from the rest of the box",
+                    description: `Since ${a.v1} and ${a.v2} are exclusively tied to those two cells in box ${box+1}, they can be removed from all other empty cells in the same box (red). This can reveal new Naked Single or Hidden Single opportunities.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -588,18 +588,18 @@ export function useSudokuEngine() {
           if (eliminations.length > 0) {
             const target = eliminations[0]!;
             return {
-              title: "Pokazivački Par (Pointing Pair) — Red",
+              title: "Pointing Pair — Row",
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Uoči poravnanje unutar kutije",
-                  description: `U kutiji ${box+1}, svi preostali kandidati za broj ${val} nalaze se isključivo u redu ${targetRow+1} (plavo). Ovo znači da ${val} mora ići u jednu od tih ćelija — i ni u koju drugu u toj kutiji.`,
+                  label: "Step 1 — Spot the alignment inside the box",
+                  description: `In box ${box+1}, all remaining candidates for digit ${val} lie exclusively in row ${targetRow+1} (blue). This means ${val} must go into one of those cells — and nowhere else in that box.`,
                   highlightCoords: cells.map(cell => ({ r: cell.r, c: cell.c, type: 'trigger' as const }))
                 },
                 {
-                  label: "Korak 2 — Eliminiši iz ostatka reda",
-                  description: `Zbog poravnanja unutar kutije, ${val} ne može biti ni u jednoj drugoj ćeliji reda ${targetRow+1} van te kutije. Crvene ćelije mogu imati ${val} uklonjen iz svojih kandidata, što simplifikuje dalje rješavanje.`,
+                  label: "Step 2 — Eliminate from the rest of the row",
+                  description: `Because of the alignment inside the box, ${val} cannot be in any other cell of row ${targetRow+1} outside that box. Red cells can have ${val} removed from their candidates, simplifying further solving.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -619,18 +619,18 @@ export function useSudokuEngine() {
           if (eliminations.length > 0) {
             const target = eliminations[0]!;
             return {
-              title: "Pokazivački Par (Pointing Pair) — Kolona",
+              title: "Pointing Pair — Column",
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Uoči poravnanje unutar kutije",
-                  description: `U kutiji ${box+1}, svi preostali kandidati za broj ${val} nalaze se isključivo u koloni ${targetCol+1} (plavo). Ovo znači da ${val} mora ići u jednu od tih ćelija — i ni u koju drugu u toj kutiji.`,
+                  label: "Step 1 — Spot the alignment inside the box",
+                  description: `In box ${box+1}, all remaining candidates for digit ${val} lie exclusively in column ${targetCol+1} (blue). This means ${val} must go into one of those cells — and nowhere else in that box.`,
                   highlightCoords: cells.map(cell => ({ r: cell.r, c: cell.c, type: 'trigger' as const }))
                 },
                 {
-                  label: "Korak 2 — Eliminiši iz ostatka kolone",
-                  description: `Zbog poravnanja unutar kutije, ${val} ne može biti ni u jednoj drugoj ćeliji kolone ${targetCol+1} van te kutije. Crvene ćelije mogu imati ${val} uklonjen iz svojih kandidata.`,
+                  label: "Step 2 — Eliminate from the rest of the column",
+                  description: `Because of the alignment inside the box, ${val} cannot be in any other cell of column ${targetCol+1} outside that box. Red cells can have ${val} removed from their candidates.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -644,13 +644,13 @@ export function useSudokuEngine() {
 
   function findNakedTriples(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Kutija ${box+1}` });
+      units.push({ cells, label: `Box ${box+1}` });
     }
 
     for (const { cells: unitCells, label } of units) {
@@ -674,13 +674,13 @@ export function useSudokuEngine() {
 
             const [v1, v2, v3] = union as [number, number, number];
             return {
-              title: `Gola Trojka (Naked Triple) — ${label}`,
+              title: `Naked Triple — ${label}`,
               targetCell: a,
               targetNum: solvedBoard.value[a.r]![a.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Pronađi Golu Trojku",
-                  description: `Ćelije [R${a.r+1}K${a.c+1}], [R${b.r+1}K${b.c+1}] i [R${c2.r+1}K${c2.c+1}] zajedno sadrže tačno tri različita kandidata: ${v1}, ${v2}, ${v3}. Svaka ćelija ima samo podskup od ta tri broja (2 ili 3). Zajedno, ova trojka "zaključava" te brojeve — nijedan od tri broja ne može otići negdje drugdje u ${label}.`,
+                  label: "Step 1 — Find the Naked Triple",
+                  description: `Cells [R${a.r+1}C${a.c+1}], [R${b.r+1}C${b.c+1}] and [R${c2.r+1}C${c2.c+1}] together contain exactly three distinct candidates: ${v1}, ${v2}, ${v3}. Each cell holds only a subset of those three digits (2 or 3). Together, this triple "locks" those digits — none of the three can go anywhere else in ${label}.`,
                   highlightCoords: [
                     { r: a.r, c: a.c, type: 'trigger' },
                     { r: b.r, c: b.c, type: 'trigger' },
@@ -688,8 +688,8 @@ export function useSudokuEngine() {
                   ]
                 },
                 {
-                  label: "Korak 2 — Eliminiši trojku iz ostatka jedinice",
-                  description: `Pošto ${v1}, ${v2} i ${v3} moraju ući u te tri ćelije, mogu se ukloniti iz svih ostalih ćelija u ${label} (crveno). Ovo drastično sužava mogućnosti.`,
+                  label: "Step 2 — Eliminate triple from the rest of the unit",
+                  description: `Since ${v1}, ${v2} and ${v3} must go into those three cells, they can be removed from all other cells in ${label} (red). This drastically narrows the possibilities.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -703,13 +703,13 @@ export function useSudokuEngine() {
 
   function findNakedQuads(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Kutija ${box+1}` });
+      units.push({ cells, label: `Box ${box+1}` });
     }
 
     for (const { cells: unitCells, label } of units) {
@@ -734,18 +734,18 @@ export function useSudokuEngine() {
 
               const [v1,v2,v3,v4] = union as [number,number,number,number];
               return {
-                title: `Gola Četvorka (Naked Quad) — ${label}`,
+                title: `Naked Quad — ${label}`,
                 targetCell: a,
                 targetNum: solvedBoard.value[a.r]![a.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Golu Četvorku",
-                    description: `Četiri ćelije u ${label} zajedno sadrže tačno četiri kandidata: ${v1}, ${v2}, ${v3}, ${v4}. Svaka ćelija ima samo podskup od ta četiri broja. Ova četvorka ih "zaključava" — nijedan od četiri broja ne može ići u drugu ćeliju iste jedinice.`,
+                    label: "Step 1 — Find the Naked Quad",
+                    description: `Four cells in ${label} together contain exactly four candidates: ${v1}, ${v2}, ${v3}, ${v4}. Each cell holds only a subset of those four digits. This quad "locks" them — none of the four digits can go into any other cell of the same unit.`,
                     highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Korak 2 — Eliminiši četvorku iz ostatka jedinice",
-                    description: `Kandidati ${v1}, ${v2}, ${v3} i ${v4} mogu se ukloniti iz svih ostalih ćelija u ${label} (crveno), jer su ekskluzivno rezervisani za te četiri ćelije.`,
+                    label: "Step 2 — Eliminate quad from the rest of the unit",
+                    description: `Candidates ${v1}, ${v2}, ${v3} and ${v4} can be removed from all other cells in ${label} (red), as they are exclusively reserved for those four cells.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -806,13 +806,13 @@ export function useSudokuEngine() {
 
                 const target = eliminations[0]!;
                 return {
-                  title: "XY-Wing (Napredna Tehnika)",
+                  title: "XY-Wing",
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Korak 1 — Pronađi XY-Wing strukturu",
-                      description: `Pivot ćelija [R${pr+1}K${pc+1}] ima kandidate [${x},${y}]. Pincer 1 [R${r1+1}K${c1+1}] ima [${x},${z}] i vidi pivot. Pincer 2 [R${r2+1}K${c2+1}] ima [${y},${z}] i vidi pivot. Bez obzira na to koji kandidat pivot odabere, jedan od pincera mora sadržavati ${z}.`,
+                      label: "Step 1 — Find the XY-Wing structure",
+                      description: `Pivot cell [R${pr+1}C${pc+1}] has candidates [${x},${y}]. Pincer 1 [R${r1+1}C${c1+1}] has [${x},${z}] and sees the pivot. Pincer 2 [R${r2+1}C${c2+1}] has [${y},${z}] and sees the pivot. Regardless of which candidate the pivot takes, one of the pincers must contain ${z}.`,
                       highlightCoords: [
                         { r: pr, c: pc, type: 'trigger' },
                         { r: r1, c: c1, type: 'trigger' },
@@ -820,8 +820,8 @@ export function useSudokuEngine() {
                       ]
                     },
                     {
-                      label: "Korak 2 — Eliminiši zajednički kandidat",
-                      description: `Svaka ćelija koja vidi oba pincera (crveno) ne može sadržavati ${z} — jer će jedan od pincera uvijek imati ${z}. Eliminacija je garantovana bez obzira na rješenje pivota.`,
+                      label: "Step 2 — Eliminate the shared candidate",
+                      description: `Every cell that sees both pincers (red) cannot contain ${z} — because one of the pincers will always hold ${z}. The elimination is guaranteed regardless of the pivot's solution.`,
                       highlightCoords: eliminations
                     }
                   ]
@@ -876,13 +876,13 @@ export function useSudokuEngine() {
 
                 const target = eliminations[0]!;
                 return {
-                  title: "XYZ-Wing (Napredna Tehnika)",
+                  title: "XYZ-Wing",
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Korak 1 — Pronađi XYZ-Wing strukturu",
-                      description: `Pivot [R${pr+1}K${pc+1}] ima tri kandidata [${x},${y},${z}]. Oba pincera [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] vide pivot i sadrže ${z} plus jedan od ${x} ili ${y}. Za razliku od XY-Wing, pivot ovdje i sam sadrži ${z}, pa eliminacija vrijedi samo za ćelije koje vide SVA tri člana.`,
+                      label: "Step 1 — Find the XYZ-Wing structure",
+                      description: `Pivot [R${pr+1}C${pc+1}] has three candidates [${x},${y},${z}]. Both pincers [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] see the pivot and contain ${z} plus one of ${x} or ${y}. Unlike XY-Wing, the pivot itself also contains ${z}, so the elimination only applies to cells that see ALL three members.`,
                       highlightCoords: [
                         { r: pr, c: pc, type: 'trigger' },
                         { r: r1, c: c1, type: 'trigger' },
@@ -890,8 +890,8 @@ export function useSudokuEngine() {
                       ]
                     },
                     {
-                      label: "Korak 2 — Eliminiši z iz ćelija koje vide sve tri",
-                      description: `Ćelije koje vide pivot i oba pincera (crveno) sigurno ne mogu sadržavati ${z} — jer ga u svim scenarijima zauzimaju neka od tri ćelije. Ovo je restriktivnija, ali moćnija verzija XY-Wing.`,
+                      label: "Step 2 — Eliminate z from cells that see all three",
+                      description: `Cells that see the pivot and both pincers (red) cannot contain ${z} — in every scenario one of the three cells holds it. This is a more restrictive but more powerful version of XY-Wing.`,
                       highlightCoords: eliminations
                     }
                   ]
@@ -970,18 +970,18 @@ export function useSudokuEngine() {
 
         const target = eliminations[0]!;
         return {
-          title: `Sue-de-Coq (Ekspertska Tehnika)`,
+          title: `Sue-de-Coq`,
           targetCell: { r: target.r, c: target.c },
           targetNum: solvedBoard.value[target.r]![target.c]!,
           steps: [
             {
-              label: "Korak 1 — Pronađi Sue-de-Coq presjek",
-              description: `Presjek reda ${r+1} i kutije ${box+1} sadrži ćelije čiji kandidati [${intDigits.join(',')}] se dijele na dvije grupe: [${rowExclusive.join(',')}] koji mogu ići samo u ostatak reda, i [${boxExclusive.join(',')}] koji mogu ići samo u ostatak kutije. Presjek (plavo) "troši" sve te kandidate.`,
+              label: "Step 1 — Find the Sue-de-Coq intersection",
+              description: `The intersection of row ${r+1} and box ${box+1} contains cells whose candidates [${intDigits.join(',')}] split into two groups: [${rowExclusive.join(',')}] that can only go into the rest of the row, and [${boxExclusive.join(',')}] that can only go into the rest of the box. The intersection (blue) "consumes" all those candidates.`,
               highlightCoords: intersect.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
             },
             {
-              label: "Korak 2 — Eliminiši iz reda i kutije",
-              description: `Pošto su [${rowExclusive.join(',')}] ekskluzivni za presjek unutar reda, ne mogu se naći u ostatku reda. Pošto su [${boxExclusive.join(',')}] ekskluzivni za presjek unutar kutije, ne mogu se naći u ostatku kutije. Crvene ćelije gube te kandidate.`,
+              label: "Step 2 — Eliminate from the row and box",
+              description: `Since [${rowExclusive.join(',')}] are exclusive to the intersection within the row, they cannot appear in the rest of the row. Since [${boxExclusive.join(',')}] are exclusive to the intersection within the box, they cannot appear in the rest of the box. Red cells lose those candidates.`,
               highlightCoords: eliminations
             }
           ]
@@ -1030,18 +1030,18 @@ export function useSudokuEngine() {
                 const target = eliminations[0]!;
                 const chainDesc = chain.map(ch => `R${ch.r+1}K${ch.c+1}`).join('→');
                 return {
-                  title: `XY-Chain (Lanac dužine ${chain.length})`,
+                  title: `XY-Chain (length ${chain.length})`,
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Korak 1 — Pronađi XY-Chain",
-                      description: `Lanac bivalentnih ćelija: ${chainDesc}. Svake dvije susjedne ćelije dijele jedan kandidat i "vide" jedna drugu. Bez obzira na smjer rješavanja lanca, broj ${exitDigit} mora biti na jednom od dva kraja lanca (plavo).`,
+                      label: "Step 1 — Find the XY-Chain",
+                      description: `Chain of bivalue cells: ${chainDesc}. Every two adjacent cells share one candidate and "see" each other. Regardless of the direction in which the chain resolves, digit ${exitDigit} must be at one of the two chain ends (blue).`,
                       highlightCoords: chain.map(ch => ({ r: ch.r, c: ch.c, type: 'trigger' as const }))
                     },
                     {
-                      label: "Korak 2 — Eliminiši zajednički kandidat",
-                      description: `Ćelije koje vide oba kraja lanca (crveno) nikad ne mogu imati ${exitDigit} — jedan kraj lanca uvijek sadrži ${exitDigit}. Ova eliminacija može otvoriti put do rješenja.`,
+                      label: "Step 2 — Eliminate the shared candidate",
+                      description: `Cells that see both ends of the chain (red) can never have ${exitDigit} — one chain end always holds ${exitDigit}. This elimination can open the path to the solution.`,
                       highlightCoords: eliminations
                     }
                   ]
@@ -1114,13 +1114,13 @@ export function useSudokuEngine() {
       targetNum: bugDigit,
       steps: [
         {
-          label: "Korak 1 — Detektuj BUG+1 stanje",
-          description: `Gotovo svaka prazna ćelija ima tačno dva kandidata — to je "Bivalue Universal Grave" (BUG) stanje. Jedina iznimka je ćelija [R${r+1}K${c+1}] koja ima tri kandidata: [${triCands.join(',')}]. Ako ne unesemo pravi broj ovdje, sudoku bi pao u deadlock s više rješenja.`,
+          label: "Step 1 — Detect BUG+1 state",
+          description: `Almost every empty cell has exactly two candidates — that is the "Bivalue Universal Grave" (BUG) state. The only exception is cell [R${r+1}C${c+1}] which has three candidates: [${triCands.join(',')}]. If we don't enter the correct digit here, the puzzle would deadlock with multiple solutions.`,
           highlightCoords: [{ r, c, type: 'trigger' }]
         },
         {
-          label: "Korak 2 — Upiši BUG digit",
-          description: `Jedini kandidat koji narušava simetričnost BUG-a je ${bugDigit} — pojavljuje se neparno puta u svom redu, koloni ili kutiji. Upisivanjem ${bugDigit} se razrješava BUG i garantuje jedinstvenost rješenja.`,
+          label: "Step 2 — Enter the BUG digit",
+          description: `The only candidate that breaks the BUG symmetry is ${bugDigit} — it appears an odd number of times in its row, column, or box. Entering ${bugDigit} resolves the BUG and guarantees solution uniqueness.`,
           highlightCoords: [{ r, c, type: 'trigger' }]
         }
       ]
@@ -1169,18 +1169,18 @@ export function useSudokuEngine() {
             for (let erBoxCol = sc; erBoxCol < sc + 3; erBoxCol++) {
               if (currentBoard.value[otherRow]![erBoxCol] === 0 && candidates[otherRow]![erBoxCol]!.includes(val)) {
                 return {
-                  title: "Prazni Pravougaonik (Empty Rectangle)",
+                  title: "Empty Rectangle",
                   targetCell: { r: otherRow, c: erBoxCol },
                   targetNum: solvedBoard.value[otherRow]![erBoxCol]!,
                   steps: [
                     {
-                      label: "Korak 1 — Uoči Prazni Pravougaonik u kutiji",
-                      description: `U kutiji ${box+1}, svi kandidati za ${val} nalaze se u redu ${erRow+1} (plavo). Ovo stvara "prazni pravougaonik" — ostatak kutije nema ${val}. Kolona ${c+1} ima jaku vezu za ${val}: jedino u redovima ${rA+1} i ${rB+1}.`,
+                      label: "Step 1 — Spot the Empty Rectangle in the box",
+                      description: `In box ${box+1}, all candidates for ${val} lie in row ${erRow+1} (blue). This creates an "empty rectangle" — the rest of the box has no ${val}. Column ${c+1} has a strong link for ${val}: only in rows ${rA+1} and ${rB+1}.`,
                       highlightCoords: boxCells.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                     },
                     {
-                      label: "Korak 2 — Eliminiši kombinacijom veza",
-                      description: `Jaka veza u koloni ${c+1} i poravnanje unutar kutije zajedno garantuju da ${val} mora biti u redu ${erRow+1} ili u koloni kutije koja sadrži ER. Ćelija [R${otherRow+1}K${erBoxCol+1}] vidi obje — stoga ${val} se eliminira iz nje.`,
+                      label: "Step 2 — Eliminate via combined links",
+                      description: `The strong link in column ${c+1} and the box alignment together guarantee that ${val} must be in row ${erRow+1} or in the box column containing the ER. Cell [R${otherRow+1}C${erBoxCol+1}] sees both — therefore ${val} is eliminated from it.`,
                       highlightCoords: [{ r: otherRow, c: erBoxCol, type: 'elimination' }]
                     }
                   ]
@@ -1252,21 +1252,21 @@ export function useSudokuEngine() {
 
             const target = eliminations[0]!;
             return {
-              title: "W-Wing (Napredna Tehnika)",
+              title: "W-Wing",
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Pronađi W-Wing strukturu",
-                  description: `Dvije ćelije [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] imaju iste kandidate [${p},${q}] i ne vide jedna drugu. Spojene su "jakom vezom" na broj ${p} — postoji jedinica gdje ${p} može ići samo u dvije ćelije, jedna vidi prvu bivalentnu, druga drugu. Ovo garantuje da bar jedna od bivalentnih ćelija sadrži ${q}.`,
+                  label: "Step 1 — Find the W-Wing structure",
+                  description: `Two cells [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] have the same candidates [${p},${q}] and cannot see each other. They are connected by a "strong link" on digit ${p} — there is a unit where ${p} can only go into two cells, one seeing the first bivalue cell and the other seeing the second. This guarantees at least one of the bivalue cells contains ${q}.`,
                   highlightCoords: [
                     { r: r1, c: c1, type: 'trigger' },
                     { r: r2, c: c2, type: 'trigger' }
                   ]
                 },
                 {
-                  label: "Korak 2 — Eliminiši q iz ćelija koje vide obje",
-                  description: `Svaka ćelija koja vidi i [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] (crveno) ne može sadržavati ${q} — jer jedna od bivalentnih ćelija uvijek sadrži ${q}, bez izuzetka.`,
+                  label: "Step 2 — Eliminate q from cells that see both",
+                  description: `Every cell that sees both [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] (red) cannot contain ${q} — because one of the bivalue cells always holds ${q}, without exception.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -1310,18 +1310,18 @@ export function useSudokuEngine() {
               const triggerCoords: HintCoordinate[] = allRows.flatMap(rd => rd.cols.map(c => ({ r: rd.r, c, type: 'trigger' as const })));
               const target = eliminations[0]!;
               return {
-                title: "Meduza (Jellyfish)",
+                title: "Jellyfish",
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Jellyfish matricu",
-                    description: `Broj ${val} pojavljuje se u 2–4 mjesta u svakom od četiri reda (${allRows.map(rd => rd.r+1).join(', ')}), a svi kandidati padaju unutar tačno 4 kolone. Ovo je četverodimenzionalni X-Wing (ili dvodimenzionalni Swordfish): ${val} je "zaključan" unutar te 4×4 mreže (plavo).`,
+                    label: "Step 1 — Find the Jellyfish matrix",
+                    description: `Digit ${val} appears in 2–4 places in each of four rows (${allRows.map(rd => rd.r+1).join(', ')}), and all candidates fall within exactly 4 columns. This is a four-dimensional X-Wing (or two-dimensional Swordfish): ${val} is "locked" inside that 4×4 grid (blue).`,
                     highlightCoords: triggerCoords
                   },
                   {
-                    label: "Korak 2 — Eliminiši iz tih kolona",
-                    description: `Bez obzira na raspored unutar matrice, ${val} pokriva sve četiri kolone u ta četiri reda. Stoga ${val} ne može biti ni u kojoj drugoj ćeliji tih kolona (crveno).`,
+                    label: "Step 2 — Eliminate from those columns",
+                    description: `Regardless of the arrangement inside the matrix, ${val} covers all four columns across those four rows. Therefore ${val} cannot appear in any other cell of those columns (red).`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -1365,18 +1365,18 @@ export function useSudokuEngine() {
               const floorCands = cands[floorIdx]!;
               if (!floorCands.includes(a) || !floorCands.includes(b)) continue;
               return {
-                title: "Jedinstveni Pravougaonik — Tip 1",
+                title: "Unique Rectangle — Type 1",
                 targetCell: floor,
                 targetNum: solvedBoard.value[floor.r]![floor.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi UR Tip 1",
-                    description: `Tri ćelije pravougaonika imaju tačno [${a},${b}]. Četvrta ćelija [R${floor.r+1}K${floor.c+1}] ima i druge kandidate. Ako bi i ona imala samo ${a} i ${b}, sudoku bi imao više rješenja — što je nemoguće u valjanom sudokuu.`,
+                    label: "Step 1 — Find UR Type 1",
+                    description: `Three cells of the rectangle have exactly [${a},${b}]. The fourth cell [R${floor.r+1}C${floor.c+1}] has additional candidates. If it also had only ${a} and ${b}, the puzzle would have multiple solutions — impossible in a valid sudoku.`,
                     highlightCoords: pairCornerIdx.map(i => ({ r: corners[i]!.r, c: corners[i]!.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Korak 2 — Eliminiši par iz četvrte ćelije",
-                    description: `${a} i ${b} se eliminišu iz [R${floor.r+1}K${floor.c+1}] kako bi se garantovalo jedinstvenost rješenja. Preostali kandidati određuju pravu vrijednost.`,
+                    label: "Step 2 — Eliminate the pair from the fourth cell",
+                    description: `${a} and ${b} are eliminated from [R${floor.r+1}C${floor.c+1}] to guarantee solution uniqueness. The remaining candidates determine the correct value.`,
                     highlightCoords: [{ r: floor.r, c: floor.c, type: 'elimination' }]
                   }
                 ]
@@ -1408,18 +1408,18 @@ export function useSudokuEngine() {
               if (eliminations.length === 0) continue;
               const target = eliminations[0]!;
               return {
-                title: "Jedinstveni Pravougaonik — Tip 2",
+                title: "Unique Rectangle — Type 2",
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi UR Tip 2",
-                    description: `Dvije ćelije pravougaonika su tačno [${a},${b}]. Druge dvije su [${a},${b},${extraDigit}] — identičan ekstra kandidat ${extraDigit}. Ako ${extraDigit} nije u jednoj od tih ćelija, nastaje deadlock s više rješenja. Stoga ${extraDigit} mora biti u jednoj od njih.`,
+                    label: "Step 1 — Find UR Type 2",
+                    description: `Two cells of the rectangle are exactly [${a},${b}]. The other two are [${a},${b},${extraDigit}] — the same extra candidate ${extraDigit}. If ${extraDigit} is not in one of those cells, the puzzle deadlocks with multiple solutions. Therefore ${extraDigit} must be in one of them.`,
                     highlightCoords: [exCell0, exCell1].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Korak 2 — Eliminiši ekstra digit iz zajedničkih vršnjaka",
-                    description: `Pošto ${extraDigit} mora biti u [R${exCell0.r+1}K${exCell0.c+1}] ili [R${exCell1.r+1}K${exCell1.c+1}], svaka ćelija koja vidi obje (crveno) ne može sadržavati ${extraDigit}.`,
+                    label: "Step 2 — Eliminate extra digit from shared peers",
+                    description: `Since ${extraDigit} must be in [R${exCell0.r+1}C${exCell0.c+1}] or [R${exCell1.r+1}C${exCell1.c+1}], any cell that sees both (red) cannot contain ${extraDigit}.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -1473,13 +1473,13 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Zmaj s Dva Kraka (Two-String Kite)",
+            title: "Two-String Kite",
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Korak 1 — Pronađi Two-String Kite",
-                description: `Broj ${val} ima tačno dva kandidata u redu ${r+1} i tačno dva kandidata u koloni ${c+1}. Oba "kraka zmaja" dijele ćeliju [R${r+1}K${c+1}] unutar iste 3×3 kutije. Bez obzira na to da li je ${val} u [R${r+1}K${rowEnd+1}] ili [R${colEnd+1}K${c+1}] — jedan kraj uvijek sadrži ${val}.`,
+                label: "Step 1 — Find the Two-String Kite",
+                description: `Digit ${val} has exactly two candidates in row ${r+1} and exactly two in column ${c+1}. Both "kite strings" share cell [R${r+1}C${c+1}] inside the same 3×3 box. Regardless of whether ${val} is in [R${r+1}C${rowEnd+1}] or [R${colEnd+1}C${c+1}] — one end always holds ${val}.`,
                 highlightCoords: [
                   { r, c: rCols[0]!, type: 'trigger' },
                   { r, c: rCols[1]!, type: 'trigger' },
@@ -1488,8 +1488,8 @@ export function useSudokuEngine() {
                 ]
               },
               {
-                label: "Korak 2 — Eliminiši iz ćelija koje vide oba kraja",
-                description: `Ćelije koje vide i [R${r+1}K${rowEnd+1}] i [R${colEnd+1}K${c+1}] (crveno) sigurno ne mogu imati ${val} — jedan od ta dva kraja ga uvijek zauzima. Ovo je ekvivalent Skyscrapera, ali orijentisan kao zmaj umjesto kao neboder.`,
+                label: "Step 2 — Eliminate from cells that see both ends",
+                description: `Cells that see both [R${r+1}C${rowEnd+1}] and [R${colEnd+1}C${c+1}] (red) cannot have ${val} — one of the two kite ends always holds it. This is the equivalent of a Skyscraper but shaped like a kite instead.`,
                 highlightCoords: eliminations
               }
             ]
@@ -1538,13 +1538,13 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Neboder (Skyscraper)",
+            title: "Skyscraper",
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Korak 1 — Pronađi Skyscraper strukturu",
-                description: `Broj ${val} pojavljuje se tačno dva puta u redu ${ra.r+1} (kolone ${ra.cols[0]+1} i ${ra.cols[1]+1}) i dva puta u redu ${rb.r+1} (kolone ${rb.cols[0]+1} i ${rb.cols[1]+1}). Dijele jednu kolonu (${sharedCol+1}) ali u različitim kutijama — kao neboder koji se naslanja na isti stub. Vrhovi (plavo: K${topA+1} i K${topB+1}) moraju sadržavati ${val} u bar jednom od ta dva reda.`,
+                label: "Step 1 — Find the Skyscraper structure",
+                description: `Digit ${val} appears exactly twice in row ${ra.r+1} (cols ${ra.cols[0]+1} and ${ra.cols[1]+1}) and twice in row ${rb.r+1} (cols ${rb.cols[0]+1} and ${rb.cols[1]+1}). They share column ${sharedCol+1} but in different boxes — like a skyscraper leaning on the same pillar. The tops (blue: C${topA+1} and C${topB+1}) must contain ${val} in at least one of those two rows.`,
                 highlightCoords: [
                   { r: ra.r, c: ra.cols[0]!, type: 'trigger' },
                   { r: ra.r, c: ra.cols[1]!, type: 'trigger' },
@@ -1553,8 +1553,8 @@ export function useSudokuEngine() {
                 ]
               },
               {
-                label: "Korak 2 — Eliminiši iz ćelija koje vide oba vrha",
-                description: `Ako ${val} nije u vrhu K${topA+1} reda ${ra.r+1}, mora biti u K${topA+1}... i obratno za drugi red. Svaka ćelija koja vidi oba vrha (crveno) sigurno ne može imati ${val} — jedan od vrhova ga uvijek sadrži.`,
+                label: "Step 2 — Eliminate from cells that see both tops",
+                description: `If ${val} is not at top C${topA+1} in row ${ra.r+1}, it must be at C${topA+1}... and vice versa for the second row. Every cell that sees both tops (red) cannot have ${val} — one of the tops always holds it.`,
                 highlightCoords: eliminations
               }
             ]
@@ -1599,18 +1599,18 @@ export function useSudokuEngine() {
             ];
             const target = eliminations[0]!;
             return {
-              title: "Swordfish (Napredna Tehnika)",
+              title: "Swordfish",
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Pronađi Swordfish matricu",
-                  description: `Broj ${val} javlja se u 2–3 mjesta u svakom od redova ${ri.r+1}, ${rj.r+1} i ${rk.r+1}, a svi ti kandidati padaju unutar tačno 3 kolone. Kao trodimenzionalni X-Wing: ${val} mora biti u jednoj od ćelija te 3×3 mreže (plavo).`,
+                  label: "Step 1 — Find the Swordfish matrix",
+                  description: `Digit ${val} appears in 2–3 places in each of rows ${ri.r+1}, ${rj.r+1} and ${rk.r+1}, and all candidates fall within exactly 3 columns. Like a three-dimensional X-Wing: ${val} must be in one of the cells of that 3×3 grid (blue).`,
                   highlightCoords: triggerCoords
                 },
                 {
-                  label: "Korak 2 — Eliminiši iz tih kolona",
-                  description: `Bez obzira na raspored unutar matrice, ${val} pokriva sve tri kolone u ta tri reda. Stoga ${val} ne može biti ni u kojoj drugoj ćeliji tih kolona (crveno) — eliminacija vrijedi za cijele kolone.`,
+                  label: "Step 2 — Eliminate from those columns",
+                  description: `Regardless of the arrangement inside the matrix, ${val} covers all three columns across those three rows. Therefore ${val} cannot appear in any other cell of those columns (red) — the elimination applies to entire columns.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -1647,18 +1647,18 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Redukcija Red→Kutija (Box-Line Reduction)",
+            title: "Box-Line Reduction — Row",
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Korak 1 — Broj zaključan u jedan red unutar kutije",
-                description: `U redu ${r+1}, broj ${val} pojavljuje se samo u ćelijama koje su sve unutar iste 3×3 kutije (plavo). To znači da ${val} mora ići u jednu od tih ćelija — ekskluzivno za taj red unutar kutije.`,
+                label: "Step 1 — Digit locked to one row inside the box",
+                description: `In row ${r+1}, digit ${val} only appears in cells that all lie within the same 3×3 box (blue). This means ${val} must go into one of those cells — exclusively within that row inside the box.`,
                 highlightCoords: cols.map(c => ({ r, c, type: 'trigger' as const }))
               },
               {
-                label: "Korak 2 — Eliminiši iz ostatka kutije",
-                description: `Pošto ${val} mora biti u redu ${r+1} unutar te kutije, ne može biti ni u kojoj drugoj ćeliji te iste kutije (crveno). Ova eliminacija se zove Box-Line Reduction — suprotna od Pointing Pair.`,
+                label: "Step 2 — Eliminate from the rest of the box",
+                description: `Since ${val} must be in row ${r+1} inside that box, it cannot appear in any other cell of that same box (red). This elimination is called Box-Line Reduction — the complement of Pointing Pair.`,
                 highlightCoords: eliminations
               }
             ]
@@ -1689,18 +1689,18 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Redukcija Kolona→Kutija (Box-Line Reduction)",
+            title: "Box-Line Reduction — Column",
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Korak 1 — Broj zaključan u jednu kolonu unutar kutije",
-                description: `U koloni ${c+1}, broj ${val} pojavljuje se samo u ćelijama koje su sve unutar iste 3×3 kutije (plavo). ${val} mora ući u jednu od tih ćelija — ekskluzivno za tu kolonu unutar kutije.`,
+                label: "Step 1 — Digit locked to one column inside the box",
+                description: `In column ${c+1}, digit ${val} only appears in cells that all lie within the same 3×3 box (blue). ${val} must go into one of those cells — exclusively within that column inside the box.`,
                 highlightCoords: rows.map(r => ({ r, c, type: 'trigger' as const }))
               },
               {
-                label: "Korak 2 — Eliminiši iz ostatka kutije",
-                description: `Pošto ${val} mora biti u koloni ${c+1} unutar te kutije, ne može biti u nijednoj drugoj ćeliji te kutije (crveno). Box-Line Reduction je komplement Pointing Pair tehnike.`,
+                label: "Step 2 — Eliminate from the rest of the box",
+                description: `Since ${val} must be in column ${c+1} inside that box, it cannot appear in any other cell of that box (red). Box-Line Reduction is the complement of the Pointing Pair technique.`,
                 highlightCoords: eliminations
               }
             ]
@@ -1713,13 +1713,13 @@ export function useSudokuEngine() {
 
   function findHiddenQuads(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Kutija ${box+1}` });
+      units.push({ cells, label: `Box ${box+1}` });
     }
 
     for (const { cells: unitCells, label } of units) {
@@ -1744,18 +1744,18 @@ export function useSudokuEngine() {
               if (eliminations.length === 0) continue;
 
               return {
-                title: `Skrivena Četvorka (Hidden Quad) — ${label}`,
+                title: `Hidden Quad — ${label}`,
                 targetCell: a,
                 targetNum: solvedBoard.value[a.r]![a.c]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi Skrivenu Četvorku",
-                    description: `Brojevi ${quad.join(', ')} mogu ići samo u četiri ćelije unutar ${label}. Ove ćelije imaju i druge kandidate, ali ${quad.join(', ')} su ekskluzivni za ovu četvorku — nigdje drugdje u jedinici ne mogu stati.`,
+                    label: "Step 1 — Find the Hidden Quad",
+                    description: `Digits ${quad.join(', ')} can only go into four cells within ${label}. These cells have other candidates, but ${quad.join(', ')} are exclusive to this quad — they cannot go anywhere else in the unit.`,
                     highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Korak 2 — Eliminiši ostale kandidate iz četvorke",
-                    description: `Pošto ${quad.join(', ')} moraju popuniti upravo te četiri ćelije, svi ostali kandidati unutar njih su nemogući i brišu se (crveno). Ovo pretvara skrivenu četvorku u golu četvorku (Naked Quad).`,
+                    label: "Step 2 — Eliminate other candidates from the quad",
+                    description: `Since ${quad.join(', ')} must fill exactly those four cells, all other candidates within them are impossible and are removed (red). This converts the hidden quad into a naked quad.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -1770,13 +1770,13 @@ export function useSudokuEngine() {
 
   function findHiddenTriples(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Kutija ${box+1}` });
+      units.push({ cells, label: `Box ${box+1}` });
     }
 
     for (const { cells: unitCells, label } of units) {
@@ -1802,13 +1802,13 @@ export function useSudokuEngine() {
             if (eliminations.length === 0) continue;
 
             return {
-              title: `Skrivena Trojka (Hidden Triple) — ${label}`,
+              title: `Hidden Triple — ${label}`,
               targetCell: a,
               targetNum: solvedBoard.value[a.r]![a.c]!,
               steps: [
                 {
-                  label: "Korak 1 — Pronađi Skrivenu Trojku",
-                  description: `Brojevi ${vi}, ${vj} i ${vk} mogu ići samo u ćelije [R${a.r+1}K${a.c+1}], [R${b.r+1}K${b.c+1}] i [R${c2.r+1}K${c2.c+1}] unutar ${label}. Ova trojka je "skrivena" — ćelije imaju i druge kandidate, ali ${vi}, ${vj}, ${vk} su ekskluzivni za ove tri ćelije.`,
+                  label: "Step 1 — Find the Hidden Triple",
+                  description: `Digits ${vi}, ${vj} and ${vk} can only go into cells [R${a.r+1}C${a.c+1}], [R${b.r+1}C${b.c+1}] and [R${c2.r+1}C${c2.c+1}] within ${label}. This triple is "hidden" — the cells have other candidates, but ${vi}, ${vj}, ${vk} are exclusive to these three cells.`,
                   highlightCoords: [
                     { r: a.r, c: a.c, type: 'trigger' },
                     { r: b.r, c: b.c, type: 'trigger' },
@@ -1816,8 +1816,8 @@ export function useSudokuEngine() {
                   ]
                 },
                 {
-                  label: "Korak 2 — Eliminiši ostale kandidate iz trojke",
-                  description: `Pošto ${vi}, ${vj} i ${vk} moraju popuniti upravo te tri ćelije, svi drugi kandidati u njima su nemogući (crveno). Eliminacijom se otkrivaju novi goli singletoni ili parovi.`,
+                  label: "Step 2 — Eliminate other candidates from the triple",
+                  description: `Since ${vi}, ${vj} and ${vk} must fill exactly those three cells, all other candidates in them are impossible (red). Eliminating them reveals new naked singles or pairs.`,
                   highlightCoords: eliminations
                 }
               ]
@@ -1861,21 +1861,21 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
 
           return {
-            title: "Skriveni Par (Hidden Pair)",
+            title: "Hidden Pair",
             targetCell: a,
             targetNum: solvedBoard.value[a.r]![a.c]!,
             steps: [
               {
-                label: "Korak 1 — Pronađi Skriveni Par",
-                description: `Brojevi ${vi} i ${vj} mogu ići samo u ćelije [Red ${a.r+1}, Kol ${a.c+1}] i [Red ${b.r+1}, Kol ${b.c+1}] unutar ove jedinice. Čak i ako te ćelije imaju više kandidata, ${vi} i ${vj} su "skriveni" unutar njih — ne mogu ići nigdje drugdje u jedinici.`,
+                label: "Step 1 — Find the Hidden Pair",
+                description: `Digits ${vi} and ${vj} can only go into cells [R${a.r+1}C${a.c+1}] and [R${b.r+1}C${b.c+1}] within this unit. Even if those cells have other candidates, ${vi} and ${vj} are "hidden" inside them — they cannot go anywhere else in the unit.`,
                 highlightCoords: [
                   { r: a.r, c: a.c, type: 'trigger' },
                   { r: b.r, c: b.c, type: 'trigger' }
                 ]
               },
               {
-                label: "Korak 2 — Eliminiši ostale kandidate iz para",
-                description: `Pošto ${vi} i ${vj} moraju zauzeti upravo te dvije ćelije, svi ostali kandidati u njima su nemogući i mogu se eliminisati (crveno). Ovo efektivno pretvara skriveni par u goli par (Naked Pair).`,
+                label: "Step 2 — Eliminate other candidates from the pair",
+                description: `Since ${vi} and ${vj} must occupy exactly those two cells, all other candidates in them are impossible and can be eliminated (red). This effectively converts the hidden pair into a naked pair.`,
                 highlightCoords: eliminations
               }
             ]
@@ -1919,13 +1919,13 @@ export function useSudokuEngine() {
 
             if (eliminations.length > 0) {
               return {
-                title: "X-Wing (Napredna Tehnika)",
+                title: "X-Wing",
                 targetCell: { r: r1.r, c: c1 },
                 targetNum: solvedBoard.value[r1.r]![c1]!,
                 steps: [
                   {
-                    label: "Korak 1 — Pronađi pravougaonik kandidata",
-                    description: `Broj ${val} javlja se tačno na dva mjesta u redu ${r1.r+1} (kolone ${c1+1} i ${c2+1}) i tačno na dva mjesta u redu ${r2.r+1} (iste kolone). Ova četiri polja formiraju pravougaonik — osnovu X-Wing tehnike. ${val} mora biti na jednoj od dviju dijagonala tog pravougaonika.`,
+                    label: "Step 1 — Find the candidate rectangle",
+                    description: `Digit ${val} appears exactly twice in row ${r1.r+1} (columns ${c1+1} and ${c2+1}) and exactly twice in row ${r2.r+1} (the same columns). These four cells form a rectangle — the basis of the X-Wing technique. ${val} must lie on one of the two diagonals of that rectangle.`,
                     highlightCoords: [
                       { r: r1.r, c: c1, type: 'trigger' },
                       { r: r1.r, c: c2, type: 'trigger' },
@@ -1934,8 +1934,8 @@ export function useSudokuEngine() {
                     ]
                   },
                   {
-                    label: "Korak 2 — Eliminiši iz kolona pravougaonika",
-                    description: `Bez obzira na to koja dijagonala je ispravna, ${val} mora biti u kolonama ${c1+1} i ${c2+1} unutar ta dva reda. Stoga ${val} ne može biti nigdje drugdje u tim kolonama. Crvene ćelije mogu imati ${val} uklonjen kao kandidata.`,
+                    label: "Step 2 — Eliminate from the rectangle's columns",
+                    description: `Regardless of which diagonal is correct, ${val} must be in columns ${c1+1} and ${c2+1} within those two rows. Therefore ${val} cannot appear anywhere else in those columns. Red cells can have ${val} removed as a candidate.`,
                     highlightCoords: eliminations
                   }
                 ]
@@ -2013,18 +2013,18 @@ export function useSudokuEngine() {
         });
 
         hint = {
-          title: "Redukcija Kandidata (Analiza)",
+          title: "Candidate Reduction (Analysis)",
           targetCell: { r, c },
           targetNum,
           steps: [
             {
-              label: "Korak 1 — Ćelija s najmanje kandidata",
-              description: `Ćelija [Red ${r+1}, Kol ${c+1}] ima najmanji broj preostalih mogućnosti. Plave ćelije u njenom redu i koloni blokiraju pogrešne kandidate, ostavljajući samo ${targetNum} kao jedinu matematički validnu opciju. Pokušaj primijeniti prethodne tehnike za bolje razumijevanje.`,
+              label: "Step 1 — Cell with fewest candidates",
+              description: `Cell [R${r+1}C${c+1}] has the fewest remaining possibilities. Blue cells in its row and column block the wrong candidates, leaving only ${targetNum} as the only mathematically valid option. Try applying the earlier techniques for better understanding.`,
               highlightCoords: blockingCells
             },
             {
-              label: "Korak 2 — Potvrdi rješenje",
-              description: `Nakon eliminacije pogrešnih opcija, ${targetNum} je jedina vrijednost koja ne krši nijedno pravilo sudokua za ovu ćeliju. Klikni "Upiši Broj" za potvrdu.`,
+              label: "Step 2 — Confirm the answer",
+              description: `After eliminating the wrong options, ${targetNum} is the only value that does not violate any sudoku rule for this cell. Click "Apply Answer" to confirm.`,
               highlightCoords: [{ r, c, type: 'trigger' }]
             }
           ]
@@ -2041,7 +2041,7 @@ export function useSudokuEngine() {
       hintStatus.value = hint.title;
       hintBody.value = hint.steps[0]!.description;
     } else {
-      hintStatus.value = "Nema slobodnih polja!";
+      hintStatus.value = "No empty cells!";
     }
   }
 

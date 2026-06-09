@@ -5,7 +5,7 @@ interface Props {
 
 defineProps<Props>();
 defineEmits<{
-  (e: "input-number", num: number): void;
+  (e: 'input-number', num: number): void;
 }>();
 </script>
 
@@ -15,13 +15,13 @@ defineEmits<{
       v-for="n in 9"
       :key="n"
       @click="$emit('input-number', n)"
-      :disabled="9 - counts[n] <= 0"
-      :class="{ 'opacity-30 pointer-events-none': 9 - counts[n] <= 0 }"
-      class="relative py-4 bg-zinc-900 hover:bg-zinc-850 text-2xl font-black rounded-none active:scale-95 transition-all border border-zinc-800 flex items-center justify-center"
+      :disabled="9 - counts[n]! <= 0"
+      :class="9 - counts[n]! <= 0 ? 'opacity-30 pointer-events-none' : 'hover:bg-zinc-800 active:scale-95'"
+      class="relative py-3 sm:py-4 bg-zinc-900 text-xl sm:text-2xl font-black transition-all border border-zinc-800 flex items-center justify-center"
     >
       <span>{{ n }}</span>
-      <span class="absolute top-1 right-1.5 text-[10px] text-violet-400 font-extrabold">
-        {{ Math.max(0, 9 - counts[n]) }}
+      <span class="absolute top-1 right-1 text-[9px] text-violet-400 font-extrabold tabular-nums leading-none">
+        {{ Math.max(0, 9 - counts[n]!) }}
       </span>
     </button>
   </div>
