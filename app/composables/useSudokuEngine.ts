@@ -701,6 +701,63 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findNakedQuads(candidates: number[][][]): ComplexHint | null {
+    const units: { cells: CellCoord[]; label: string }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let box = 0; box < 9; box++) {
+      const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+      const cells: CellCoord[] = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
+      units.push({ cells, label: `Kutija ${box+1}` });
+    }
+
+    for (const { cells: unitCells, label } of units) {
+      const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0 && candidates[r]![c]!.length >= 2 && candidates[r]![c]!.length <= 4);
+      for (let i = 0; i < emptyCells.length; i++) {
+        for (let j = i + 1; j < emptyCells.length; j++) {
+          for (let k = j + 1; k < emptyCells.length; k++) {
+            for (let l = k + 1; l < emptyCells.length; l++) {
+              const a = emptyCells[i]!, b = emptyCells[j]!, c2 = emptyCells[k]!, d = emptyCells[l]!;
+              const union = [...new Set([...candidates[a.r]![a.c]!, ...candidates[b.r]![b.c]!, ...candidates[c2.r]![c2.c]!, ...candidates[d.r]![d.c]!])];
+              if (union.length !== 4) continue;
+
+              const eliminations: HintCoordinate[] = [];
+              for (const { r, c } of unitCells) {
+                if ([a,b,c2,d].some(x => x.r === r && x.c === c)) continue;
+                if (currentBoard.value[r]![c] !== 0) continue;
+                for (const v of union) {
+                  if (candidates[r]![c]!.includes(v)) { eliminations.push({ r, c, type: 'elimination' }); break; }
+                }
+              }
+              if (eliminations.length === 0) continue;
+
+              const [v1,v2,v3,v4] = union as [number,number,number,number];
+              return {
+                title: `Gola Četvorka (Naked Quad) — ${label}`,
+                targetCell: a,
+                targetNum: solvedBoard.value[a.r]![a.c]!,
+                steps: [
+                  {
+                    label: "Korak 1 — Pronađi Golu Četvorku",
+                    description: `Četiri ćelije u ${label} zajedno sadrže tačno četiri kandidata: ${v1}, ${v2}, ${v3}, ${v4}. Svaka ćelija ima samo podskup od ta četiri broja. Ova četvorka ih "zaključava" — nijedan od četiri broja ne može ići u drugu ćeliju iste jedinice.`,
+                    highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
+                  },
+                  {
+                    label: "Korak 2 — Eliminiši četvorku iz ostatka jedinice",
+                    description: `Kandidati ${v1}, ${v2}, ${v3} i ${v4} mogu se ukloniti iz svih ostalih ćelija u ${label} (crveno), jer su ekskluzivno rezervisani za te četiri ćelije.`,
+                    highlightCoords: eliminations
+                  }
+                ]
+              };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findHiddenTriples(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
     for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
@@ -890,6 +947,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findHiddenSingle(candidates);
     if (!hint) hint = findNakedPairs(candidates);
     if (!hint) hint = findNakedTriples(candidates);
+    if (!hint) hint = findNakedQuads(candidates);
     if (!hint) hint = findHiddenTriples(candidates);
     if (!hint) hint = findHiddenPairs(candidates);
     if (!hint) hint = findPointingPair(candidates);
