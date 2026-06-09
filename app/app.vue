@@ -170,6 +170,15 @@ function handleInputNumber(num: number) {
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
         mistakes.value++;
+        if (conflicts.length > 0) {
+          const inRow = conflicts.some(cc => cc.r === r);
+          const inCol = conflicts.some(cc => cc.c === c);
+          const inBox = conflicts.some(cc => cc.r !== r && cc.c !== c);
+          const where = inRow ? `row ${r + 1}` : inCol ? `col ${c + 1}` : inBox ? 'this box' : 'another cell';
+          hintStatus.value = `Conflicts with ${where}!`;
+        } else {
+          hintStatus.value = 'Wrong digit here!';
+        }
         if (mistakes.value >= 3) {
           triggerLocalModal(t('modal.gameOver'), t('modal.gameOverMsg'));
         }
