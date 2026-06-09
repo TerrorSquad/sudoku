@@ -35,7 +35,7 @@ defineEmits<{
     <div class="flex items-center justify-between bg-zinc-900/60 border border-zinc-800 px-3.5 py-2.5 gap-3">
       <!-- Timer -->
       <div class="flex items-center gap-2 shrink-0">
-        <span class="font-mono font-bold text-base text-zinc-100 tabular-nums">{{ formattedTime }}</span>
+        <span class="font-mono font-bold text-base 3xl:text-xl text-zinc-100 tabular-nums">{{ formattedTime }}</span>
         <button @click="$emit('toggle-pause')" class="p-1 hover:bg-zinc-800 transition-colors rounded">
           <svg v-if="!isPaused" class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -47,12 +47,12 @@ defineEmits<{
       </div>
 
       <!-- Hint status -->
-      <div class="text-[11px] text-amber-400 font-bold tracking-wide uppercase truncate text-center flex-1 min-w-0">
+      <div class="text-[11px] 3xl:text-sm text-amber-400 font-bold tracking-wide uppercase truncate text-center flex-1 min-w-0">
         {{ hintStatus }}
       </div>
 
       <!-- Mistakes -->
-      <div class="flex items-center gap-1 text-xs text-zinc-400 shrink-0">
+      <div class="flex items-center gap-1 text-xs 3xl:text-sm text-zinc-400 shrink-0">
         <span>{{ $t('game.mistakes') }}:</span>
         <span class="font-bold text-rose-400">{{ mistakes }}</span>
         <span>/ {{ maxMistakes }}</span>

@@ -17,10 +17,10 @@ defineEmits<{
       @click="$emit('input-number', n)"
       :disabled="9 - counts[n]! <= 0"
       :class="9 - counts[n]! <= 0 ? 'opacity-30 pointer-events-none' : 'hover:bg-zinc-800 active:scale-95'"
-      class="relative py-3 sm:py-4 bg-zinc-900 text-xl sm:text-2xl font-black font-game transition-all border border-zinc-800 flex items-center justify-center"
+      class="relative py-3 sm:py-4 3xl:py-5 bg-zinc-900 text-xl sm:text-2xl 3xl:text-3xl font-black font-game transition-all border border-zinc-800 flex items-center justify-center"
     >
       <span>{{ n }}</span>
-      <span class="absolute top-1 right-1 text-[9px] text-violet-400 font-extrabold tabular-nums leading-none">
+      <span class="absolute top-1 right-1 text-[9px] 3xl:text-[12px] text-violet-400 font-extrabold tabular-nums leading-none">
         {{ Math.max(0, 9 - counts[n]!) }}
       </span>
     </button>

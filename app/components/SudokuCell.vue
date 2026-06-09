@@ -47,13 +47,13 @@ const cellClasses = computed(() => {
   <div
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative aspect-square flex items-center justify-center text-3xl font-bold bg-[#141417] border border-zinc-800 cursor-pointer transition-all duration-100 p-0.5 no-select"
+    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold bg-[#141417] border border-zinc-800 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
     <span v-if="value !== 0" class="font-game">{{ value }}</span>
 
     <div
       v-else-if="showAllCandidates"
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] font-semibold text-zinc-500 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] 3xl:text-[13px] font-semibold text-zinc-500 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span :class="{ 'text-amber-400 font-black': dynamicCandidates.includes(n) }">
@@ -64,7 +64,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] font-black text-zinc-500 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] 3xl:text-[13px] font-black text-zinc-500 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>

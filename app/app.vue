@@ -241,8 +241,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       <!-- 3xl left sidebar: shortcuts & branding -->
       <div class="hidden 3xl:flex flex-col gap-6 sticky top-6 3xl:col-span-1">
         <div>
-          <p class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Keyboard</p>
-          <ul class="space-y-2">
+          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Keyboard</p>
+          <ul class="space-y-3">
             <li v-for="(s, i) in [
               { key: '1–9', desc: 'Input number' },
               { key: 'Backspace', desc: 'Erase cell' },
@@ -250,19 +250,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
               { key: 'H', desc: 'Get hint' },
               { key: 'A', desc: 'Auto-fill notes' },
             ]" :key="i" class="flex items-center gap-3">
-              <kbd class="font-game text-[10px] font-bold px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-300 shrink-0 min-w-[52px] text-center">{{ s.key }}</kbd>
-              <span class="text-xs text-zinc-500">{{ s.desc }}</span>
+              <kbd class="font-game text-xs font-bold px-2 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 shrink-0 min-w-[60px] text-center">{{ s.key }}</kbd>
+              <span class="text-sm text-zinc-400">{{ s.desc }}</span>
             </li>
           </ul>
         </div>
 
         <div class="border-t border-zinc-800 pt-4">
-          <p class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Legend</p>
-          <ul class="space-y-2 text-xs text-zinc-500">
-            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-zinc-100 border border-zinc-600" /> Given digit</li>
-            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-violet-300/30 border border-violet-400" /> Your entry</li>
-            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-rose-500/20 border border-rose-400" /> Conflict</li>
-            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-violet-950/60 border border-violet-400" /> Selected</li>
+          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Legend</p>
+          <ul class="space-y-3 text-sm text-zinc-400">
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-zinc-100 border border-zinc-600" /> Given digit</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-300/30 border border-violet-400" /> Your entry</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-rose-500/20 border border-rose-400" /> Conflict</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-950/60 border border-violet-400" /> Selected</li>
           </ul>
         </div>
       </div>
@@ -270,7 +270,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       <!-- Center / main game column -->
       <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
         <!-- constrain board to viewport height so controls are always visible -->
-        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-280px)] mx-auto 3xl:max-w-[680px]">
+        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-300px)] mx-auto 3xl:max-w-[800px]">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"
