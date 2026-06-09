@@ -63,6 +63,9 @@ const modalTitle = ref<string>('');
 const modalMessage = ref<string>('');
 const isWinState = ref<boolean>(false);
 
+const hintsUsed = ref<number>(0);
+const techniqueLog = ref<string[]>([]);
+
 const savedInfo = computed(() => {
   if (!gameSave.hasSave.value) return null;
   const s = gameSave.loadMostRecent();
@@ -118,6 +121,8 @@ function handleContinueGame() {
   hintStatus.value = t('game.ready');
   hintBody.value = '';
   notesMode.value = false;
+  hintsUsed.value = 0;
+  techniqueLog.value = [];
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;
   timer.startTimer();
@@ -131,6 +136,8 @@ function handleStartGame(level: Difficulty) {
   hintStatus.value = t('game.newBoard');
   hintBody.value = '';
   notesMode.value = false;
+  hintsUsed.value = 0;
+  techniqueLog.value = [];
   startNewGame(level);
   timer.resetTimer();
   timer.startTimer();
@@ -179,7 +186,10 @@ function handleInputNumber(num: number) {
 }
 
 function handleNextStep() {
+  const title = activeComplexHint.value?.title;
   nextHintStep(() => {
+    if (title && !techniqueLog.value.includes(title)) techniqueLog.value.push(title);
+    hintsUsed.value++;
     if (checkWinCondition()) {
       triggerLocalModal(
         t('modal.win'),
@@ -203,6 +213,9 @@ function handleTriggerHint() {
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
+  const name = activeComplexHint.value.title;
+  hintsUsed.value++;
+  if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   engine.applyComplexHint();
   if (checkWinCondition()) {
     triggerLocalModal(t('modal.win'), t('modal.winInstantMsg'), true);
@@ -427,7 +440,34 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :class="isWinState ? 'border-emerald-500/60 border-t-4 border-t-emerald-500' : 'border-rose-500/40 border-t-4 border-t-rose-500'"
       >
         <h3 class="text-xl font-black mb-2 text-zinc-100 uppercase tracking-tight">{{ modalTitle }}</h3>
-        <p class="text-sm text-zinc-400 mb-6 leading-relaxed">{{ modalMessage }}</p>
+        <p class="text-sm text-zinc-400 mb-4 leading-relaxed">{{ modalMessage }}</p>
+
+        <!-- Win summary -->
+        <div v-if="isWinState" class="mb-5 text-left border border-zinc-800 divide-y divide-zinc-800">
+          <div class="flex justify-between px-3 py-2">
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Difficulty</span>
+            <span class="text-xs font-bold text-zinc-200 capitalize">{{ activeDifficulty }}</span>
+          </div>
+          <div class="flex justify-between px-3 py-2">
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Mistakes</span>
+            <span class="text-xs font-bold" :class="mistakes === 0 ? 'text-emerald-400' : 'text-rose-400'">{{ mistakes }} / 3</span>
+          </div>
+          <div class="flex justify-between px-3 py-2">
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Hints used</span>
+            <span class="text-xs font-bold" :class="hintsUsed === 0 ? 'text-emerald-400' : 'text-amber-400'">{{ hintsUsed }}</span>
+          </div>
+          <div v-if="techniqueLog.length" class="px-3 py-2">
+            <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-2">Techniques used</p>
+            <div class="flex flex-wrap gap-1">
+              <span
+                v-for="name in techniqueLog"
+                :key="name"
+                class="text-[10px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-semibold"
+              >{{ name }}</span>
+            </div>
+          </div>
+        </div>
+
         <button
           @click="handleModalClose"
           class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-sm font-bold uppercase transition-all border border-zinc-700"

@@ -49,7 +49,7 @@ const cellClasses = computed(() => {
     :class="cellClasses"
     class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold bg-[#141417] border border-zinc-800 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
-    <span v-if="value !== 0" class="font-game">{{ value }}</span>
+    <span v-if="value !== 0" :key="value" class="font-game cell-pop">{{ value }}</span>
 
     <div
       v-else-if="showAllCandidates"
@@ -79,5 +79,13 @@ const cellClasses = computed(() => {
 }
 .sudoku-border-b {
   border-bottom: 3px solid #a1a1aa !important;
+}
+@keyframes cell-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.cell-pop {
+  animation: cell-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 </style>
