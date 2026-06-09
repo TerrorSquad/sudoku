@@ -905,6 +905,62 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findJellyfish(candidates: number[][][]): ComplexHint | null {
+    for (let val = 1; val <= 9; val++) {
+      // Row-based Jellyfish: 4 rows each with 2–4 candidates, union of cols = exactly 4
+      const rowData: { r: number; cols: number[] }[] = [];
+      for (let r = 0; r < 9; r++) {
+        const cols: number[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) cols.push(c);
+        }
+        if (cols.length >= 2 && cols.length <= 4) rowData.push({ r, cols });
+      }
+      for (let i = 0; i < rowData.length; i++) {
+        for (let j = i + 1; j < rowData.length; j++) {
+          for (let k = j + 1; k < rowData.length; k++) {
+            for (let l = k + 1; l < rowData.length; l++) {
+              const ri = rowData[i]!, rj = rowData[j]!, rk = rowData[k]!, rl = rowData[l]!;
+              const colUnion = [...new Set([...ri.cols, ...rj.cols, ...rk.cols, ...rl.cols])];
+              if (colUnion.length !== 4) continue;
+              const eliminations: HintCoordinate[] = [];
+              for (const c of colUnion) {
+                for (let r = 0; r < 9; r++) {
+                  if (r === ri.r || r === rj.r || r === rk.r || r === rl.r) continue;
+                  if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) {
+                    eliminations.push({ r, c, type: 'elimination' });
+                  }
+                }
+              }
+              if (eliminations.length === 0) continue;
+              const allRows = [ri, rj, rk, rl];
+              const triggerCoords: HintCoordinate[] = allRows.flatMap(rd => rd.cols.map(c => ({ r: rd.r, c, type: 'trigger' as const })));
+              const target = eliminations[0]!;
+              return {
+                title: "Meduza (Jellyfish)",
+                targetCell: { r: target.r, c: target.c },
+                targetNum: solvedBoard.value[target.r]![target.c]!,
+                steps: [
+                  {
+                    label: "Korak 1 — Pronađi Jellyfish matricu",
+                    description: `Broj ${val} pojavljuje se u 2–4 mjesta u svakom od četiri reda (${allRows.map(rd => rd.r+1).join(', ')}), a svi kandidati padaju unutar tačno 4 kolone. Ovo je četverodimenzionalni X-Wing (ili dvodimenzionalni Swordfish): ${val} je "zaključan" unutar te 4×4 mreže (plavo).`,
+                    highlightCoords: triggerCoords
+                  },
+                  {
+                    label: "Korak 2 — Eliminiši iz tih kolona",
+                    description: `Bez obzira na raspored unutar matrice, ${val} pokriva sve četiri kolone u ta četiri reda. Stoga ${val} ne može biti ni u kojoj drugoj ćeliji tih kolona (crveno).`,
+                    highlightCoords: eliminations
+                  }
+                ]
+              };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findUniqueRectangle(candidates: number[][][]): ComplexHint | null {
     // Type 1: three corners have exactly {a,b}, fourth has {a,b,...} — eliminate a,b from fourth
     for (let r1 = 0; r1 < 8; r1++) {
@@ -1499,6 +1555,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
     if (!hint) hint = findSwordfish(candidates);
+    if (!hint) hint = findJellyfish(candidates);
     if (!hint) hint = findXYWing(candidates);
     if (!hint) hint = findXYZWing(candidates);
     if (!hint) hint = findSkyscraper(candidates);
