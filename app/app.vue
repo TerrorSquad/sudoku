@@ -64,16 +64,19 @@ const isWinState = ref<boolean>(false);
 
 const savedInfo = computed(() => {
   if (!gameSave.hasSave.value) return null;
-  const s = gameSave.load();
+  const s = gameSave.loadMostRecent();
   if (!s) return null;
   return { difficulty: s.difficulty, time: timer.formatTime(s.timerSeconds) };
 });
 
-// Auto-save on every meaningful state change while a game is active
+// Auto-save on every meaningful state change while a game is active.
+// Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
+// clears the save — without this guard the save would be re-created immediately.
 watch(
   [currentBoard, notesBoard, mistakes],
   () => {
-    if (currentScreen.value !== 'game' || !currentBoard.value || !initialBoard.value) return;
+    if (currentScreen.value !== 'game' || showModal.value) return;
+    if (!currentBoard.value || !initialBoard.value) return;
     gameSave.save({
       currentBoard: currentBoard.value,
       initialBoard: initialBoard.value,
@@ -93,7 +96,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   isWinState.value = win;
   showModal.value = true;
   timer.stopTimer();
-  gameSave.clear();
+  gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
     confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 }, colors: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#34d399'] });
   }
@@ -106,7 +109,7 @@ function handleModalClose() {
 }
 
 function handleContinueGame() {
-  const s = gameSave.load();
+  const s = gameSave.loadMostRecent();
   if (!s) return;
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
@@ -121,10 +124,12 @@ function handleContinueGame() {
 }
 
 function handleStartGame(level: Difficulty) {
+  gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
   hintStatus.value = t('game.newBoard');
   hintBody.value = '';
+  notesMode.value = false;
   startNewGame(level);
   timer.resetTimer();
   timer.startTimer();

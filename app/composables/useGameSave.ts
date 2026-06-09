@@ -1,7 +1,8 @@
 import { ref, readonly } from 'vue';
 import type { Grid, NotesGrid, Difficulty } from '../types/sudoku';
 
-const SAVE_KEY = 'sudoku_v1_save';
+const DIFFICULTIES = ['easy', 'medium', 'hard', 'expert'] as const;
+const saveKey = (d: Difficulty) => `sudoku_v1_save_${d}`;
 
 export interface GameSave {
   currentBoard: Grid;
@@ -11,35 +12,43 @@ export interface GameSave {
   difficulty: Difficulty;
   timerSeconds: number;
   mistakes: number;
+  savedAt: number;
 }
 
-// Module-level ref so hasSave is reactive across the whole app
-const _hasSave = ref(typeof window !== 'undefined' && !!localStorage.getItem(SAVE_KEY));
+const _hasSave = ref(false);
+
+function recheck(): void {
+  _hasSave.value = DIFFICULTIES.some(d => !!localStorage.getItem(saveKey(d)));
+}
+
+if (typeof window !== 'undefined') recheck();
 
 export function useGameSave() {
-  function save(state: GameSave): void {
+  function save(state: Omit<GameSave, 'savedAt'>): void {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      const full: GameSave = { ...state, savedAt: Date.now() };
+      localStorage.setItem(saveKey(state.difficulty), JSON.stringify(full));
       _hasSave.value = true;
     } catch {
-      // localStorage quota exceeded or unavailable — silently ignore
+      // quota exceeded — silently ignore
     }
   }
 
-  function load(): GameSave | null {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
+  function loadMostRecent(): GameSave | null {
+    const saves = DIFFICULTIES.map(d => {
+      const raw = localStorage.getItem(saveKey(d));
       if (!raw) return null;
-      return JSON.parse(raw) as GameSave;
-    } catch {
-      return null;
-    }
+      try { return JSON.parse(raw) as GameSave; } catch { return null; }
+    }).filter(Boolean) as GameSave[];
+
+    if (!saves.length) return null;
+    return saves.sort((a, b) => b.savedAt - a.savedAt)[0]!;
   }
 
-  function clear(): void {
-    localStorage.removeItem(SAVE_KEY);
-    _hasSave.value = false;
+  function clearDifficulty(d: Difficulty): void {
+    localStorage.removeItem(saveKey(d));
+    recheck();
   }
 
-  return { save, load, clear, hasSave: readonly(_hasSave) };
+  return { save, loadMostRecent, clearDifficulty, hasSave: readonly(_hasSave) };
 }
