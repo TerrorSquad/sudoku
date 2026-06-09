@@ -835,6 +835,76 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findXYZWing(candidates: number[][][]): ComplexHint | null {
+    // pivot: 3 candidates [x,y,z]; pincer1 sees pivot with [x,z]; pincer2 sees pivot with [y,z]
+    // eliminate z from cells that see pivot AND both pincers
+    for (let pr = 0; pr < 9; pr++) {
+      for (let pc = 0; pc < 9; pc++) {
+        const pivot = candidates[pr]![pc]!;
+        if (currentBoard.value[pr]![pc] !== 0 || pivot.length !== 3) continue;
+        const [x, y, z] = pivot as [number, number, number];
+
+        for (let r1 = 0; r1 < 9; r1++) {
+          for (let c1 = 0; c1 < 9; c1++) {
+            if (r1 === pr && c1 === pc) continue;
+            if (currentBoard.value[r1]![c1] !== 0 || !seesCell(pr, pc, r1, c1)) continue;
+            const p1 = candidates[r1]![c1]!;
+            if (p1.length !== 2 || !p1.includes(z)) continue;
+            const xOrY1 = p1.find(v => v !== z);
+            if (xOrY1 !== x && xOrY1 !== y) continue;
+            const needed2 = xOrY1 === x ? y : x;
+
+            for (let r2 = 0; r2 < 9; r2++) {
+              for (let c2 = 0; c2 < 9; c2++) {
+                if (r2 === pr && c2 === pc) continue;
+                if (r2 === r1 && c2 === c1) continue;
+                if (currentBoard.value[r2]![c2] !== 0 || !seesCell(pr, pc, r2, c2)) continue;
+                const p2 = candidates[r2]![c2]!;
+                if (p2.length !== 2 || !p2.includes(z) || !p2.includes(needed2)) continue;
+
+                const eliminations: HintCoordinate[] = [];
+                for (let r = 0; r < 9; r++) {
+                  for (let c = 0; c < 9; c++) {
+                    if (currentBoard.value[r]![c] !== 0) continue;
+                    if ((r === pr && c === pc) || (r === r1 && c === c1) || (r === r2 && c === c2)) continue;
+                    if (seesCell(r, c, pr, pc) && seesCell(r, c, r1, c1) && seesCell(r, c, r2, c2) && candidates[r]![c]!.includes(z)) {
+                      eliminations.push({ r, c, type: 'elimination' });
+                    }
+                  }
+                }
+                if (eliminations.length === 0) continue;
+
+                const target = eliminations[0]!;
+                return {
+                  title: "XYZ-Wing (Napredna Tehnika)",
+                  targetCell: { r: target.r, c: target.c },
+                  targetNum: solvedBoard.value[target.r]![target.c]!,
+                  steps: [
+                    {
+                      label: "Korak 1 — Pronađi XYZ-Wing strukturu",
+                      description: `Pivot [R${pr+1}K${pc+1}] ima tri kandidata [${x},${y},${z}]. Oba pincera [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] vide pivot i sadrže ${z} plus jedan od ${x} ili ${y}. Za razliku od XY-Wing, pivot ovdje i sam sadrži ${z}, pa eliminacija vrijedi samo za ćelije koje vide SVA tri člana.`,
+                      highlightCoords: [
+                        { r: pr, c: pc, type: 'trigger' },
+                        { r: r1, c: c1, type: 'trigger' },
+                        { r: r2, c: c2, type: 'trigger' }
+                      ]
+                    },
+                    {
+                      label: "Korak 2 — Eliminiši z iz ćelija koje vide sve tri",
+                      description: `Ćelije koje vide pivot i oba pincera (crveno) sigurno ne mogu sadržavati ${z} — jer ga u svim scenarijima zauzimaju neka od tri ćelije. Ovo je restriktivnija, ali moćnija verzija XY-Wing.`,
+                      highlightCoords: eliminations
+                    }
+                  ]
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findSwordfish(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row-based Swordfish
@@ -1236,6 +1306,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findXWing(candidates);
     if (!hint) hint = findSwordfish(candidates);
     if (!hint) hint = findXYWing(candidates);
+    if (!hint) hint = findXYZWing(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
