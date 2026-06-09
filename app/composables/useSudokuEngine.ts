@@ -905,6 +905,90 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findWWing(candidates: number[][][]): ComplexHint | null {
+    // W-Wing: two bivalue cells [p,q] connected via a strong link on p → eliminate q from cells seeing both bivalue cells
+    for (let r1 = 0; r1 < 9; r1++) {
+      for (let c1 = 0; c1 < 9; c1++) {
+        if (currentBoard.value[r1]![c1] !== 0) continue;
+        const cands1 = candidates[r1]![c1]!;
+        if (cands1.length !== 2) continue;
+        const [p, q] = cands1 as [number, number];
+
+        for (let r2 = 0; r2 < 9; r2++) {
+          for (let c2 = 0; c2 < 9; c2++) {
+            if (r2 === r1 && c2 === c1) continue;
+            if (currentBoard.value[r2]![c2] !== 0) continue;
+            const cands2 = candidates[r2]![c2]!;
+            if (cands2.length !== 2 || !cands2.includes(p) || !cands2.includes(q)) continue;
+            if (seesCell(r1, c1, r2, c2)) continue; // must NOT see each other directly
+
+            // find a strong link on p connecting them (a unit where p appears exactly twice: in a cell seeing c1 and a cell seeing c2)
+            // simplification: check rows/cols/boxes where p has exactly 2 occurrences and one sees c1, other sees c2
+            let linked = false;
+            // check rows
+            for (let r = 0; r < 9 && !linked; r++) {
+              const pCols = [] as number[];
+              for (let c = 0; c < 9; c++) {
+                if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(p)) pCols.push(c);
+              }
+              if (pCols.length !== 2) continue;
+              const [ca, cb] = pCols as [number, number];
+              if ((seesCell(r1, c1, r, ca) && seesCell(r2, c2, r, cb)) ||
+                  (seesCell(r1, c1, r, cb) && seesCell(r2, c2, r, ca))) linked = true;
+            }
+            // check cols
+            for (let c = 0; c < 9 && !linked; c++) {
+              const pRows = [] as number[];
+              for (let r = 0; r < 9; r++) {
+                if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(p)) pRows.push(r);
+              }
+              if (pRows.length !== 2) continue;
+              const [ra, rb] = pRows as [number, number];
+              if ((seesCell(r1, c1, ra, c) && seesCell(r2, c2, rb, c)) ||
+                  (seesCell(r1, c1, rb, c) && seesCell(r2, c2, ra, c))) linked = true;
+            }
+            if (!linked) continue;
+
+            const eliminations: HintCoordinate[] = [];
+            for (let r = 0; r < 9; r++) {
+              for (let c = 0; c < 9; c++) {
+                if (currentBoard.value[r]![c] !== 0) continue;
+                if ((r === r1 && c === c1) || (r === r2 && c === c2)) continue;
+                if (seesCell(r, c, r1, c1) && seesCell(r, c, r2, c2) && candidates[r]![c]!.includes(q)) {
+                  eliminations.push({ r, c, type: 'elimination' });
+                }
+              }
+            }
+            if (eliminations.length === 0) continue;
+
+            const target = eliminations[0]!;
+            return {
+              title: "W-Wing (Napredna Tehnika)",
+              targetCell: { r: target.r, c: target.c },
+              targetNum: solvedBoard.value[target.r]![target.c]!,
+              steps: [
+                {
+                  label: "Korak 1 — Pronađi W-Wing strukturu",
+                  description: `Dvije ćelije [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] imaju iste kandidate [${p},${q}] i ne vide jedna drugu. Spojene su "jakom vezom" na broj ${p} — postoji jedinica gdje ${p} može ići samo u dvije ćelije, jedna vidi prvu bivalentnu, druga drugu. Ovo garantuje da bar jedna od bivalentnih ćelija sadrži ${q}.`,
+                  highlightCoords: [
+                    { r: r1, c: c1, type: 'trigger' },
+                    { r: r2, c: c2, type: 'trigger' }
+                  ]
+                },
+                {
+                  label: "Korak 2 — Eliminiši q iz ćelija koje vide obje",
+                  description: `Svaka ćelija koja vidi i [R${r1+1}K${c1+1}] i [R${r2+1}K${c2+1}] (crveno) ne može sadržavati ${q} — jer jedna od bivalentnih ćelija uvijek sadrži ${q}, bez izuzetka.`,
+                  highlightCoords: eliminations
+                }
+              ]
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findJellyfish(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row-based Jellyfish: 4 rows each with 2–4 candidates, union of cols = exactly 4
@@ -1561,6 +1645,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
+    if (!hint) hint = findWWing(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
