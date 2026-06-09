@@ -235,11 +235,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- GAME -->
     <div
       v-else-if="currentScreen === 'game'"
-      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
+      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 flex-1 items-start"
     >
 
       <!-- 3xl left sidebar: shortcuts & branding -->
-      <div class="hidden 3xl:flex flex-col gap-6 sticky top-6 3xl:col-span-1">
+      <div class="hidden 3xl:flex flex-col gap-6 sticky top-3 3xl:col-span-1">
         <div>
           <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Keyboard</p>
           <ul class="space-y-3">
@@ -270,7 +270,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       <!-- Center / main game column -->
       <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
         <!-- constrain board to viewport height so controls are always visible -->
-        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-300px)] mx-auto 3xl:max-w-[800px]">
+        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-360px)] mx-auto 3xl:max-w-[800px]">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"
@@ -323,7 +323,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       </div>
 
       <!-- Right / hint panel -->
-      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 3xl:top-6 text-sm font-medium 3xl:min-w-0">
+      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0">
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"
