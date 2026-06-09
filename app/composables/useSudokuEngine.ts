@@ -642,6 +642,63 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findHiddenPairs(candidates: number[][][]): ComplexHint | null {
+    const units: CellCoord[][] = [];
+    for (let r = 0; r < 9; r++) units.push(Array.from({ length: 9 }, (_, c) => ({ r, c })));
+    for (let c = 0; c < 9; c++) units.push(Array.from({ length: 9 }, (_, r) => ({ r, c })));
+    for (let box = 0; box < 9; box++) {
+      const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+      const cells: CellCoord[] = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
+      units.push(cells);
+    }
+
+    for (const unit of units) {
+      const emptyCells = unit.filter(({ r, c }) => currentBoard.value[r]![c] === 0);
+      for (let vi = 1; vi <= 9; vi++) {
+        for (let vj = vi + 1; vj <= 9; vj++) {
+          const cellsWithVi = emptyCells.filter(({ r, c }) => candidates[r]![c]!.includes(vi));
+          const cellsWithVj = emptyCells.filter(({ r, c }) => candidates[r]![c]!.includes(vj));
+          if (cellsWithVi.length !== 2 || cellsWithVj.length !== 2) continue;
+          if (cellsWithVi[0]!.r !== cellsWithVj[0]!.r || cellsWithVi[0]!.c !== cellsWithVj[0]!.c) continue;
+          if (cellsWithVi[1]!.r !== cellsWithVj[1]!.r || cellsWithVi[1]!.c !== cellsWithVj[1]!.c) continue;
+
+          const a = cellsWithVi[0]!;
+          const b = cellsWithVi[1]!;
+          const eliminations: HintCoordinate[] = [];
+          for (const cell of [a, b]) {
+            for (const cand of candidates[cell.r]![cell.c]!) {
+              if (cand !== vi && cand !== vj) eliminations.push({ r: cell.r, c: cell.c, type: 'elimination' });
+            }
+          }
+          if (eliminations.length === 0) continue;
+
+          return {
+            title: "Skriveni Par (Hidden Pair)",
+            targetCell: a,
+            targetNum: solvedBoard.value[a.r]![a.c]!,
+            steps: [
+              {
+                label: "Korak 1 — Pronađi Skriveni Par",
+                description: `Brojevi ${vi} i ${vj} mogu ići samo u ćelije [Red ${a.r+1}, Kol ${a.c+1}] i [Red ${b.r+1}, Kol ${b.c+1}] unutar ove jedinice. Čak i ako te ćelije imaju više kandidata, ${vi} i ${vj} su "skriveni" unutar njih — ne mogu ići nigdje drugdje u jedinici.`,
+                highlightCoords: [
+                  { r: a.r, c: a.c, type: 'trigger' },
+                  { r: b.r, c: b.c, type: 'trigger' }
+                ]
+              },
+              {
+                label: "Korak 2 — Eliminiši ostale kandidate iz para",
+                description: `Pošto ${vi} i ${vj} moraju zauzeti upravo te dvije ćelije, svi ostali kandidati u njima su nemogući i mogu se eliminisati (crveno). Ovo efektivno pretvara skriveni par u goli par (Naked Pair).`,
+                highlightCoords: eliminations
+              }
+            ]
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   function findXWing(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       const rowsWithTwo: { r: number; cols: [number, number] }[] = [];
@@ -712,6 +769,7 @@ export function useSudokuEngine() {
     let hint = findNakedSingle(candidates);
     if (!hint) hint = findHiddenSingle(candidates);
     if (!hint) hint = findNakedPairs(candidates);
+    if (!hint) hint = findHiddenPairs(candidates);
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
 
