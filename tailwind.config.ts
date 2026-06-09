@@ -6,6 +6,9 @@ export default {
       fontFamily: {
         game: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
+      screens: {
+        '3xl': '1920px',
+      },
     },
   },
 } satisfies Config

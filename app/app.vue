@@ -233,62 +233,97 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     />
 
     <!-- GAME -->
-    <div v-else-if="currentScreen === 'game'" class="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 w-full max-w-7xl mx-auto px-3 sm:px-5 py-3 flex-1 items-start">
+    <div
+      v-else-if="currentScreen === 'game'"
+      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[280px_minmax(0,1fr)_460px] gap-4 lg:gap-6 3xl:gap-8 w-full max-w-7xl 2xl:max-w-[1500px] 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
+    >
 
-      <!-- Left / main column -->
-      <div class="lg:col-span-7 flex flex-col gap-3">
-        <GameDashboard
-          :formatted-time="timer.formatTime(timer.timerSeconds.value)"
-          :is-paused="timer.isPaused.value"
-          :mistakes="mistakes"
-          :max-mistakes="3"
-          :hint-status="hintStatus"
-          :difficulty="activeDifficulty"
-          @toggle-pause="timer.togglePause()"
-          @exit-game="exitToMenu"
-        />
-
-        <SudokuGrid
-          :current-board="currentBoard"
-          :initial-board="initialBoard"
-          :solved-board="solvedBoard"
-          :notes-board="notesBoard"
-          :selected-cell="selectedCell"
-          :active-hint-cell="activeHintCell"
-          :hint-triggers="hintTriggers"
-          :hint-eliminations="hintEliminations"
-          :conflict-cells="conflictCells"
-          :show-all-candidates="showAllCandidates"
-          :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
-          @select-cell="handleSelectCell"
-        />
-
-        <div class="flex gap-2 w-full">
-          <ControlPanel
-            :notes-mode="notesMode"
-            @undo="undoMove"
-            @erase="eraseCell(selectedCell)"
-            @toggle-notes="notesMode = !notesMode"
-            @trigger-hint="handleTriggerHint"
-            class="flex-grow"
-          />
-          <button
-            @click="handleAutoFillNotes"
-            :title="$t('game.autoNotes')"
-            class="px-3 sm:px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold uppercase tracking-wider transition-all active:scale-95 text-violet-400 flex items-center gap-1.5"
-          >
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            <span class="hidden sm:inline">{{ $t('game.autoNotes') }}</span>
-          </button>
+      <!-- 3xl left sidebar: shortcuts & branding -->
+      <div class="hidden 3xl:flex flex-col gap-6 sticky top-6 3xl:col-span-1">
+        <div>
+          <p class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Keyboard</p>
+          <ul class="space-y-2">
+            <li v-for="(s, i) in [
+              { key: '1–9', desc: 'Input number' },
+              { key: 'Backspace', desc: 'Erase cell' },
+              { key: 'N', desc: 'Toggle notes' },
+              { key: 'H', desc: 'Get hint' },
+              { key: 'A', desc: 'Auto-fill notes' },
+            ]" :key="i" class="flex items-center gap-3">
+              <kbd class="font-game text-[10px] font-bold px-2 py-0.5 bg-zinc-900 border border-zinc-700 text-zinc-300 shrink-0 min-w-[52px] text-center">{{ s.key }}</kbd>
+              <span class="text-xs text-zinc-500">{{ s.desc }}</span>
+            </li>
+          </ul>
         </div>
 
-        <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
+        <div class="border-t border-zinc-800 pt-4">
+          <p class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Legend</p>
+          <ul class="space-y-2 text-xs text-zinc-500">
+            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-zinc-100 border border-zinc-600" /> Given digit</li>
+            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-violet-300/30 border border-violet-400" /> Your entry</li>
+            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-rose-500/20 border border-rose-400" /> Conflict</li>
+            <li class="flex items-center gap-2"><span class="w-3 h-3 shrink-0 bg-violet-950/60 border border-violet-400" /> Selected</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Center / main game column -->
+      <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
+        <!-- cap board width on ultra-wide so it doesn't grow absurdly large -->
+        <div class="flex flex-col gap-3 3xl:max-w-[680px] 3xl:mx-auto 3xl:w-full">
+          <GameDashboard
+            :formatted-time="timer.formatTime(timer.timerSeconds.value)"
+            :is-paused="timer.isPaused.value"
+            :mistakes="mistakes"
+            :max-mistakes="3"
+            :hint-status="hintStatus"
+            :difficulty="activeDifficulty"
+            @toggle-pause="timer.togglePause()"
+            @exit-game="exitToMenu"
+          />
+
+          <SudokuGrid
+            :current-board="currentBoard"
+            :initial-board="initialBoard"
+            :solved-board="solvedBoard"
+            :notes-board="notesBoard"
+            :selected-cell="selectedCell"
+            :active-hint-cell="activeHintCell"
+            :hint-triggers="hintTriggers"
+            :hint-eliminations="hintEliminations"
+            :conflict-cells="conflictCells"
+            :show-all-candidates="showAllCandidates"
+            :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
+            @select-cell="handleSelectCell"
+          />
+
+          <div class="flex gap-2 w-full">
+            <ControlPanel
+              :notes-mode="notesMode"
+              @undo="undoMove"
+              @erase="eraseCell(selectedCell)"
+              @toggle-notes="notesMode = !notesMode"
+              @trigger-hint="handleTriggerHint"
+              class="flex-grow"
+            />
+            <button
+              @click="handleAutoFillNotes"
+              :title="$t('game.autoNotes')"
+              class="px-3 sm:px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold uppercase tracking-wider transition-all active:scale-95 text-violet-400 flex items-center gap-1.5"
+            >
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <span class="hidden sm:inline">{{ $t('game.autoNotes') }}</span>
+            </button>
+          </div>
+
+          <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
+        </div>
       </div>
 
       <!-- Right / hint panel -->
-      <div class="lg:col-span-5 lg:sticky lg:top-3 text-sm font-medium">
+      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 3xl:top-6 text-sm font-medium">
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"
