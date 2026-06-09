@@ -235,7 +235,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- GAME -->
     <div
       v-else-if="currentScreen === 'game'"
-      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[280px_minmax(0,1fr)_460px] gap-4 lg:gap-6 3xl:gap-8 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
+      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
     >
 
       <!-- 3xl left sidebar: shortcuts & branding -->
@@ -323,7 +323,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       </div>
 
       <!-- Right / hint panel -->
-      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 3xl:top-6 text-sm font-medium">
+      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 3xl:top-6 text-sm font-medium 3xl:min-w-0">
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"

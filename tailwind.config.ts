@@ -7,7 +7,7 @@ export default {
         game: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       screens: {
-        '3xl': '1920px',
+        '3xl': '1600px',
       },
     },
   },
