@@ -28,15 +28,15 @@ const cellClasses = computed(() => {
   return {
     "sudoku-border-r": props.col === 2 || props.col === 5,
     "sudoku-border-b": props.row === 2 || props.row === 5,
-    "text-zinc-350 font-black": props.isInitial,
-    "text-violet-400":
+    "text-zinc-100 font-bold": props.isInitial,
+    "text-violet-300 font-semibold":
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
-    "text-rose-500 bg-rose-950/20":
+    "text-rose-400 bg-rose-950/20":
       !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
     "bg-zinc-800/40": props.isHighlighted && !props.isSelected,
-    "bg-violet-900/15": props.isSameValue && props.value !== 0 && !props.isSelected,
-    "bg-zinc-800 ring-2 ring-violet-500 z-10": props.isSelected && !props.hasConflict,
-    "bg-zinc-800 ring-2 ring-rose-500 z-10": props.isSelected && props.hasConflict,
+    "bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
+    "bg-violet-950/60 ring-2 ring-violet-400 z-10": props.isSelected && !props.hasConflict,
+    "bg-rose-950/50 ring-2 ring-rose-500 z-10": props.isSelected && props.hasConflict,
     'bg-indigo-500/30 ring-1 ring-indigo-400 z-10': props.isHintTrigger,
 'bg-rose-500/30 ring-1 ring-rose-400 z-10': props.isHintElimination,
   };
@@ -75,9 +75,9 @@ const cellClasses = computed(() => {
 
 <style scoped>
 .sudoku-border-r {
-  border-right: 3px solid #9ca3af !important;
+  border-right: 3px solid #a1a1aa !important;
 }
 .sudoku-border-b {
-  border-bottom: 3px solid #9ca3af !important;
+  border-bottom: 3px solid #a1a1aa !important;
 }
 </style>

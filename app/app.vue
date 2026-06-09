@@ -326,11 +326,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   0%, 100% { background-color: rgba(244,63,94,0.2);  box-shadow: inset 0 0 8px rgba(244,63,94,0.3); }
   50%       { background-color: rgba(244,63,94,0.55); box-shadow: inset 0 0 16px rgba(244,63,94,0.7); }
 }
-@keyframes pulse-scale {
-  0%, 100% { transform: scale(1);    filter: brightness(1); }
-  50%       { transform: scale(1.05); filter: brightness(1.3); }
-}
 :deep(.bg-indigo-500\/30) { animation: trigger-glow    1.2s infinite ease-in-out !important; }
 :deep(.bg-rose-500\/30)   { animation: elimination-blink 1.2s infinite ease-in-out !important; }
-:deep(.ring-violet-500)   { animation: pulse-scale      1.8s infinite ease-in-out !important; }
 </style>
