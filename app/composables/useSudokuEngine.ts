@@ -758,6 +758,63 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findSwordfish(candidates: number[][][]): ComplexHint | null {
+    for (let val = 1; val <= 9; val++) {
+      // Row-based Swordfish
+      const rowData: { r: number; cols: number[] }[] = [];
+      for (let r = 0; r < 9; r++) {
+        const cols: number[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) cols.push(c);
+        }
+        if (cols.length >= 2 && cols.length <= 3) rowData.push({ r, cols });
+      }
+      for (let i = 0; i < rowData.length; i++) {
+        for (let j = i + 1; j < rowData.length; j++) {
+          for (let k = j + 1; k < rowData.length; k++) {
+            const ri = rowData[i]!, rj = rowData[j]!, rk = rowData[k]!;
+            const colUnion = [...new Set([...ri.cols, ...rj.cols, ...rk.cols])];
+            if (colUnion.length !== 3) continue;
+            const eliminations: HintCoordinate[] = [];
+            for (const c of colUnion) {
+              for (let r = 0; r < 9; r++) {
+                if (r === ri.r || r === rj.r || r === rk.r) continue;
+                if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) {
+                  eliminations.push({ r, c, type: 'elimination' });
+                }
+              }
+            }
+            if (eliminations.length === 0) continue;
+            const triggerCoords: HintCoordinate[] = [
+              ...[...ri.cols].map(c => ({ r: ri.r, c, type: 'trigger' as const })),
+              ...[...rj.cols].map(c => ({ r: rj.r, c, type: 'trigger' as const })),
+              ...[...rk.cols].map(c => ({ r: rk.r, c, type: 'trigger' as const }))
+            ];
+            const target = eliminations[0]!;
+            return {
+              title: "Swordfish (Napredna Tehnika)",
+              targetCell: { r: target.r, c: target.c },
+              targetNum: solvedBoard.value[target.r]![target.c]!,
+              steps: [
+                {
+                  label: "Korak 1 — Pronađi Swordfish matricu",
+                  description: `Broj ${val} javlja se u 2–3 mjesta u svakom od redova ${ri.r+1}, ${rj.r+1} i ${rk.r+1}, a svi ti kandidati padaju unutar tačno 3 kolone. Kao trodimenzionalni X-Wing: ${val} mora biti u jednoj od ćelija te 3×3 mreže (plavo).`,
+                  highlightCoords: triggerCoords
+                },
+                {
+                  label: "Korak 2 — Eliminiši iz tih kolona",
+                  description: `Bez obzira na raspored unutar matrice, ${val} pokriva sve tri kolone u ta tri reda. Stoga ${val} ne može biti ni u kojoj drugoj ćeliji tih kolona (crveno) — eliminacija vrijedi za cijele kolone.`,
+                  highlightCoords: eliminations
+                }
+              ]
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findBoxLineReduction(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row → box: val in a row is confined to one box → eliminate from rest of that box
@@ -1100,6 +1157,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findBoxLineReduction(candidates);
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
+    if (!hint) hint = findSwordfish(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
