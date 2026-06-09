@@ -905,6 +905,74 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findTwoStringKite(candidates: number[][][]): ComplexHint | null {
+    for (let val = 1; val <= 9; val++) {
+      // For each row with exactly 2 candidates and each column with exactly 2 candidates
+      // that share a cell in the same box, we can eliminate val from cell that sees the other row-end and col-end
+      for (let r = 0; r < 9; r++) {
+        const rCols: number[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) rCols.push(c);
+        }
+        if (rCols.length !== 2) continue;
+
+        for (let c = 0; c < 9; c++) {
+          const cRows: number[] = [];
+          for (let r2 = 0; r2 < 9; r2++) {
+            if (currentBoard.value[r2]![c] === 0 && candidates[r2]![c]!.includes(val)) cRows.push(r2);
+          }
+          if (cRows.length !== 2) continue;
+
+          // find intersection: row r must have a candidate in column c, and col c must have candidate in row r
+          if (!rCols.includes(c)) continue;
+          if (!cRows.includes(r)) continue;
+
+          // shared cell is (r, c) — both strings meet here in the same box
+          const rowEnd = rCols.find(cc => cc !== c)!;
+          const colEnd = cRows.find(rr => rr !== r)!;
+
+          // the two "tails" are (r, rowEnd) and (colEnd, c)
+          // any cell seeing both tails can have val eliminated
+          const eliminations: HintCoordinate[] = [];
+          for (let er = 0; er < 9; er++) {
+            for (let ec = 0; ec < 9; ec++) {
+              if (currentBoard.value[er]![ec] !== 0) continue;
+              if ((er === r && ec === rowEnd) || (er === colEnd && ec === c)) continue;
+              if (seesCell(er, ec, r, rowEnd) && seesCell(er, ec, colEnd, c) && candidates[er]![ec]!.includes(val)) {
+                eliminations.push({ r: er, c: ec, type: 'elimination' });
+              }
+            }
+          }
+          if (eliminations.length === 0) continue;
+          const target = eliminations[0]!;
+          return {
+            title: "Zmaj s Dva Kraka (Two-String Kite)",
+            targetCell: { r: target.r, c: target.c },
+            targetNum: solvedBoard.value[target.r]![target.c]!,
+            steps: [
+              {
+                label: "Korak 1 — Pronađi Two-String Kite",
+                description: `Broj ${val} ima tačno dva kandidata u redu ${r+1} i tačno dva kandidata u koloni ${c+1}. Oba "kraka zmaja" dijele ćeliju [R${r+1}K${c+1}] unutar iste 3×3 kutije. Bez obzira na to da li je ${val} u [R${r+1}K${rowEnd+1}] ili [R${colEnd+1}K${c+1}] — jedan kraj uvijek sadrži ${val}.`,
+                highlightCoords: [
+                  { r, c: rCols[0]!, type: 'trigger' },
+                  { r, c: rCols[1]!, type: 'trigger' },
+                  { r: cRows[0]!, c, type: 'trigger' },
+                  { r: cRows[1]!, c, type: 'trigger' }
+                ]
+              },
+              {
+                label: "Korak 2 — Eliminiši iz ćelija koje vide oba kraja",
+                description: `Ćelije koje vide i [R${r+1}K${rowEnd+1}] i [R${colEnd+1}K${c+1}] (crveno) sigurno ne mogu imati ${val} — jedan od ta dva kraja ga uvijek zauzima. Ovo je ekvivalent Skyscrapera, ali orijentisan kao zmaj umjesto kao neboder.`,
+                highlightCoords: eliminations
+              }
+            ]
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   function findSkyscraper(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row-based: two rows each with exactly 2 candidates, sharing exactly one column
@@ -1373,6 +1441,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findXYWing(candidates);
     if (!hint) hint = findXYZWing(candidates);
     if (!hint) hint = findSkyscraper(candidates);
+    if (!hint) hint = findTwoStringKite(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
