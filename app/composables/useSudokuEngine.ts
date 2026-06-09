@@ -758,6 +758,95 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findBoxLineReduction(candidates: number[][][]): ComplexHint | null {
+    for (let val = 1; val <= 9; val++) {
+      // Row → box: val in a row is confined to one box → eliminate from rest of that box
+      for (let r = 0; r < 9; r++) {
+        const cols: number[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) cols.push(c);
+        }
+        if (cols.length === 0) continue;
+        const boxCols = cols.map(c => Math.floor(c / 3));
+        if (boxCols.every(bc => bc === boxCols[0]!)) {
+          const boxCol = boxCols[0]! * 3;
+          const boxRow = Math.floor(r / 3) * 3;
+          const eliminations: HintCoordinate[] = [];
+          for (let r2 = boxRow; r2 < boxRow + 3; r2++) {
+            if (r2 === r) continue;
+            for (let c2 = boxCol; c2 < boxCol + 3; c2++) {
+              if (currentBoard.value[r2]![c2] === 0 && candidates[r2]![c2]!.includes(val)) {
+                eliminations.push({ r: r2, c: c2, type: 'elimination' });
+              }
+            }
+          }
+          if (eliminations.length === 0) continue;
+          const target = eliminations[0]!;
+          return {
+            title: "Redukcija Red→Kutija (Box-Line Reduction)",
+            targetCell: { r: target.r, c: target.c },
+            targetNum: solvedBoard.value[target.r]![target.c]!,
+            steps: [
+              {
+                label: "Korak 1 — Broj zaključan u jedan red unutar kutije",
+                description: `U redu ${r+1}, broj ${val} pojavljuje se samo u ćelijama koje su sve unutar iste 3×3 kutije (plavo). To znači da ${val} mora ići u jednu od tih ćelija — ekskluzivno za taj red unutar kutije.`,
+                highlightCoords: cols.map(c => ({ r, c, type: 'trigger' as const }))
+              },
+              {
+                label: "Korak 2 — Eliminiši iz ostatka kutije",
+                description: `Pošto ${val} mora biti u redu ${r+1} unutar te kutije, ne može biti ni u kojoj drugoj ćeliji te iste kutije (crveno). Ova eliminacija se zove Box-Line Reduction — suprotna od Pointing Pair.`,
+                highlightCoords: eliminations
+              }
+            ]
+          };
+        }
+      }
+
+      // Col → box: val in a col is confined to one box → eliminate from rest of that box
+      for (let c = 0; c < 9; c++) {
+        const rows: number[] = [];
+        for (let r = 0; r < 9; r++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) rows.push(r);
+        }
+        if (rows.length === 0) continue;
+        const boxRows = rows.map(r => Math.floor(r / 3));
+        if (boxRows.every(br => br === boxRows[0]!)) {
+          const boxRow = boxRows[0]! * 3;
+          const boxCol = Math.floor(c / 3) * 3;
+          const eliminations: HintCoordinate[] = [];
+          for (let c2 = boxCol; c2 < boxCol + 3; c2++) {
+            if (c2 === c) continue;
+            for (let r2 = boxRow; r2 < boxRow + 3; r2++) {
+              if (currentBoard.value[r2]![c2] === 0 && candidates[r2]![c2]!.includes(val)) {
+                eliminations.push({ r: r2, c: c2, type: 'elimination' });
+              }
+            }
+          }
+          if (eliminations.length === 0) continue;
+          const target = eliminations[0]!;
+          return {
+            title: "Redukcija Kolona→Kutija (Box-Line Reduction)",
+            targetCell: { r: target.r, c: target.c },
+            targetNum: solvedBoard.value[target.r]![target.c]!,
+            steps: [
+              {
+                label: "Korak 1 — Broj zaključan u jednu kolonu unutar kutije",
+                description: `U koloni ${c+1}, broj ${val} pojavljuje se samo u ćelijama koje su sve unutar iste 3×3 kutije (plavo). ${val} mora ući u jednu od tih ćelija — ekskluzivno za tu kolonu unutar kutije.`,
+                highlightCoords: rows.map(r => ({ r, c, type: 'trigger' as const }))
+              },
+              {
+                label: "Korak 2 — Eliminiši iz ostatka kutije",
+                description: `Pošto ${val} mora biti u koloni ${c+1} unutar te kutije, ne može biti u nijednoj drugoj ćeliji te kutije (crveno). Box-Line Reduction je komplement Pointing Pair tehnike.`,
+                highlightCoords: eliminations
+              }
+            ]
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   function findHiddenQuads(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
     for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
@@ -1008,6 +1097,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findHiddenQuads(candidates);
     if (!hint) hint = findHiddenTriples(candidates);
     if (!hint) hint = findHiddenPairs(candidates);
+    if (!hint) hint = findBoxLineReduction(candidates);
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
 
