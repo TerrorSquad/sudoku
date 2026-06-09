@@ -235,7 +235,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- GAME -->
     <div
       v-else-if="currentScreen === 'game'"
-      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[280px_minmax(0,1fr)_460px] gap-4 lg:gap-6 3xl:gap-8 w-full max-w-7xl 2xl:max-w-[1500px] 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
+      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[280px_minmax(0,1fr)_460px] gap-4 lg:gap-6 3xl:gap-8 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 3xl:py-6 flex-1 items-start"
     >
 
       <!-- 3xl left sidebar: shortcuts & branding -->
@@ -269,8 +269,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
       <!-- Center / main game column -->
       <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
-        <!-- cap board width on ultra-wide so it doesn't grow absurdly large -->
-        <div class="flex flex-col gap-3 3xl:max-w-[680px] 3xl:mx-auto 3xl:w-full">
+        <!-- constrain board to viewport height so controls are always visible -->
+        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-280px)] mx-auto 3xl:max-w-[680px]">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"
