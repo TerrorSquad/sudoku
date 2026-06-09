@@ -758,6 +758,83 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function seesCell(r1: number, c1: number, r2: number, c2: number): boolean {
+    if (r1 === r2 || c1 === c2) return true;
+    return Math.floor(r1 / 3) === Math.floor(r2 / 3) && Math.floor(c1 / 3) === Math.floor(c2 / 3);
+  }
+
+  function findXYWing(candidates: number[][][]): ComplexHint | null {
+    // pivot: exactly 2 candidates [x,y]; pincer1 sees pivot with [x,z]; pincer2 sees pivot with [y,z]
+    // any cell that sees BOTH pincers can have z eliminated
+    for (let pr = 0; pr < 9; pr++) {
+      for (let pc = 0; pc < 9; pc++) {
+        const pivot = candidates[pr]![pc]!;
+        if (currentBoard.value[pr]![pc] !== 0 || pivot.length !== 2) continue;
+        const [x, y] = pivot as [number, number];
+
+        for (let r1 = 0; r1 < 9; r1++) {
+          for (let c1 = 0; c1 < 9; c1++) {
+            if (r1 === pr && c1 === pc) continue;
+            if (currentBoard.value[r1]![c1] !== 0) continue;
+            if (!seesCell(pr, pc, r1, c1)) continue;
+            const p1 = candidates[r1]![c1]!;
+            if (p1.length !== 2 || !p1.includes(x)) continue;
+            const z = p1.find(v => v !== x)!;
+            if (z === y) continue;
+
+            for (let r2 = 0; r2 < 9; r2++) {
+              for (let c2 = 0; c2 < 9; c2++) {
+                if (r2 === pr && c2 === pc) continue;
+                if (r2 === r1 && c2 === c1) continue;
+                if (currentBoard.value[r2]![c2] !== 0) continue;
+                if (!seesCell(pr, pc, r2, c2)) continue;
+                const p2 = candidates[r2]![c2]!;
+                if (p2.length !== 2 || !p2.includes(y) || !p2.includes(z)) continue;
+
+                // found XY-Wing: eliminate z from cells that see both pincers
+                const eliminations: HintCoordinate[] = [];
+                for (let r = 0; r < 9; r++) {
+                  for (let c = 0; c < 9; c++) {
+                    if (currentBoard.value[r]![c] !== 0) continue;
+                    if ((r === r1 && c === c1) || (r === r2 && c === c2)) continue;
+                    if (seesCell(r, c, r1, c1) && seesCell(r, c, r2, c2) && candidates[r]![c]!.includes(z)) {
+                      eliminations.push({ r, c, type: 'elimination' });
+                    }
+                  }
+                }
+                if (eliminations.length === 0) continue;
+
+                const target = eliminations[0]!;
+                return {
+                  title: "XY-Wing (Napredna Tehnika)",
+                  targetCell: { r: target.r, c: target.c },
+                  targetNum: solvedBoard.value[target.r]![target.c]!,
+                  steps: [
+                    {
+                      label: "Korak 1 — Pronađi XY-Wing strukturu",
+                      description: `Pivot ćelija [R${pr+1}K${pc+1}] ima kandidate [${x},${y}]. Pincer 1 [R${r1+1}K${c1+1}] ima [${x},${z}] i vidi pivot. Pincer 2 [R${r2+1}K${c2+1}] ima [${y},${z}] i vidi pivot. Bez obzira na to koji kandidat pivot odabere, jedan od pincera mora sadržavati ${z}.`,
+                      highlightCoords: [
+                        { r: pr, c: pc, type: 'trigger' },
+                        { r: r1, c: c1, type: 'trigger' },
+                        { r: r2, c: c2, type: 'trigger' }
+                      ]
+                    },
+                    {
+                      label: "Korak 2 — Eliminiši zajednički kandidat",
+                      description: `Svaka ćelija koja vidi oba pincera (crveno) ne može sadržavati ${z} — jer će jedan od pincera uvijek imati ${z}. Eliminacija je garantovana bez obzira na rješenje pivota.`,
+                      highlightCoords: eliminations
+                    }
+                  ]
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findSwordfish(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row-based Swordfish
@@ -1158,6 +1235,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
     if (!hint) hint = findSwordfish(candidates);
+    if (!hint) hint = findXYWing(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
