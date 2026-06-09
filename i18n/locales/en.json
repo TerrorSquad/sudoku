@@ -2,7 +2,9 @@
   "menu": {
     "title": "SUDOKU PRO",
     "subtitle": "Vue 3 / Nuxt · Step-by-step hint system",
-    "start": "Start New Game"
+    "continue": "Continue",
+    "continueSub": "{difficulty} · {time}",
+    "start": "New Game"
   },
   "difficulty": {
     "title": "Choose a Challenge",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useSudokuEngine } from './composables/useSudokuEngine';
 import { useTimer } from './composables/useTimer';
 
@@ -12,6 +12,7 @@ import SideExplanationPanel from './components/SideExplanationPanel.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
+import { useGameSave } from './composables/useGameSave';
 
 const { t } = useI18n();
 
@@ -33,6 +34,7 @@ const {
   currentStepIndex,
   currentStep,
   startNewGame,
+  restoreGame,
   eraseCell,
   clearRelationalNotes,
   saveHistory,
@@ -44,6 +46,8 @@ const {
   checkWinCondition,
   getGridCandidates
 } = engine;
+
+const gameSave = useGameSave();
 
 const notesMode = ref<boolean>(false);
 const showAllCandidates = ref<boolean>(false);
@@ -58,12 +62,38 @@ const modalTitle = ref<string>('');
 const modalMessage = ref<string>('');
 const isWinState = ref<boolean>(false);
 
+const savedInfo = computed(() => {
+  if (!gameSave.hasSave.value) return null;
+  const s = gameSave.load();
+  if (!s) return null;
+  return { difficulty: s.difficulty, time: timer.formatTime(s.timerSeconds) };
+});
+
+// Auto-save on every meaningful state change while a game is active
+watch(
+  [currentBoard, notesBoard, mistakes],
+  () => {
+    if (currentScreen.value !== 'game' || !currentBoard.value || !initialBoard.value) return;
+    gameSave.save({
+      currentBoard: currentBoard.value,
+      initialBoard: initialBoard.value,
+      solvedBoard: solvedBoard.value,
+      notesBoard: notesBoard.value,
+      difficulty: activeDifficulty.value,
+      timerSeconds: timer.timerSeconds.value,
+      mistakes: mistakes.value,
+    });
+  },
+  { deep: true }
+);
+
 function triggerLocalModal(title: string, message: string, win: boolean = false) {
   modalTitle.value = title;
   modalMessage.value = message;
   isWinState.value = win;
   showModal.value = true;
   timer.stopTimer();
+  gameSave.clear();
   if (win) {
     confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 }, colors: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#34d399'] });
   }
@@ -73,6 +103,21 @@ function handleModalClose() {
   showModal.value = false;
   currentScreen.value = 'menu';
   timer.resetTimer();
+}
+
+function handleContinueGame() {
+  const s = gameSave.load();
+  if (!s) return;
+  restoreGame(s);
+  activeDifficulty.value = s.difficulty;
+  mistakes.value = s.mistakes;
+  hintStatus.value = t('game.ready');
+  hintBody.value = '';
+  notesMode.value = false;
+  timer.resetTimer();
+  timer.timerSeconds.value = s.timerSeconds;
+  timer.startTimer();
+  currentScreen.value = 'game';
 }
 
 function handleStartGame(level: Difficulty) {
@@ -216,12 +261,28 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           {{ $t('menu.subtitle') }}
         </p>
       </div>
-      <button
-        @click="currentScreen = 'difficulty'"
-        class="w-full max-w-xs py-4 px-6 bg-zinc-900 border border-zinc-700 font-bold text-sm hover:bg-zinc-800 hover:border-zinc-600 transition-all active:scale-95"
-      >
-        {{ $t('menu.start') }}
-      </button>
+      <div class="flex flex-col items-center gap-3 w-full max-w-xs">
+        <!-- Continue saved game -->
+        <div v-if="gameSave.hasSave.value" class="w-full">
+          <button
+            @click="handleContinueGame"
+            class="w-full py-4 px-6 bg-emerald-900/40 border border-emerald-600/60 font-bold text-sm text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-500 transition-all active:scale-95"
+          >
+            {{ $t('menu.continue') }}
+          </button>
+          <p v-if="savedInfo" class="text-[11px] text-zinc-500 text-center mt-1.5 uppercase tracking-wider font-semibold">
+            {{ $t('menu.continueSub', { difficulty: savedInfo.difficulty, time: savedInfo.time }) }}
+          </p>
+        </div>
+
+        <!-- New game -->
+        <button
+          @click="currentScreen = 'difficulty'"
+          class="w-full py-4 px-6 bg-zinc-900 border border-zinc-700 font-bold text-sm hover:bg-zinc-800 hover:border-zinc-600 transition-all active:scale-95"
+        >
+          {{ $t('menu.start') }}
+        </button>
+      </div>
     </div>
 
     <!-- DIFFICULTY -->

@@ -2095,6 +2095,25 @@ export function useSudokuEngine() {
     hintEliminations.value = step.highlightCoords.filter(c => c.type === 'elimination');
   }
 
+  function restoreGame(save: {
+    currentBoard: Grid;
+    initialBoard: Grid;
+    solvedBoard: Grid;
+    notesBoard: NotesGrid;
+  }): void {
+    currentBoard.value = save.currentBoard.map(row => [...row]) as Grid;
+    initialBoard.value = save.initialBoard.map(row => [...row]) as Grid;
+    solvedBoard.value = save.solvedBoard.map(row => [...row]) as Grid;
+    notesBoard.value = save.notesBoard.map(row => row.map(cell => [...cell])) as NotesGrid;
+    selectedCell.value = null;
+    activeComplexHint.value = null;
+    currentStepIndex.value = 0;
+    hintTriggers.value = [];
+    hintEliminations.value = [];
+    activeHintCell.value = null;
+    boardHistory.value = [];
+  }
+
   return {
     currentBoard,
     initialBoard,
@@ -2114,6 +2133,7 @@ export function useSudokuEngine() {
     getGridCandidates,
     startNewGame,
     loadCustomBoard,
+    restoreGame,
     eraseCell,
     clearRelationalNotes,
     saveHistory,
