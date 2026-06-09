@@ -905,6 +905,71 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findSkyscraper(candidates: number[][][]): ComplexHint | null {
+    for (let val = 1; val <= 9; val++) {
+      // Row-based: two rows each with exactly 2 candidates, sharing exactly one column
+      const rowData: { r: number; cols: [number, number] }[] = [];
+      for (let r = 0; r < 9; r++) {
+        const cols: number[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (currentBoard.value[r]![c] === 0 && candidates[r]![c]!.includes(val)) cols.push(c);
+        }
+        if (cols.length === 2) rowData.push({ r, cols: [cols[0]!, cols[1]!] });
+      }
+      for (let i = 0; i < rowData.length; i++) {
+        for (let j = i + 1; j < rowData.length; j++) {
+          const ra = rowData[i]!, rb = rowData[j]!;
+          // find shared column (the "base") and unshared columns (the "tops")
+          let sharedCol = -1, topA = -1, topB = -1;
+          if (ra.cols[0] === rb.cols[0]) { sharedCol = ra.cols[0]; topA = ra.cols[1]; topB = rb.cols[1]; }
+          else if (ra.cols[0] === rb.cols[1]) { sharedCol = ra.cols[0]; topA = ra.cols[1]; topB = rb.cols[0]; }
+          else if (ra.cols[1] === rb.cols[0]) { sharedCol = ra.cols[1]; topA = ra.cols[0]; topB = rb.cols[1]; }
+          else if (ra.cols[1] === rb.cols[1]) { sharedCol = ra.cols[1]; topA = ra.cols[0]; topB = rb.cols[0]; }
+          if (sharedCol === -1) continue;
+          // shared column must be in different boxes (otherwise it's an X-Wing)
+          if (Math.floor(ra.r / 3) === Math.floor(rb.r / 3)) continue;
+
+          // eliminate val from cells that see both tops
+          const eliminations: HintCoordinate[] = [];
+          for (let r = 0; r < 9; r++) {
+            for (let c = 0; c < 9; c++) {
+              if (currentBoard.value[r]![c] !== 0) continue;
+              if ((r === ra.r && c === topA) || (r === rb.r && c === topB)) continue;
+              if (seesCell(r, c, ra.r, topA) && seesCell(r, c, rb.r, topB) && candidates[r]![c]!.includes(val)) {
+                eliminations.push({ r, c, type: 'elimination' });
+              }
+            }
+          }
+          if (eliminations.length === 0) continue;
+          const target = eliminations[0]!;
+          return {
+            title: "Neboder (Skyscraper)",
+            targetCell: { r: target.r, c: target.c },
+            targetNum: solvedBoard.value[target.r]![target.c]!,
+            steps: [
+              {
+                label: "Korak 1 — Pronađi Skyscraper strukturu",
+                description: `Broj ${val} pojavljuje se tačno dva puta u redu ${ra.r+1} (kolone ${ra.cols[0]+1} i ${ra.cols[1]+1}) i dva puta u redu ${rb.r+1} (kolone ${rb.cols[0]+1} i ${rb.cols[1]+1}). Dijele jednu kolonu (${sharedCol+1}) ali u različitim kutijama — kao neboder koji se naslanja na isti stub. Vrhovi (plavo: K${topA+1} i K${topB+1}) moraju sadržavati ${val} u bar jednom od ta dva reda.`,
+                highlightCoords: [
+                  { r: ra.r, c: ra.cols[0]!, type: 'trigger' },
+                  { r: ra.r, c: ra.cols[1]!, type: 'trigger' },
+                  { r: rb.r, c: rb.cols[0]!, type: 'trigger' },
+                  { r: rb.r, c: rb.cols[1]!, type: 'trigger' }
+                ]
+              },
+              {
+                label: "Korak 2 — Eliminiši iz ćelija koje vide oba vrha",
+                description: `Ako ${val} nije u vrhu K${topA+1} reda ${ra.r+1}, mora biti u K${topA+1}... i obratno za drugi red. Svaka ćelija koja vidi oba vrha (crveno) sigurno ne može imati ${val} — jedan od vrhova ga uvijek sadrži.`,
+                highlightCoords: eliminations
+              }
+            ]
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   function findSwordfish(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // Row-based Swordfish
@@ -1307,6 +1372,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findSwordfish(candidates);
     if (!hint) hint = findXYWing(candidates);
     if (!hint) hint = findXYZWing(candidates);
+    if (!hint) hint = findSkyscraper(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
