@@ -758,6 +758,63 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findHiddenQuads(candidates: number[][][]): ComplexHint | null {
+    const units: { cells: CellCoord[]; label: string }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let box = 0; box < 9; box++) {
+      const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+      const cells: CellCoord[] = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
+      units.push({ cells, label: `Kutija ${box+1}` });
+    }
+
+    for (const { cells: unitCells, label } of units) {
+      const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0);
+      const digits = [1,2,3,4,5,6,7,8,9];
+      for (let vi = 0; vi < 6; vi++) {
+        for (let vj = vi+1; vj < 7; vj++) {
+          for (let vk = vj+1; vk < 8; vk++) {
+            for (let vl = vk+1; vl < 9; vl++) {
+              const quad = [digits[vi]!, digits[vj]!, digits[vk]!, digits[vl]!];
+              const cellsWithAny = emptyCells.filter(({ r, c }) => quad.some(v => candidates[r]![c]!.includes(v)));
+              if (cellsWithAny.length !== 4) continue;
+              if (!quad.every(v => cellsWithAny.some(({ r, c }) => candidates[r]![c]!.includes(v)))) continue;
+
+              const [a,b,c2,d] = cellsWithAny as [CellCoord,CellCoord,CellCoord,CellCoord];
+              const eliminations: HintCoordinate[] = [];
+              for (const cell of [a,b,c2,d]) {
+                for (const cand of candidates[cell.r]![cell.c]!) {
+                  if (!quad.includes(cand)) eliminations.push({ r: cell.r, c: cell.c, type: 'elimination' });
+                }
+              }
+              if (eliminations.length === 0) continue;
+
+              return {
+                title: `Skrivena Četvorka (Hidden Quad) — ${label}`,
+                targetCell: a,
+                targetNum: solvedBoard.value[a.r]![a.c]!,
+                steps: [
+                  {
+                    label: "Korak 1 — Pronađi Skrivenu Četvorku",
+                    description: `Brojevi ${quad.join(', ')} mogu ići samo u četiri ćelije unutar ${label}. Ove ćelije imaju i druge kandidate, ali ${quad.join(', ')} su ekskluzivni za ovu četvorku — nigdje drugdje u jedinici ne mogu stati.`,
+                    highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
+                  },
+                  {
+                    label: "Korak 2 — Eliminiši ostale kandidate iz četvorke",
+                    description: `Pošto ${quad.join(', ')} moraju popuniti upravo te četiri ćelije, svi ostali kandidati unutar njih su nemogući i brišu se (crveno). Ovo pretvara skrivenu četvorku u golu četvorku (Naked Quad).`,
+                    highlightCoords: eliminations
+                  }
+                ]
+              };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findHiddenTriples(candidates: number[][][]): ComplexHint | null {
     const units: { cells: CellCoord[]; label: string }[] = [];
     for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
@@ -948,6 +1005,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findNakedPairs(candidates);
     if (!hint) hint = findNakedTriples(candidates);
     if (!hint) hint = findNakedQuads(candidates);
+    if (!hint) hint = findHiddenQuads(candidates);
     if (!hint) hint = findHiddenTriples(candidates);
     if (!hint) hint = findHiddenPairs(candidates);
     if (!hint) hint = findPointingPair(candidates);
