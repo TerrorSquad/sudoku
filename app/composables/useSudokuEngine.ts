@@ -1956,26 +1956,26 @@ export function useSudokuEngine() {
     let hint = findNakedSingle(candidates);
     if (!hint) hint = findHiddenSingle(candidates);
     if (!hint) hint = findNakedPairs(candidates);
+    if (!hint) hint = findHiddenPairs(candidates);
     if (!hint) hint = findNakedTriples(candidates);
+    if (!hint) hint = findHiddenTriples(candidates);
     if (!hint) hint = findNakedQuads(candidates);
     if (!hint) hint = findHiddenQuads(candidates);
-    if (!hint) hint = findHiddenTriples(candidates);
-    if (!hint) hint = findHiddenPairs(candidates);
-    if (!hint) hint = findBoxLineReduction(candidates);
     if (!hint) hint = findPointingPair(candidates);
+    if (!hint) hint = findBoxLineReduction(candidates);
     if (!hint) hint = findXWing(candidates);
     if (!hint) hint = findSwordfish(candidates);
     if (!hint) hint = findJellyfish(candidates);
-    if (!hint) hint = findXYWing(candidates);
-    if (!hint) hint = findXYZWing(candidates);
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
+    if (!hint) hint = findEmptyRectangle(candidates);
+    if (!hint) hint = findXYWing(candidates);
+    if (!hint) hint = findXYZWing(candidates);
+    if (!hint) hint = findWWing(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
     if (!hint) hint = findXYChain(candidates);
     if (!hint) hint = findSueDeCoq(candidates);
     if (!hint) hint = findBUG(candidates);
-    if (!hint) hint = findEmptyRectangle(candidates);
-    if (!hint) hint = findWWing(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
