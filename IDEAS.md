@@ -16,10 +16,10 @@
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 6 | Win animation (confetti or ripple) | ⬜ Todo | Trigger on board completion |
-| 7 | Cell placement animation (pop/scale on number entry) | ⬜ Todo | CSS transition on SudokuCell |
+| 6 | Win animation (confetti or ripple) | ✅ Done | canvas-confetti burst on win |
+| 7 | Cell placement animation (pop/scale on number entry) | ✅ Done | Spring-pop via :key remount + CSS keyframe |
 | 8 | Dark mode toggle | ⬜ Todo | Already dark — add light mode option |
-| 9 | Completion summary modal | ⬜ Todo | Show time, hints used, mistakes, technique list |
+| 9 | Completion summary modal | ✅ Done | Shows difficulty, mistakes, hints used, technique list |
 
 ---
 
@@ -27,7 +27,7 @@
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 10 | Technique log | ⬜ Todo | Sidebar/drawer listing each hint triggered this game |
+| 10 | Technique log | ✅ Done | Tracked per-game; shown in win summary modal |
 | 11 | "Why wrong?" explainer | ⬜ Todo | On mistake: show conflicting cell + explanation |
 | 12 | Progressive technique unlocking by difficulty | ⬜ Todo | Easy = Singles only, Expert = all 23 |
 | 13 | Per-technique usage stats (localStorage) | ⬜ Todo | "You've used XY-Wing 3 times" |
@@ -39,5 +39,5 @@
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
 | 14 | Daily puzzle (date-seeded, same for everyone) | ⬜ Todo | Shareable result string |
-| 15 | Custom puzzle import (paste 81 digits) | ⬜ Todo | Simple form, no OCR |
+| 15 | Custom puzzle import (paste 81 digits) | ✅ Done | CustomImport screen with validation + mini preview |
 | 16 | True puzzle generator (permutations, not one fixed template) | ⬜ Todo | Infinite unique puzzles |

@@ -10,6 +10,7 @@ import ControlPanel from './components/ControlPanel.vue';
 import Numpad from './components/Numpad.vue';
 import SideExplanationPanel from './components/SideExplanationPanel.vue';
 import SudokuAcademy from './components/SudokuAcademy.vue';
+import CustomImport from './components/CustomImport.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
@@ -45,7 +46,8 @@ const {
   prevHintStep,
   cancelComplexHint,
   checkWinCondition,
-  getGridCandidates
+  getGridCandidates,
+  loadCustomBoard,
 } = engine;
 
 const gameSave = useGameSave();
@@ -55,7 +57,7 @@ const showAllCandidates = ref<boolean>(false);
 const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t('game.ready'));
 const hintBody = ref<string>('');
-const currentScreen = ref<'menu' | 'difficulty' | 'game' | 'academy'>('menu');
+const currentScreen = ref<'menu' | 'difficulty' | 'game' | 'academy' | 'custom-import'>('menu');
 const activeDifficulty = ref<Difficulty>('medium');
 
 const showModal = ref<boolean>(false);
@@ -242,6 +244,20 @@ function handleAutoFillNotes() {
   hintStatus.value = t('game.notesFilled');
 }
 
+function handleLoadCustomPuzzle(board: import('./types/sudoku').Grid) {
+  activeDifficulty.value = 'custom';
+  mistakes.value = 0;
+  hintStatus.value = t('game.newBoard');
+  hintBody.value = '';
+  notesMode.value = false;
+  hintsUsed.value = 0;
+  techniqueLog.value = [];
+  loadCustomBoard(board);
+  timer.resetTimer();
+  timer.startTimer();
+  currentScreen.value = 'game';
+}
+
 function exitToMenu() {
   timer.stopTimer();
   cancelComplexHint();
@@ -302,6 +318,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           {{ $t('menu.start') }}
         </button>
 
+        <!-- Custom puzzle -->
+        <button
+          @click="currentScreen = 'custom-import'"
+          class="w-full py-3 px-6 bg-transparent border border-zinc-800 font-semibold text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Custom Puzzle
+        </button>
+
         <!-- Academy -->
         <button
           @click="currentScreen = 'academy'"
@@ -326,6 +353,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- ACADEMY -->
     <SudokuAcademy
       v-else-if="currentScreen === 'academy'"
+      @back-to-menu="currentScreen = 'menu'"
+    />
+
+    <!-- CUSTOM IMPORT -->
+    <CustomImport
+      v-else-if="currentScreen === 'custom-import'"
+      @load-puzzle="handleLoadCustomPuzzle"
       @back-to-menu="currentScreen = 'menu'"
     />
 
