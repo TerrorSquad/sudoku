@@ -16,6 +16,7 @@ import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
 import { useGameSave } from './composables/useGameSave';
 import { useTechniqueStats } from './composables/useTechniqueStats';
+import { useDailyPuzzle } from './composables/useDailyPuzzle';
 
 const { t } = useI18n();
 
@@ -53,6 +54,8 @@ const {
 
 const gameSave = useGameSave();
 const techStats = useTechniqueStats();
+const dailyPuzzle = useDailyPuzzle();
+const isDailyMode = ref(false);
 
 const notesMode = ref<boolean>(false);
 const showAllCandidates = ref<boolean>(false);
@@ -69,6 +72,8 @@ const isWinState = ref<boolean>(false);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
+
+const dailyRecord = computed(() => dailyPuzzle.getRecord());
 
 const savedInfo = computed(() => {
   if (!gameSave.hasSave.value) return null;
@@ -106,12 +111,14 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   timer.stopTimer();
   gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
+    if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
     confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 }, colors: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#34d399'] });
   }
 }
 
 function handleModalClose() {
   showModal.value = false;
+  isDailyMode.value = false;
   currentScreen.value = 'menu';
   timer.resetTimer();
 }
@@ -259,6 +266,21 @@ function handleAutoFillNotes() {
   hintStatus.value = t('game.notesFilled');
 }
 
+function handleStartDaily() {
+  isDailyMode.value = true;
+  activeDifficulty.value = 'medium';
+  mistakes.value = 0;
+  hintStatus.value = t('game.newBoard');
+  hintBody.value = '';
+  notesMode.value = false;
+  hintsUsed.value = 0;
+  techniqueLog.value = [];
+  loadCustomBoard(dailyPuzzle.getBoard());
+  timer.resetTimer();
+  timer.startTimer();
+  currentScreen.value = 'game';
+}
+
 function handleLoadCustomPuzzle(board: import('./types/sudoku').Grid) {
   activeDifficulty.value = 'custom';
   mistakes.value = 0;
@@ -331,6 +353,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           class="w-full py-4 px-6 bg-zinc-900 border border-zinc-700 font-bold text-sm hover:bg-zinc-800 hover:border-zinc-600 transition-all active:scale-95"
         >
           {{ $t('menu.start') }}
+        </button>
+
+        <!-- Daily challenge -->
+        <button
+          @click="handleStartDaily"
+          :disabled="!!dailyRecord"
+          :class="dailyRecord
+            ? 'bg-emerald-950/20 border-emerald-800 text-emerald-600 cursor-default'
+            : 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-100'"
+          class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span v-if="dailyRecord">Daily — Completed ✓</span>
+          <span v-else>Daily Challenge</span>
         </button>
 
         <!-- Custom puzzle -->

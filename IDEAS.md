@@ -38,6 +38,6 @@
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 14 | Daily puzzle (date-seeded, same for everyone) | ⬜ Todo | Shareable result string |
+| 14 | Daily puzzle (date-seeded, same for everyone) | ✅ Done | Seeded PRNG per date; completion tracked in localStorage |
 | 15 | Custom puzzle import (paste 81 digits) | ✅ Done | CustomImport screen with validation + mini preview |
 | 16 | True puzzle generator (permutations, not one fixed template) | ⬜ Todo | Infinite unique puzzles |
