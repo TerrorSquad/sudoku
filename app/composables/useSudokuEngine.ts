@@ -905,6 +905,67 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findUniqueRectangle(candidates: number[][][]): ComplexHint | null {
+    // Type 1: three corners have exactly {a,b}, fourth has {a,b,...} — eliminate a,b from fourth
+    for (let r1 = 0; r1 < 8; r1++) {
+      for (let r2 = r1 + 1; r2 < 9; r2++) {
+        if (Math.floor(r1 / 3) === Math.floor(r2 / 3)) continue; // must be different box-rows
+        for (let c1 = 0; c1 < 8; c1++) {
+          for (let c2 = c1 + 1; c2 < 9; c2++) {
+            if (Math.floor(c1 / 3) === Math.floor(c2 / 3)) continue; // must be different box-cols
+            const corners = [
+              { r: r1, c: c1 }, { r: r1, c: c2 },
+              { r: r2, c: c1 }, { r: r2, c: c2 }
+            ] as [CellCoord, CellCoord, CellCoord, CellCoord];
+
+            if (corners.some(({ r, c }) => currentBoard.value[r]![c] !== 0)) continue;
+            const cands = corners.map(({ r, c }) => candidates[r]![c]!);
+
+            // find corners with exactly 2 candidates all equal to same pair
+            const pairCorners = corners.filter((_, i) => cands[i]!.length === 2);
+            if (pairCorners.length !== 3) continue;
+
+            const ref = cands[corners.indexOf(pairCorners[0]!)]!;
+            if (ref.length !== 2) continue;
+            const [a, b] = ref as [number, number];
+            if (!pairCorners.every(({ r, c }) => {
+              const cd = candidates[r]![c]!;
+              return cd.length === 2 && cd.includes(a) && cd.includes(b);
+            })) continue;
+
+            // find the "floor" corner (the one NOT in pairCorners)
+            const floorCorner = corners.find(({ r, c }) => !pairCorners.some(p => p.r === r && p.c === c))!;
+            const floorCands = candidates[floorCorner.r]![floorCorner.c]!;
+            if (!floorCands.includes(a) || !floorCands.includes(b)) continue;
+
+            const eliminations: HintCoordinate[] = [
+              { r: floorCorner.r, c: floorCorner.c, type: 'elimination' }
+            ];
+
+            return {
+              title: "Jedinstveni Pravougaonik — Tip 1 (Unique Rectangle)",
+              targetCell: floorCorner,
+              targetNum: solvedBoard.value[floorCorner.r]![floorCorner.c]!,
+              steps: [
+                {
+                  label: "Korak 1 — Pronađi Jedinstveni Pravougaonik",
+                  description: `Četiri ćelije formiraju pravougaonik koji presijecaju dva reda i dvije kolone, svaka u drugoj 3×3 kutiji. Tri od četiri ćelije imaju tačno iste kandidate [${a},${b}]. Ako bi i četvrta ćelija imala samo ${a} i ${b}, sudoku bi imao više rješenja — što je nemoguće u ispravnom sudokuu.`,
+                  highlightCoords: pairCorners.map(({ r, c }) => ({ r, c, type: 'trigger' as const }))
+                },
+                {
+                  label: "Korak 2 — Eliminiši par iz četvrte ćelije",
+                  description: `Ćelija [R${floorCorner.r+1}K${floorCorner.c+1}] mora sadržavati nešto osim ${a} i ${b} kako bi se garantovalo jedinstvenost rješenja. Stoga ${a} i ${b} se eliminišu iz nje — ostatak kandidata daje pravo rješenje.`,
+                  highlightCoords: eliminations
+                }
+              ]
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findTwoStringKite(candidates: number[][][]): ComplexHint | null {
     for (let val = 1; val <= 9; val++) {
       // For each row with exactly 2 candidates and each column with exactly 2 candidates
@@ -1442,6 +1503,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findXYZWing(candidates);
     if (!hint) hint = findSkyscraper(candidates);
     if (!hint) hint = findTwoStringKite(candidates);
+    if (!hint) hint = findUniqueRectangle(candidates);
 
     // Fallback: fewest-candidates heuristic
     if (!hint) {
