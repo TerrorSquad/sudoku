@@ -128,9 +128,12 @@ export function useSudokuEngine() {
   // --- GAME MANAGEMENT ---
   function startNewGame(difficulty: string) {
     let removeCount = 42;
-    if (difficulty === 'easy') removeCount = 30;
-    if (difficulty === 'hard') removeCount = 52;
-    if (difficulty === 'expert') removeCount = 58;
+    if (difficulty === 'beginner') removeCount = 20;
+    else if (difficulty === 'easy') removeCount = 30;
+    else if (difficulty === 'medium') removeCount = 42;
+    else if (difficulty === 'hard') removeCount = 52;
+    else if (difficulty === 'expert') removeCount = 58;
+    else if (difficulty === 'master') removeCount = 62;
 
     const basePuzzle = solvedTemplate.map(row => [...row]);
     let removed = 0;

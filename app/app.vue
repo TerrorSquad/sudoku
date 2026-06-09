@@ -9,6 +9,7 @@ import SudokuGrid from './components/SudokuGrid.vue';
 import ControlPanel from './components/ControlPanel.vue';
 import Numpad from './components/Numpad.vue';
 import SideExplanationPanel from './components/SideExplanationPanel.vue';
+import SudokuAcademy from './components/SudokuAcademy.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
@@ -54,7 +55,7 @@ const showAllCandidates = ref<boolean>(false);
 const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t('game.ready'));
 const hintBody = ref<string>('');
-const currentScreen = ref<'menu' | 'difficulty' | 'game'>('menu');
+const currentScreen = ref<'menu' | 'difficulty' | 'game' | 'academy'>('menu');
 const activeDifficulty = ref<Difficulty>('medium');
 
 const showModal = ref<boolean>(false);
@@ -287,6 +288,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         >
           {{ $t('menu.start') }}
         </button>
+
+        <!-- Academy -->
+        <button
+          @click="currentScreen = 'academy'"
+          class="w-full py-3 px-6 bg-transparent border border-zinc-800 font-semibold text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          Sudoku Academy
+        </button>
       </div>
     </div>
 
@@ -295,6 +307,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       v-else-if="currentScreen === 'difficulty'"
       :active-difficulty="activeDifficulty"
       @select-difficulty="handleStartGame"
+      @back-to-menu="currentScreen = 'menu'"
+    />
+
+    <!-- ACADEMY -->
+    <SudokuAcademy
+      v-else-if="currentScreen === 'academy'"
       @back-to-menu="currentScreen = 'menu'"
     />
 

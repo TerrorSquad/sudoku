@@ -9,14 +9,18 @@
   "difficulty": {
     "title": "Choose a Challenge",
     "subtitle": "Pick your difficulty level:",
+    "beginner": "Beginner",
     "easy": "Easy",
     "medium": "Medium",
     "hard": "Hard",
     "expert": "Expert",
-    "easyDesc": "Simple eliminations — great for beginners.",
+    "master": "Master",
+    "beginnerDesc": "Most cells given — learn the grid with confidence.",
+    "easyDesc": "Simple eliminations only — great for building intuition.",
     "mediumDesc": "Requires pointing pairs and basic techniques.",
     "hardDesc": "Naked pairs, hidden singles and more.",
     "expertDesc": "X-Wing, XY-Wing and advanced chains.",
+    "masterDesc": "Near-minimal clues — demands expert chains and deep logic.",
     "back": "Back to Menu"
   },
   "game": {

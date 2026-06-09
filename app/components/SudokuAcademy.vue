@@ -1,0 +1,266 @@
+<script setup lang="ts">
+const emit = defineEmits<{
+  (e: 'back-to-menu'): void;
+}>();
+
+interface Technique {
+  name: string;
+  tier: 'Basic' | 'Intermediate' | 'Advanced' | 'Expert';
+  lookFor: string;
+  howItHelps: string;
+}
+
+const techniques: Technique[] = [
+  // Basic
+  {
+    name: 'Naked Single',
+    tier: 'Basic',
+    lookFor: 'A cell where only one digit is a valid candidate — all other digits already appear in the same row, column, or box.',
+    howItHelps: 'Place that single remaining candidate directly. No deduction required; the answer is forced by elimination.',
+  },
+  {
+    name: 'Hidden Single',
+    tier: 'Basic',
+    lookFor: 'Within a row, column, or box, find a digit that can only fit in one specific cell — even if that cell has other candidates.',
+    howItHelps: 'Because the digit has nowhere else to go in that unit, it must go in that cell. Place it and clear all other candidates from that cell.',
+  },
+  // Intermediate
+  {
+    name: 'Naked Pair',
+    tier: 'Intermediate',
+    lookFor: 'Two cells in the same unit that each contain exactly the same two candidates and no others.',
+    howItHelps: 'Those two digits must fill those two cells (in some order). Remove both candidates from every other cell in the unit.',
+  },
+  {
+    name: 'Hidden Pair',
+    tier: 'Intermediate',
+    lookFor: 'Two digits that appear as candidates in exactly two cells of a unit, and nowhere else in that unit.',
+    howItHelps: 'Those two cells must contain those two digits. Remove all other candidates from those two cells.',
+  },
+  {
+    name: 'Naked Triple',
+    tier: 'Intermediate',
+    lookFor: 'Three cells in a unit whose combined candidates form a pool of exactly three digits. Each cell holds two or three of those digits.',
+    howItHelps: 'Those three digits are locked into those three cells. Eliminate them from every other cell in the unit.',
+  },
+  {
+    name: 'Hidden Triple',
+    tier: 'Intermediate',
+    lookFor: 'Three digits that only appear in three cells of a unit (across any combination), and nowhere else in that unit.',
+    howItHelps: 'Those three cells must contain those three digits. Strip all other candidates from those cells.',
+  },
+  {
+    name: 'Naked Quad',
+    tier: 'Intermediate',
+    lookFor: 'Four cells in a unit whose combined candidates are exactly four digits.',
+    howItHelps: 'Those four digits are confined to those four cells. Eliminate them from all other cells in the unit.',
+  },
+  {
+    name: 'Hidden Quad',
+    tier: 'Intermediate',
+    lookFor: 'Four digits that only appear within four cells of a unit.',
+    howItHelps: 'Those four cells own those four digits. All other candidates in those cells can be removed.',
+  },
+  {
+    name: 'Pointing Pair / Triple',
+    tier: 'Intermediate',
+    lookFor: 'Inside a box, a digit\'s candidates all lie in the same row or column (a "pointing" line).',
+    howItHelps: 'That digit must go in one of those pointing cells. Remove it from the rest of that row or column outside the box.',
+  },
+  {
+    name: 'Box-Line Reduction',
+    tier: 'Intermediate',
+    lookFor: 'All candidates for a digit within a row or column are confined to a single box.',
+    howItHelps: 'That digit must live in that row or column intersection. Remove it from all other cells in that box.',
+  },
+  // Advanced
+  {
+    name: 'X-Wing',
+    tier: 'Advanced',
+    lookFor: 'A digit that appears in exactly two cells in each of two different rows, and those cells share the same two columns.',
+    howItHelps: 'The digit must occupy one cell in each row, forcing it into those two columns. Eliminate the digit from those two columns everywhere outside the two rows.',
+  },
+  {
+    name: 'Swordfish',
+    tier: 'Advanced',
+    lookFor: 'A digit that appears in two or three cells in each of three rows, with all occurrences spanning exactly three columns.',
+    howItHelps: 'Extends X-Wing logic to three rows. The digit must be placed inside those three rows, so remove it from the three columns everywhere else.',
+  },
+  {
+    name: 'Jellyfish',
+    tier: 'Advanced',
+    lookFor: 'A digit appearing in two to four cells across four rows, all within the same four columns.',
+    howItHelps: 'Four-row extension of Swordfish. Eliminate the digit from those four columns everywhere outside the four defining rows.',
+  },
+  {
+    name: 'Skyscraper',
+    tier: 'Advanced',
+    lookFor: 'A digit that has exactly two candidates in each of two rows. The two pairs share one common column (the "base"); the remaining two cells are the "roof."',
+    howItHelps: 'One of the two roof cells must contain the digit. Any cell that can see both roof cells can have the digit eliminated.',
+  },
+  {
+    name: 'Two-String Kite',
+    tier: 'Advanced',
+    lookFor: 'A digit that forms a conjugate pair in a row and another conjugate pair in a column, with one cell of each pair sharing the same box.',
+    howItHelps: 'The two far endpoints of the kite are linked: one must be true. Any cell that can see both endpoints can have the digit removed.',
+  },
+  {
+    name: 'Empty Rectangle',
+    tier: 'Advanced',
+    lookFor: 'A box where a digit\'s candidates are restricted to one row or column within that box. Combine this with a conjugate pair in a separate row or column.',
+    howItHelps: 'The restricted line in the box creates an indirect link. Follow the chain: the digit is eliminated from the cell at the intersection of the chain\'s endpoints.',
+  },
+  // Expert
+  {
+    name: 'XY-Wing',
+    tier: 'Expert',
+    lookFor: 'Three bivalue cells (each with exactly two candidates): a pivot sharing one candidate with each of two pincers, while the pincers share a common third candidate.',
+    howItHelps: 'Whichever value fills the pivot, one of the pincers must take the shared candidate. Any cell that can see both pincers loses that shared candidate.',
+  },
+  {
+    name: 'XYZ-Wing',
+    tier: 'Expert',
+    lookFor: 'Like XY-Wing, but the pivot holds three candidates (XYZ) and each pincer holds two (XZ and YZ). All three cells share a common candidate Z.',
+    howItHelps: 'No matter what fills the pivot, one of the three cells takes Z. Any cell that can see all three cells can have Z eliminated.',
+  },
+  {
+    name: 'W-Wing',
+    tier: 'Expert',
+    lookFor: 'Two cells with identical two candidates (A and B), connected through a conjugate pair for candidate A elsewhere on the board.',
+    howItHelps: 'The connecting pair forces one of the two W-Wing cells to hold B. Any cell that can see both W-Wing cells loses candidate B.',
+  },
+  {
+    name: 'Unique Rectangle',
+    tier: 'Expert',
+    lookFor: 'Four cells forming a rectangle across two rows and two columns, all within two boxes, where the same two candidates appear in at least three corners.',
+    howItHelps: 'A valid Sudoku has exactly one solution. If this pattern were completed ambiguously, two solutions would exist — which is impossible. Force the cell that breaks the deadly pattern.',
+  },
+  {
+    name: 'XY-Chain',
+    tier: 'Expert',
+    lookFor: 'A chain of bivalue cells where each adjacent pair shares exactly one candidate. The chain begins and ends with the same candidate.',
+    howItHelps: 'If the starting cell doesn\'t hold that candidate, the chain forces the end cell to hold it — and vice versa. Any cell seeing both chain endpoints loses that candidate.',
+  },
+  {
+    name: 'Sue de Coq',
+    tier: 'Expert',
+    lookFor: 'A group of 2–3 cells in a box that also lie in the same row or column, whose combined candidates equal the count of cells plus two extra digits from outside the group\'s units.',
+    howItHelps: 'The group must collectively contain certain digits. This forces eliminations in both the intersecting row/column and the rest of the box.',
+  },
+  {
+    name: 'BUG',
+    tier: 'Expert',
+    lookFor: 'All remaining unsolved cells would have exactly two candidates — except one cell that has three. This is a "Bivalue Universal Grave."',
+    howItHelps: 'Placing either of the non-extra candidates leads to a position with multiple solutions (invalid). The extra candidate in the triple cell is forced; place it.',
+  },
+];
+
+const tiers = ['Basic', 'Intermediate', 'Advanced', 'Expert'] as const;
+
+const tierMeta: Record<string, { color: string; badge: string; desc: string }> = {
+  Basic:        { color: 'emerald', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', desc: 'Single-cell logic — suitable for all skill levels.' },
+  Intermediate: { color: 'amber',   badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   desc: 'Multi-cell patterns that restrict candidate groups.' },
+  Advanced:     { color: 'violet',  badge: 'bg-violet-500/15 text-violet-400 border-violet-500/30', desc: 'Fish and chain patterns spanning rows and columns.' },
+  Expert:       { color: 'rose',    badge: 'bg-rose-500/15 text-rose-400 border-rose-500/30',     desc: 'Deep logical chains and uniqueness arguments.' },
+};
+
+const tierHeading: Record<string, string> = {
+  Basic:        'text-emerald-400',
+  Intermediate: 'text-amber-400',
+  Advanced:     'text-violet-400',
+  Expert:       'text-rose-400',
+};
+
+const tierBorder: Record<string, string> = {
+  Basic:        'border-emerald-500/20 hover:border-emerald-500/50',
+  Intermediate: 'border-amber-500/20 hover:border-amber-500/50',
+  Advanced:     'border-violet-500/20 hover:border-violet-500/50',
+  Expert:       'border-rose-500/20 hover:border-rose-500/50',
+};
+
+function byTier(tier: string) {
+  return techniques.filter(t => t.tier === tier);
+}
+</script>
+
+<template>
+  <div class="min-h-screen w-full flex flex-col">
+    <!-- Header -->
+    <div class="sticky top-0 z-10 bg-[#0c0a09]/95 backdrop-blur border-b border-zinc-800 px-4 sm:px-8 py-4 flex items-center gap-4">
+      <button
+        @click="emit('back-to-menu')"
+        class="flex items-center gap-2 text-sm font-semibold text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-wider"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+        </svg>
+        Menu
+      </button>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl sm:text-2xl font-black text-zinc-100 tracking-tight leading-tight">Sudoku Academy</h1>
+        <p class="text-xs text-zinc-500 hidden sm:block">All 23 solving techniques explained — from naked singles to expert chains</p>
+      </div>
+      <div class="shrink-0 text-right hidden sm:block">
+        <span class="text-xs text-zinc-600 font-semibold">23 techniques · 4 tiers</span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
+
+      <div v-for="tier in tiers" :key="tier" class="mb-12">
+        <!-- Tier heading -->
+        <div class="flex items-center gap-3 mb-5">
+          <h2 :class="tierHeading[tier]" class="text-xl font-black uppercase tracking-widest">{{ tier }}</h2>
+          <span :class="tierMeta[tier]!.badge" class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border">
+            {{ byTier(tier).length }} technique{{ byTier(tier).length !== 1 ? 's' : '' }}
+          </span>
+          <div class="flex-1 h-px bg-zinc-800" />
+        </div>
+        <p class="text-xs text-zinc-500 mb-5 -mt-3">{{ tierMeta[tier]!.desc }}</p>
+
+        <!-- Cards grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            v-for="tech in byTier(tier)"
+            :key="tech.name"
+            :class="tierBorder[tier]"
+            class="bg-zinc-900/60 border p-5 transition-colors"
+          >
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <h3 class="text-base font-black text-zinc-100 leading-tight">{{ tech.name }}</h3>
+              <span :class="tierMeta[tier]!.badge" class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0">
+                {{ tier }}
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">What to look for</p>
+                <p class="text-sm text-zinc-300 leading-relaxed">{{ tech.lookFor }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">How it helps</p>
+                <p class="text-sm text-zinc-400 leading-relaxed">{{ tech.howItHelps }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-zinc-800 pt-8 text-center">
+        <p class="text-xs text-zinc-600 leading-relaxed max-w-lg mx-auto">
+          These techniques are used by the in-game analyzer. When you request a hint, the engine applies them in order from Basic to Expert, showing you step-by-step how each deduction is made.
+        </p>
+        <button
+          @click="emit('back-to-menu')"
+          class="mt-6 px-8 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sm font-bold text-zinc-300 uppercase tracking-wider transition-all active:scale-95"
+        >
+          Back to Menu
+        </button>
+      </div>
+
+    </div>
+  </div>
+</template>

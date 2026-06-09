@@ -1,7 +1,7 @@
 import { ref, readonly } from 'vue';
 import type { Grid, NotesGrid, Difficulty } from '../types/sudoku';
 
-const DIFFICULTIES = ['easy', 'medium', 'hard', 'expert'] as const;
+const DIFFICULTIES = ['beginner', 'easy', 'medium', 'hard', 'expert', 'master'] as const;
 const saveKey = (d: Difficulty) => `sudoku_v1_save_${d}`;
 
 export interface GameSave {
