@@ -905,6 +905,92 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findSueDeCoq(candidates: number[][][]): ComplexHint | null {
+    // Sue-de-Coq: intersection of a row/col segment and a box that together contain exactly N cells
+    // covering N+M digits where N come from the intersection, M from the rest of the row/col,
+    // M from the rest of the box — allowing eliminations from both the row/col and the box.
+    for (let box = 0; box < 9; box++) {
+      const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+
+      // Try each row that intersects this box
+      for (let r = sr; r < sr + 3; r++) {
+        // Intersection: empty cells in row r AND in box
+        const intersect: CellCoord[] = [];
+        for (let c = sc; c < sc + 3; c++) {
+          if (currentBoard.value[r]![c] === 0) intersect.push({ r, c });
+        }
+        if (intersect.length < 2) continue;
+
+        // Remaining row cells (outside box)
+        const rowRest: CellCoord[] = [];
+        for (let c = 0; c < 9; c++) {
+          if (c < sc || c >= sc + 3) {
+            if (currentBoard.value[r]![c] === 0) rowRest.push({ r, c });
+          }
+        }
+
+        // Remaining box cells (outside row)
+        const boxRest: CellCoord[] = [];
+        for (let r2 = sr; r2 < sr + 3; r2++) {
+          if (r2 === r) continue;
+          for (let c = sc; c < sc + 3; c++) {
+            if (currentBoard.value[r2]![c] === 0) boxRest.push({ r: r2, c });
+          }
+        }
+
+        // Union of candidates in intersection
+        const intDigits = [...new Set(intersect.flatMap(({ r: ir, c: ic }) => candidates[ir]![ic]!))];
+        if (intDigits.length < 2 || intDigits.length > intersect.length + 2) continue;
+
+        // Try to find a subset from rowRest and boxRest that "covers" extra digits
+        // Simplified: check if intersection candidates = row-exclusive + box-exclusive partition
+        const rowRestDigits = [...new Set(rowRest.flatMap(({ r: ir, c: ic }) => candidates[ir]![ic]!))];
+        const boxRestDigits = [...new Set(boxRest.flatMap(({ r: ir, c: ic }) => candidates[ir]![ic]!))];
+
+        const rowExclusive = intDigits.filter(v => rowRestDigits.includes(v) && !boxRestDigits.includes(v));
+        const boxExclusive = intDigits.filter(v => boxRestDigits.includes(v) && !rowRestDigits.includes(v));
+        const shared = intDigits.filter(v => !rowExclusive.includes(v) && !boxExclusive.includes(v));
+
+        if (shared.length > 0 || rowExclusive.length === 0 || boxExclusive.length === 0) continue;
+        if (intDigits.length !== rowExclusive.length + boxExclusive.length) continue;
+
+        // Eliminations: rowExclusive from rowRest, boxExclusive from boxRest
+        const eliminations: HintCoordinate[] = [];
+        for (const { r: er, c: ec } of rowRest) {
+          for (const v of rowExclusive) {
+            if (candidates[er]![ec]!.includes(v)) eliminations.push({ r: er, c: ec, type: 'elimination' });
+          }
+        }
+        for (const { r: er, c: ec } of boxRest) {
+          for (const v of boxExclusive) {
+            if (candidates[er]![ec]!.includes(v)) eliminations.push({ r: er, c: ec, type: 'elimination' });
+          }
+        }
+        if (eliminations.length === 0) continue;
+
+        const target = eliminations[0]!;
+        return {
+          title: `Sue-de-Coq (Ekspertska Tehnika)`,
+          targetCell: { r: target.r, c: target.c },
+          targetNum: solvedBoard.value[target.r]![target.c]!,
+          steps: [
+            {
+              label: "Korak 1 — Pronađi Sue-de-Coq presjek",
+              description: `Presjek reda ${r+1} i kutije ${box+1} sadrži ćelije čiji kandidati [${intDigits.join(',')}] se dijele na dvije grupe: [${rowExclusive.join(',')}] koji mogu ići samo u ostatak reda, i [${boxExclusive.join(',')}] koji mogu ići samo u ostatak kutije. Presjek (plavo) "troši" sve te kandidate.`,
+              highlightCoords: intersect.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
+            },
+            {
+              label: "Korak 2 — Eliminiši iz reda i kutije",
+              description: `Pošto su [${rowExclusive.join(',')}] ekskluzivni za presjek unutar reda, ne mogu se naći u ostatku reda. Pošto su [${boxExclusive.join(',')}] ekskluzivni za presjek unutar kutije, ne mogu se naći u ostatku kutije. Crvene ćelije gube te kandidate.`,
+              highlightCoords: eliminations
+            }
+          ]
+        };
+      }
+    }
+    return null;
+  }
+
   function findXYChain(candidates: number[][][]): ComplexHint | null {
     // XY-Chain: chain of bivalue cells where consecutive cells share a digit and see each other.
     // The first and last cells share a digit q. Cells seeing both ends can have q eliminated.
@@ -1849,6 +1935,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findTwoStringKite(candidates);
     if (!hint) hint = findUniqueRectangle(candidates);
     if (!hint) hint = findXYChain(candidates);
+    if (!hint) hint = findSueDeCoq(candidates);
     if (!hint) hint = findBUG(candidates);
     if (!hint) hint = findEmptyRectangle(candidates);
     if (!hint) hint = findWWing(candidates);
