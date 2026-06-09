@@ -701,6 +701,67 @@ export function useSudokuEngine() {
     return null;
   }
 
+  function findHiddenTriples(candidates: number[][][]): ComplexHint | null {
+    const units: { cells: CellCoord[]; label: string }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Red ${r+1}` });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Kolona ${c+1}` });
+    for (let box = 0; box < 9; box++) {
+      const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
+      const cells: CellCoord[] = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
+      units.push({ cells, label: `Kutija ${box+1}` });
+    }
+
+    for (const { cells: unitCells, label } of units) {
+      const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0);
+      // try all combos of 3 digits
+      for (let vi = 1; vi <= 7; vi++) {
+        for (let vj = vi + 1; vj <= 8; vj++) {
+          for (let vk = vj + 1; vk <= 9; vk++) {
+            // cells that contain at least one of vi,vj,vk
+            const triple = [vi, vj, vk];
+            const cellsWithAny = emptyCells.filter(({ r, c }) => triple.some(v => candidates[r]![c]!.includes(v)));
+            if (cellsWithAny.length !== 3) continue;
+            // each of the three digits must appear in at least one of those cells
+            if (!triple.every(v => cellsWithAny.some(({ r, c }) => candidates[r]![c]!.includes(v)))) continue;
+
+            const [a, b, c2] = cellsWithAny as [CellCoord, CellCoord, CellCoord];
+            const eliminations: HintCoordinate[] = [];
+            for (const cell of [a, b, c2]) {
+              for (const cand of candidates[cell.r]![cell.c]!) {
+                if (!triple.includes(cand)) eliminations.push({ r: cell.r, c: cell.c, type: 'elimination' });
+              }
+            }
+            if (eliminations.length === 0) continue;
+
+            return {
+              title: `Skrivena Trojka (Hidden Triple) — ${label}`,
+              targetCell: a,
+              targetNum: solvedBoard.value[a.r]![a.c]!,
+              steps: [
+                {
+                  label: "Korak 1 — Pronađi Skrivenu Trojku",
+                  description: `Brojevi ${vi}, ${vj} i ${vk} mogu ići samo u ćelije [R${a.r+1}K${a.c+1}], [R${b.r+1}K${b.c+1}] i [R${c2.r+1}K${c2.c+1}] unutar ${label}. Ova trojka je "skrivena" — ćelije imaju i druge kandidate, ali ${vi}, ${vj}, ${vk} su ekskluzivni za ove tri ćelije.`,
+                  highlightCoords: [
+                    { r: a.r, c: a.c, type: 'trigger' },
+                    { r: b.r, c: b.c, type: 'trigger' },
+                    { r: c2.r, c: c2.c, type: 'trigger' }
+                  ]
+                },
+                {
+                  label: "Korak 2 — Eliminiši ostale kandidate iz trojke",
+                  description: `Pošto ${vi}, ${vj} i ${vk} moraju popuniti upravo te tri ćelije, svi drugi kandidati u njima su nemogući (crveno). Eliminacijom se otkrivaju novi goli singletoni ili parovi.`,
+                  highlightCoords: eliminations
+                }
+              ]
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function findHiddenPairs(candidates: number[][][]): ComplexHint | null {
     const units: CellCoord[][] = [];
     for (let r = 0; r < 9; r++) units.push(Array.from({ length: 9 }, (_, c) => ({ r, c })));
@@ -829,6 +890,7 @@ export function useSudokuEngine() {
     if (!hint) hint = findHiddenSingle(candidates);
     if (!hint) hint = findNakedPairs(candidates);
     if (!hint) hint = findNakedTriples(candidates);
+    if (!hint) hint = findHiddenTriples(candidates);
     if (!hint) hint = findHiddenPairs(candidates);
     if (!hint) hint = findPointingPair(candidates);
     if (!hint) hint = findXWing(candidates);
