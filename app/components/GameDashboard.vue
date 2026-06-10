@@ -16,7 +16,7 @@ defineEmits<{
 
 <template>
   <div class="flex flex-col gap-2 w-full">
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col items-start gap-1 sm:flex-row sm:justify-between sm:items-center sm:gap-0">
       <button
         @click="$emit('exit-game')"
         class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
