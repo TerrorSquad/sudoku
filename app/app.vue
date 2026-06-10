@@ -453,8 +453,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
       <!-- Center / main game column -->
       <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
-        <!-- constrain board to viewport height so controls are always visible -->
-        <div class="flex flex-col gap-3 w-full max-w-[calc(100vh-340px)] mx-auto">
+        <div class="flex flex-col gap-3 w-full mx-auto">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"

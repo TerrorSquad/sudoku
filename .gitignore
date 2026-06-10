@@ -27,6 +27,7 @@ logs
 # skills-lock.json is committed as the source of truth; run `caveman install` to restore
 .claude/
 .agents/
+.playwright-mcp/
 
 # VS Code — machine-specific settings
 .vscode/
