@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from '../types/sudoku';
 
 export interface ExplanationStep {
@@ -15,6 +16,8 @@ export interface ComplexHint {
 }
 
 export function useSudokuEngine() {
+  const { t } = useI18n();
+
   const currentBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
   const initialBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
   const solvedBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
@@ -268,18 +271,18 @@ export function useSudokuEngine() {
           }
 
           return {
-            title: "Naked Single",
+            title: t('hint.tech.nakedSingle.title'),
             targetCell: { r, c },
             targetNum,
             steps: [
               {
-                label: "Step 1 — Find blocking cells",
-                description: `Cell [R${r+1}C${c+1}] is surrounded by all other digits. The blue-highlighted cells in its row, column, and box block every digit except ${targetNum}. A Naked Single means only one candidate remains — visible directly without further analysis.`,
+                label: t('hint.tech.nakedSingle.step1Label'),
+                description: t('hint.tech.nakedSingle.step1Desc', { row: r+1, col: c+1, num: targetNum }),
                 highlightCoords: triggers
               },
               {
-                label: "Step 2 — Enter the only remaining digit",
-                description: `Since all other digits (1–9 except ${targetNum}) are eliminated from this cell by conflicts in its row, column, and box, ${targetNum} is the only valid value.`,
+                label: t('hint.tech.nakedSingle.step2Label'),
+                description: t('hint.tech.nakedSingle.step2Desc', { num: targetNum }),
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -305,18 +308,18 @@ export function useSudokuEngine() {
             if (currentBoard.value[r]![i] !== 0) triggers.push({ r, c: i, type: 'trigger' });
           }
           return {
-            title: "Hidden Single — Row",
+            title: t('hint.tech.hiddenSingleRow.title'),
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Step 1 — Scan the full row",
-                description: `Check all empty cells in row ${r+1}. Digit ${val} is not possible in any other cell of that row — blocked by their columns or boxes. Filled cells (blue) show why. This is called Hidden Single because ${val} is "hidden" inside the row — not immediately obvious.`,
+                label: t('hint.tech.hiddenSingleRow.step1Label'),
+                description: t('hint.tech.hiddenSingleRow.step1Desc', { row: r+1, val }),
                 highlightCoords: triggers
               },
               {
-                label: "Step 2 — Only valid placement for this digit",
-                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire row, that is the only valid placement. Enter ${val}.`,
+                label: t('hint.tech.hiddenSingleRow.step2Label'),
+                description: t('hint.tech.hiddenSingleRow.step2Desc', { row: r+1, col: c+1, val }),
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -337,18 +340,18 @@ export function useSudokuEngine() {
             if (currentBoard.value[i]![c] !== 0) triggers.push({ r: i, c, type: 'trigger' });
           }
           return {
-            title: "Hidden Single — Column",
+            title: t('hint.tech.hiddenSingleColumn.title'),
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Step 1 — Scan the full column",
-                description: `Check all empty cells in column ${c+1}. Digit ${val} is not possible in any other cell of that column — blocked by their rows or boxes. Filled cells (blue) show why the other positions are ruled out.`,
+                label: t('hint.tech.hiddenSingleColumn.step1Label'),
+                description: t('hint.tech.hiddenSingleColumn.step1Desc', { col: c+1, val }),
                 highlightCoords: triggers
               },
               {
-                label: "Step 2 — Only valid placement for this digit",
-                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire column ${c+1}, that is the only valid placement. Enter ${val}.`,
+                label: t('hint.tech.hiddenSingleColumn.step2Label'),
+                description: t('hint.tech.hiddenSingleColumn.step2Desc', { row: r+1, col: c+1, val }),
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -377,18 +380,18 @@ export function useSudokuEngine() {
             }
           }
           return {
-            title: "Hidden Single — Box",
+            title: t('hint.tech.hiddenSingleBox.title'),
             targetCell: { r, c },
             targetNum: val,
             steps: [
               {
-                label: "Step 1 — Scan the 3×3 box",
-                description: `Look at box ${box+1} (rows ${startRow+1}–${startRow+3}, cols ${startCol+1}–${startCol+3}). Digit ${val} is not possible in any other empty cell of that box — blocked by surrounding rows and columns. Filled cells (blue) confirm this.`,
+                label: t('hint.tech.hiddenSingleBox.step1Label'),
+                description: t('hint.tech.hiddenSingleBox.step1Desc', { box: box+1, rowStart: startRow+1, rowEnd: startRow+3, colStart: startCol+1, colEnd: startCol+3, val }),
                 highlightCoords: triggers
               },
               {
-                label: "Step 2 — Only valid placement in the box",
-                description: `Since ${val} can only go into cell [R${r+1}C${c+1}] within the entire box ${box+1}, that is the only valid placement. Enter ${val}.`,
+                label: t('hint.tech.hiddenSingleBox.step2Label'),
+                description: t('hint.tech.hiddenSingleBox.step2Desc', { row: r+1, col: c+1, box: box+1, val }),
                 highlightCoords: [{ r, c, type: 'trigger' }]
               }
             ]
@@ -426,21 +429,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Naked Pair — Row",
+                title: t('hint.tech.nakedPairRow.title'),
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Naked Pair",
-                    description: `In row ${r+1}, the cells in columns ${a.c+1} and ${b.c+1} share exactly the same candidates [${a.v1}, ${a.v2}]. A Naked Pair means these two digits must go into one of those two cells — no other digit can go there, and ${a.v1} and ${a.v2} cannot appear elsewhere in the row.`,
+                    label: t('hint.tech.nakedPairRow.step1Label'),
+                    description: t('hint.tech.nakedPairRow.step1Desc', { row: r+1, col1: a.c+1, col2: b.c+1, v1: a.v1, v2: a.v2 }),
                     highlightCoords: [
                       { r, c: a.c, type: 'trigger' },
                       { r, c: b.c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Step 2 — Eliminate pair from the rest of the row",
-                    description: `Since ${a.v1} and ${a.v2} are "locked" into those two cells, they cannot appear in any other cell of row ${r+1}. Red-highlighted cells can have ${a.v1} or ${a.v2} removed from their candidate lists, opening new possibilities.`,
+                    label: t('hint.tech.nakedPairRow.step2Label'),
+                    description: t('hint.tech.nakedPairRow.step2Desc', { v1: a.v1, v2: a.v2, row: r+1 }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -477,21 +480,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Naked Pair — Column",
+                title: t('hint.tech.nakedPairColumn.title'),
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Naked Pair in the column",
-                    description: `In column ${c+1}, the cells in rows ${a.r+1} and ${b.r+1} share exactly the same candidates [${a.v1}, ${a.v2}]. Those two digits must go into one of those two cells — no other digit is possible there, and ${a.v1} and ${a.v2} cannot appear elsewhere in the column.`,
+                    label: t('hint.tech.nakedPairColumn.step1Label'),
+                    description: t('hint.tech.nakedPairColumn.step1Desc', { col: c+1, row1: a.r+1, row2: b.r+1, v1: a.v1, v2: a.v2 }),
                     highlightCoords: [
                       { r: a.r, c, type: 'trigger' },
                       { r: b.r, c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Step 2 — Eliminate pair from the rest of the column",
-                    description: `Since ${a.v1} and ${a.v2} are "locked" into those two cells in column ${c+1}, they can be removed from all other cells in the same column (red). This narrows candidates and simplifies further solving.`,
+                    label: t('hint.tech.nakedPairColumn.step2Label'),
+                    description: t('hint.tech.nakedPairColumn.step2Desc', { v1: a.v1, v2: a.v2, col: c+1 }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -534,21 +537,21 @@ export function useSudokuEngine() {
             if (eliminations.length > 0) {
               const target = eliminations[0]!;
               return {
-                title: "Naked Pair — Box",
+                title: t('hint.tech.nakedPairBox.title'),
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Naked Pair in the box",
-                    description: `In box ${box+1}, cells [R${a.r+1}C${a.c+1}] and [R${b.r+1}C${b.c+1}] share the same candidates [${a.v1}, ${a.v2}]. This means ${a.v1} and ${a.v2} must go into one of those two cells, without exception.`,
+                    label: t('hint.tech.nakedPairBox.step1Label'),
+                    description: t('hint.tech.nakedPairBox.step1Desc', { box: box+1, row1: a.r+1, col1: a.c+1, row2: b.r+1, col2: b.c+1, v1: a.v1, v2: a.v2 }),
                     highlightCoords: [
                       { r: a.r, c: a.c, type: 'trigger' },
                       { r: b.r, c: b.c, type: 'trigger' }
                     ]
                   },
                   {
-                    label: "Step 2 — Eliminate pair from the rest of the box",
-                    description: `Since ${a.v1} and ${a.v2} are exclusively tied to those two cells in box ${box+1}, they can be removed from all other empty cells in the same box (red). This can reveal new Naked Single or Hidden Single opportunities.`,
+                    label: t('hint.tech.nakedPairBox.step2Label'),
+                    description: t('hint.tech.nakedPairBox.step2Desc', { v1: a.v1, v2: a.v2, box: box+1 }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -591,18 +594,18 @@ export function useSudokuEngine() {
           if (eliminations.length > 0) {
             const target = eliminations[0]!;
             return {
-              title: "Pointing Pair — Row",
+              title: t('hint.tech.pointingPairRow.title'),
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Step 1 — Spot the alignment inside the box",
-                  description: `In box ${box+1}, all remaining candidates for digit ${val} lie exclusively in row ${targetRow+1} (blue). This means ${val} must go into one of those cells — and nowhere else in that box.`,
+                  label: t('hint.tech.pointingPairRow.step1Label'),
+                  description: t('hint.tech.pointingPairRow.step1Desc', { box: box+1, val, row: targetRow+1 }),
                   highlightCoords: cells.map(cell => ({ r: cell.r, c: cell.c, type: 'trigger' as const }))
                 },
                 {
-                  label: "Step 2 — Eliminate from the rest of the row",
-                  description: `Because of the alignment inside the box, ${val} cannot be in any other cell of row ${targetRow+1} outside that box. Red cells can have ${val} removed from their candidates, simplifying further solving.`,
+                  label: t('hint.tech.pointingPairRow.step2Label'),
+                  description: t('hint.tech.pointingPairRow.step2Desc', { val, row: targetRow+1 }),
                   highlightCoords: eliminations
                 }
               ]
@@ -622,18 +625,18 @@ export function useSudokuEngine() {
           if (eliminations.length > 0) {
             const target = eliminations[0]!;
             return {
-              title: "Pointing Pair — Column",
+              title: t('hint.tech.pointingPairColumn.title'),
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Step 1 — Spot the alignment inside the box",
-                  description: `In box ${box+1}, all remaining candidates for digit ${val} lie exclusively in column ${targetCol+1} (blue). This means ${val} must go into one of those cells — and nowhere else in that box.`,
+                  label: t('hint.tech.pointingPairColumn.step1Label'),
+                  description: t('hint.tech.pointingPairColumn.step1Desc', { box: box+1, val, col: targetCol+1 }),
                   highlightCoords: cells.map(cell => ({ r: cell.r, c: cell.c, type: 'trigger' as const }))
                 },
                 {
-                  label: "Step 2 — Eliminate from the rest of the column",
-                  description: `Because of the alignment inside the box, ${val} cannot be in any other cell of column ${targetCol+1} outside that box. Red cells can have ${val} removed from their candidates.`,
+                  label: t('hint.tech.pointingPairColumn.step2Label'),
+                  description: t('hint.tech.pointingPairColumn.step2Desc', { val, col: targetCol+1 }),
                   highlightCoords: eliminations
                 }
               ]
@@ -646,17 +649,17 @@ export function useSudokuEngine() {
   }
 
   function findNakedTriples(candidates: number[][][]): ComplexHint | null {
-    const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
+    const units: { cells: CellCoord[]; unitType: 'row' | 'column' | 'box'; unitN: number }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), unitType: 'row', unitN: r+1 });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), unitType: 'column', unitN: c+1 });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Box ${box+1}` });
+      units.push({ cells, unitType: 'box', unitN: box+1 });
     }
 
-    for (const { cells: unitCells, label } of units) {
+    for (const { cells: unitCells, unitType, unitN } of units) {
       const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0 && candidates[r]![c]!.length >= 2 && candidates[r]![c]!.length <= 3);
       for (let i = 0; i < emptyCells.length; i++) {
         for (let j = i + 1; j < emptyCells.length; j++) {
@@ -676,14 +679,16 @@ export function useSudokuEngine() {
             if (eliminations.length === 0) continue;
 
             const [v1, v2, v3] = union as [number, number, number];
+            const unitTitle = t(`hint.unit.${unitType}`, { n: unitN });
+            const unitLoc = t(`hint.unit.${unitType}Loc`, { n: unitN });
             return {
-              title: `Naked Triple — ${label}`,
+              title: t('hint.tech.nakedTriple.title', { unit: unitTitle }),
               targetCell: a,
               targetNum: solvedBoard.value[a.r]![a.c]!,
               steps: [
                 {
-                  label: "Step 1 — Find the Naked Triple",
-                  description: `Cells [R${a.r+1}C${a.c+1}], [R${b.r+1}C${b.c+1}] and [R${c2.r+1}C${c2.c+1}] together contain exactly three distinct candidates: ${v1}, ${v2}, ${v3}. Each cell holds only a subset of those three digits (2 or 3). Together, this triple "locks" those digits — none of the three can go anywhere else in ${label}.`,
+                  label: t('hint.tech.nakedTriple.step1Label'),
+                  description: t('hint.tech.nakedTriple.step1Desc', { row1: a.r+1, col1: a.c+1, row2: b.r+1, col2: b.c+1, row3: c2.r+1, col3: c2.c+1, v1, v2, v3, unit: unitLoc }),
                   highlightCoords: [
                     { r: a.r, c: a.c, type: 'trigger' },
                     { r: b.r, c: b.c, type: 'trigger' },
@@ -691,8 +696,8 @@ export function useSudokuEngine() {
                   ]
                 },
                 {
-                  label: "Step 2 — Eliminate triple from the rest of the unit",
-                  description: `Since ${v1}, ${v2} and ${v3} must go into those three cells, they can be removed from all other cells in ${label} (red). This drastically narrows the possibilities.`,
+                  label: t('hint.tech.nakedTriple.step2Label'),
+                  description: t('hint.tech.nakedTriple.step2Desc', { v1, v2, v3, unit: unitLoc }),
                   highlightCoords: eliminations
                 }
               ]
@@ -705,17 +710,17 @@ export function useSudokuEngine() {
   }
 
   function findNakedQuads(candidates: number[][][]): ComplexHint | null {
-    const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
+    const units: { cells: CellCoord[]; unitType: 'row' | 'column' | 'box'; unitN: number }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), unitType: 'row', unitN: r+1 });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), unitType: 'column', unitN: c+1 });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Box ${box+1}` });
+      units.push({ cells, unitType: 'box', unitN: box+1 });
     }
 
-    for (const { cells: unitCells, label } of units) {
+    for (const { cells: unitCells, unitType, unitN } of units) {
       const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0 && candidates[r]![c]!.length >= 2 && candidates[r]![c]!.length <= 4);
       for (let i = 0; i < emptyCells.length; i++) {
         for (let j = i + 1; j < emptyCells.length; j++) {
@@ -736,19 +741,21 @@ export function useSudokuEngine() {
               if (eliminations.length === 0) continue;
 
               const [v1,v2,v3,v4] = union as [number,number,number,number];
+              const unitTitle = t(`hint.unit.${unitType}`, { n: unitN });
+              const unitLoc = t(`hint.unit.${unitType}Loc`, { n: unitN });
               return {
-                title: `Naked Quad — ${label}`,
+                title: t('hint.tech.nakedQuad.title', { unit: unitTitle }),
                 targetCell: a,
                 targetNum: solvedBoard.value[a.r]![a.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Naked Quad",
-                    description: `Four cells in ${label} together contain exactly four candidates: ${v1}, ${v2}, ${v3}, ${v4}. Each cell holds only a subset of those four digits. This quad "locks" them — none of the four digits can go into any other cell of the same unit.`,
+                    label: t('hint.tech.nakedQuad.step1Label'),
+                    description: t('hint.tech.nakedQuad.step1Desc', { unit: unitLoc, v1, v2, v3, v4 }),
                     highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Step 2 — Eliminate quad from the rest of the unit",
-                    description: `Candidates ${v1}, ${v2}, ${v3} and ${v4} can be removed from all other cells in ${label} (red), as they are exclusively reserved for those four cells.`,
+                    label: t('hint.tech.nakedQuad.step2Label'),
+                    description: t('hint.tech.nakedQuad.step2Desc', { v1, v2, v3, v4, unit: unitLoc }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -809,13 +816,13 @@ export function useSudokuEngine() {
 
                 const target = eliminations[0]!;
                 return {
-                  title: "XY-Wing",
+                  title: t('hint.tech.xyWing.title'),
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Step 1 — Find the XY-Wing structure",
-                      description: `Pivot cell [R${pr+1}C${pc+1}] has candidates [${x},${y}]. Pincer 1 [R${r1+1}C${c1+1}] has [${x},${z}] and sees the pivot. Pincer 2 [R${r2+1}C${c2+1}] has [${y},${z}] and sees the pivot. Regardless of which candidate the pivot takes, one of the pincers must contain ${z}.`,
+                      label: t('hint.tech.xyWing.step1Label'),
+                      description: t('hint.tech.xyWing.step1Desc', { pr: pr+1, pc: pc+1, x, y, r1: r1+1, c1: c1+1, z, r2: r2+1, c2: c2+1 }),
                       highlightCoords: [
                         { r: pr, c: pc, type: 'trigger' },
                         { r: r1, c: c1, type: 'trigger' },
@@ -823,8 +830,8 @@ export function useSudokuEngine() {
                       ]
                     },
                     {
-                      label: "Step 2 — Eliminate the shared candidate",
-                      description: `Every cell that sees both pincers (red) cannot contain ${z} — because one of the pincers will always hold ${z}. The elimination is guaranteed regardless of the pivot's solution.`,
+                      label: t('hint.tech.xyWing.step2Label'),
+                      description: t('hint.tech.xyWing.step2Desc', { z }),
                       highlightCoords: eliminations
                     }
                   ]
@@ -879,13 +886,13 @@ export function useSudokuEngine() {
 
                 const target = eliminations[0]!;
                 return {
-                  title: "XYZ-Wing",
+                  title: t('hint.tech.xyzWing.title'),
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Step 1 — Find the XYZ-Wing structure",
-                      description: `Pivot [R${pr+1}C${pc+1}] has three candidates [${x},${y},${z}]. Both pincers [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] see the pivot and contain ${z} plus one of ${x} or ${y}. Unlike XY-Wing, the pivot itself also contains ${z}, so the elimination only applies to cells that see ALL three members.`,
+                      label: t('hint.tech.xyzWing.step1Label'),
+                      description: t('hint.tech.xyzWing.step1Desc', { pr: pr+1, pc: pc+1, x, y, z, r1: r1+1, c1: c1+1, r2: r2+1, c2: c2+1 }),
                       highlightCoords: [
                         { r: pr, c: pc, type: 'trigger' },
                         { r: r1, c: c1, type: 'trigger' },
@@ -893,8 +900,8 @@ export function useSudokuEngine() {
                       ]
                     },
                     {
-                      label: "Step 2 — Eliminate z from cells that see all three",
-                      description: `Cells that see the pivot and both pincers (red) cannot contain ${z} — in every scenario one of the three cells holds it. This is a more restrictive but more powerful version of XY-Wing.`,
+                      label: t('hint.tech.xyzWing.step2Label'),
+                      description: t('hint.tech.xyzWing.step2Desc', { z }),
                       highlightCoords: eliminations
                     }
                   ]
@@ -973,18 +980,18 @@ export function useSudokuEngine() {
 
         const target = eliminations[0]!;
         return {
-          title: `Sue-de-Coq`,
+          title: t('hint.tech.sueDeCoq.title'),
           targetCell: { r: target.r, c: target.c },
           targetNum: solvedBoard.value[target.r]![target.c]!,
           steps: [
             {
-              label: "Step 1 — Find the Sue-de-Coq intersection",
-              description: `The intersection of row ${r+1} and box ${box+1} contains cells whose candidates [${intDigits.join(',')}] split into two groups: [${rowExclusive.join(',')}] that can only go into the rest of the row, and [${boxExclusive.join(',')}] that can only go into the rest of the box. The intersection (blue) "consumes" all those candidates.`,
+              label: t('hint.tech.sueDeCoq.step1Label'),
+              description: t('hint.tech.sueDeCoq.step1Desc', { row: r+1, box: box+1, intDigits: intDigits.join(','), rowExclusive: rowExclusive.join(','), boxExclusive: boxExclusive.join(',') }),
               highlightCoords: intersect.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
             },
             {
-              label: "Step 2 — Eliminate from the row and box",
-              description: `Since [${rowExclusive.join(',')}] are exclusive to the intersection within the row, they cannot appear in the rest of the row. Since [${boxExclusive.join(',')}] are exclusive to the intersection within the box, they cannot appear in the rest of the box. Red cells lose those candidates.`,
+              label: t('hint.tech.sueDeCoq.step2Label'),
+              description: t('hint.tech.sueDeCoq.step2Desc', { rowExclusive: rowExclusive.join(','), boxExclusive: boxExclusive.join(',') }),
               highlightCoords: eliminations
             }
           ]
@@ -1031,20 +1038,20 @@ export function useSudokuEngine() {
               }
               if (eliminations.length > 0) {
                 const target = eliminations[0]!;
-                const chainDesc = chain.map(ch => `R${ch.r+1}K${ch.c+1}`).join('→');
+                const chainDesc = chain.map(ch => `R${ch.r+1}C${ch.c+1}`).join('→');
                 return {
-                  title: `XY-Chain (length ${chain.length})`,
+                  title: t('hint.tech.xyChain.title', { len: chain.length }),
                   targetCell: { r: target.r, c: target.c },
                   targetNum: solvedBoard.value[target.r]![target.c]!,
                   steps: [
                     {
-                      label: "Step 1 — Find the XY-Chain",
-                      description: `Chain of bivalue cells: ${chainDesc}. Every two adjacent cells share one candidate and "see" each other. Regardless of the direction in which the chain resolves, digit ${exitDigit} must be at one of the two chain ends (blue).`,
+                      label: t('hint.tech.xyChain.step1Label'),
+                      description: t('hint.tech.xyChain.step1Desc', { chain: chainDesc, digit: exitDigit }),
                       highlightCoords: chain.map(ch => ({ r: ch.r, c: ch.c, type: 'trigger' as const }))
                     },
                     {
-                      label: "Step 2 — Eliminate the shared candidate",
-                      description: `Cells that see both ends of the chain (red) can never have ${exitDigit} — one chain end always holds ${exitDigit}. This elimination can open the path to the solution.`,
+                      label: t('hint.tech.xyChain.step2Label'),
+                      description: t('hint.tech.xyChain.step2Desc', { digit: exitDigit }),
                       highlightCoords: eliminations
                     }
                   ]
@@ -1112,18 +1119,18 @@ export function useSudokuEngine() {
     if (bugDigit === -1) bugDigit = triCands[0]!; // fallback: pick first
 
     return {
-      title: "BUG+1 (Bivalue Universal Grave)",
+      title: t('hint.tech.bug.title'),
       targetCell: trivialCell,
       targetNum: bugDigit,
       steps: [
         {
-          label: "Step 1 — Detect BUG+1 state",
-          description: `Almost every empty cell has exactly two candidates — that is the "Bivalue Universal Grave" (BUG) state. The only exception is cell [R${r+1}C${c+1}] which has three candidates: [${triCands.join(',')}]. If we don't enter the correct digit here, the puzzle would deadlock with multiple solutions.`,
+          label: t('hint.tech.bug.step1Label'),
+          description: t('hint.tech.bug.step1Desc', { row: r+1, col: c+1, cands: triCands.join(',') }),
           highlightCoords: [{ r, c, type: 'trigger' }]
         },
         {
-          label: "Step 2 — Enter the BUG digit",
-          description: `The only candidate that breaks the BUG symmetry is ${bugDigit} — it appears an odd number of times in its row, column, or box. Entering ${bugDigit} resolves the BUG and guarantees solution uniqueness.`,
+          label: t('hint.tech.bug.step2Label'),
+          description: t('hint.tech.bug.step2Desc', { digit: bugDigit }),
           highlightCoords: [{ r, c, type: 'trigger' }]
         }
       ]
@@ -1172,18 +1179,18 @@ export function useSudokuEngine() {
             for (let erBoxCol = sc; erBoxCol < sc + 3; erBoxCol++) {
               if (currentBoard.value[otherRow]![erBoxCol] === 0 && candidates[otherRow]![erBoxCol]!.includes(val)) {
                 return {
-                  title: "Empty Rectangle",
+                  title: t('hint.tech.emptyRectangle.title'),
                   targetCell: { r: otherRow, c: erBoxCol },
                   targetNum: solvedBoard.value[otherRow]![erBoxCol]!,
                   steps: [
                     {
-                      label: "Step 1 — Spot the Empty Rectangle in the box",
-                      description: `In box ${box+1}, all candidates for ${val} lie in row ${erRow+1} (blue). This creates an "empty rectangle" — the rest of the box has no ${val}. Column ${c+1} has a strong link for ${val}: only in rows ${rA+1} and ${rB+1}.`,
+                      label: t('hint.tech.emptyRectangle.step1Label'),
+                      description: t('hint.tech.emptyRectangle.step1Desc', { box: box+1, val, erRow: erRow+1, col: c+1, rowA: rA+1, rowB: rB+1 }),
                       highlightCoords: boxCells.map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                     },
                     {
-                      label: "Step 2 — Eliminate via combined links",
-                      description: `The strong link in column ${c+1} and the box alignment together guarantee that ${val} must be in row ${erRow+1} or in the box column containing the ER. Cell [R${otherRow+1}C${erBoxCol+1}] sees both — therefore ${val} is eliminated from it.`,
+                      label: t('hint.tech.emptyRectangle.step2Label'),
+                      description: t('hint.tech.emptyRectangle.step2Desc', { col: c+1, val, erRow: erRow+1, row: otherRow+1, col2: erBoxCol+1 }),
                       highlightCoords: [{ r: otherRow, c: erBoxCol, type: 'elimination' }]
                     }
                   ]
@@ -1255,21 +1262,21 @@ export function useSudokuEngine() {
 
             const target = eliminations[0]!;
             return {
-              title: "W-Wing",
+              title: t('hint.tech.wWing.title'),
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Step 1 — Find the W-Wing structure",
-                  description: `Two cells [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] have the same candidates [${p},${q}] and cannot see each other. They are connected by a "strong link" on digit ${p} — there is a unit where ${p} can only go into two cells, one seeing the first bivalue cell and the other seeing the second. This guarantees at least one of the bivalue cells contains ${q}.`,
+                  label: t('hint.tech.wWing.step1Label'),
+                  description: t('hint.tech.wWing.step1Desc', { r1: r1+1, c1: c1+1, r2: r2+1, c2: c2+1, p, q }),
                   highlightCoords: [
                     { r: r1, c: c1, type: 'trigger' },
                     { r: r2, c: c2, type: 'trigger' }
                   ]
                 },
                 {
-                  label: "Step 2 — Eliminate q from cells that see both",
-                  description: `Every cell that sees both [R${r1+1}C${c1+1}] and [R${r2+1}C${c2+1}] (red) cannot contain ${q} — because one of the bivalue cells always holds ${q}, without exception.`,
+                  label: t('hint.tech.wWing.step2Label'),
+                  description: t('hint.tech.wWing.step2Desc', { r1: r1+1, c1: c1+1, r2: r2+1, c2: c2+1, q }),
                   highlightCoords: eliminations
                 }
               ]
@@ -1313,18 +1320,18 @@ export function useSudokuEngine() {
               const triggerCoords: HintCoordinate[] = allRows.flatMap(rd => rd.cols.map(c => ({ r: rd.r, c, type: 'trigger' as const })));
               const target = eliminations[0]!;
               return {
-                title: "Jellyfish",
+                title: t('hint.tech.jellyfish.title'),
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Jellyfish matrix",
-                    description: `Digit ${val} appears in 2–4 places in each of four rows (${allRows.map(rd => rd.r+1).join(', ')}), and all candidates fall within exactly 4 columns. This is a four-dimensional X-Wing (or two-dimensional Swordfish): ${val} is "locked" inside that 4×4 grid (blue).`,
+                    label: t('hint.tech.jellyfish.step1Label'),
+                    description: t('hint.tech.jellyfish.step1Desc', { val, rows: allRows.map(rd => rd.r+1).join(', ') }),
                     highlightCoords: triggerCoords
                   },
                   {
-                    label: "Step 2 — Eliminate from those columns",
-                    description: `Regardless of the arrangement inside the matrix, ${val} covers all four columns across those four rows. Therefore ${val} cannot appear in any other cell of those columns (red).`,
+                    label: t('hint.tech.jellyfish.step2Label'),
+                    description: t('hint.tech.jellyfish.step2Desc', { val }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -1368,18 +1375,18 @@ export function useSudokuEngine() {
               const floorCands = cands[floorIdx]!;
               if (!floorCands.includes(a) || !floorCands.includes(b)) continue;
               return {
-                title: "Unique Rectangle — Type 1",
+                title: t('hint.tech.uniqueRectangleType1.title'),
                 targetCell: floor,
                 targetNum: solvedBoard.value[floor.r]![floor.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find UR Type 1",
-                    description: `Three cells of the rectangle have exactly [${a},${b}]. The fourth cell [R${floor.r+1}C${floor.c+1}] has additional candidates. If it also had only ${a} and ${b}, the puzzle would have multiple solutions — impossible in a valid sudoku.`,
+                    label: t('hint.tech.uniqueRectangleType1.step1Label'),
+                    description: t('hint.tech.uniqueRectangleType1.step1Desc', { a, b, row: floor.r+1, col: floor.c+1 }),
                     highlightCoords: pairCornerIdx.map(i => ({ r: corners[i]!.r, c: corners[i]!.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Step 2 — Eliminate the pair from the fourth cell",
-                    description: `${a} and ${b} are eliminated from [R${floor.r+1}C${floor.c+1}] to guarantee solution uniqueness. The remaining candidates determine the correct value.`,
+                    label: t('hint.tech.uniqueRectangleType1.step2Label'),
+                    description: t('hint.tech.uniqueRectangleType1.step2Desc', { a, b, row: floor.r+1, col: floor.c+1 }),
                     highlightCoords: [{ r: floor.r, c: floor.c, type: 'elimination' }]
                   }
                 ]
@@ -1411,18 +1418,18 @@ export function useSudokuEngine() {
               if (eliminations.length === 0) continue;
               const target = eliminations[0]!;
               return {
-                title: "Unique Rectangle — Type 2",
+                title: t('hint.tech.uniqueRectangleType2.title'),
                 targetCell: { r: target.r, c: target.c },
                 targetNum: solvedBoard.value[target.r]![target.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find UR Type 2",
-                    description: `Two cells of the rectangle are exactly [${a},${b}]. The other two are [${a},${b},${extraDigit}] — the same extra candidate ${extraDigit}. If ${extraDigit} is not in one of those cells, the puzzle deadlocks with multiple solutions. Therefore ${extraDigit} must be in one of them.`,
+                    label: t('hint.tech.uniqueRectangleType2.step1Label'),
+                    description: t('hint.tech.uniqueRectangleType2.step1Desc', { a, b, extra: extraDigit }),
                     highlightCoords: [exCell0, exCell1].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Step 2 — Eliminate extra digit from shared peers",
-                    description: `Since ${extraDigit} must be in [R${exCell0.r+1}C${exCell0.c+1}] or [R${exCell1.r+1}C${exCell1.c+1}], any cell that sees both (red) cannot contain ${extraDigit}.`,
+                    label: t('hint.tech.uniqueRectangleType2.step2Label'),
+                    description: t('hint.tech.uniqueRectangleType2.step2Desc', { extra: extraDigit, row1: exCell0.r+1, col1: exCell0.c+1, row2: exCell1.r+1, col2: exCell1.c+1 }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -1476,13 +1483,13 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Two-String Kite",
+            title: t('hint.tech.twoStringKite.title'),
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Step 1 — Find the Two-String Kite",
-                description: `Digit ${val} has exactly two candidates in row ${r+1} and exactly two in column ${c+1}. Both "kite strings" share cell [R${r+1}C${c+1}] inside the same 3×3 box. Regardless of whether ${val} is in [R${r+1}C${rowEnd+1}] or [R${colEnd+1}C${c+1}] — one end always holds ${val}.`,
+                label: t('hint.tech.twoStringKite.step1Label'),
+                description: t('hint.tech.twoStringKite.step1Desc', { val, row: r+1, col: c+1, rowEnd: rowEnd+1, colEnd: colEnd+1 }),
                 highlightCoords: [
                   { r, c: rCols[0]!, type: 'trigger' },
                   { r, c: rCols[1]!, type: 'trigger' },
@@ -1491,8 +1498,8 @@ export function useSudokuEngine() {
                 ]
               },
               {
-                label: "Step 2 — Eliminate from cells that see both ends",
-                description: `Cells that see both [R${r+1}C${rowEnd+1}] and [R${colEnd+1}C${c+1}] (red) cannot have ${val} — one of the two kite ends always holds it. This is the equivalent of a Skyscraper but shaped like a kite instead.`,
+                label: t('hint.tech.twoStringKite.step2Label'),
+                description: t('hint.tech.twoStringKite.step2Desc', { row: r+1, rowEnd: rowEnd+1, colEnd: colEnd+1, col: c+1, val }),
                 highlightCoords: eliminations
               }
             ]
@@ -1541,13 +1548,13 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Skyscraper",
+            title: t('hint.tech.skyscraper.title'),
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Step 1 — Find the Skyscraper structure",
-                description: `Digit ${val} appears exactly twice in row ${ra.r+1} (cols ${ra.cols[0]+1} and ${ra.cols[1]+1}) and twice in row ${rb.r+1} (cols ${rb.cols[0]+1} and ${rb.cols[1]+1}). They share column ${sharedCol+1} but in different boxes — like a skyscraper leaning on the same pillar. The tops (blue: C${topA+1} and C${topB+1}) must contain ${val} in at least one of those two rows.`,
+                label: t('hint.tech.skyscraper.step1Label'),
+                description: t('hint.tech.skyscraper.step1Desc', { val, rowA: ra.r+1, colA1: ra.cols[0]!+1, colA2: ra.cols[1]!+1, rowB: rb.r+1, colB1: rb.cols[0]!+1, colB2: rb.cols[1]!+1, sharedCol: sharedCol+1, topA: topA+1, topB: topB+1 }),
                 highlightCoords: [
                   { r: ra.r, c: ra.cols[0]!, type: 'trigger' },
                   { r: ra.r, c: ra.cols[1]!, type: 'trigger' },
@@ -1556,8 +1563,8 @@ export function useSudokuEngine() {
                 ]
               },
               {
-                label: "Step 2 — Eliminate from cells that see both tops",
-                description: `If ${val} is not at top C${topA+1} in row ${ra.r+1}, it must be at C${topA+1}... and vice versa for the second row. Every cell that sees both tops (red) cannot have ${val} — one of the tops always holds it.`,
+                label: t('hint.tech.skyscraper.step2Label'),
+                description: t('hint.tech.skyscraper.step2Desc', { val, topA: topA+1, rowA: ra.r+1, topB: topB+1, rowB: rb.r+1 }),
                 highlightCoords: eliminations
               }
             ]
@@ -1602,18 +1609,18 @@ export function useSudokuEngine() {
             ];
             const target = eliminations[0]!;
             return {
-              title: "Swordfish",
+              title: t('hint.tech.swordfish.title'),
               targetCell: { r: target.r, c: target.c },
               targetNum: solvedBoard.value[target.r]![target.c]!,
               steps: [
                 {
-                  label: "Step 1 — Find the Swordfish matrix",
-                  description: `Digit ${val} appears in 2–3 places in each of rows ${ri.r+1}, ${rj.r+1} and ${rk.r+1}, and all candidates fall within exactly 3 columns. Like a three-dimensional X-Wing: ${val} must be in one of the cells of that 3×3 grid (blue).`,
+                  label: t('hint.tech.swordfish.step1Label'),
+                  description: t('hint.tech.swordfish.step1Desc', { val, row1: ri.r+1, row2: rj.r+1, row3: rk.r+1 }),
                   highlightCoords: triggerCoords
                 },
                 {
-                  label: "Step 2 — Eliminate from those columns",
-                  description: `Regardless of the arrangement inside the matrix, ${val} covers all three columns across those three rows. Therefore ${val} cannot appear in any other cell of those columns (red) — the elimination applies to entire columns.`,
+                  label: t('hint.tech.swordfish.step2Label'),
+                  description: t('hint.tech.swordfish.step2Desc', { val }),
                   highlightCoords: eliminations
                 }
               ]
@@ -1650,18 +1657,18 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Box-Line Reduction — Row",
+            title: t('hint.tech.boxLineReductionRow.title'),
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Step 1 — Digit locked to one row inside the box",
-                description: `In row ${r+1}, digit ${val} only appears in cells that all lie within the same 3×3 box (blue). This means ${val} must go into one of those cells — exclusively within that row inside the box.`,
+                label: t('hint.tech.boxLineReductionRow.step1Label'),
+                description: t('hint.tech.boxLineReductionRow.step1Desc', { row: r+1, val }),
                 highlightCoords: cols.map(c => ({ r, c, type: 'trigger' as const }))
               },
               {
-                label: "Step 2 — Eliminate from the rest of the box",
-                description: `Since ${val} must be in row ${r+1} inside that box, it cannot appear in any other cell of that same box (red). This elimination is called Box-Line Reduction — the complement of Pointing Pair.`,
+                label: t('hint.tech.boxLineReductionRow.step2Label'),
+                description: t('hint.tech.boxLineReductionRow.step2Desc', { row: r+1, val }),
                 highlightCoords: eliminations
               }
             ]
@@ -1692,18 +1699,18 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
           const target = eliminations[0]!;
           return {
-            title: "Box-Line Reduction — Column",
+            title: t('hint.tech.boxLineReductionColumn.title'),
             targetCell: { r: target.r, c: target.c },
             targetNum: solvedBoard.value[target.r]![target.c]!,
             steps: [
               {
-                label: "Step 1 — Digit locked to one column inside the box",
-                description: `In column ${c+1}, digit ${val} only appears in cells that all lie within the same 3×3 box (blue). ${val} must go into one of those cells — exclusively within that column inside the box.`,
+                label: t('hint.tech.boxLineReductionColumn.step1Label'),
+                description: t('hint.tech.boxLineReductionColumn.step1Desc', { col: c+1, val }),
                 highlightCoords: rows.map(r => ({ r, c, type: 'trigger' as const }))
               },
               {
-                label: "Step 2 — Eliminate from the rest of the box",
-                description: `Since ${val} must be in column ${c+1} inside that box, it cannot appear in any other cell of that box (red). Box-Line Reduction is the complement of the Pointing Pair technique.`,
+                label: t('hint.tech.boxLineReductionColumn.step2Label'),
+                description: t('hint.tech.boxLineReductionColumn.step2Desc', { col: c+1, val }),
                 highlightCoords: eliminations
               }
             ]
@@ -1715,17 +1722,17 @@ export function useSudokuEngine() {
   }
 
   function findHiddenQuads(candidates: number[][][]): ComplexHint | null {
-    const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
+    const units: { cells: CellCoord[]; unitType: 'row' | 'column' | 'box'; unitN: number }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), unitType: 'row', unitN: r+1 });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), unitType: 'column', unitN: c+1 });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Box ${box+1}` });
+      units.push({ cells, unitType: 'box', unitN: box+1 });
     }
 
-    for (const { cells: unitCells, label } of units) {
+    for (const { cells: unitCells, unitType, unitN } of units) {
       const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0);
       const digits = [1,2,3,4,5,6,7,8,9];
       for (let vi = 0; vi < 6; vi++) {
@@ -1746,19 +1753,22 @@ export function useSudokuEngine() {
               }
               if (eliminations.length === 0) continue;
 
+              const unitTitle = t(`hint.unit.${unitType}`, { n: unitN });
+              const unitLoc = t(`hint.unit.${unitType}Loc`, { n: unitN });
+              const digitsStr = quad.join(', ');
               return {
-                title: `Hidden Quad — ${label}`,
+                title: t('hint.tech.hiddenQuad.title', { unit: unitTitle }),
                 targetCell: a,
                 targetNum: solvedBoard.value[a.r]![a.c]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the Hidden Quad",
-                    description: `Digits ${quad.join(', ')} can only go into four cells within ${label}. These cells have other candidates, but ${quad.join(', ')} are exclusive to this quad — they cannot go anywhere else in the unit.`,
+                    label: t('hint.tech.hiddenQuad.step1Label'),
+                    description: t('hint.tech.hiddenQuad.step1Desc', { digits: digitsStr, unit: unitLoc }),
                     highlightCoords: [a,b,c2,d].map(x => ({ r: x.r, c: x.c, type: 'trigger' as const }))
                   },
                   {
-                    label: "Step 2 — Eliminate other candidates from the quad",
-                    description: `Since ${quad.join(', ')} must fill exactly those four cells, all other candidates within them are impossible and are removed (red). This converts the hidden quad into a naked quad.`,
+                    label: t('hint.tech.hiddenQuad.step2Label'),
+                    description: t('hint.tech.hiddenQuad.step2Desc', { digits: digitsStr }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -1772,17 +1782,17 @@ export function useSudokuEngine() {
   }
 
   function findHiddenTriples(candidates: number[][][]): ComplexHint | null {
-    const units: { cells: CellCoord[]; label: string }[] = [];
-    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), label: `Row ${r+1}` });
-    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), label: `Column ${c+1}` });
+    const units: { cells: CellCoord[]; unitType: 'row' | 'column' | 'box'; unitN: number }[] = [];
+    for (let r = 0; r < 9; r++) units.push({ cells: Array.from({ length: 9 }, (_, c) => ({ r, c })), unitType: 'row', unitN: r+1 });
+    for (let c = 0; c < 9; c++) units.push({ cells: Array.from({ length: 9 }, (_, r) => ({ r, c })), unitType: 'column', unitN: c+1 });
     for (let box = 0; box < 9; box++) {
       const sr = Math.floor(box / 3) * 3, sc = (box % 3) * 3;
       const cells: CellCoord[] = [];
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cells.push({ r: sr + i, c: sc + j });
-      units.push({ cells, label: `Box ${box+1}` });
+      units.push({ cells, unitType: 'box', unitN: box+1 });
     }
 
-    for (const { cells: unitCells, label } of units) {
+    for (const { cells: unitCells, unitType, unitN } of units) {
       const emptyCells = unitCells.filter(({ r, c }) => currentBoard.value[r]![c] === 0);
       // try all combos of 3 digits
       for (let vi = 1; vi <= 7; vi++) {
@@ -1804,14 +1814,16 @@ export function useSudokuEngine() {
             }
             if (eliminations.length === 0) continue;
 
+            const unitTitle = t(`hint.unit.${unitType}`, { n: unitN });
+            const unitLoc = t(`hint.unit.${unitType}Loc`, { n: unitN });
             return {
-              title: `Hidden Triple — ${label}`,
+              title: t('hint.tech.hiddenTriple.title', { unit: unitTitle }),
               targetCell: a,
               targetNum: solvedBoard.value[a.r]![a.c]!,
               steps: [
                 {
-                  label: "Step 1 — Find the Hidden Triple",
-                  description: `Digits ${vi}, ${vj} and ${vk} can only go into cells [R${a.r+1}C${a.c+1}], [R${b.r+1}C${b.c+1}] and [R${c2.r+1}C${c2.c+1}] within ${label}. This triple is "hidden" — the cells have other candidates, but ${vi}, ${vj}, ${vk} are exclusive to these three cells.`,
+                  label: t('hint.tech.hiddenTriple.step1Label'),
+                  description: t('hint.tech.hiddenTriple.step1Desc', { v1: vi, v2: vj, v3: vk, row1: a.r+1, col1: a.c+1, row2: b.r+1, col2: b.c+1, row3: c2.r+1, col3: c2.c+1, unit: unitLoc }),
                   highlightCoords: [
                     { r: a.r, c: a.c, type: 'trigger' },
                     { r: b.r, c: b.c, type: 'trigger' },
@@ -1819,8 +1831,8 @@ export function useSudokuEngine() {
                   ]
                 },
                 {
-                  label: "Step 2 — Eliminate other candidates from the triple",
-                  description: `Since ${vi}, ${vj} and ${vk} must fill exactly those three cells, all other candidates in them are impossible (red). Eliminating them reveals new naked singles or pairs.`,
+                  label: t('hint.tech.hiddenTriple.step2Label'),
+                  description: t('hint.tech.hiddenTriple.step2Desc', { v1: vi, v2: vj, v3: vk }),
                   highlightCoords: eliminations
                 }
               ]
@@ -1864,21 +1876,21 @@ export function useSudokuEngine() {
           if (eliminations.length === 0) continue;
 
           return {
-            title: "Hidden Pair",
+            title: t('hint.tech.hiddenPair.title'),
             targetCell: a,
             targetNum: solvedBoard.value[a.r]![a.c]!,
             steps: [
               {
-                label: "Step 1 — Find the Hidden Pair",
-                description: `Digits ${vi} and ${vj} can only go into cells [R${a.r+1}C${a.c+1}] and [R${b.r+1}C${b.c+1}] within this unit. Even if those cells have other candidates, ${vi} and ${vj} are "hidden" inside them — they cannot go anywhere else in the unit.`,
+                label: t('hint.tech.hiddenPair.step1Label'),
+                description: t('hint.tech.hiddenPair.step1Desc', { v1: vi, v2: vj, row1: a.r+1, col1: a.c+1, row2: b.r+1, col2: b.c+1 }),
                 highlightCoords: [
                   { r: a.r, c: a.c, type: 'trigger' },
                   { r: b.r, c: b.c, type: 'trigger' }
                 ]
               },
               {
-                label: "Step 2 — Eliminate other candidates from the pair",
-                description: `Since ${vi} and ${vj} must occupy exactly those two cells, all other candidates in them are impossible and can be eliminated (red). This effectively converts the hidden pair into a naked pair.`,
+                label: t('hint.tech.hiddenPair.step2Label'),
+                description: t('hint.tech.hiddenPair.step2Desc', { v1: vi, v2: vj }),
                 highlightCoords: eliminations
               }
             ]
@@ -1922,13 +1934,13 @@ export function useSudokuEngine() {
 
             if (eliminations.length > 0) {
               return {
-                title: "X-Wing",
+                title: t('hint.tech.xWing.title'),
                 targetCell: { r: r1.r, c: c1 },
                 targetNum: solvedBoard.value[r1.r]![c1]!,
                 steps: [
                   {
-                    label: "Step 1 — Find the candidate rectangle",
-                    description: `Digit ${val} appears exactly twice in row ${r1.r+1} (columns ${c1+1} and ${c2+1}) and exactly twice in row ${r2.r+1} (the same columns). These four cells form a rectangle — the basis of the X-Wing technique. ${val} must lie on one of the two diagonals of that rectangle.`,
+                    label: t('hint.tech.xWing.step1Label'),
+                    description: t('hint.tech.xWing.step1Desc', { val, row1: r1.r+1, col1: c1+1, col2: c2+1, row2: r2.r+1 }),
                     highlightCoords: [
                       { r: r1.r, c: c1, type: 'trigger' },
                       { r: r1.r, c: c2, type: 'trigger' },
@@ -1937,8 +1949,8 @@ export function useSudokuEngine() {
                     ]
                   },
                   {
-                    label: "Step 2 — Eliminate from the rectangle's columns",
-                    description: `Regardless of which diagonal is correct, ${val} must be in columns ${c1+1} and ${c2+1} within those two rows. Therefore ${val} cannot appear anywhere else in those columns. Red cells can have ${val} removed as a candidate.`,
+                    label: t('hint.tech.xWing.step2Label'),
+                    description: t('hint.tech.xWing.step2Desc', { val, col1: c1+1, col2: c2+1 }),
                     highlightCoords: eliminations
                   }
                 ]
@@ -2016,18 +2028,18 @@ export function useSudokuEngine() {
         });
 
         hint = {
-          title: "Candidate Reduction (Analysis)",
+          title: t('hint.tech.candidateReduction.title'),
           targetCell: { r, c },
           targetNum,
           steps: [
             {
-              label: "Step 1 — Cell with fewest candidates",
-              description: `Cell [R${r+1}C${c+1}] has the fewest remaining possibilities. Blue cells in its row and column block the wrong candidates, leaving only ${targetNum} as the only mathematically valid option. Try applying the earlier techniques for better understanding.`,
+              label: t('hint.tech.candidateReduction.step1Label'),
+              description: t('hint.tech.candidateReduction.step1Desc', { row: r+1, col: c+1, num: targetNum }),
               highlightCoords: blockingCells
             },
             {
-              label: "Step 2 — Confirm the answer",
-              description: `After eliminating the wrong options, ${targetNum} is the only value that does not violate any sudoku rule for this cell. Click "Apply Answer" to confirm.`,
+              label: t('hint.tech.candidateReduction.step2Label'),
+              description: t('hint.tech.candidateReduction.step2Desc', { num: targetNum }),
               highlightCoords: [{ r, c, type: 'trigger' }]
             }
           ]
@@ -2044,7 +2056,7 @@ export function useSudokuEngine() {
       hintStatus.value = hint.title;
       hintBody.value = hint.steps[0]!.description;
     } else {
-      hintStatus.value = "No empty cells!";
+      hintStatus.value = t('modal.noMoves');
     }
   }
 
