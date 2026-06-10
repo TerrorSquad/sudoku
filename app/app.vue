@@ -439,7 +439,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- GAME -->
     <div
       v-else-if="currentScreen === 'game'"
-      class="flex flex-col lg:grid lg:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 flex-1 items-start"
+      class="flex flex-col lg:grid lg:max-3xl:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 flex-1 items-start"
     >
 
       <!-- 3xl left sidebar: shortcuts & branding -->
@@ -472,7 +472,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       </div>
 
       <!-- Center / main game column -->
-      <div class="lg:col-span-7 3xl:col-span-1 flex flex-col gap-3">
+      <div class="lg:max-3xl:col-span-7 3xl:col-span-1 flex flex-col gap-3">
         <div class="flex flex-col gap-3 w-full mx-auto">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
@@ -526,7 +526,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       </div>
 
       <!-- Right / hint panel -->
-      <div class="lg:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0">
+      <div class="lg:max-3xl:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0">
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"
