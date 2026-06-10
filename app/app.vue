@@ -338,7 +338,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   <div class="min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
 
     <!-- Theme + locale switcher -->
-    <div class="fixed top-3 right-3 z-40 flex items-center gap-2">
+    <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
       <LocaleSwitcher />
       <UColorModeButton />
     </div>

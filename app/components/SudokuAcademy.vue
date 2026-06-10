@@ -400,7 +400,7 @@ function byTier(tier: string) {
 <template>
   <div class="min-h-screen w-full flex flex-col">
     <!-- Header -->
-    <div class="sticky top-0 z-10 backdrop-blur border-b pl-4 sm:pl-8 pr-4 sm:pr-44 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200">
+    <div class="sticky top-0 z-10 backdrop-blur border-b pl-4 sm:pl-8 pr-44 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200">
       <button
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
@@ -408,10 +408,10 @@ function byTier(tier: string) {
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         </svg>
-        Menu
+        <span class="hidden sm:inline">Menu</span>
       </button>
       <div class="flex-1 min-w-0">
-        <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900">Sudoku Academy</h1>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-tight wrap-break-word dark:text-zinc-100 text-zinc-900">Sudoku Academy</h1>
         <p class="text-xs text-zinc-500 hidden sm:block">All 23 solving techniques explained — from naked singles to expert chains</p>
       </div>
       <div class="shrink-0 text-right hidden sm:block">
