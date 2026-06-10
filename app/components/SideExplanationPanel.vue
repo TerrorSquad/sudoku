@@ -32,7 +32,7 @@ const isLastStep = computed(() => {
 </script>
 
 <template>
-  <div class="w-full border p-4 flex flex-col select-none dark:bg-zinc-900/40 dark:border-zinc-800 bg-zinc-50 border-zinc-200">
+  <div class="w-full border p-4 flex flex-col select-none dark:bg-zinc-900/40 dark:border-zinc-800 bg-zinc-50 border-zinc-200 3xl:mt-12">
 
     <!-- Empty state -->
     <div v-if="!activeComplexHint" class="flex flex-col items-center justify-center text-center p-6 py-10">
