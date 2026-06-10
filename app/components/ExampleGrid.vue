@@ -32,13 +32,13 @@ function cellClass(r: number, c: number) {
 </script>
 
 <template>
-  <div class="grid grid-cols-9 w-full max-w-[280px] mx-auto border-2 border-zinc-600 select-none bg-[#141417]">
+  <div class="grid grid-cols-9 w-full max-w-[280px] mx-auto border-2 select-none dark:bg-[#141417] dark:border-zinc-600 bg-zinc-100 border-zinc-400">
     <template v-for="(row, r) in board" :key="r">
       <div
         v-for="(val, c) in row"
         :key="c"
         :class="cellClass(r, c)"
-        class="relative aspect-square flex items-center justify-center border border-zinc-800 text-sm sm:text-base font-bold font-game text-zinc-200"
+        class="relative aspect-square flex items-center justify-center border text-sm sm:text-base font-bold font-game dark:border-zinc-800 dark:text-zinc-200 border-zinc-300 text-zinc-800"
       >
         <span v-if="val !== 0">{{ val }}</span>
         <div

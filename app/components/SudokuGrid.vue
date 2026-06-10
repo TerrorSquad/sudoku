@@ -39,8 +39,8 @@ function hasConflict(r: number, c: number): boolean {
 </script>
 
 <template>
-  <div class="relative w-full max-w-[calc(100vh-340px)] aspect-square mx-auto bg-zinc-950 p-2 border-2 border-zinc-600 overflow-hidden no-select">
-    <div class="grid grid-cols-9 grid-rows-[repeat(9,minmax(0,1fr))] h-full w-full gap-[1.5px] bg-zinc-700 overflow-hidden">
+  <div class="relative w-full max-w-[calc(100vh-340px)] aspect-square mx-auto dark:bg-zinc-950 dark:border-zinc-600 bg-zinc-300 border-zinc-400 p-2 border-2 overflow-hidden no-select">
+    <div class="grid grid-cols-9 grid-rows-9 h-full w-full gap-[1.5px] dark:bg-zinc-700 bg-zinc-300 overflow-hidden">
       <template v-for="(row, r) in 9" :key="r">
         <SudokuCell
           v-for="(col, c) in 9"

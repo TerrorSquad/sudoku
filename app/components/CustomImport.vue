@@ -66,22 +66,22 @@ function loadExample() {
     <div>
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-300 uppercase tracking-wider mb-5 transition-colors"
+        class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-5 transition-colors dark:hover:text-zinc-300 hover:text-zinc-700"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         </svg>
         Back
       </button>
-      <h2 class="text-3xl font-black text-zinc-100 uppercase tracking-tight">Custom Puzzle</h2>
-      <p class="text-sm text-zinc-400 mt-1">Paste 81 digits (0 = empty cell). Spaces and newlines are ignored.</p>
+      <h2 class="text-3xl font-black uppercase tracking-tight dark:text-zinc-100 text-zinc-900">Custom Puzzle</h2>
+      <p class="text-sm mt-1 dark:text-zinc-400 text-zinc-600">Paste 81 digits (0 = empty cell). Spaces and newlines are ignored.</p>
     </div>
 
     <textarea
       v-model="raw"
       rows="4"
       placeholder="530070000600195000098000060800060003400803001700020006060000280000419005000080079"
-      class="w-full bg-zinc-950 border border-zinc-700 focus:border-violet-500 text-zinc-200 text-sm font-game p-3 resize-none outline-none transition-colors placeholder:text-zinc-700"
+      class="w-full border focus:border-violet-500 text-sm font-game p-3 resize-none outline-none transition-colors dark:bg-zinc-950 dark:border-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-700 bg-zinc-50 border-zinc-300 text-zinc-800 placeholder:text-zinc-400"
       spellcheck="false"
     />
 
@@ -89,7 +89,7 @@ function loadExample() {
       <span :class="cleaned.length === 81 ? 'text-emerald-400' : 'text-zinc-500'" class="font-mono font-bold">
         {{ cleaned.length }} / 81
       </span>
-      <button @click="loadExample" class="text-zinc-500 hover:text-zinc-300 underline transition-colors">
+      <button @click="loadExample" class="text-zinc-500 underline transition-colors dark:hover:text-zinc-300 hover:text-zinc-700">
         Load example
       </button>
     </div>
@@ -97,17 +97,17 @@ function loadExample() {
     <p v-if="error" class="text-xs text-rose-400 font-semibold">{{ error }}</p>
 
     <!-- Mini preview -->
-    <div v-if="preview" class="grid grid-cols-9 gap-px bg-zinc-700 border border-zinc-700 shrink-0">
+    <div v-if="preview" class="grid grid-cols-9 gap-px border shrink-0 dark:bg-zinc-700 dark:border-zinc-700 bg-zinc-300 border-zinc-300">
       <template v-for="(row, r) in preview" :key="r">
         <div
           v-for="(cell, c) in row"
           :key="`${r}-${c}`"
           :class="[
-            cell !== 0 ? 'text-zinc-100 font-bold' : 'text-zinc-700',
+            cell !== 0 ? 'font-bold dark:text-zinc-100 text-zinc-900' : 'dark:text-zinc-700 text-zinc-300',
             (c === 2 || c === 5) ? 'border-r-2 border-r-zinc-500' : '',
             (r === 2 || r === 5) ? 'border-b-2 border-b-zinc-500' : '',
           ]"
-          class="bg-zinc-900 aspect-square flex items-center justify-center text-[11px] font-game"
+          class="aspect-square flex items-center justify-center text-[11px] font-game dark:bg-zinc-900 bg-zinc-100"
         >
           {{ cell !== 0 ? cell : '·' }}
         </div>
@@ -117,7 +117,7 @@ function loadExample() {
     <button
       @click="handleLoad"
       :disabled="!isValid"
-      :class="isValid ? 'bg-violet-700 hover:bg-violet-600 border-violet-600 text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed'"
+      :class="isValid ? 'bg-violet-700 hover:bg-violet-600 border-violet-600 text-white' : 'dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-100 border-zinc-300 text-zinc-600 cursor-not-allowed'"
       class="w-full py-4 border font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
     >
       Play Puzzle

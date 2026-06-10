@@ -322,7 +322,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
 <template>
   <UApp>
-  <div class="min-h-screen w-full text-zinc-100 antialiased bg-[#0c0a09] flex flex-col">
+  <div class="min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
+
+    <!-- Theme + locale switcher -->
+    <div class="fixed top-3 right-3 z-40 flex items-center gap-2">
+      <UColorModeButton />
+    </div>
 
     <!-- MENU -->
     <div v-if="currentScreen === 'menu'" class="flex flex-col justify-center items-center flex-1 px-6 py-12 gap-10">
@@ -339,7 +344,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         <div v-if="gameSave.hasSave.value" class="w-full">
           <button
             @click="handleContinueGame"
-            class="w-full py-4 px-6 bg-emerald-900/40 border border-emerald-600/60 font-bold text-sm text-emerald-300 hover:bg-emerald-900/60 hover:border-emerald-500 transition-all active:scale-95"
+            class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 dark:bg-emerald-900/40 dark:border-emerald-600/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 dark:hover:border-emerald-500 bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400"
           >
             {{ $t('menu.continue') }}
           </button>
@@ -351,7 +356,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         <!-- New game -->
         <button
           @click="currentScreen = 'difficulty'"
-          class="w-full py-4 px-6 bg-zinc-900 border border-zinc-700 font-bold text-sm hover:bg-zinc-800 hover:border-zinc-600 transition-all active:scale-95"
+          class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 dark:bg-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:border-zinc-600 bg-zinc-50 border-zinc-300 hover:bg-zinc-100 hover:border-zinc-400"
         >
           {{ $t('menu.start') }}
         </button>
@@ -361,8 +366,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           @click="handleStartDaily"
           :disabled="!!dailyRecord"
           :class="dailyRecord
-            ? 'bg-emerald-950/20 border-emerald-800 text-emerald-600 cursor-default'
-            : 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-100'"
+            ? 'dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-600 bg-emerald-50 border-emerald-300 text-emerald-700 cursor-default'
+            : 'dark:bg-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:border-zinc-600 dark:text-zinc-100 bg-zinc-50 border-zinc-300 hover:bg-zinc-100 hover:border-zinc-400 text-zinc-900'"
           class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
         >
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +380,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         <!-- Custom puzzle -->
         <button
           @click="currentScreen = 'custom-import'"
-          class="w-full py-3 px-6 bg-transparent border border-zinc-800 font-semibold text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+          class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -386,7 +391,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         <!-- Academy -->
         <button
           @click="currentScreen = 'academy'"
-          class="w-full py-3 px-6 bg-transparent border border-zinc-800 font-semibold text-xs text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+          class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -435,17 +440,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
               { key: 'H', desc: 'Get hint' },
               { key: 'A', desc: 'Auto-fill notes' },
             ]" :key="i" class="flex items-center gap-3">
-              <kbd class="font-game text-xs font-bold px-2 py-1 bg-zinc-900 border border-zinc-700 text-zinc-300 shrink-0 min-w-[60px] text-center">{{ s.key }}</kbd>
-              <span class="text-sm text-zinc-400">{{ s.desc }}</span>
+              <kbd class="font-game text-xs font-bold px-2 py-1 border shrink-0 min-w-[60px] text-center dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-100 border-zinc-300 text-zinc-700">{{ s.key }}</kbd>
+              <span class="text-sm dark:text-zinc-400 text-zinc-600">{{ s.desc }}</span>
             </li>
           </ul>
         </div>
 
-        <div class="border-t border-zinc-800 pt-4">
+        <div class="border-t pt-4 dark:border-zinc-800 border-zinc-200">
           <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Legend</p>
-          <ul class="space-y-3 text-sm text-zinc-400">
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-zinc-100 border border-zinc-600" /> Given digit</li>
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-300/30 border border-violet-400" /> Your entry</li>
+          <ul class="space-y-3 text-sm dark:text-zinc-400 text-zinc-600">
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-zinc-100 dark:border-zinc-600 bg-zinc-900 border-zinc-400" /> Given digit</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-violet-300/30 dark:border-violet-400 bg-violet-600/30 border-violet-500" /> Your entry</li>
             <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-rose-500/20 border border-rose-400" /> Conflict</li>
             <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-950/60 border border-violet-400" /> Selected</li>
           </ul>
@@ -493,7 +498,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
             <button
               @click="handleAutoFillNotes"
               :title="$t('game.autoNotes')"
-              class="px-3 sm:px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold uppercase tracking-wider transition-all active:scale-95 text-violet-400 flex items-center gap-1.5"
+              class="px-3 sm:px-4 py-2 border text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-violet-400 bg-zinc-50 hover:bg-zinc-100 border-zinc-300 text-violet-600"
             >
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -523,17 +528,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- MODAL -->
     <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center px-4">
       <div
-        class="bg-zinc-900 border w-full max-w-sm p-6 shadow-2xl text-center"
+        class="border w-full max-w-sm p-6 shadow-2xl text-center dark:bg-zinc-900 bg-white"
         :class="isWinState ? 'border-emerald-500/60 border-t-4 border-t-emerald-500' : 'border-rose-500/40 border-t-4 border-t-rose-500'"
       >
-        <h3 class="text-xl font-black mb-2 text-zinc-100 uppercase tracking-tight">{{ modalTitle }}</h3>
-        <p class="text-sm text-zinc-400 mb-4 leading-relaxed">{{ modalMessage }}</p>
+        <h3 class="text-xl font-black mb-2 uppercase tracking-tight dark:text-zinc-100 text-zinc-900">{{ modalTitle }}</h3>
+        <p class="text-sm mb-4 leading-relaxed dark:text-zinc-400 text-zinc-600">{{ modalMessage }}</p>
 
         <!-- Win summary -->
-        <div v-if="isWinState" class="mb-5 text-left border border-zinc-800 divide-y divide-zinc-800">
+        <div v-if="isWinState" class="mb-5 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y">
           <div class="flex justify-between px-3 py-2">
             <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Difficulty</span>
-            <span class="text-xs font-bold text-zinc-200 capitalize">{{ activeDifficulty }}</span>
+            <span class="text-xs font-bold capitalize dark:text-zinc-200 text-zinc-800">{{ activeDifficulty }}</span>
           </div>
           <div class="flex justify-between px-3 py-2">
             <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Mistakes</span>
@@ -557,7 +562,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
         <button
           @click="handleModalClose"
-          class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-sm font-bold uppercase transition-all border border-zinc-700"
+          class="w-full py-3 text-sm font-bold uppercase transition-all border dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border-zinc-300"
         >
           {{ $t('modal.close') }}
         </button>

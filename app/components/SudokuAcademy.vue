@@ -400,10 +400,10 @@ function byTier(tier: string) {
 <template>
   <div class="min-h-screen w-full flex flex-col">
     <!-- Header -->
-    <div class="sticky top-0 z-10 bg-[#0c0a09]/95 backdrop-blur border-b border-zinc-800 px-4 sm:px-8 py-4 flex items-center gap-4">
+    <div class="sticky top-0 z-10 backdrop-blur border-b px-4 sm:px-8 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200">
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-wider"
+        class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
@@ -411,7 +411,7 @@ function byTier(tier: string) {
         Menu
       </button>
       <div class="flex-1 min-w-0">
-        <h1 class="text-xl sm:text-2xl font-black text-zinc-100 tracking-tight leading-tight">Sudoku Academy</h1>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900">Sudoku Academy</h1>
         <p class="text-xs text-zinc-500 hidden sm:block">All 23 solving techniques explained — from naked singles to expert chains</p>
       </div>
       <div class="shrink-0 text-right hidden sm:block">
@@ -423,8 +423,8 @@ function byTier(tier: string) {
     <div class="flex-1 px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
 
       <!-- Example legend -->
-      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 px-4 py-3 bg-zinc-900/40 border border-zinc-800 text-[11px] text-zinc-400">
-        <span class="font-bold text-zinc-300 uppercase tracking-widest">Example colors</span>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 px-4 py-3 border text-[11px] dark:bg-zinc-900/40 dark:border-zinc-800 dark:text-zinc-400 bg-zinc-50 border-zinc-200 text-zinc-600">
+        <span class="font-bold uppercase tracking-widest dark:text-zinc-300 text-zinc-700">Example colors</span>
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-emerald-500/30 ring-1 ring-emerald-500 inline-block"></span> Target cell</span>
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-indigo-500/40 ring-1 ring-indigo-400 inline-block"></span> Trigger / evidence</span>
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-rose-500/40 ring-1 ring-rose-400 inline-block"></span> Eliminated candidate</span>
@@ -438,7 +438,7 @@ function byTier(tier: string) {
           <span :class="tierMeta[tier]!.badge" class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border">
             {{ byTier(tier).length }} technique{{ byTier(tier).length !== 1 ? 's' : '' }}
           </span>
-          <div class="flex-1 h-px bg-zinc-800" />
+          <div class="flex-1 h-px dark:bg-zinc-800 bg-zinc-200" />
         </div>
         <p class="text-xs text-zinc-500 mb-5 -mt-3">{{ tierMeta[tier]!.desc }}</p>
 
@@ -448,15 +448,15 @@ function byTier(tier: string) {
             v-for="tech in byTier(tier)"
             :key="tech.name"
             :class="[tierBorder[tier], tech.example ? 'cursor-pointer' : '']"
-            class="bg-zinc-900/60 border p-5 transition-colors"
+            class="border p-5 transition-colors dark:bg-zinc-900/60 bg-zinc-50"
             @click="tech.example && toggleExample(tech.name)"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
-              <h3 class="text-base font-black text-zinc-100 leading-tight">{{ tech.name }}</h3>
+              <h3 class="text-base font-black leading-tight dark:text-zinc-100 text-zinc-900">{{ tech.name }}</h3>
               <div class="flex items-center gap-1.5 shrink-0">
                 <span
                   v-if="techStats.getCount(tech.name) > 0"
-                  class="text-[9px] font-bold px-1.5 py-0.5 bg-zinc-700/60 border border-zinc-600 text-zinc-400"
+                  class="text-[9px] font-bold px-1.5 py-0.5 border dark:bg-zinc-700/60 dark:border-zinc-600 dark:text-zinc-400 bg-zinc-200 border-zinc-300 text-zinc-600"
                   :title="`Used ${techStats.getCount(tech.name)} time${techStats.getCount(tech.name) !== 1 ? 's' : ''}`"
                 >
                   ×{{ techStats.getCount(tech.name) }}
@@ -478,15 +478,15 @@ function byTier(tier: string) {
             <div class="space-y-3">
               <div>
                 <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">What to look for</p>
-                <p class="text-sm text-zinc-300 leading-relaxed">{{ tech.lookFor }}</p>
+                <p class="text-sm leading-relaxed dark:text-zinc-300 text-zinc-700">{{ tech.lookFor }}</p>
               </div>
               <div>
                 <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">How it helps</p>
-                <p class="text-sm text-zinc-400 leading-relaxed">{{ tech.howItHelps }}</p>
+                <p class="text-sm leading-relaxed dark:text-zinc-400 text-zinc-600">{{ tech.howItHelps }}</p>
               </div>
             </div>
 
-            <div v-if="tech.example && expanded.has(tech.name)" class="mt-4 pt-4 border-t border-zinc-800" @click.stop>
+            <div v-if="tech.example && expanded.has(tech.name)" class="mt-4 pt-4 border-t dark:border-zinc-800 border-zinc-200" @click.stop>
               <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 text-center">Worked example</p>
               <ExampleGrid
                 :board="tech.example.board"
@@ -495,20 +495,20 @@ function byTier(tier: string) {
                 :trigger="tech.example.trigger"
                 :elimination="tech.example.elimination"
               />
-              <p class="text-xs text-zinc-400 leading-relaxed mt-3 text-center max-w-sm mx-auto">{{ tech.example.caption }}</p>
+              <p class="text-xs leading-relaxed mt-3 text-center max-w-sm mx-auto dark:text-zinc-400 text-zinc-600">{{ tech.example.caption }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="border-t border-zinc-800 pt-8 text-center">
+      <div class="border-t pt-8 text-center dark:border-zinc-800 border-zinc-200">
         <p class="text-xs text-zinc-600 leading-relaxed max-w-lg mx-auto">
           These techniques are used by the in-game analyzer. When you request a hint, the engine applies them in order from Basic to Expert, showing you step-by-step how each deduction is made.
         </p>
         <button
           @click="emit('back-to-menu')"
-          class="mt-6 px-8 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sm font-bold text-zinc-300 uppercase tracking-wider transition-all active:scale-95"
+          class="mt-6 px-8 py-3 border text-sm font-bold uppercase tracking-wider transition-all active:scale-95 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-50 hover:bg-zinc-100 border-zinc-300 text-zinc-700"
         >
           Back to Menu
         </button>

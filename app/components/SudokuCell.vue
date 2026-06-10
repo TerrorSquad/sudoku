@@ -28,17 +28,17 @@ const cellClasses = computed(() => {
   return {
     "sudoku-border-r": props.col === 2 || props.col === 5,
     "sudoku-border-b": props.row === 2 || props.row === 5,
-    "text-zinc-100 font-bold": props.isInitial,
-    "text-violet-300 font-semibold":
+    "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
+    "dark:text-violet-300 text-violet-600 font-semibold":
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
-    "text-rose-400 bg-rose-950/20":
+    "dark:text-rose-400 text-rose-600 dark:!bg-rose-950/20 !bg-rose-100":
       !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
-    "bg-zinc-800/40": props.isHighlighted && !props.isSelected,
-    "bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
-    "bg-violet-950/60 ring-2 ring-violet-400 z-10": props.isSelected && !props.hasConflict,
-    "bg-rose-950/50 ring-2 ring-rose-500 z-10": props.isSelected && props.hasConflict,
-    'bg-indigo-500/30 ring-1 ring-indigo-400 z-10': props.isHintTrigger,
-'bg-rose-500/30 ring-1 ring-rose-400 z-10': props.isHintElimination,
+    "dark:bg-zinc-800/40 bg-zinc-300/50": props.isHighlighted && !props.isSelected,
+    "!bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
+    "!bg-violet-950/60 ring-2 ring-violet-400 z-10": props.isSelected && !props.hasConflict,
+    "!bg-rose-950/50 ring-2 ring-rose-500 z-10": props.isSelected && props.hasConflict,
+    '!bg-indigo-500/30 ring-1 ring-indigo-400 z-10': props.isHintTrigger,
+'!bg-rose-500/30 ring-1 ring-rose-400 z-10': props.isHintElimination,
   };
 });
 </script>
@@ -47,7 +47,7 @@ const cellClasses = computed(() => {
   <div
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold bg-[#141417] border border-zinc-800 cursor-pointer transition-all duration-100 p-0.5 no-select"
+    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] dark:border-zinc-800 bg-zinc-100 border-zinc-300 border cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
     <span v-if="value !== 0" :key="value" class="font-game cell-pop">{{ value }}</span>
 
@@ -56,7 +56,7 @@ const cellClasses = computed(() => {
       class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] 3xl:text-[13px] font-semibold text-zinc-500 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
-        <span :class="{ 'text-amber-400 font-black': dynamicCandidates.includes(n) }">
+        <span :class="{ 'dark:text-amber-400 text-amber-600 font-black': dynamicCandidates.includes(n) }">
           {{ dynamicCandidates.includes(n) ? n : "" }}
         </span>
       </div>
