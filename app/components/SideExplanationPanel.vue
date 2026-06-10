@@ -51,7 +51,7 @@ const isLastStep = computed(() => {
     <div v-else class="flex flex-col gap-4">
       <!-- Technique title -->
       <div class="border-b pb-3 dark:border-zinc-800 border-zinc-200">
-        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest block mb-1">
+        <span class="text-[10px] font-bold dark:text-amber-400 text-amber-700 uppercase tracking-widest block mb-1">
           {{ $t('hint.detectedTechnique') }}
         </span>
         <h2 class="text-lg 3xl:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900">{{ activeComplexHint.title }}</h2>
@@ -69,7 +69,7 @@ const isLastStep = computed(() => {
 
       <!-- Step content -->
       <div v-if="currentStep" class="border p-4 space-y-2 dark:bg-zinc-950/60 dark:border-zinc-800 bg-zinc-100 border-zinc-200">
-        <h4 class="text-xs 3xl:text-sm font-black text-amber-400 uppercase tracking-wider font-mono">
+        <h4 class="text-xs 3xl:text-sm font-black dark:text-amber-400 text-amber-700 uppercase tracking-wider font-mono">
           {{ $t('hint.step', { n: currentStepIndex + 1 }) }}: {{ currentStep.label }}
         </h4>
         <p class="text-sm 3xl:text-base leading-relaxed dark:text-zinc-300 text-zinc-700">
@@ -108,8 +108,8 @@ const isLastStep = computed(() => {
           <button
             @click="emit('next-step')"
             :class="isLastStep
-              ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400 hover:bg-emerald-600/30'
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'"
+              ? 'bg-emerald-600/20 border-emerald-500 dark:text-emerald-400 text-emerald-700 hover:bg-emerald-600/30'
+              : 'bg-amber-500/10 border-amber-500/30 dark:text-amber-400 text-amber-700 hover:bg-amber-500/20'"
             class="py-2.5 border text-xs font-black uppercase transition-all active:scale-95"
           >
             {{ isLastStep ? $t('hint.apply') : $t('hint.next') }}
@@ -118,7 +118,7 @@ const isLastStep = computed(() => {
 
         <button
           @click="emit('cancel')"
-          class="w-full py-2 3xl:py-3 text-zinc-500 hover:text-rose-400 text-xs 3xl:text-sm uppercase font-bold tracking-wider transition-colors"
+          class="w-full py-2 3xl:py-3 text-zinc-500 dark:hover:text-rose-400 hover:text-rose-600 text-xs 3xl:text-sm uppercase font-bold tracking-wider transition-colors"
         >
           {{ $t('hint.cancel') }}
         </button>

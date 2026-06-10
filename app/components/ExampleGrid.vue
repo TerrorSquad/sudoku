@@ -43,7 +43,7 @@ function cellClass(r: number, c: number) {
         <span v-if="val !== 0">{{ val }}</span>
         <div
           v-else-if="candidates(r, c).length"
-          class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 text-[7px] sm:text-[8px] font-semibold text-amber-400 font-game leading-none"
+          class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 text-[7px] sm:text-[8px] font-semibold dark:text-amber-400 text-amber-700 font-game leading-none"
         >
           <div v-for="n in 9" :key="n" class="flex items-center justify-center">
             {{ candidates(r, c).includes(n) ? n : '' }}

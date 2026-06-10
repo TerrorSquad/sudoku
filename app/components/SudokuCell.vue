@@ -33,10 +33,10 @@ const cellClasses = computed(() => {
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
     "dark:text-rose-400 text-rose-600 dark:!bg-rose-950/20 !bg-rose-100":
       !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
-    "dark:bg-zinc-800/40 bg-zinc-300/50 dark:border-zinc-600 border-zinc-400": props.isHighlighted && !props.isSelected,
+    "dark:bg-zinc-800/40 bg-zinc-300/50 dark:border-zinc-400 border-zinc-600": props.isHighlighted && !props.isSelected,
     "!bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
-    "!bg-violet-950/60 ring-2 ring-violet-400 z-10": props.isSelected && !props.hasConflict,
-    "!bg-rose-950/50 ring-2 ring-rose-500 z-10": props.isSelected && props.hasConflict,
+    "dark:!bg-violet-950/60 !bg-violet-200 ring-2 dark:ring-violet-400 ring-violet-600 z-10": props.isSelected && !props.hasConflict,
+    "dark:!bg-rose-950/50 !bg-rose-200 ring-2 dark:ring-rose-500 ring-rose-600 z-10": props.isSelected && props.hasConflict,
     '!bg-indigo-500/30 ring-1 ring-indigo-400 z-10': props.isHintTrigger,
 '!bg-rose-500/30 ring-1 ring-rose-400 z-10': props.isHintElimination,
   };
@@ -47,7 +47,7 @@ const cellClasses = computed(() => {
   <div
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] dark:border-zinc-800 bg-zinc-100 border-zinc-300 border cursor-pointer transition-all duration-100 p-0.5 no-select"
+    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border border-zinc-500 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
     <span v-if="value !== 0" :key="value" class="font-game cell-pop">{{ value }}</span>
 
@@ -75,10 +75,10 @@ const cellClasses = computed(() => {
 
 <style scoped>
 .sudoku-border-r {
-  border-right: 3px solid #a1a1aa !important;
+  border-right-width: 3px !important;
 }
 .sudoku-border-b {
-  border-bottom: 3px solid #a1a1aa !important;
+  border-bottom-width: 3px !important;
 }
 @keyframes cell-pop {
   0%   { transform: scale(0.4); opacity: 0; }

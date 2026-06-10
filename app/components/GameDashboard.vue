@@ -27,7 +27,7 @@ defineEmits<{
         <span>{{ $t('game.exitToMenu') }}</span>
       </button>
 
-      <span class="px-2.5 py-0.5 text-[10px] font-bold bg-violet-500/10 text-violet-400 border border-violet-500/20 uppercase tracking-wide">
+      <span class="px-2.5 py-0.5 text-[10px] font-bold bg-violet-500/10 dark:text-violet-400 text-violet-600 border border-violet-500/20 uppercase tracking-wide">
         {{ difficulty }}
       </span>
     </div>
@@ -37,24 +37,24 @@ defineEmits<{
       <div class="flex items-center gap-2 shrink-0">
         <span class="font-mono font-bold text-base 3xl:text-xl tabular-nums dark:text-zinc-100 text-zinc-900">{{ formattedTime }}</span>
         <button @click="$emit('toggle-pause')" class="p-1 transition-colors rounded dark:hover:bg-zinc-800 hover:bg-zinc-200">
-          <svg v-if="!isPaused" class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-if="!isPaused" class="w-4 h-4 dark:text-violet-400 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <svg v-else class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-4 h-4 dark:text-emerald-400 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
           </svg>
         </button>
       </div>
 
       <!-- Hint status -->
-      <div class="text-[11px] 3xl:text-sm text-amber-400 font-bold tracking-wide uppercase truncate text-center flex-1 min-w-0">
+      <div class="text-[11px] 3xl:text-sm dark:text-amber-400 text-amber-700 font-bold tracking-wide uppercase truncate text-center flex-1 min-w-0">
         {{ hintStatus }}
       </div>
 
       <!-- Mistakes -->
       <div class="flex items-center gap-1 text-xs 3xl:text-sm shrink-0 dark:text-zinc-400 text-zinc-600">
         <span>{{ $t('game.mistakes') }}:</span>
-        <span class="font-bold text-rose-400">{{ mistakes }}</span>
+        <span class="font-bold dark:text-rose-400 text-rose-600">{{ mistakes }}</span>
         <span>/ {{ maxMistakes }}</span>
       </div>
     </div>

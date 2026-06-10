@@ -372,17 +372,17 @@ const techniques: Technique[] = [
 const tiers = ['Basic', 'Intermediate', 'Advanced', 'Expert'] as const;
 
 const tierMeta: Record<string, { color: string; badge: string; desc: string }> = {
-  Basic:        { color: 'emerald', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', desc: 'Single-cell logic — suitable for all skill levels.' },
-  Intermediate: { color: 'amber',   badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',   desc: 'Multi-cell patterns that restrict candidate groups.' },
-  Advanced:     { color: 'violet',  badge: 'bg-violet-500/15 text-violet-400 border-violet-500/30', desc: 'Fish and chain patterns spanning rows and columns.' },
-  Expert:       { color: 'rose',    badge: 'bg-rose-500/15 text-rose-400 border-rose-500/30',     desc: 'Deep logical chains and uniqueness arguments.' },
+  Basic:        { color: 'emerald', badge: 'bg-emerald-500/15 dark:text-emerald-400 text-emerald-600 border-emerald-500/30', desc: 'Single-cell logic — suitable for all skill levels.' },
+  Intermediate: { color: 'amber',   badge: 'bg-amber-500/15 dark:text-amber-400 text-amber-700 border-amber-500/30',   desc: 'Multi-cell patterns that restrict candidate groups.' },
+  Advanced:     { color: 'violet',  badge: 'bg-violet-500/15 dark:text-violet-400 text-violet-600 border-violet-500/30', desc: 'Fish and chain patterns spanning rows and columns.' },
+  Expert:       { color: 'rose',    badge: 'bg-rose-500/15 dark:text-rose-400 text-rose-600 border-rose-500/30',     desc: 'Deep logical chains and uniqueness arguments.' },
 };
 
 const tierHeading: Record<string, string> = {
-  Basic:        'text-emerald-400',
-  Intermediate: 'text-amber-400',
-  Advanced:     'text-violet-400',
-  Expert:       'text-rose-400',
+  Basic:        'dark:text-emerald-400 text-emerald-600',
+  Intermediate: 'dark:text-amber-400 text-amber-700',
+  Advanced:     'dark:text-violet-400 text-violet-600',
+  Expert:       'dark:text-rose-400 text-rose-600',
 };
 
 const tierBorder: Record<string, string> = {

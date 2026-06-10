@@ -20,7 +20,7 @@ defineEmits<{
       class="relative py-3 sm:py-4 3xl:py-5 text-xl sm:text-2xl 3xl:text-3xl font-black font-game transition-all border flex items-center justify-center dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
     >
       <span>{{ n }}</span>
-      <span class="absolute top-1 right-1 text-[9px] 3xl:text-[12px] text-violet-400 font-extrabold tabular-nums leading-none">
+      <span class="absolute top-1 right-1 text-[9px] 3xl:text-[12px] dark:text-violet-400 text-violet-600 font-extrabold tabular-nums leading-none">
         {{ Math.max(0, 9 - counts[n]!) }}
       </span>
     </button>

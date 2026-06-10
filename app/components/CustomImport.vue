@@ -88,7 +88,7 @@ function loadExample() {
     />
 
     <div class="flex items-center justify-between text-xs">
-      <span :class="cleaned.length === 81 ? 'text-emerald-400' : 'text-zinc-500'" class="font-mono font-bold">
+      <span :class="cleaned.length === 81 ? 'dark:text-emerald-400 text-emerald-600' : 'text-zinc-500'" class="font-mono font-bold">
         {{ cleaned.length }} / 81
       </span>
       <button @click="loadExample" class="text-zinc-500 underline transition-colors dark:hover:text-zinc-300 hover:text-zinc-700">
@@ -96,7 +96,7 @@ function loadExample() {
       </button>
     </div>
 
-    <p v-if="error" class="text-xs text-rose-400 font-semibold">{{ error }}</p>
+    <p v-if="error" class="text-xs dark:text-rose-400 text-rose-600 font-semibold">{{ error }}</p>
 
     <!-- Mini preview -->
     <div v-if="preview" class="grid grid-cols-9 gap-px border shrink-0 dark:bg-zinc-700 dark:border-zinc-700 bg-zinc-300 border-zinc-300">

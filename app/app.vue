@@ -556,11 +556,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           </div>
           <div class="flex justify-between px-3 py-2">
             <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('game.mistakes') }}</span>
-            <span class="text-xs font-bold" :class="mistakes === 0 ? 'text-emerald-400' : 'text-rose-400'">{{ mistakes }} / 3</span>
+            <span class="text-xs font-bold" :class="mistakes === 0 ? 'dark:text-emerald-400 text-emerald-600' : 'dark:text-rose-400 text-rose-600'">{{ mistakes }} / 3</span>
           </div>
           <div class="flex justify-between px-3 py-2">
             <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('modal.hintsUsed') }}</span>
-            <span class="text-xs font-bold" :class="hintsUsed === 0 ? 'text-emerald-400' : 'text-amber-400'">{{ hintsUsed }}</span>
+            <span class="text-xs font-bold" :class="hintsUsed === 0 ? 'dark:text-emerald-400 text-emerald-600' : 'dark:text-amber-400 text-amber-700'">{{ hintsUsed }}</span>
           </div>
           <div v-if="techniqueLog.length" class="px-3 py-2">
             <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-2">{{ $t('modal.techniquesUsed') }}</p>
@@ -568,7 +568,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
               <span
                 v-for="name in techniqueLog"
                 :key="name"
-                class="text-[10px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-semibold"
+                class="text-[10px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 dark:text-amber-400 text-amber-700 font-semibold"
               >{{ name }}</span>
             </div>
           </div>
