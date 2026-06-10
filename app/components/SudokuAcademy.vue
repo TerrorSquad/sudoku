@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useTechniqueStats } from '../composables/useTechniqueStats';
+import ExampleGrid from './ExampleGrid.vue';
 
 const emit = defineEmits<{
   (e: 'back-to-menu'): void;
@@ -7,11 +9,55 @@ const emit = defineEmits<{
 
 const techStats = useTechniqueStats();
 
+interface ExampleCell {
+  r: number;
+  c: number;
+}
+
+interface TechniqueExample {
+  board: number[][];
+  notes?: Record<string, number[]>;
+  target?: ExampleCell[];
+  trigger?: ExampleCell[];
+  elimination?: ExampleCell[];
+  caption: string;
+}
+
 interface Technique {
   name: string;
   tier: 'Basic' | 'Intermediate' | 'Advanced' | 'Expert';
   lookFor: string;
   howItHelps: string;
+  example?: TechniqueExample;
+}
+
+// Shared base grid used as visual context for examples — only the cells
+// relevant to each technique are blanked out and annotated with candidates.
+const BASE_BOARD: number[][] = [
+  [5, 3, 4, 6, 7, 8, 9, 1, 2],
+  [6, 7, 2, 1, 9, 5, 3, 4, 8],
+  [1, 9, 8, 3, 4, 2, 5, 6, 7],
+  [8, 5, 9, 7, 6, 1, 4, 2, 3],
+  [4, 2, 6, 8, 5, 3, 7, 9, 1],
+  [7, 1, 3, 9, 2, 4, 8, 5, 6],
+  [9, 6, 1, 5, 3, 7, 2, 8, 4],
+  [2, 8, 7, 4, 1, 9, 6, 3, 5],
+  [3, 4, 5, 2, 8, 6, 1, 7, 9],
+];
+
+function boardWith(blanks: [number, number][]): number[][] {
+  const board = BASE_BOARD.map(row => [...row]);
+  for (const [r, c] of blanks) board[r]![c] = 0;
+  return board;
+}
+
+const expanded = ref<Set<string>>(new Set());
+
+function toggleExample(name: string) {
+  const next = new Set(expanded.value);
+  if (next.has(name)) next.delete(name);
+  else next.add(name);
+  expanded.value = next;
 }
 
 const techniques: Technique[] = [
@@ -21,12 +67,25 @@ const techniques: Technique[] = [
     tier: 'Basic',
     lookFor: 'A cell where only one digit is a valid candidate — all other digits already appear in the same row, column, or box.',
     howItHelps: 'Place that single remaining candidate directly. No deduction required; the answer is forced by elimination.',
+    example: {
+      board: boardWith([[0, 0]]),
+      notes: { '0-0': [5] },
+      target: [{ r: 0, c: 0 }],
+      caption: 'R1C1 has exactly one candidate left: 5. Every other digit already appears in its row, column, or box, so 5 must go here.',
+    },
   },
   {
     name: 'Hidden Single',
     tier: 'Basic',
     lookFor: 'Within a row, column, or box, find a digit that can only fit in one specific cell — even if that cell has other candidates.',
     howItHelps: 'Because the digit has nowhere else to go in that unit, it must go in that cell. Place it and clear all other candidates from that cell.',
+    example: {
+      board: boardWith([[0, 0], [0, 1], [0, 2]]),
+      notes: { '0-0': [2, 5, 8], '0-1': [3, 9], '0-2': [4, 9] },
+      target: [{ r: 0, c: 0 }],
+      trigger: [{ r: 0, c: 1 }, { r: 0, c: 2 }],
+      caption: 'Digit 5 is missing from this box. Of the three empty cells, only R1C1 can hold a 5 — the highlighted cells don\'t have it as a candidate. Even though R1C1 has other candidates too, the 5 must go here.',
+    },
   },
   // Intermediate
   {
@@ -212,6 +271,15 @@ function byTier(tier: string) {
     <!-- Content -->
     <div class="flex-1 px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
 
+      <!-- Example legend -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-8 px-4 py-3 bg-zinc-900/40 border border-zinc-800 text-[11px] text-zinc-400">
+        <span class="font-bold text-zinc-300 uppercase tracking-widest">Example colors</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-emerald-500/30 ring-1 ring-emerald-500 inline-block"></span> Target cell</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-indigo-500/40 ring-1 ring-indigo-400 inline-block"></span> Trigger / evidence</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-rose-500/40 ring-1 ring-rose-400 inline-block"></span> Eliminated candidate</span>
+        <span class="ml-auto text-zinc-600 hidden sm:inline">Click a card with an example to see it worked out</span>
+      </div>
+
       <div v-for="tier in tiers" :key="tier" class="mb-12">
         <!-- Tier heading -->
         <div class="flex items-center gap-3 mb-5">
@@ -228,8 +296,9 @@ function byTier(tier: string) {
           <div
             v-for="tech in byTier(tier)"
             :key="tech.name"
-            :class="tierBorder[tier]"
+            :class="[tierBorder[tier], tech.example ? 'cursor-pointer' : '']"
             class="bg-zinc-900/60 border p-5 transition-colors"
+            @click="tech.example && toggleExample(tech.name)"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
               <h3 class="text-base font-black text-zinc-100 leading-tight">{{ tech.name }}</h3>
@@ -244,6 +313,14 @@ function byTier(tier: string) {
                 <span :class="tierMeta[tier]!.badge" class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border">
                   {{ tier }}
                 </span>
+                <svg
+                  v-if="tech.example"
+                  class="w-4 h-4 text-zinc-500 transition-transform"
+                  :class="{ 'rotate-180': expanded.has(tech.name) }"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
 
@@ -256,6 +333,18 @@ function byTier(tier: string) {
                 <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">How it helps</p>
                 <p class="text-sm text-zinc-400 leading-relaxed">{{ tech.howItHelps }}</p>
               </div>
+            </div>
+
+            <div v-if="tech.example && expanded.has(tech.name)" class="mt-4 pt-4 border-t border-zinc-800" @click.stop>
+              <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 text-center">Worked example</p>
+              <ExampleGrid
+                :board="tech.example.board"
+                :notes="tech.example.notes"
+                :target="tech.example.target"
+                :trigger="tech.example.trigger"
+                :elimination="tech.example.elimination"
+              />
+              <p class="text-xs text-zinc-400 leading-relaxed mt-3 text-center max-w-sm mx-auto">{{ tech.example.caption }}</p>
             </div>
           </div>
         </div>
