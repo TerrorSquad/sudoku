@@ -321,6 +321,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <template>
+  <UApp>
   <div class="min-h-screen w-full text-zinc-100 antialiased bg-[#0c0a09] flex flex-col">
 
     <!-- MENU -->
@@ -564,6 +565,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     </div>
 
   </div>
+  </UApp>
 </template>
 
 <style scoped>
