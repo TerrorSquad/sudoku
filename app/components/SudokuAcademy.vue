@@ -400,7 +400,7 @@ function byTier(tier: string) {
 <template>
   <div class="min-h-screen w-full flex flex-col">
     <!-- Header -->
-    <div class="sticky top-0 z-10 backdrop-blur border-b px-4 sm:px-8 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200">
+    <div class="sticky top-0 z-10 backdrop-blur border-b pl-4 sm:pl-8 pr-4 sm:pr-44 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200">
       <button
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"

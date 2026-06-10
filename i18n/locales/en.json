@@ -4,7 +4,11 @@
     "subtitle": "Vue 3 / Nuxt · Step-by-step hint system",
     "continue": "Continue",
     "continueSub": "{difficulty} · {time}",
-    "start": "New Game"
+    "start": "New Game",
+    "dailyChallenge": "Daily Challenge",
+    "dailyCompleted": "Daily — Completed ✓",
+    "customPuzzle": "Custom Puzzle",
+    "academy": "Sudoku Academy"
   },
   "difficulty": {
     "title": "Choose a Challenge",
@@ -31,13 +35,32 @@
     "notesFilled": "Notes auto-filled!",
     "cellFilled": "Cell filled!",
     "instantApplied": "Answer instantly applied!",
-    "autoNotes": "Auto Notes"
+    "autoNotes": "Auto Notes",
+    "conflictWith": "Conflicts with {where}!",
+    "wrongDigit": "Wrong digit here!",
+    "whereRow": "row {n}",
+    "whereCol": "col {n}",
+    "whereBox": "this box",
+    "whereCell": "another cell"
   },
   "controls": {
     "undo": "Undo",
     "erase": "Erase",
     "notes": "Notes",
     "hint": "Hint"
+  },
+  "sidebar": {
+    "keyboard": "Keyboard",
+    "legend": "Legend",
+    "shortcutInputNumber": "Input number",
+    "shortcutEraseCell": "Erase cell",
+    "shortcutToggleNotes": "Toggle notes",
+    "shortcutGetHint": "Get hint",
+    "shortcutAutoFillNotes": "Auto-fill notes",
+    "legendGiven": "Given digit",
+    "legendEntry": "Your entry",
+    "legendConflict": "Conflict",
+    "legendSelected": "Selected"
   },
   "hint": {
     "panelTitle": "Analysis Panel",
@@ -60,6 +83,24 @@
     "winHintMsg": "You solved the puzzle with the analyzer in {time}.",
     "winInstantMsg": "You solved the puzzle with the analyzer!",
     "close": "Close",
-    "noMoves": "No empty cells!"
+    "noMoves": "No empty cells!",
+    "difficulty": "Difficulty",
+    "hintsUsed": "Hints used",
+    "techniquesUsed": "Techniques used"
+  },
+  "customImport": {
+    "title": "Custom Puzzle",
+    "back": "Back",
+    "description": "Paste 81 digits (0 = empty cell). Spaces and newlines are ignored.",
+    "loadExample": "Load example",
+    "playPuzzle": "Play Puzzle",
+    "errorExpectedDigits": "Expected 81 digits, got {count}.",
+    "errorOnlyDigits": "Only digits 0–9 are allowed.",
+    "errorRowDuplicate": "Row {row} has duplicate {value}.",
+    "errorColDuplicate": "Column {col} has duplicate {value}.",
+    "errorBoxDuplicate": "Box at row {row} col {col} has duplicate {value}."
+  },
+  "a11y": {
+    "switchLanguage": "Switch language"
   }
 }

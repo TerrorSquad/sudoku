@@ -5,7 +5,10 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css'],
   i18n: {
-    locales: [{ code: 'en', language: 'en-US', file: 'en.json', name: 'English' }],
+    locales: [
+      { code: 'en', language: 'en-US', file: 'en.json', name: 'English' },
+      { code: 'sr', language: 'sr-Latn-RS', file: 'sr.json', name: 'Srpski' },
+    ],
     defaultLocale: 'en',
     langDir: 'locales/',
     strategy: 'no_prefix',

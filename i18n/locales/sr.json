@@ -1,0 +1,106 @@
+{
+  "menu": {
+    "title": "SUDOKU PRO",
+    "subtitle": "Vue 3 / Nuxt · Sistem nagoveštaja korak po korak",
+    "continue": "Nastavi",
+    "continueSub": "{difficulty} · {time}",
+    "start": "Nova igra",
+    "dailyChallenge": "Dnevni izazov",
+    "dailyCompleted": "Dnevni izazov — Završeno ✓",
+    "customPuzzle": "Prilagođena slagalica",
+    "academy": "Sudoku akademija"
+  },
+  "difficulty": {
+    "title": "Izaberi izazov",
+    "subtitle": "Izaberi nivo težine:",
+    "beginner": "Početnik",
+    "easy": "Lako",
+    "medium": "Srednje",
+    "hard": "Teško",
+    "expert": "Ekspert",
+    "master": "Majstor",
+    "beginnerDesc": "Većina polja je data — upoznaj tablu sa sigurnošću.",
+    "easyDesc": "Samo jednostavne eliminacije — odlično za izgradnju intuicije.",
+    "mediumDesc": "Zahteva tehnike usmerenih parova i osnovne tehnike.",
+    "hardDesc": "Goli parovi, skriveni jedinstveni brojevi i još toga.",
+    "expertDesc": "X-Wing, XY-Wing i napredni lanci.",
+    "masterDesc": "Skoro minimalan broj datih cifara — zahteva ekspertske lance i duboku logiku.",
+    "back": "Nazad na meni"
+  },
+  "game": {
+    "exitToMenu": "Izlaz",
+    "mistakes": "Greške",
+    "ready": "Spreman za igru",
+    "newBoard": "Nova tabla učitana!",
+    "notesFilled": "Beleške automatski popunjene!",
+    "cellFilled": "Polje popunjeno!",
+    "instantApplied": "Odgovor odmah primenjen!",
+    "autoNotes": "Automatske beleške",
+    "conflictWith": "Sukob sa {where}!",
+    "wrongDigit": "Pogrešna cifra ovde!",
+    "whereRow": "redom {n}",
+    "whereCol": "kolonom {n}",
+    "whereBox": "ovim kvadrantom",
+    "whereCell": "drugim poljem"
+  },
+  "controls": {
+    "undo": "Vrati",
+    "erase": "Obriši",
+    "notes": "Beleške",
+    "hint": "Nagoveštaj"
+  },
+  "sidebar": {
+    "keyboard": "Tastatura",
+    "legend": "Legenda",
+    "shortcutInputNumber": "Unos broja",
+    "shortcutEraseCell": "Obriši polje",
+    "shortcutToggleNotes": "Uključi/isključi beleške",
+    "shortcutGetHint": "Dobij nagoveštaj",
+    "shortcutAutoFillNotes": "Automatski popuni beleške",
+    "legendGiven": "Data cifra",
+    "legendEntry": "Tvoj unos",
+    "legendConflict": "Sukob",
+    "legendSelected": "Izabrano"
+  },
+  "hint": {
+    "panelTitle": "Panel analize",
+    "panelDesc": "Klikni na dugme Nagoveštaj tokom igre da aktiviraš duboku logičku analizu i postepenu dekonstrukciju složenih tehnika rešavanja.",
+    "detectedTechnique": "Otkrivena tehnika",
+    "step": "Korak {n}",
+    "targetCell": "Ciljno polje (polje koje se rešava)",
+    "triggerCells": "Polja dokaza (okidači logičkog pravila)",
+    "eliminations": "Eliminacije (čišćenje sukobljenih kandidata)",
+    "prev": "Prethodno",
+    "next": "Sledeće",
+    "apply": "Primeni odgovor",
+    "cancel": "Otkaži"
+  },
+  "modal": {
+    "gameOver": "Kraj igre",
+    "gameOverMsg": "Napravio si 3 greške. Pokušaj ponovo!",
+    "win": "Slagalica rešena!",
+    "winMsg": "Rešio si {difficulty} slagalicu za {time}.",
+    "winHintMsg": "Rešio si slagalicu uz pomoć analizatora za {time}.",
+    "winInstantMsg": "Rešio si slagalicu uz pomoć analizatora!",
+    "close": "Zatvori",
+    "noMoves": "Nema praznih polja!",
+    "difficulty": "Težina",
+    "hintsUsed": "Korišćeni nagoveštaji",
+    "techniquesUsed": "Korišćene tehnike"
+  },
+  "customImport": {
+    "title": "Prilagođena slagalica",
+    "back": "Nazad",
+    "description": "Nalepi 81 cifru (0 = prazno polje). Razmaci i novi redovi se zanemaruju.",
+    "loadExample": "Učitaj primer",
+    "playPuzzle": "Igraj slagalicu",
+    "errorExpectedDigits": "Očekivano 81 cifara, dobijeno {count}.",
+    "errorOnlyDigits": "Dozvoljene su samo cifre 0–9.",
+    "errorRowDuplicate": "Red {row} ima duplikat {value}.",
+    "errorColDuplicate": "Kolona {col} ima duplikat {value}.",
+    "errorBoxDuplicate": "Kvadrant na redu {row}, koloni {col} ima duplikat {value}."
+  },
+  "a11y": {
+    "switchLanguage": "Promeni jezik"
+  }
+}

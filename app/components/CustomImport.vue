@@ -7,6 +7,8 @@ const emit = defineEmits<{
   (e: 'back-to-menu'): void;
 }>();
 
+const { t } = useI18n();
+
 const raw = ref('');
 const error = ref('');
 
@@ -27,8 +29,8 @@ function handleLoad() {
   error.value = '';
   if (!isValid.value) {
     const s = cleaned.value;
-    if (s.length !== 81) error.value = `Expected 81 digits, got ${s.length}.`;
-    else error.value = 'Only digits 0–9 are allowed.';
+    if (s.length !== 81) error.value = t('customImport.errorExpectedDigits', { count: s.length });
+    else error.value = t('customImport.errorOnlyDigits');
     return;
   }
   const board = preview.value!.map(row => [...row]) as Grid;
@@ -38,14 +40,14 @@ function handleLoad() {
       const v = board[r]![c]!;
       if (v === 0) continue;
       for (let x = 0; x < 9; x++) {
-        if (x !== c && board[r]![x] === v) { error.value = `Row ${r + 1} has duplicate ${v}.`; return; }
-        if (x !== r && board[x]![c] === v) { error.value = `Column ${c + 1} has duplicate ${v}.`; return; }
+        if (x !== c && board[r]![x] === v) { error.value = t('customImport.errorRowDuplicate', { row: r + 1, value: v }); return; }
+        if (x !== r && board[x]![c] === v) { error.value = t('customImport.errorColDuplicate', { col: c + 1, value: v }); return; }
       }
       const br = r - (r % 3), bc = c - (c % 3);
       for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
         const rr = br + i, cc = bc + j;
         if ((rr !== r || cc !== c) && board[rr]![cc] === v) {
-          error.value = `Box at row ${br + 1} col ${bc + 1} has duplicate ${v}.`; return;
+          error.value = t('customImport.errorBoxDuplicate', { row: br + 1, col: bc + 1, value: v }); return;
         }
       }
     }
@@ -71,10 +73,10 @@ function loadExample() {
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         </svg>
-        Back
+        {{ $t('customImport.back') }}
       </button>
-      <h2 class="text-3xl font-black uppercase tracking-tight dark:text-zinc-100 text-zinc-900">Custom Puzzle</h2>
-      <p class="text-sm mt-1 dark:text-zinc-400 text-zinc-600">Paste 81 digits (0 = empty cell). Spaces and newlines are ignored.</p>
+      <h2 class="text-3xl font-black uppercase tracking-tight dark:text-zinc-100 text-zinc-900">{{ $t('customImport.title') }}</h2>
+      <p class="text-sm mt-1 dark:text-zinc-400 text-zinc-600">{{ $t('customImport.description') }}</p>
     </div>
 
     <textarea
@@ -90,7 +92,7 @@ function loadExample() {
         {{ cleaned.length }} / 81
       </span>
       <button @click="loadExample" class="text-zinc-500 underline transition-colors dark:hover:text-zinc-300 hover:text-zinc-700">
-        Load example
+        {{ $t('customImport.loadExample') }}
       </button>
     </div>
 
@@ -120,7 +122,7 @@ function loadExample() {
       :class="isValid ? 'bg-violet-700 hover:bg-violet-600 border-violet-600 text-white' : 'dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-100 border-zinc-300 text-zinc-600 cursor-not-allowed'"
       class="w-full py-4 border font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
     >
-      Play Puzzle
+      {{ $t('customImport.playPuzzle') }}
     </button>
   </div>
 </template>

@@ -11,14 +11,21 @@ import Numpad from './components/Numpad.vue';
 import SideExplanationPanel from './components/SideExplanationPanel.vue';
 import SudokuAcademy from './components/SudokuAcademy.vue';
 import CustomImport from './components/CustomImport.vue';
+import LocaleSwitcher from './components/LocaleSwitcher.vue';
 
 import type { CellCoord, Difficulty } from './types/sudoku';
 import confetti from 'canvas-confetti';
 import { useGameSave } from './composables/useGameSave';
 import { useTechniqueStats } from './composables/useTechniqueStats';
 import { useDailyPuzzle } from './composables/useDailyPuzzle';
+import * as uiLocales from '@nuxt/ui/locale';
 
-const { t } = useI18n();
+const { t, locale, locales } = useI18n();
+const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
+
+useHead(() => ({
+  htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
+}));
 
 const engine = useSudokuEngine();
 const timer = useTimer();
@@ -183,10 +190,16 @@ function handleInputNumber(num: number) {
           const inRow = conflicts.some(cc => cc.r === r);
           const inCol = conflicts.some(cc => cc.c === c);
           const inBox = conflicts.some(cc => cc.r !== r && cc.c !== c);
-          const where = inRow ? `row ${r + 1}` : inCol ? `col ${c + 1}` : inBox ? 'this box' : 'another cell';
-          hintStatus.value = `Conflicts with ${where}!`;
+          const where = inRow
+            ? t('game.whereRow', { n: r + 1 })
+            : inCol
+              ? t('game.whereCol', { n: c + 1 })
+              : inBox
+                ? t('game.whereBox')
+                : t('game.whereCell');
+          hintStatus.value = t('game.conflictWith', { where });
         } else {
-          hintStatus.value = 'Wrong digit here!';
+          hintStatus.value = t('game.wrongDigit');
         }
         if (mistakes.value >= 3) {
           triggerLocalModal(t('modal.gameOver'), t('modal.gameOverMsg'));
@@ -321,11 +334,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
 <template>
-  <UApp>
+  <UApp :locale="localeMap[locale] ?? uiLocales.en">
   <div class="min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
 
     <!-- Theme + locale switcher -->
     <div class="fixed top-3 right-3 z-40 flex items-center gap-2">
+      <LocaleSwitcher />
       <UColorModeButton />
     </div>
 
@@ -373,8 +387,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span v-if="dailyRecord">Daily — Completed ✓</span>
-          <span v-else>Daily Challenge</span>
+          <span v-if="dailyRecord">{{ $t('menu.dailyCompleted') }}</span>
+          <span v-else>{{ $t('menu.dailyChallenge') }}</span>
         </button>
 
         <!-- Custom puzzle -->
@@ -385,7 +399,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
-          Custom Puzzle
+          {{ $t('menu.customPuzzle') }}
         </button>
 
         <!-- Academy -->
@@ -396,7 +410,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          Sudoku Academy
+          {{ $t('menu.academy') }}
         </button>
       </div>
     </div>
@@ -431,14 +445,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       <!-- 3xl left sidebar: shortcuts & branding -->
       <div class="hidden 3xl:flex flex-col gap-6 sticky top-3 3xl:col-span-1">
         <div>
-          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Keyboard</p>
+          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">{{ $t('sidebar.keyboard') }}</p>
           <ul class="space-y-3">
             <li v-for="(s, i) in [
-              { key: '1–9', desc: 'Input number' },
-              { key: 'Backspace', desc: 'Erase cell' },
-              { key: 'N', desc: 'Toggle notes' },
-              { key: 'H', desc: 'Get hint' },
-              { key: 'A', desc: 'Auto-fill notes' },
+              { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
+              { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
+              { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
+              { key: 'H', desc: $t('sidebar.shortcutGetHint') },
+              { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
             ]" :key="i" class="flex items-center gap-3">
               <kbd class="font-game text-xs font-bold px-2 py-1 border shrink-0 min-w-[60px] text-center dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-100 border-zinc-300 text-zinc-700">{{ s.key }}</kbd>
               <span class="text-sm dark:text-zinc-400 text-zinc-600">{{ s.desc }}</span>
@@ -447,12 +461,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         </div>
 
         <div class="border-t pt-4 dark:border-zinc-800 border-zinc-200">
-          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">Legend</p>
+          <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">{{ $t('sidebar.legend') }}</p>
           <ul class="space-y-3 text-sm dark:text-zinc-400 text-zinc-600">
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-zinc-100 dark:border-zinc-600 bg-zinc-900 border-zinc-400" /> Given digit</li>
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-violet-300/30 dark:border-violet-400 bg-violet-600/30 border-violet-500" /> Your entry</li>
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-rose-500/20 border border-rose-400" /> Conflict</li>
-            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-950/60 border border-violet-400" /> Selected</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-zinc-100 dark:border-zinc-600 bg-zinc-900 border-zinc-400" /> {{ $t('sidebar.legendGiven') }}</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 border dark:bg-violet-300/30 dark:border-violet-400 bg-violet-600/30 border-violet-500" /> {{ $t('sidebar.legendEntry') }}</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-rose-500/20 border border-rose-400" /> {{ $t('sidebar.legendConflict') }}</li>
+            <li class="flex items-center gap-3"><span class="w-4 h-4 shrink-0 bg-violet-950/60 border border-violet-400" /> {{ $t('sidebar.legendSelected') }}</li>
           </ul>
         </div>
       </div>
@@ -537,19 +551,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         <!-- Win summary -->
         <div v-if="isWinState" class="mb-5 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y">
           <div class="flex justify-between px-3 py-2">
-            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Difficulty</span>
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('modal.difficulty') }}</span>
             <span class="text-xs font-bold capitalize dark:text-zinc-200 text-zinc-800">{{ activeDifficulty }}</span>
           </div>
           <div class="flex justify-between px-3 py-2">
-            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Mistakes</span>
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('game.mistakes') }}</span>
             <span class="text-xs font-bold" :class="mistakes === 0 ? 'text-emerald-400' : 'text-rose-400'">{{ mistakes }} / 3</span>
           </div>
           <div class="flex justify-between px-3 py-2">
-            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Hints used</span>
+            <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('modal.hintsUsed') }}</span>
             <span class="text-xs font-bold" :class="hintsUsed === 0 ? 'text-emerald-400' : 'text-amber-400'">{{ hintsUsed }}</span>
           </div>
           <div v-if="techniqueLog.length" class="px-3 py-2">
-            <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-2">Techniques used</p>
+            <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-2">{{ $t('modal.techniquesUsed') }}</p>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="name in techniqueLog"
