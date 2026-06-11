@@ -18,6 +18,8 @@ import confetti from 'canvas-confetti';
 import { useGameSave } from './composables/useGameSave';
 import { useTechniqueStats } from './composables/useTechniqueStats';
 import { useDailyPuzzle } from './composables/useDailyPuzzle';
+import { useScore } from './composables/useScore';
+import { computeScore, type ScoreBreakdown } from './utils/score';
 import * as uiLocales from '@nuxt/ui/locale';
 
 const { t, locale, locales } = useI18n();
@@ -81,6 +83,27 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 const mistakeExplainer = ref<string>('');
 
+const score = useScore();
+const lastScore = ref<ScoreBreakdown | null>(null);
+const isNewBest = ref<boolean>(false);
+const lifetimeTotal = ref<number>(0);
+const displayedScore = ref<number>(0); // animated count-up of lastScore.total
+
+// Count `displayedScore` up to the final total over ~0.8s for a little flourish.
+function animateScoreCountUp(to: number) {
+  const start = performance.now();
+  const duration = 800;
+  displayedScore.value = 0;
+  function tick(now: number) {
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    displayedScore.value = Math.round(to * eased);
+    if (p < 1) requestAnimationFrame(tick);
+    else displayedScore.value = to;
+  }
+  requestAnimationFrame(tick);
+}
+
 // Lifetime per-technique usage from localStorage; refreshed when the win modal opens
 const techStatsTotals = computed(() => {
   void showModal.value;
@@ -135,7 +158,20 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
     if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
+    const breakdown = computeScore({
+      difficulty: activeDifficulty.value,
+      timeSeconds: timer.timerSeconds.value,
+      mistakes: mistakes.value,
+      hintsUsed: hintsUsed.value,
+    });
+    const result = score.record(activeDifficulty.value, breakdown.total);
+    lastScore.value = breakdown;
+    isNewBest.value = result.isNewBest;
+    lifetimeTotal.value = result.stats.total;
+    animateScoreCountUp(breakdown.total);
     confetti({ particleCount: 160, spread: 80, origin: { y: 0.55 }, colors: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#34d399'] });
+  } else {
+    lastScore.value = null;
   }
 }
 
@@ -586,11 +622,50 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- MODAL -->
     <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center px-4">
       <div
-        class="border w-full max-w-sm p-6 shadow-2xl text-center dark:bg-zinc-900 bg-white"
+        class="modal-pop border w-full max-w-sm p-6 shadow-2xl text-center dark:bg-zinc-900 bg-white"
         :class="isWinState ? 'border-emerald-500/60 border-t-4 border-t-emerald-500' : 'border-rose-500/40 border-t-4 border-t-rose-500'"
       >
         <h3 class="text-xl font-black mb-2 uppercase tracking-tight dark:text-zinc-100 text-zinc-900">{{ modalTitle }}</h3>
         <p class="text-sm mb-4 leading-relaxed dark:text-zinc-400 text-zinc-600">{{ modalMessage }}</p>
+
+        <!-- Score headline -->
+        <div v-if="isWinState && lastScore" class="mb-5">
+          <p class="text-[11px] text-zinc-500 uppercase tracking-widest font-semibold">{{ $t('modal.scoreTotal') }}</p>
+          <p class="text-5xl font-black tabular-nums bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent leading-tight">
+            {{ displayedScore }}
+          </p>
+          <p v-if="isNewBest" class="score-badge inline-block mt-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-amber-500/15 border border-amber-500/40 dark:text-amber-300 text-amber-700">
+            ★ {{ $t('modal.scoreNewBest') }}
+          </p>
+
+          <!-- breakdown -->
+          <div class="mt-3 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y text-xs">
+            <div class="flex justify-between px-3 py-1.5">
+              <span class="text-zinc-500">{{ $t('modal.scoreBase') }}</span>
+              <span class="font-bold tabular-nums dark:text-zinc-200 text-zinc-800">{{ lastScore.base }}</span>
+            </div>
+            <div v-if="lastScore.speedBonus" class="flex justify-between px-3 py-1.5">
+              <span class="text-zinc-500">{{ $t('modal.scoreSpeed') }}</span>
+              <span class="font-bold tabular-nums dark:text-emerald-400 text-emerald-600">+{{ lastScore.speedBonus }}</span>
+            </div>
+            <div v-if="lastScore.flawlessBonus" class="flex justify-between px-3 py-1.5">
+              <span class="text-zinc-500">{{ $t('modal.scoreFlawless') }}</span>
+              <span class="font-bold tabular-nums dark:text-emerald-400 text-emerald-600">+{{ lastScore.flawlessBonus }}</span>
+            </div>
+            <div v-if="lastScore.mistakePenalty" class="flex justify-between px-3 py-1.5">
+              <span class="text-zinc-500">{{ $t('modal.scoreMistakePenalty') }}</span>
+              <span class="font-bold tabular-nums dark:text-rose-400 text-rose-600">−{{ lastScore.mistakePenalty }}</span>
+            </div>
+            <div v-if="lastScore.hintPenalty" class="flex justify-between px-3 py-1.5">
+              <span class="text-zinc-500">{{ $t('modal.scoreHintPenalty') }}</span>
+              <span class="font-bold tabular-nums dark:text-amber-400 text-amber-700">−{{ lastScore.hintPenalty }}</span>
+            </div>
+            <div class="flex justify-between px-3 py-1.5 bg-zinc-500/5">
+              <span class="text-zinc-500 uppercase tracking-wider font-semibold">{{ $t('modal.scoreLifetime') }}</span>
+              <span class="font-bold tabular-nums dark:text-zinc-300 text-zinc-700">{{ lifetimeTotal }}</span>
+            </div>
+          </div>
+        </div>
 
         <!-- Win summary -->
         <div v-if="isWinState" class="mb-5 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y">
@@ -643,4 +718,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 }
 :deep(.bg-indigo-500\/30) { animation: trigger-glow    1.2s infinite ease-in-out !important; }
 :deep(.bg-rose-500\/30)   { animation: elimination-blink 1.2s infinite ease-in-out !important; }
+
+@keyframes modal-pop {
+  0%   { transform: scale(0.85) translateY(8px); opacity: 0; }
+  60%  { transform: scale(1.02); }
+  100% { transform: scale(1)    translateY(0);   opacity: 1; }
+}
+.modal-pop { animation: modal-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes score-badge {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.25); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.score-badge { animation: score-badge 0.4s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 </style>

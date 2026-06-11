@@ -317,7 +317,16 @@
     "difficulty": "Difficulty",
     "hintsUsed": "Hints used",
     "techniquesUsed": "Techniques used",
-    "usedTotal": "{n}× total"
+    "usedTotal": "{n}× total",
+    "score": "Score",
+    "scoreBase": "Base",
+    "scoreSpeed": "Speed bonus",
+    "scoreFlawless": "Flawless bonus",
+    "scoreMistakePenalty": "Mistakes",
+    "scoreHintPenalty": "Hints",
+    "scoreTotal": "Score",
+    "scoreNewBest": "New best!",
+    "scoreLifetime": "Lifetime total"
   },
   "customImport": {
     "title": "Custom Puzzle",

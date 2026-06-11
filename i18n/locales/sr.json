@@ -317,7 +317,16 @@
     "difficulty": "Težina",
     "hintsUsed": "Korišćeni nagoveštaji",
     "techniquesUsed": "Korišćene tehnike",
-    "usedTotal": "ukupno {n}×"
+    "usedTotal": "ukupno {n}×",
+    "score": "Poeni",
+    "scoreBase": "Osnova",
+    "scoreSpeed": "Bonus za brzinu",
+    "scoreFlawless": "Bonus bez greške",
+    "scoreMistakePenalty": "Greške",
+    "scoreHintPenalty": "Pomoći",
+    "scoreTotal": "Poeni",
+    "scoreNewBest": "Novi rekord!",
+    "scoreLifetime": "Ukupno poena"
   },
   "customImport": {
     "title": "Prilagođena slagalica",

@@ -23,6 +23,12 @@ defineEmits<{
   (e: "click"): void;
 }>();
 
+// A player entry that's wrong (conflict or not matching the solution) shakes
+// instead of popping, for immediate tactile feedback on a mistake.
+const isWrong = computed(() =>
+  props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict)
+);
+
 // Dinamičke klase za Genina stil (oštre ivice, debeli 3x3 borderi)
 const cellClasses = computed(() => {
   return {
@@ -49,7 +55,7 @@ const cellClasses = computed(() => {
     :class="cellClasses"
     class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border border-zinc-500 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
-    <span v-if="value !== 0" :key="value" class="font-game cell-pop">{{ value }}</span>
+    <span v-if="value !== 0" :key="value" class="font-game" :class="isWrong ? 'cell-shake' : 'cell-pop'">{{ value }}</span>
 
     <div
       v-else-if="showAllCandidates"
@@ -87,5 +93,16 @@ const cellClasses = computed(() => {
 }
 .cell-pop {
   animation: cell-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes cell-shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-4px); }
+  40%  { transform: translateX(4px); }
+  60%  { transform: translateX(-3px); }
+  80%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+.cell-shake {
+  animation: cell-shake 0.32s ease-in-out both;
 }
 </style>
