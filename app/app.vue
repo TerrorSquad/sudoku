@@ -80,7 +80,16 @@ const isWinState = ref<boolean>(false);
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 
-const dailyRecord = computed(() => dailyPuzzle.getRecord());
+// Depend on currentScreen so these refresh when returning to the menu
+// after completing the daily (localStorage itself is not reactive).
+const dailyRecord = computed(() => {
+  void currentScreen.value;
+  return dailyPuzzle.getRecord();
+});
+const dailyStreak = computed(() => {
+  void currentScreen.value;
+  return dailyPuzzle.getStreak();
+});
 
 const savedInfo = computed(() => {
   if (!gameSave.hasSave.value) return null;
@@ -390,6 +399,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           <span v-if="dailyRecord">{{ $t('menu.dailyCompleted') }}</span>
           <span v-else>{{ $t('menu.dailyChallenge') }}</span>
         </button>
+        <p v-if="dailyStreak > 0" class="text-[11px] text-amber-600 dark:text-amber-400 text-center -mt-1 uppercase tracking-wider font-semibold">
+          🔥 {{ $t('menu.dailyStreak', { n: dailyStreak }) }}
+        </p>
 
         <!-- Custom puzzle -->
         <button
