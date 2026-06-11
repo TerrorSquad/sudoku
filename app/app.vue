@@ -190,6 +190,10 @@ function handleInputNumber(num: number) {
 
   if (initialBoard.value[r]![c] !== 0) return;
 
+  // Manual entry dismisses any active step-by-step hint — the board the hint
+  // was reasoning about no longer matches what the player is doing.
+  if (activeComplexHint.value) cancelComplexHint();
+
   saveHistory();
 
   if (notesMode.value) {

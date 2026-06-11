@@ -1894,60 +1894,10 @@ export function useSudokuEngine() {
     if (!hint) hint = findSueDeCoq(candidates);
     if (!hint) hint = findBUG(candidates);
 
-    // Fallback: fewest-candidates heuristic
-    if (!hint) {
-      let bestRow = -1;
-      let bestCol = -1;
-      let bestCandidates: number[] = [];
-      let minDomainSize = 10;
-
-      for (let r = 0; r < 9; r++) {
-        for (let c = 0; c < 9; c++) {
-          if (currentBoard.value[r]![c] === 0) {
-            const cellCands = candidates[r]![c]!;
-            if (cellCands.length > 0 && cellCands.length < minDomainSize) {
-              minDomainSize = cellCands.length;
-              bestRow = r;
-              bestCol = c;
-              bestCandidates = cellCands;
-            }
-          }
-        }
-      }
-
-      if (bestRow !== -1) {
-        const r = bestRow;
-        const c = bestCol;
-        const targetNum = solvedBoard.value[r]![c]!;
-        const falseCandidates = bestCandidates.filter(v => v !== targetNum);
-        const blockingCells: HintCoordinate[] = [];
-
-        falseCandidates.forEach(cand => {
-          for (let i = 0; i < 9; i++) {
-            if (currentBoard.value[r]![i] === cand) blockingCells.push({ r, c: i, type: 'trigger' });
-            if (currentBoard.value[i]![c] === cand) blockingCells.push({ r: i, c, type: 'trigger' });
-          }
-        });
-
-        hint = {
-          title: t('hint.tech.candidateReduction.title'),
-          targetCell: { r, c },
-          targetNum,
-          steps: [
-            {
-              label: t('hint.tech.candidateReduction.step1Label'),
-              description: t('hint.tech.candidateReduction.step1Desc', { row: r+1, col: c+1, num: targetNum }),
-              highlightCoords: blockingCells
-            },
-            {
-              label: t('hint.tech.candidateReduction.step2Label'),
-              description: t('hint.tech.candidateReduction.step2Desc', { num: targetNum }),
-              highlightCoords: [{ r, c, type: 'trigger' }]
-            }
-          ]
-        };
-      }
-    }
+    // No cheat fallback: every generated board is guaranteed solvable by these
+    // techniques (see sudokuGrader). If none applies — only possible on a custom
+    // import needing an un-modelled technique — we say so honestly rather than
+    // revealing the answer key dressed up as logic.
 
     if (hint) {
       activeComplexHint.value = hint;
