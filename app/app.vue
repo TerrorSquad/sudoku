@@ -79,6 +79,13 @@ const isWinState = ref<boolean>(false);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
+const mistakeExplainer = ref<string>('');
+
+// Lifetime per-technique usage from localStorage; refreshed when the win modal opens
+const techStatsTotals = computed(() => {
+  void showModal.value;
+  return techStats.getAll();
+});
 
 // Depend on currentScreen so these refresh when returning to the menu
 // after completing the daily (localStorage itself is not reactive).
@@ -147,6 +154,7 @@ function handleContinueGame() {
   mistakes.value = s.mistakes;
   hintStatus.value = t('game.ready');
   hintBody.value = '';
+  mistakeExplainer.value = '';
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -162,6 +170,7 @@ function handleStartGame(level: Difficulty) {
   mistakes.value = 0;
   hintStatus.value = t('game.newBoard');
   hintBody.value = '';
+  mistakeExplainer.value = '';
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -207,13 +216,17 @@ function handleInputNumber(num: number) {
                 ? t('game.whereBox')
                 : t('game.whereCell');
           hintStatus.value = t('game.conflictWith', { where });
+          const first = conflicts[0]!;
+          mistakeExplainer.value = t('game.whyConflict', { num, r: first.r + 1, c: first.c + 1 });
         } else {
           hintStatus.value = t('game.wrongDigit');
+          mistakeExplainer.value = t('game.whyWrong', { num });
         }
         if (mistakes.value >= 3) {
           triggerLocalModal(t('modal.gameOver'), t('modal.gameOverMsg'));
         }
       } else {
+        mistakeExplainer.value = '';
         clearRelationalNotes(r, c, num);
         if (checkWinCondition()) {
           triggerLocalModal(
@@ -294,6 +307,7 @@ function handleStartDaily() {
   mistakes.value = 0;
   hintStatus.value = t('game.newBoard');
   hintBody.value = '';
+  mistakeExplainer.value = '';
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -308,6 +322,7 @@ function handleLoadCustomPuzzle(board: import('./types/sudoku').Grid) {
   mistakes.value = 0;
   hintStatus.value = t('game.newBoard');
   hintBody.value = '';
+  mistakeExplainer.value = '';
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -497,6 +512,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
             @exit-game="exitToMenu"
           />
 
+          <!-- Why-wrong explainer -->
+          <div
+            v-if="mistakeExplainer"
+            class="flex items-start justify-between gap-2 border px-3 py-2 text-xs leading-relaxed bg-rose-500/10 border-rose-500/30 dark:text-rose-300 text-rose-700"
+          >
+            <p>{{ mistakeExplainer }}</p>
+            <button
+              @click="mistakeExplainer = ''"
+              :aria-label="$t('modal.close')"
+              class="shrink-0 font-bold px-1 transition-colors dark:hover:text-rose-100 hover:text-rose-900"
+            >✕</button>
+          </div>
+
           <SudokuGrid
             :current-board="currentBoard"
             :initial-board="initialBoard"
@@ -580,8 +608,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
               <span
                 v-for="name in techniqueLog"
                 :key="name"
+                :title="$t('modal.usedTotal', { n: techStatsTotals[name] ?? 1 })"
                 class="text-[10px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 dark:text-amber-400 text-amber-700 font-semibold"
-              >{{ name }}</span>
+              >{{ name }} <span class="opacity-70">×{{ techStatsTotals[name] ?? 1 }}</span></span>
             </div>
           </div>
         </div>

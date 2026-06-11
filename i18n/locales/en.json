@@ -42,7 +42,9 @@
     "whereRow": "row {n}",
     "whereCol": "col {n}",
     "whereBox": "this box",
-    "whereCell": "another cell"
+    "whereCell": "another cell",
+    "whyConflict": "{num} can't go here — it clashes with the {num} in row {r}, column {c}. A digit may appear only once per row, column and box.",
+    "whyWrong": "No visible clash, but {num} isn't the digit for this cell — the puzzle would become unsolvable. Tip: use notes (N) to narrow the candidates."
   },
   "controls": {
     "undo": "Undo",
@@ -314,7 +316,8 @@
     "noMoves": "No empty cells!",
     "difficulty": "Difficulty",
     "hintsUsed": "Hints used",
-    "techniquesUsed": "Techniques used"
+    "techniquesUsed": "Techniques used",
+    "usedTotal": "{n}× total"
   },
   "customImport": {
     "title": "Custom Puzzle",

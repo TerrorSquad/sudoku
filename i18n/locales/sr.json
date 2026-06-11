@@ -42,7 +42,9 @@
     "whereRow": "redom {n}",
     "whereCol": "kolonom {n}",
     "whereBox": "ovim kvadrantom",
-    "whereCell": "drugim poljem"
+    "whereCell": "drugim poljem",
+    "whyConflict": "Broj {num} ne može ovde — sudara se sa {num} u redu {r}, koloni {c}. Cifra sme da se pojavi samo jednom po redu, koloni i kvadratu.",
+    "whyWrong": "Nema vidljivog sudara, ali {num} nije cifra za ovo polje — slagalica bi postala nerešiva. Savet: koristi beleške (N) da suziš kandidate."
   },
   "controls": {
     "undo": "Vrati",
@@ -314,7 +316,8 @@
     "noMoves": "Nema praznih polja!",
     "difficulty": "Težina",
     "hintsUsed": "Korišćeni nagoveštaji",
-    "techniquesUsed": "Korišćene tehnike"
+    "techniquesUsed": "Korišćene tehnike",
+    "usedTotal": "ukupno {n}×"
   },
   "customImport": {
     "title": "Prilagođena slagalica",
