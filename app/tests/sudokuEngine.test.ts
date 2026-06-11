@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Engine poziva useI18n() van komponente — mockujemo prevod za testove
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+}));
+
 import { useSudokuEngine } from '../composables/useSudokuEngine';
 
 describe('Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja', () => {

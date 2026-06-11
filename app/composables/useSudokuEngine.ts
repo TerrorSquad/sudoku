@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from '../types/sudoku';
+import { generatePuzzle, solveBoard, DIFFICULTY_REMOVE_COUNT } from '../utils/sudokuCore';
 
 export interface ExplanationStep {
   label: string;
@@ -130,32 +131,12 @@ export function useSudokuEngine() {
 
   // --- GAME MANAGEMENT ---
   function startNewGame(difficulty: string) {
-    let removeCount = 42;
-    if (difficulty === 'beginner') removeCount = 20;
-    else if (difficulty === 'easy') removeCount = 30;
-    else if (difficulty === 'medium') removeCount = 42;
-    else if (difficulty === 'hard') removeCount = 52;
-    else if (difficulty === 'expert') removeCount = 58;
-    else if (difficulty === 'master') removeCount = 62;
+    const removeCount = DIFFICULTY_REMOVE_COUNT[difficulty] ?? 42;
+    const { puzzle, solution } = generatePuzzle(removeCount);
 
-    const basePuzzle = solvedTemplate.map(row => [...row]);
-    let removed = 0;
-    while (removed < removeCount) {
-      const r = Math.floor(Math.random() * 9);
-      const c = Math.floor(Math.random() * 9);
-      if (basePuzzle[r]![c] !== 0) {
-        basePuzzle[r]![c] = 0;
-        removed++;
-      }
-    }
-
-    initialBoard.value = basePuzzle.map(row => [...row]);
-    currentBoard.value = basePuzzle.map(row => [...row]);
-
-    const tempToSolve = basePuzzle.map(row => [...row]);
-    if (solveBoardWithBacktracking(tempToSolve)) {
-      solvedBoard.value = tempToSolve;
-    }
+    initialBoard.value = puzzle.map(row => [...row]);
+    currentBoard.value = puzzle.map(row => [...row]);
+    solvedBoard.value = solution;
 
     notesBoard.value = Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false)));
     boardHistory.value = [];
@@ -167,12 +148,8 @@ export function useSudokuEngine() {
     initialBoard.value = board.map(row => [...row]);
     currentBoard.value = board.map(row => [...row]);
 
-    const tempToSolve = board.map(row => [...row]);
-    if (solveBoardWithBacktracking(tempToSolve)) {
-      solvedBoard.value = tempToSolve;
-    } else {
-      solvedBoard.value = solvedTemplate.map(row => [...row]);
-    }
+    const solved = solveBoard(board);
+    solvedBoard.value = solved ?? solvedTemplate.map(row => [...row]);
 
     notesBoard.value = Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false)));
     boardHistory.value = [];
