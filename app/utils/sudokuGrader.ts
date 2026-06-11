@@ -11,7 +11,13 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from './sud
 //   4 — naked/hidden quad, Swordfish, XY-Wing
 //   5 — not solvable with the above (chains/guessing territory)
 
-export type Grade = 1 | 2 | 3 | 4 | 5;
+// 1..5 = hardest technique tier required to fully solve.
+// STUCK = no implemented technique makes progress (needs guessing / a technique
+// we don't model). STUCK puzzles are never accepted for generated games — that
+// guarantees the hint engine (a superset of these techniques) can always find a
+// real move and never has to fall back to revealing the answer.
+export type Grade = 1 | 2 | 3 | 4 | 5 | 6;
+export const STUCK: Grade = 6;
 
 const bit = (v: number) => 1 << (v - 1);
 const ALL_MASK = 0x1FF;
@@ -285,6 +291,40 @@ function eliminateXYWing(s: SolveState): boolean {
   return false;
 }
 
+// --- XYZ-Wing ---
+// Pivot has 3 candidates {x,y,z}; two bivalue pincers (peers of pivot) are
+// {x,z} and {y,z}. z can be removed from any cell that sees all three.
+
+function eliminateXYZWing(s: SolveState): boolean {
+  for (let pivot = 0; pivot < 81; pivot++) {
+    if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
+    const pm = s.cands[pivot]!;
+    const pincers = PEERS[pivot]!.filter(i =>
+      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0
+    );
+    for (let a = 0; a < pincers.length; a++) {
+      for (let b = a + 1; b < pincers.length; b++) {
+        const ma = s.cands[pincers[a]!]!;
+        const mb = s.cands[pincers[b]!]!;
+        if ((ma | mb) !== pm) continue;       // together cover all three digits
+        const z = ma & mb;                    // shared digit, eliminable
+        if (popcount(z) !== 1) continue;
+        let changed = false;
+        for (let i = 0; i < 81; i++) {
+          if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
+          if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
+          if (PEERS[pivot]!.includes(i) && PEERS[pincers[a]!]!.includes(i) && PEERS[pincers[b]!]!.includes(i)) {
+            s.cands[i]! &= ~z;
+            changed = true;
+          }
+        }
+        if (changed) return true;
+      }
+    }
+  }
+  return false;
+}
+
 export interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;
@@ -301,6 +341,7 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
     { tier: 2, run: () => eliminateBoxLine(s) || eliminateNakedSubset(s, 2) || eliminateHiddenSubset(s, 2) },
     { tier: 3, run: () => eliminateNakedSubset(s, 3) || eliminateHiddenSubset(s, 3) || eliminateFish(s, 2) },
     { tier: 4, run: () => eliminateNakedSubset(s, 4) || eliminateHiddenSubset(s, 4) || eliminateFish(s, 3) || eliminateXYWing(s) },
+    { tier: 5, run: () => eliminateFish(s, 4) || eliminateXYZWing(s) },
   ];
 
   outer: while (s.board.some(v => v === 0)) {
@@ -310,7 +351,7 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         continue outer;
       }
     }
-    grade = 5;
+    grade = STUCK;
     break;
   }
 
@@ -329,29 +370,33 @@ export interface GradedPuzzle extends GeneratedPuzzle {
 
 interface DifficultyTarget {
   removeTarget: number;
-  accepts: (g: Grade) => boolean;
-  ideal: Grade;
+  min: Grade;   // lowest acceptable tier (inclusive)
+  max: Grade;   // highest acceptable tier (inclusive)
+  ideal: Grade; // preferred tier; closest-to-ideal solved board is the fallback
 }
 
-// Dig targets and grade ranges tuned against measured grade distributions:
-// random digging yields mostly singles-solvable puzzles at ANY clue count,
-// so harder difficulties need deep digs plus retry-until-grade-matches.
+// All targets are SOLVED tiers (1..5) — STUCK is never acceptable, so every
+// generated board is fully solvable by logic alone. Random digging yields
+// mostly easy boards even at high clue counts, so harder tiers rely on the
+// retry loop keeping the closest-to-ideal solved board.
 const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
-  beginner: { removeTarget: 20, accepts: g => g === 1, ideal: 1 },
-  easy: { removeTarget: 32, accepts: g => g === 1, ideal: 1 },
-  medium: { removeTarget: 54, accepts: g => g === 2, ideal: 2 },
-  hard: { removeTarget: 56, accepts: g => g === 3 || g === 4, ideal: 3 },
-  expert: { removeTarget: 58, accepts: g => g >= 4, ideal: 4 },
-  master: { removeTarget: 62, accepts: g => g === 5, ideal: 5 },
+  beginner: { removeTarget: 38, min: 1, max: 1, ideal: 1 },
+  easy: { removeTarget: 44, min: 1, max: 2, ideal: 1 },
+  medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
+  hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
+  expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
+  master: { removeTarget: 60, min: 4, max: 5, ideal: 5 },
 };
 
 /**
- * Generate a puzzle whose required techniques match the requested difficulty.
- * Retries generation up to `maxAttempts`; falls back to the closest grade
- * seen so the call always returns a unique-solution puzzle.
+ * Generate a puzzle matching the requested difficulty. Always returns a board
+ * that is fully solvable by logic (never STUCK): the first attempt whose grade
+ * lands in [min, max] wins; otherwise the closest-to-ideal SOLVED board seen is
+ * returned, so difficulty degrades gracefully rather than ever shipping a
+ * guess-only puzzle.
  */
-export function generateGradedPuzzle(difficulty: string, rng: Rng = Math.random, maxAttempts = 30): GradedPuzzle {
-  const target = DIFFICULTY_TARGETS[difficulty] ?? { removeTarget: 42, accepts: () => true, ideal: 3 as Grade };
+export function generateGradedPuzzle(difficulty: string, rng: Rng = Math.random, maxAttempts = 60): GradedPuzzle {
+  const target = DIFFICULTY_TARGETS[difficulty] ?? { removeTarget: 42, min: 1 as Grade, max: STUCK, ideal: 3 as Grade };
   const removeTarget = target.removeTarget;
 
   let best: GradedPuzzle | null = null;
@@ -361,13 +406,25 @@ export function generateGradedPuzzle(difficulty: string, rng: Rng = Math.random,
     const gp = generatePuzzle(removeTarget, rng);
     const grade = gradePuzzle(gp.puzzle);
     const graded: GradedPuzzle = { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
-    if (target.accepts(grade)) return graded;
-    const dist = Math.abs(grade - target.ideal);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = graded;
+    if (grade >= target.min && grade <= target.max) return graded;
+    // Only solved boards (grade < STUCK) are eligible fallbacks.
+    if (grade < STUCK) {
+      const dist = Math.abs(grade - target.ideal);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = graded;
+      }
     }
   }
 
-  return best!;
+  if (best) return best;
+
+  // No solved board appeared (pathological for deep digs). Fall back to a
+  // shallow dig, which is virtually always singles-solvable, and keep digging
+  // until one grades as solvable so we never return a STUCK board.
+  for (;;) {
+    const gp = generatePuzzle(30, rng);
+    const grade = gradePuzzle(gp.puzzle);
+    if (grade < STUCK) return { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
+  }
 }

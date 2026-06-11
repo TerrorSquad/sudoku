@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from '../utils/sudokuCore';
-import { solveLogically, gradePuzzle, generateGradedPuzzle } from '../utils/sudokuGrader';
+import { solveLogically, gradePuzzle, generateGradedPuzzle, STUCK } from '../utils/sudokuGrader';
 import type { Grid } from '../types/sudoku';
 
 describe('sudokuGrader — logical solver', () => {
@@ -20,32 +20,37 @@ describe('sudokuGrader — logical solver', () => {
     }
   });
 
-  it('never reports solved=true with an incomplete or wrong board', () => {
-    const { puzzle } = generatePuzzle(60, makeRng(99));
-    const result = solveLogically(puzzle);
-    const flat = result.board.flat();
-    if (result.solved) {
-      expect(flat.every(v => v >= 1 && v <= 9)).toBe(true);
-    } else {
-      expect(result.grade).toBe(5);
-      expect(flat.some(v => v === 0)).toBe(true);
+  it('solved=true iff the board is complete; STUCK iff incomplete', () => {
+    for (const seed of [99, 100, 101, 102]) {
+      const { puzzle } = generatePuzzle(60, makeRng(seed));
+      const result = solveLogically(puzzle);
+      const flat = result.board.flat();
+      if (result.solved) {
+        expect(flat.every(v => v >= 1 && v <= 9)).toBe(true);
+        expect(result.grade).toBeLessThan(STUCK);
+      } else {
+        expect(result.grade).toBe(STUCK);
+        expect(flat.some(v => v === 0)).toBe(true);
+      }
     }
   });
 
-  it('grades the empty grid as 5 (not logically solvable)', () => {
+  it('grades the empty grid as STUCK (not logically solvable)', () => {
     const empty: Grid = Array(9).fill(null).map(() => Array(9).fill(0));
-    expect(gradePuzzle(empty)).toBe(5);
+    expect(gradePuzzle(empty)).toBe(STUCK);
   });
 });
 
 describe('sudokuGrader — graded generation', () => {
   it.each(['beginner', 'easy', 'medium', 'hard', 'expert', 'master'])(
-    'generates a unique-solution %s puzzle with a grade',
+    'always returns a fully logically-solvable %s puzzle (never STUCK)',
     (difficulty) => {
       const gp = generateGradedPuzzle(difficulty, makeRng(2026));
       expect(hasUniqueSolution(gp.puzzle)).toBe(true);
       expect(gp.grade).toBeGreaterThanOrEqual(1);
-      expect(gp.grade).toBeLessThanOrEqual(5);
+      expect(gp.grade).toBeLessThan(STUCK);
+      // Grade is the genuine logical difficulty: the tier-only solver completes it.
+      expect(solveLogically(gp.puzzle).solved).toBe(true);
       expect(solveBoard(gp.puzzle)).toEqual(gp.solution);
     }
   );
@@ -57,8 +62,11 @@ describe('sudokuGrader — graded generation', () => {
     }
   });
 
-  it('expert puzzles require advanced techniques (grade >= 3)', () => {
-    const gp = generateGradedPuzzle('expert', makeRng(7));
-    expect(gp.grade).toBeGreaterThanOrEqual(3);
+  it('harder difficulties trend to higher tiers than easier ones', () => {
+    const grade = (d: string, seed: number) => generateGradedPuzzle(d, makeRng(seed)).grade;
+    // Average across seeds keeps this robust against the rare fallback board.
+    const avg = (d: string) => [1, 2, 3, 4, 5].reduce((s, seed) => s + grade(d, seed), 0) / 5;
+    expect(avg('beginner')).toBeLessThanOrEqual(avg('hard'));
+    expect(avg('easy')).toBeLessThanOrEqual(avg('expert'));
   });
 });
