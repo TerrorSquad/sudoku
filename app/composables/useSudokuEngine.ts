@@ -1,7 +1,8 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from '../types/sudoku';
-import { generatePuzzle, solveBoard, DIFFICULTY_REMOVE_COUNT } from '../utils/sudokuCore';
+import { solveBoard } from '../utils/sudokuCore';
+import { generateGradedPuzzle } from '../utils/sudokuGrader';
 
 export interface ExplanationStep {
   label: string;
@@ -131,8 +132,7 @@ export function useSudokuEngine() {
 
   // --- GAME MANAGEMENT ---
   function startNewGame(difficulty: string) {
-    const removeCount = DIFFICULTY_REMOVE_COUNT[difficulty] ?? 42;
-    const { puzzle, solution } = generatePuzzle(removeCount);
+    const { puzzle, solution } = generateGradedPuzzle(difficulty);
 
     initialBoard.value = puzzle.map(row => [...row]);
     currentBoard.value = puzzle.map(row => [...row]);
