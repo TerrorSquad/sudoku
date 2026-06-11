@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { Grid } from '../types/sudoku';
+import { countSolutions } from '../utils/sudokuCore';
 
 const emit = defineEmits<{
   (e: 'load-puzzle', board: Grid): void;
@@ -52,6 +53,9 @@ function handleLoad() {
       }
     }
   }
+  const solutions = countSolutions(board, 2);
+  if (solutions === 0) { error.value = t('customImport.errorNoSolution'); return; }
+  if (solutions > 1) { error.value = t('customImport.errorMultipleSolutions'); return; }
   emit('load-puzzle', board);
 }
 

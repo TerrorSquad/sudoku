@@ -325,7 +325,9 @@
     "errorOnlyDigits": "Dozvoljene su samo cifre 0–9.",
     "errorRowDuplicate": "Red {row} ima duplikat {value}.",
     "errorColDuplicate": "Kolona {col} ima duplikat {value}.",
-    "errorBoxDuplicate": "Kvadrant na redu {row}, koloni {col} ima duplikat {value}."
+    "errorBoxDuplicate": "Kvadrant na redu {row}, koloni {col} ima duplikat {value}.",
+    "errorNoSolution": "Ova zagonetka nema rešenje — proveri cifre i pokušaj ponovo.",
+    "errorMultipleSolutions": "Ova zagonetka ima više od jednog rešenja, pa greške ne bi mogle pošteno da se proveravaju. Dodaj još zadatih cifara."
   },
   "a11y": {
     "switchLanguage": "Promeni jezik"

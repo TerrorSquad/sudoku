@@ -1,7 +1,13 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from '../types/sudoku';
-import { solveBoard } from '../utils/sudokuCore';
+import {
+  solveBoard,
+  cloneGrid,
+  isValidPlacement,
+  getGridCandidates,
+  getConflictCells as findConflictCells,
+} from '../utils/sudokuCore';
 import { generateGradedPuzzle } from '../utils/sudokuGrader';
 
 export interface ExplanationStep {
@@ -35,18 +41,6 @@ export function useSudokuEngine() {
   const hintTriggers = ref<CellCoord[]>([]);
   const hintEliminations = ref<CellCoord[]>([]);
 
-  const solvedTemplate = [
-    [5, 3, 4, 6, 7, 8, 9, 1, 2],
-    [6, 7, 2, 1, 9, 5, 3, 4, 8],
-    [1, 9, 8, 3, 4, 2, 5, 6, 7],
-    [8, 5, 9, 7, 6, 1, 4, 2, 3],
-    [4, 2, 6, 8, 5, 3, 7, 9, 1],
-    [7, 1, 3, 9, 2, 4, 8, 5, 6],
-    [9, 6, 1, 5, 3, 7, 2, 8, 4],
-    [2, 8, 7, 4, 1, 9, 6, 3, 5],
-    [3, 4, 5, 2, 8, 6, 1, 7, 9]
-  ];
-
   const numberCounts = computed(() => {
     const counts = Array(10).fill(0) as number[];
     for (let r = 0; r < 9; r++) {
@@ -70,64 +64,11 @@ export function useSudokuEngine() {
     return activeComplexHint.value.steps[currentStepIndex.value] ?? null;
   });
 
-  // --- SOLVER ---
-  function solveBoardWithBacktracking(board: Grid): boolean {
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (board[r]![c] === 0) {
-          for (let num = 1; num <= 9; num++) {
-            if (isValid(board, r, c, num)) {
-              board[r]![c] = num;
-              if (solveBoardWithBacktracking(board)) return true;
-              board[r]![c] = 0;
-            }
-          }
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  function isValid(board: Grid, row: number, col: number, num: number): boolean {
-    for (let x = 0; x < 9; x++) {
-      if (board[row]![x] === num && x !== col) return false;
-      if (board[x]![col] === num && x !== row) return false;
-    }
-    const startRow = row - (row % 3);
-    const startCol = col - (col % 3);
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        if (board[i + startRow]![j + startCol] === num && (i + startRow !== row || j + startCol !== col)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
+  // Validity, conflicts and candidates live in utils/sudokuCore (pure, unit-tested).
+  const isValid = isValidPlacement;
 
   function getConflictCells(row: number, col: number, num: number): CellCoord[] {
-    const conflicts: CellCoord[] = [];
-    if (num === 0) return conflicts;
-
-    for (let x = 0; x < 9; x++) {
-      if (x !== col && currentBoard.value[row]![x] === num) conflicts.push({ r: row, c: x });
-      if (x !== row && currentBoard.value[x]![col] === num) conflicts.push({ r: x, c: col });
-    }
-    const startRow = row - (row % 3);
-    const startCol = col - (col % 3);
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        const currR = i + startRow;
-        const currC = j + startCol;
-        if ((currR !== row || currC !== col) && currentBoard.value[currR]![currC] === num) {
-          if (!conflicts.some(item => item.r === currR && item.c === currC)) {
-            conflicts.push({ r: currR, c: currC });
-          }
-        }
-      }
-    }
-    return conflicts;
+    return findConflictCells(currentBoard.value, row, col, num);
   }
 
   // --- GAME MANAGEMENT ---
@@ -149,7 +90,7 @@ export function useSudokuEngine() {
     currentBoard.value = board.map(row => [...row]);
 
     const solved = solveBoard(board);
-    solvedBoard.value = solved ?? solvedTemplate.map(row => [...row]);
+    solvedBoard.value = solved ?? cloneGrid(board);
 
     notesBoard.value = Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false)));
     boardHistory.value = [];
@@ -205,22 +146,6 @@ export function useSudokuEngine() {
       }
     }
     return true;
-  }
-
-  function getGridCandidates(board: Grid): number[][][] {
-    const candidates: number[][][] = Array.from({ length: 9 }, () =>
-      Array.from({ length: 9 }, () => [] as number[])
-    );
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (board[r]![c] === 0) {
-          for (let val = 1; val <= 9; val++) {
-            if (isValid(board, r, c, val)) candidates[r]![c]!.push(val);
-          }
-        }
-      }
-    }
-    return candidates;
   }
 
   // --- HINT TECHNIQUES (simplest to hardest) ---

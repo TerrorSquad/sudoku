@@ -325,7 +325,9 @@
     "errorOnlyDigits": "Only digits 0–9 are allowed.",
     "errorRowDuplicate": "Row {row} has duplicate {value}.",
     "errorColDuplicate": "Column {col} has duplicate {value}.",
-    "errorBoxDuplicate": "Box at row {row} col {col} has duplicate {value}."
+    "errorBoxDuplicate": "Box at row {row} col {col} has duplicate {value}.",
+    "errorNoSolution": "This puzzle has no solution — check the digits and try again.",
+    "errorMultipleSolutions": "This puzzle has more than one solution, so mistakes could not be checked fairly. Add more givens."
   },
   "a11y": {
     "switchLanguage": "Switch language"

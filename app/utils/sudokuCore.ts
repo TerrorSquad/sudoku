@@ -1,4 +1,4 @@
-import type { Grid } from '../types/sudoku';
+import type { Grid, CellCoord } from '../types/sudoku';
 
 // Pure sudoku logic: no Vue, no i18n — unit-testable and reusable
 // (engine composable, daily puzzle, difficulty grader).
@@ -39,6 +39,48 @@ export function isValidPlacement(board: Grid, row: number, col: number, num: num
     }
   }
   return true;
+}
+
+/** Cells already containing `num` that conflict with placing it at (row, col). */
+export function getConflictCells(board: Grid, row: number, col: number, num: number): CellCoord[] {
+  const conflicts: CellCoord[] = [];
+  if (num === 0) return conflicts;
+
+  for (let x = 0; x < 9; x++) {
+    if (x !== col && board[row]![x] === num) conflicts.push({ r: row, c: x });
+    if (x !== row && board[x]![col] === num) conflicts.push({ r: x, c: col });
+  }
+  const startRow = row - (row % 3);
+  const startCol = col - (col % 3);
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const r = startRow + i;
+      const c = startCol + j;
+      if ((r !== row || c !== col) && board[r]![c] === num) {
+        if (!conflicts.some(item => item.r === r && item.c === c)) {
+          conflicts.push({ r, c });
+        }
+      }
+    }
+  }
+  return conflicts;
+}
+
+/** Candidate digits per empty cell (empty array for filled cells). */
+export function getGridCandidates(board: Grid): number[][][] {
+  const candidates: number[][][] = Array.from({ length: 9 }, () =>
+    Array.from({ length: 9 }, () => [] as number[])
+  );
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (board[r]![c] === 0) {
+        for (let val = 1; val <= 9; val++) {
+          if (isValidPlacement(board, r, c, val)) candidates[r]![c]!.push(val);
+        }
+      }
+    }
+  }
+  return candidates;
 }
 
 function popcount(x: number): number {

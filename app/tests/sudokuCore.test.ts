@@ -8,6 +8,8 @@ import {
   generateSolvedGrid,
   generatePuzzle,
   isValidPlacement,
+  getConflictCells,
+  getGridCandidates,
   DIFFICULTY_REMOVE_COUNT,
 } from '../utils/sudokuCore';
 import type { Grid } from '../types/sudoku';
@@ -42,6 +44,34 @@ describe('sudokuCore — solver', () => {
     const { puzzle } = generatePuzzle(40, makeRng(42));
     const solved = solveBoard(puzzle);
     expect(solved).toEqual(solution);
+  });
+});
+
+describe('sudokuCore — board helpers', () => {
+  it('getConflictCells finds row, column and box conflicts', () => {
+    const board: Grid = Array(9).fill(null).map(() => Array(9).fill(0));
+    board[0]![5] = 7; // same row
+    board[4]![0] = 7; // same column
+    board[1]![1] = 7; // same box
+    const conflicts = getConflictCells(board, 0, 0, 7);
+    expect(conflicts).toContainEqual({ r: 0, c: 5 });
+    expect(conflicts).toContainEqual({ r: 4, c: 0 });
+    expect(conflicts).toContainEqual({ r: 1, c: 1 });
+    expect(getConflictCells(board, 0, 0, 0)).toEqual([]);
+  });
+
+  it('getGridCandidates lists only valid digits for empty cells', () => {
+    const { puzzle, solution } = generatePuzzle(40, makeRng(3));
+    const candidates = getGridCandidates(puzzle);
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (puzzle[r]![c] !== 0) {
+          expect(candidates[r]![c]).toEqual([]);
+        } else {
+          expect(candidates[r]![c]).toContain(solution[r]![c]);
+        }
+      }
+    }
   });
 });
 
