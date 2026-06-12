@@ -44,7 +44,8 @@
     "whereBox": "this box",
     "whereCell": "another cell",
     "whyConflict": "{num} can't go here — it clashes with the {num} in row {r}, column {c}. A digit may appear only once per row, column and box.",
-    "whyWrong": "No visible clash, but {num} isn't the digit for this cell — the puzzle would become unsolvable. Tip: use notes (N) to narrow the candidates."
+    "whyWrong": "No visible clash, but {num} isn't the digit for this cell — the puzzle would become unsolvable. Tip: use notes (N) to narrow the candidates.",
+    "candidatesCleared": "Candidates removed — keep going!"
   },
   "controls": {
     "undo": "Undo",
@@ -302,6 +303,74 @@
         "step1Desc": "Cell [R{row}C{col}] has the fewest remaining possibilities. Blue cells in its row and column block the wrong candidates, leaving only {num} as the only mathematically valid option. Try applying the earlier techniques for better understanding.",
         "step2Label": "Confirm the answer",
         "step2Desc": "After eliminating the wrong options, {num} is the only value that does not violate any sudoku rule for this cell. Click \"Apply Answer\" to confirm."
+      }
+    },
+    "move": {
+      "findLabel": "Spot the pattern",
+      "placeLabel": "Place the digit",
+      "eliminateLabel": "Remove candidates",
+      "placeStep": "Place {num} at R{row}C{col}.",
+      "eliminateStep": "Remove {digits} from the highlighted cell(s).",
+      "none": "No further logical move found from here.",
+      "naked-single": {
+        "name": "Naked Single",
+        "desc": "This cell has only one candidate left — {num}. Every other digit already appears in its row, column, or box."
+      },
+      "hidden-single": {
+        "name": "Hidden Single",
+        "desc": "{num} fits in only one cell of this unit, so it must go there."
+      },
+      "pointing": {
+        "name": "Pointing Pair",
+        "desc": "Within one box, {digits} is confined to a single line — so it can be removed from the rest of that line ({count} cell(s))."
+      },
+      "box-line": {
+        "name": "Box-Line Reduction",
+        "desc": "Within one line, {digits} is confined to a single box — so it can be removed from the rest of that box ({count} cell(s))."
+      },
+      "naked-pair": {
+        "name": "Naked Pair",
+        "desc": "Two cells share only {digits}, locking those digits. Remove them from {count} other cell(s) in the unit."
+      },
+      "hidden-pair": {
+        "name": "Hidden Pair",
+        "desc": "{digits} appear in only two cells of a unit, so their other candidates can be removed."
+      },
+      "naked-triple": {
+        "name": "Naked Triple",
+        "desc": "Three cells together hold only {digits}. Remove those digits from {count} other cell(s) in the unit."
+      },
+      "hidden-triple": {
+        "name": "Hidden Triple",
+        "desc": "{digits} are locked to three cells of a unit, so their other candidates can be removed."
+      },
+      "naked-quad": {
+        "name": "Naked Quad",
+        "desc": "Four cells together hold only {digits}. Remove those digits from {count} other cell(s) in the unit."
+      },
+      "hidden-quad": {
+        "name": "Hidden Quad",
+        "desc": "{digits} are locked to four cells of a unit, so their other candidates can be removed."
+      },
+      "x-wing": {
+        "name": "X-Wing",
+        "desc": "{num} forms an X-Wing across two lines, so it can be removed from the crossing lines ({count} cell(s))."
+      },
+      "swordfish": {
+        "name": "Swordfish",
+        "desc": "{num} forms a Swordfish across three lines, so it can be removed from the crossing lines ({count} cell(s))."
+      },
+      "jellyfish": {
+        "name": "Jellyfish",
+        "desc": "{num} forms a Jellyfish across four lines, so it can be removed from the crossing lines ({count} cell(s))."
+      },
+      "xy-wing": {
+        "name": "XY-Wing",
+        "desc": "An XY-Wing forces {num} out of {count} cell(s) seen by both pincers."
+      },
+      "xyz-wing": {
+        "name": "XYZ-Wing",
+        "desc": "An XYZ-Wing forces {num} out of {count} cell(s) seen by the pivot and both pincers."
       }
     }
   },

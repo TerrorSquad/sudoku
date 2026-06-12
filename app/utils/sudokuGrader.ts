@@ -325,6 +325,297 @@ function eliminateXYZWing(s: SolveState): boolean {
   return false;
 }
 
+// ===========================================================================
+// Structured hint layer
+//
+// The boolean technique functions above drive grading (fast, batch). The hint
+// engine needs the SAME logic but reported as a single structured move it can
+// explain and apply soundly — placements place a logically-forced digit;
+// eliminations remove specific candidates (never the answer key). These finders
+// are read-only (no mutation) and return the FIRST move of their kind.
+// ===========================================================================
+
+export type TechniqueId =
+  | 'naked-single' | 'hidden-single'
+  | 'pointing' | 'box-line'
+  | 'naked-pair' | 'hidden-pair'
+  | 'naked-triple' | 'hidden-triple'
+  | 'naked-quad' | 'hidden-quad'
+  | 'x-wing' | 'swordfish' | 'jellyfish'
+  | 'xy-wing' | 'xyz-wing';
+
+export interface CellRC { r: number; c: number; }
+export interface DigitAt { r: number; c: number; num: number; }
+
+export interface SolveMove {
+  technique: TechniqueId;
+  tier: Grade;
+  placement?: DigitAt;        // present for single techniques
+  eliminations: DigitAt[];    // candidates removed (elimination techniques)
+  triggers: CellRC[];         // the pattern cells that justify the move
+  digits: number[];           // the digit(s) the technique is about
+}
+
+const rc = (i: number): CellRC => ({ r: Math.floor(i / 9), c: i % 9 });
+const idx = (r: number, c: number) => r * 9 + c;
+
+function findNakedSingleMove(s: SolveState): SolveMove | null {
+  for (let i = 0; i < 81; i++) {
+    if (s.board[i] === 0 && popcount(s.cands[i]!) === 1) {
+      const num = maskDigits(s.cands[i]!)[0]!;
+      const triggers = PEERS[i]!.filter(p => s.board[p] !== 0).map(rc);
+      return { technique: 'naked-single', tier: 1, placement: { ...rc(i), num }, eliminations: [], triggers, digits: [num] };
+    }
+  }
+  return null;
+}
+
+function findHiddenSingleMove(s: SolveState): SolveMove | null {
+  for (const unit of ALL_UNITS) {
+    for (let v = 1; v <= 9; v++) {
+      const b = bit(v);
+      let only = -1; let count = 0;
+      for (const i of unit) {
+        if (s.board[i] === 0 && (s.cands[i]! & b)) { only = i; if (++count > 1) break; }
+      }
+      if (count === 1) {
+        const triggers = unit.filter(i => i !== only && s.board[i] !== 0).map(rc);
+        return { technique: 'hidden-single', tier: 1, placement: { ...rc(only), num: v }, eliminations: [], triggers, digits: [v] };
+      }
+    }
+  }
+  return null;
+}
+
+function findBoxLineMove(s: SolveState): SolveMove | null {
+  // Pointing: digit confined to one row/col within a box → clear it from the line
+  for (const box of BOXES) {
+    for (let v = 1; v <= 9; v++) {
+      const b = bit(v);
+      const cells = box.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      if (cells.length < 2) continue;
+      const rows = new Set(cells.map(i => Math.floor(i / 9)));
+      const cols = new Set(cells.map(i => i % 9));
+      const line = rows.size === 1 ? ROWS[[...rows][0]!]! : cols.size === 1 ? COLS[[...cols][0]!]! : null;
+      if (!line) continue;
+      const elims = line.filter(i => !box.includes(i) && s.board[i] === 0 && (s.cands[i]! & b));
+      if (elims.length) {
+        return { technique: 'pointing', tier: 2, eliminations: elims.map(i => ({ ...rc(i), num: v })), triggers: cells.map(rc), digits: [v] };
+      }
+    }
+  }
+  // Claiming: digit confined to one box within a row/col → clear it from the box
+  for (const lineSet of [...ROWS, ...COLS]) {
+    for (let v = 1; v <= 9; v++) {
+      const b = bit(v);
+      const cells = lineSet.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      if (cells.length < 2) continue;
+      const boxes = new Set(cells.map(i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3)));
+      if (boxes.size !== 1) continue;
+      const box = BOXES[[...boxes][0]!]!;
+      const elims = box.filter(i => !lineSet.includes(i) && s.board[i] === 0 && (s.cands[i]! & b));
+      if (elims.length) {
+        return { technique: 'box-line', tier: 2, eliminations: elims.map(i => ({ ...rc(i), num: v })), triggers: cells.map(rc), digits: [v] };
+      }
+    }
+  }
+  return null;
+}
+
+const NAKED_SUBSET_TECH: Record<number, TechniqueId> = { 2: 'naked-pair', 3: 'naked-triple', 4: 'naked-quad' };
+const HIDDEN_SUBSET_TECH: Record<number, TechniqueId> = { 2: 'hidden-pair', 3: 'hidden-triple', 4: 'hidden-quad' };
+const SUBSET_TIER: Record<number, Grade> = { 2: 2, 3: 3, 4: 4 };
+
+function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
+  for (const unit of ALL_UNITS) {
+    const empty = unit.filter(i => s.board[i] === 0 && popcount(s.cands[i]!) <= k && popcount(s.cands[i]!) >= 2);
+    if (empty.length < k) continue;
+    for (const combo of combos(empty, k)) {
+      let union = 0;
+      for (const i of combo) union |= s.cands[i]!;
+      if (popcount(union) !== k) continue;
+      const elims: DigitAt[] = [];
+      for (const i of unit) {
+        if (s.board[i] === 0 && !combo.includes(i) && (s.cands[i]! & union)) {
+          for (const num of maskDigits(s.cands[i]! & union)) elims.push({ ...rc(i), num });
+        }
+      }
+      if (elims.length) {
+        return { technique: NAKED_SUBSET_TECH[k]!, tier: SUBSET_TIER[k]!, eliminations: elims, triggers: combo.map(rc), digits: maskDigits(union) };
+      }
+    }
+  }
+  return null;
+}
+
+function findHiddenSubsetMove(s: SolveState, k: number): SolveMove | null {
+  for (const unit of ALL_UNITS) {
+    const empty = unit.filter(i => s.board[i] === 0);
+    if (empty.length <= k) continue;
+    let present = 0;
+    for (const i of empty) present |= s.cands[i]!;
+    const digits = maskDigits(present);
+    if (digits.length <= k) continue;
+    for (const combo of combos(digits, k)) {
+      let comboMask = 0;
+      for (const v of combo) comboMask |= bit(v);
+      const holders = empty.filter(i => s.cands[i]! & comboMask);
+      if (holders.length !== k) continue;
+      const elims: DigitAt[] = [];
+      for (const i of holders) {
+        if (s.cands[i]! & ~comboMask) {
+          for (const num of maskDigits(s.cands[i]! & ~comboMask)) elims.push({ ...rc(i), num });
+        }
+      }
+      if (elims.length) {
+        return { technique: HIDDEN_SUBSET_TECH[k]!, tier: SUBSET_TIER[k]!, eliminations: elims, triggers: holders.map(rc), digits: combo };
+      }
+    }
+  }
+  return null;
+}
+
+const FISH_TECH: Record<number, TechniqueId> = { 2: 'x-wing', 3: 'swordfish', 4: 'jellyfish' };
+const FISH_TIER: Record<number, Grade> = { 2: 3, 3: 4, 4: 5 };
+
+function findFishMove(s: SolveState, k: number): SolveMove | null {
+  for (const [base] of [[ROWS, COLS], [COLS, ROWS]] as const) {
+    const baseIsRow = base === ROWS;
+    for (let v = 1; v <= 9; v++) {
+      const b = bit(v);
+      const baseSets: { unit: number; positions: number[] }[] = [];
+      for (let u = 0; u < 9; u++) {
+        const positions = base[u]!
+          .map((i, pos) => ({ i, pos }))
+          .filter(({ i }) => s.board[i] === 0 && (s.cands[i]! & b))
+          .map(({ pos }) => pos);
+        if (positions.length >= 2 && positions.length <= k) baseSets.push({ unit: u, positions });
+      }
+      if (baseSets.length < k) continue;
+      for (const combo of combos(baseSets.map((_, i) => i), k)) {
+        const lines = new Set<number>();
+        for (const ci of combo) for (const p of baseSets[ci]!.positions) lines.add(p);
+        if (lines.size !== k) continue;
+        const baseUnits = new Set(combo.map(ci => baseSets[ci]!.unit));
+        const elims: DigitAt[] = [];
+        const triggers: CellRC[] = [];
+        for (const ci of combo) {
+          for (const p of baseSets[ci]!.positions) {
+            const i = baseIsRow ? idx(baseSets[ci]!.unit, p) : idx(p, baseSets[ci]!.unit);
+            triggers.push(rc(i));
+          }
+        }
+        for (const p of lines) {
+          for (let u = 0; u < 9; u++) {
+            if (baseUnits.has(u)) continue;
+            const i = baseIsRow ? idx(u, p) : idx(p, u);
+            if (s.board[i] === 0 && (s.cands[i]! & b)) elims.push({ ...rc(i), num: v });
+          }
+        }
+        if (elims.length) {
+          return { technique: FISH_TECH[k]!, tier: FISH_TIER[k]!, eliminations: elims, triggers, digits: [v] };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findXYWingMove(s: SolveState): SolveMove | null {
+  const bivalue: number[] = [];
+  for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
+  for (const pivot of bivalue) {
+    const pm = s.cands[pivot]!;
+    const pincers = PEERS[pivot]!.filter(i =>
+      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & pm) && s.cands[i]! !== pm
+    );
+    for (let a = 0; a < pincers.length; a++) {
+      for (let b = a + 1; b < pincers.length; b++) {
+        const ma = s.cands[pincers[a]!]!;
+        const mb = s.cands[pincers[b]!]!;
+        const z = ma & mb & ~pm;
+        if (popcount(z) !== 1) continue;
+        if (((ma | mb) & pm) !== pm) continue;
+        const zNum = maskDigits(z)[0]!;
+        const elims: DigitAt[] = [];
+        for (const i of PEERS[pincers[a]!]!) {
+          if (i === pivot || i === pincers[b]) continue;
+          if (s.board[i] === 0 && (s.cands[i]! & z) && PEERS[pincers[b]!]!.includes(i)) elims.push({ ...rc(i), num: zNum });
+        }
+        if (elims.length) {
+          return { technique: 'xy-wing', tier: 4, eliminations: elims, triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)], digits: [zNum] };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findXYZWingMove(s: SolveState): SolveMove | null {
+  for (let pivot = 0; pivot < 81; pivot++) {
+    if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
+    const pm = s.cands[pivot]!;
+    const pincers = PEERS[pivot]!.filter(i =>
+      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0
+    );
+    for (let a = 0; a < pincers.length; a++) {
+      for (let b = a + 1; b < pincers.length; b++) {
+        const ma = s.cands[pincers[a]!]!;
+        const mb = s.cands[pincers[b]!]!;
+        if ((ma | mb) !== pm) continue;
+        const z = ma & mb;
+        if (popcount(z) !== 1) continue;
+        const zNum = maskDigits(z)[0]!;
+        const elims: DigitAt[] = [];
+        for (let i = 0; i < 81; i++) {
+          if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
+          if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
+          if (PEERS[pivot]!.includes(i) && PEERS[pincers[a]!]!.includes(i) && PEERS[pincers[b]!]!.includes(i)) {
+            elims.push({ ...rc(i), num: zNum });
+          }
+        }
+        if (elims.length) {
+          return { technique: 'xyz-wing', tier: 5, eliminations: elims, triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)], digits: [zNum] };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Easiest-first dispatch — mirrors the grading tier order.
+function findNextMove(s: SolveState): SolveMove | null {
+  return findNakedSingleMove(s)
+    ?? findHiddenSingleMove(s)
+    ?? findBoxLineMove(s)
+    ?? findNakedSubsetMove(s, 2)
+    ?? findHiddenSubsetMove(s, 2)
+    ?? findNakedSubsetMove(s, 3)
+    ?? findHiddenSubsetMove(s, 3)
+    ?? findFishMove(s, 2)
+    ?? findNakedSubsetMove(s, 4)
+    ?? findHiddenSubsetMove(s, 4)
+    ?? findFishMove(s, 3)
+    ?? findXYWingMove(s)
+    ?? findFishMove(s, 4)
+    ?? findXYZWingMove(s);
+}
+
+/**
+ * The next logically-justified move for the current board, or null if no
+ * implemented technique applies. `appliedEliminations` are candidate removals
+ * already shown to the player in earlier hint steps — replayed so an
+ * elimination chain progresses to the placement it unlocks.
+ */
+export function nextHint(board: Grid, appliedEliminations: DigitAt[] = []): SolveMove | null {
+  const s = initState(board);
+  for (const e of appliedEliminations) {
+    const i = idx(e.r, e.c);
+    if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
+  }
+  return findNextMove(s);
+}
+
 export interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;

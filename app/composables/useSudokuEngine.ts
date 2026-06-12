@@ -8,7 +8,7 @@ import {
   getGridCandidates,
   getConflictCells as findConflictCells,
 } from '../utils/sudokuCore';
-import { generateGradedPuzzle } from '../utils/sudokuGrader';
+import { generateGradedPuzzle, nextHint, type SolveMove, type DigitAt, type TechniqueId } from '../utils/sudokuGrader';
 
 export interface ExplanationStep {
   label: string;
@@ -40,6 +40,18 @@ export function useSudokuEngine() {
   const activeHintCell = ref<CellCoord | null>(null);
   const hintTriggers = ref<CellCoord[]>([]);
   const hintEliminations = ref<CellCoord[]>([]);
+
+  // The structured move backing the active hint, and the candidate eliminations
+  // already shown to the player this hint-chain — replayed by nextHint so an
+  // elimination unlocks the placement it leads to. Cleared on any board change
+  // the player makes (new game, load, undo, erase, manual entry).
+  const activeMove = ref<SolveMove | null>(null);
+  const appliedEliminations = ref<DigitAt[]>([]);
+
+  function resetHintChain() {
+    appliedEliminations.value = [];
+    activeMove.value = null;
+  }
 
   const numberCounts = computed(() => {
     const counts = Array(10).fill(0) as number[];
@@ -83,6 +95,7 @@ export function useSudokuEngine() {
     boardHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
+    resetHintChain();
   }
 
   function loadCustomBoard(board: Grid) {
@@ -96,6 +109,7 @@ export function useSudokuEngine() {
     boardHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
+    resetHintChain();
   }
 
   function eraseCell(coord: CellCoord | null) {
@@ -106,6 +120,8 @@ export function useSudokuEngine() {
     saveHistory();
     currentBoard.value[r]![c] = 0;
     notesBoard.value[r]![c] = Array(10).fill(false);
+    cancelComplexHint();
+    resetHintChain();
   }
 
   function clearRelationalNotes(row: number, col: number, num: number) {
@@ -137,6 +153,7 @@ export function useSudokuEngine() {
       notesBoard.value = prevState.notes;
     }
     cancelComplexHint();
+    resetHintChain();
   }
 
   function checkWinCondition(): boolean {
@@ -1866,50 +1883,66 @@ export function useSudokuEngine() {
   }
 
   // --- MAIN HINT DISPATCHER ---
-  function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
-    const candidates = getGridCandidates(currentBoard.value);
+  // Hints come from the grader's logical solver (sudokuGrader.nextHint), which
+  // returns the next genuinely-justified move: a placement of a forced single,
+  // or the removal of specific candidates. We never read the answer key, so a
+  // hint can never place a digit its own explanation didn't justify.
+  function buildHintFromMove(move: SolveMove): ComplexHint {
+    const tech = move.technique;
+    const digitsStr = move.digits.join(', ');
+    const findDesc = t(`hint.move.${tech}.desc`, {
+      num: move.digits[0] ?? 0,
+      digits: digitsStr,
+      count: move.eliminations.length,
+    });
+    const triggerCoords: HintCoordinate[] = move.triggers.map(c => ({ r: c.r, c: c.c, type: 'trigger' }));
 
-    // Evaluate techniques from simplest to most advanced
-    let hint = findNakedSingle(candidates);
-    if (!hint) hint = findHiddenSingle(candidates);
-    if (!hint) hint = findNakedPairs(candidates);
-    if (!hint) hint = findHiddenPairs(candidates);
-    if (!hint) hint = findNakedTriples(candidates);
-    if (!hint) hint = findHiddenTriples(candidates);
-    if (!hint) hint = findNakedQuads(candidates);
-    if (!hint) hint = findHiddenQuads(candidates);
-    if (!hint) hint = findPointingPair(candidates);
-    if (!hint) hint = findBoxLineReduction(candidates);
-    if (!hint) hint = findXWing(candidates);
-    if (!hint) hint = findSwordfish(candidates);
-    if (!hint) hint = findJellyfish(candidates);
-    if (!hint) hint = findSkyscraper(candidates);
-    if (!hint) hint = findTwoStringKite(candidates);
-    if (!hint) hint = findEmptyRectangle(candidates);
-    if (!hint) hint = findXYWing(candidates);
-    if (!hint) hint = findXYZWing(candidates);
-    if (!hint) hint = findWWing(candidates);
-    if (!hint) hint = findUniqueRectangle(candidates);
-    if (!hint) hint = findXYChain(candidates);
-    if (!hint) hint = findSueDeCoq(candidates);
-    if (!hint) hint = findBUG(candidates);
-
-    // No cheat fallback: every generated board is guaranteed solvable by these
-    // techniques (see sudokuGrader). If none applies — only possible on a custom
-    // import needing an un-modelled technique — we say so honestly rather than
-    // revealing the answer key dressed up as logic.
-
-    if (hint) {
-      activeComplexHint.value = hint;
-      currentStepIndex.value = 0;
-      selectedCell.value = hint.targetCell;
-      updateStepHighlights();
-
-      hintStatus.value = hint.title;
-      hintBody.value = hint.steps[0]!.description;
+    let targetCell: CellCoord;
+    let actionStep: ExplanationStep;
+    if (move.placement) {
+      targetCell = { r: move.placement.r, c: move.placement.c };
+      actionStep = {
+        label: t('hint.move.placeLabel'),
+        description: t('hint.move.placeStep', { num: move.placement.num, row: move.placement.r + 1, col: move.placement.c + 1 }),
+        highlightCoords: [{ r: targetCell.r, c: targetCell.c, type: 'trigger' }],
+      };
     } else {
-      hintStatus.value = t('modal.noMoves');
+      const focus = move.triggers[0] ?? move.eliminations[0]!;
+      targetCell = { r: focus.r, c: focus.c };
+      actionStep = {
+        label: t('hint.move.eliminateLabel'),
+        description: t('hint.move.eliminateStep', { digits: digitsStr, count: move.eliminations.length }),
+        highlightCoords: move.eliminations.map(e => ({ r: e.r, c: e.c, type: 'elimination' as const })),
+      };
     }
+
+    return {
+      title: t(`hint.move.${tech}.name`),
+      targetCell,
+      targetNum: move.placement?.num ?? 0,
+      steps: [
+        { label: t('hint.move.findLabel'), description: findDesc, highlightCoords: triggerCoords },
+        actionStep,
+      ],
+    };
+  }
+
+  function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
+    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    if (!move) {
+      activeMove.value = null;
+      hintStatus.value = t('hint.move.none');
+      return;
+    }
+    activeMove.value = move;
+    const hint = buildHintFromMove(move);
+    activeComplexHint.value = hint;
+    currentStepIndex.value = 0;
+    selectedCell.value = hint.targetCell;
+    updateStepHighlights();
+
+    hintStatus.value = hint.title;
+    hintBody.value = hint.steps[0]!.description;
   }
 
   function nextHintStep(onComplete: () => void) {
@@ -1931,17 +1964,45 @@ export function useSudokuEngine() {
   }
 
   function applyComplexHint() {
-    if (!activeComplexHint.value) return;
-    const { targetCell, targetNum } = activeComplexHint.value;
+    const move = activeMove.value;
+    if (!move) return;
 
     saveHistory();
-    currentBoard.value[targetCell.r]![targetCell.c] = targetNum;
-    clearRelationalNotes(targetCell.r, targetCell.c, targetNum);
+    if (move.placement) {
+      const { r, c, num } = move.placement;
+      currentBoard.value[r]![c] = num;
+      clearRelationalNotes(r, c, num);
+    } else {
+      // Elimination: reveal the affected cells' candidates with the eliminated
+      // digit removed, so the deduction is visible. Detection persists the
+      // removal via appliedEliminations (replayed by the next hint).
+      const baseCands = getGridCandidates(currentBoard.value);
+      const byCell = new Map<string, Set<number>>();
+      for (const e of move.eliminations) {
+        const key = `${e.r},${e.c}`;
+        if (!byCell.has(key)) {
+          const set = new Set<number>(baseCands[e.r]![e.c]!);
+          for (const prev of appliedEliminations.value) {
+            if (prev.r === e.r && prev.c === e.c) set.delete(prev.num);
+          }
+          byCell.set(key, set);
+        }
+        byCell.get(key)!.delete(e.num);
+      }
+      for (const [key, set] of byCell) {
+        const [r, c] = key.split(',').map(Number) as [number, number];
+        const notes = Array(10).fill(false);
+        for (const n of set) notes[n] = true;
+        notesBoard.value[r]![c] = notes;
+      }
+      appliedEliminations.value.push(...move.eliminations);
+    }
     cancelComplexHint();
   }
 
   function cancelComplexHint() {
     activeComplexHint.value = null;
+    activeMove.value = null;
     currentStepIndex.value = 0;
     activeHintCell.value = null;
     hintTriggers.value = [];
@@ -1979,6 +2040,7 @@ export function useSudokuEngine() {
     hintEliminations.value = [];
     activeHintCell.value = null;
     boardHistory.value = [];
+    resetHintChain();
   }
 
   return {
@@ -2010,6 +2072,8 @@ export function useSudokuEngine() {
     nextHintStep,
     prevHintStep,
     applyComplexHint,
-    cancelComplexHint
+    cancelComplexHint,
+    resetHintChain,
+    activeMove,
   };
 }

@@ -44,7 +44,8 @@
     "whereBox": "ovim kvadrantom",
     "whereCell": "drugim poljem",
     "whyConflict": "Broj {num} ne može ovde — sudara se sa {num} u redu {r}, koloni {c}. Cifra sme da se pojavi samo jednom po redu, koloni i kvadratu.",
-    "whyWrong": "Nema vidljivog sudara, ali {num} nije cifra za ovo polje — slagalica bi postala nerešiva. Savet: koristi beleške (N) da suziš kandidate."
+    "whyWrong": "Nema vidljivog sudara, ali {num} nije cifra za ovo polje — slagalica bi postala nerešiva. Savet: koristi beleške (N) da suziš kandidate.",
+    "candidatesCleared": "Kandidati uklonjeni — nastavi!"
   },
   "controls": {
     "undo": "Vrati",
@@ -302,6 +303,74 @@
         "step1Desc": "Ćelija [R{row}C{col}] ima najmanje preostalih mogućnosti. Plave ćelije u njenom redu i koloni blokiraju pogrešne kandidate, ostavljajući {num} kao jedinu matematički ispravnu opciju. Pokušaj da primeniš prethodne tehnike za bolje razumevanje.",
         "step2Label": "Potvrdi odgovor",
         "step2Desc": "Nakon eliminisanja pogrešnih opcija, {num} je jedina vrednost koja ne krši nijedno pravilo sudokua za ovu ćeliju. Klikni \"Primeni odgovor\" za potvrdu."
+      }
+    },
+    "move": {
+      "findLabel": "Uoči obrazac",
+      "placeLabel": "Upiši cifru",
+      "eliminateLabel": "Ukloni kandidate",
+      "placeStep": "Upiši {num} u R{row}C{col}.",
+      "eliminateStep": "Ukloni {digits} iz označenih polja.",
+      "none": "Odavde nema daljeg logičkog poteza.",
+      "naked-single": {
+        "name": "Goli singl",
+        "desc": "Ovo polje ima samo jednog kandidata — {num}. Sve ostale cifre već postoje u njegovom redu, koloni ili kvadratu."
+      },
+      "hidden-single": {
+        "name": "Skriveni singl",
+        "desc": "{num} može da stane samo u jedno polje ove jedinice, pa mora tu."
+      },
+      "pointing": {
+        "name": "Pokazujući par",
+        "desc": "Unutar jednog kvadrata, {digits} je ograničena na jednu liniju — pa se može ukloniti iz ostatka te linije ({count} polja)."
+      },
+      "box-line": {
+        "name": "Redukcija kvadrat-linija",
+        "desc": "Unutar jedne linije, {digits} je ograničena na jedan kvadrat — pa se može ukloniti iz ostatka tog kvadrata ({count} polja)."
+      },
+      "naked-pair": {
+        "name": "Goli par",
+        "desc": "Dva polja sadrže samo {digits}, zaključavajući te cifre. Ukloni ih iz {count} drugih polja u jedinici."
+      },
+      "hidden-pair": {
+        "name": "Skriveni par",
+        "desc": "{digits} se pojavljuju samo u dva polja jedinice, pa se njihovi ostali kandidati mogu ukloniti."
+      },
+      "naked-triple": {
+        "name": "Goli tripl",
+        "desc": "Tri polja zajedno drže samo {digits}. Ukloni te cifre iz {count} drugih polja u jedinici."
+      },
+      "hidden-triple": {
+        "name": "Skriveni tripl",
+        "desc": "{digits} su zaključane u tri polja jedinice, pa se ostali kandidati mogu ukloniti."
+      },
+      "naked-quad": {
+        "name": "Goli kvadrupl",
+        "desc": "Četiri polja zajedno drže samo {digits}. Ukloni te cifre iz {count} drugih polja u jedinici."
+      },
+      "hidden-quad": {
+        "name": "Skriveni kvadrupl",
+        "desc": "{digits} su zaključane u četiri polja jedinice, pa se ostali kandidati mogu ukloniti."
+      },
+      "x-wing": {
+        "name": "X-Wing",
+        "desc": "{num} formira X-Wing preko dve linije, pa se može ukloniti iz ukrštenih linija ({count} polja)."
+      },
+      "swordfish": {
+        "name": "Swordfish",
+        "desc": "{num} formira Swordfish preko tri linije, pa se može ukloniti iz ukrštenih linija ({count} polja)."
+      },
+      "jellyfish": {
+        "name": "Jellyfish",
+        "desc": "{num} formira Jellyfish preko četiri linije, pa se može ukloniti iz ukrštenih linija ({count} polja)."
+      },
+      "xy-wing": {
+        "name": "XY-Wing",
+        "desc": "XY-Wing izbacuje {num} iz {count} polja koje vide oba kraka."
+      },
+      "xyz-wing": {
+        "name": "XYZ-Wing",
+        "desc": "XYZ-Wing izbacuje {num} iz {count} polja koje vide pivot i oba kraka."
       }
     }
   },

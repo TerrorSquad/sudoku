@@ -226,9 +226,11 @@ function handleInputNumber(num: number) {
 
   if (initialBoard.value[r]![c] !== 0) return;
 
-  // Manual entry dismisses any active step-by-step hint — the board the hint
-  // was reasoning about no longer matches what the player is doing.
+  // Manual entry dismisses any active step-by-step hint and resets the hint
+  // chain — the board the hint was reasoning about no longer matches what the
+  // player is doing.
   if (activeComplexHint.value) cancelComplexHint();
+  engine.resetHintChain();
 
   saveHistory();
 
@@ -282,6 +284,7 @@ function handleInputNumber(num: number) {
 
 function handleNextStep() {
   const title = activeComplexHint.value?.title;
+  const wasPlacement = !!engine.activeMove.value?.placement;
   nextHintStep(() => {
     if (title) {
       if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
@@ -295,7 +298,7 @@ function handleNextStep() {
         true
       );
     } else {
-      hintStatus.value = t('game.cellFilled');
+      hintStatus.value = wasPlacement ? t('game.cellFilled') : t('game.candidatesCleared');
       hintBody.value = '';
     }
   });
@@ -312,6 +315,7 @@ function handleTriggerHint() {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const name = activeComplexHint.value.title;
+  const wasPlacement = !!engine.activeMove.value?.placement;
   hintsUsed.value++;
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
@@ -319,7 +323,7 @@ function handleInstantApplyHint() {
   if (checkWinCondition()) {
     triggerLocalModal(t('modal.win'), t('modal.winInstantMsg'), true);
   } else {
-    hintStatus.value = t('game.instantApplied');
+    hintStatus.value = wasPlacement ? t('game.instantApplied') : t('game.candidatesCleared');
     hintBody.value = '';
   }
 }
