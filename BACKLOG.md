@@ -5,22 +5,16 @@ See [IDEAS.md](IDEAS.md) for the original feature roadmap (mostly shipped).
 
 ## Next up (known gaps)
 
-- **Academy is English-only.** Technique names/text are hardcoded. The in-game
-  hint titles are localized, so in Serbian the per-technique ×N usage badge in
-  the Academy won't match. Move Academy strings to i18n if multi-language polish
-  is wanted.
 - **Exotic techniques are not learnable in-game.** Skyscraper, two-string-kite,
   empty rectangle, w-wing, unique rectangle, xy-chain, sue de coq, BUG were
   removed (unreachable on generated boards). If you ever want them taught/used,
   they'd need porting into the structured `nextHint` layer + generation tuning.
+- **Legacy technique-stat names.** Old saves contain per-unit names
+  ("Hidden Single — Row") from the removed detectors; new play records unified
+  names. Harmless, but a one-time migration could merge them in the Stats chart.
 
 ## Features (decided / parked)
 
-- **PWA / installable** — manifest + service worker + offline cache so the app
-  is installable and store-ready. (User chose this as the store path.)
-- **Stats screen** — win rate, average time, games played, best score per
-  difficulty. Data already exists in `useScore` (lifetime total, per-difficulty
-  bests) and the daily/technique stores; just needs a screen.
 - **Leaderboard** — skipped for now (local-only). `useScore` is structured so a
   cloud backend can be added later without changing the scoring math.
 
@@ -47,3 +41,5 @@ See [IDEAS.md](IDEAS.md) for the original feature roadmap (mostly shipped).
 - Rebuilt Academy: 15 used techniques, every example a real harvested solver
   state with valid candidates.
 - Mobile responsive fixes (control bar, hint panel) + ambient brand backdrop.
+- Statistics screen (lifetime score, per-difficulty wins/best/time, technique
+  chart); Academy localized (en + sr); installable PWA with offline support.
