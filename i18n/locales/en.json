@@ -51,7 +51,8 @@
     "undo": "Undo",
     "erase": "Erase",
     "notes": "Notes",
-    "hint": "Hint"
+    "hint": "Hint",
+    "auto": "Auto"
   },
   "sidebar": {
     "keyboard": "Keyboard",

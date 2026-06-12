@@ -51,7 +51,8 @@
     "undo": "Vrati",
     "erase": "Obriši",
     "notes": "Beleške",
-    "hint": "Nagoveštaj"
+    "hint": "Nagoveštaj",
+    "auto": "Auto"
   },
   "sidebar": {
     "keyboard": "Tastatura",

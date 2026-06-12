@@ -584,33 +584,24 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
             @select-cell="handleSelectCell"
           />
 
-          <div class="flex gap-2 w-full">
-            <ControlPanel
-              :notes-mode="notesMode"
-              @undo="undoMove"
-              @erase="eraseCell(selectedCell)"
-              @toggle-notes="notesMode = !notesMode"
-              @trigger-hint="handleTriggerHint"
-              class="flex-grow"
-            />
-            <button
-              @click="handleAutoFillNotes"
-              :title="$t('game.autoNotes')"
-              class="px-3 sm:px-4 py-2 border text-xs font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-violet-400 bg-zinc-50 hover:bg-zinc-100 border-zinc-300 text-violet-600"
-            >
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              <span class="hidden sm:inline">{{ $t('game.autoNotes') }}</span>
-            </button>
-          </div>
+          <ControlPanel
+            :notes-mode="notesMode"
+            @undo="undoMove"
+            @erase="eraseCell(selectedCell)"
+            @toggle-notes="notesMode = !notesMode"
+            @trigger-hint="handleTriggerHint"
+            @auto-notes="handleAutoFillNotes"
+          />
 
           <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
         </div>
       </div>
 
-      <!-- Right / hint panel -->
-      <div class="lg:max-3xl:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0">
+      <!-- Right / hint panel — on mobile only takes space once a hint is active -->
+      <div
+        :class="activeComplexHint ? 'block' : 'hidden lg:block'"
+        class="lg:max-3xl:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0"
+      >
         <SideExplanationPanel
           :active-complex-hint="activeComplexHint"
           :current-step-index="currentStepIndex"
