@@ -3,25 +3,16 @@
 Living list of deferred work and ideas. Newest priorities at top of each section.
 See [IDEAS.md](IDEAS.md) for the original feature roadmap (mostly shipped).
 
-## In progress
+## Next up (known gaps)
 
-- **Hint engine rework** — make hints logically sound: elimination techniques
-  apply candidate eliminations instead of placing answer-key digits. (Being
-  done now via a grader-driven, persistent-candidate hint engine.)
-
-## Next up (known bugs / gaps)
-
-- **Sudoku Academy examples are wrong.** `app/components/SudokuAcademy.vue`
-  uses one near-solved `BASE_BOARD`, blanks a few cells, and hand-types `notes`
-  that are never validated against the board — so an example can show a pencil
-  mark for a digit that already appears in that row/box. Rebuild each technique's
-  example with a real board + board-derived candidates (reuse
-  `utils/sudokuCore` + `sudokuGrader`), and ideally generate the example by
-  finding a real instance of the technique.
-- **Remove dead hint detectors.** Once the grader-driven hint engine lands, the
-  ~23 in-engine `findX` detectors in `useSudokuEngine.ts` (and their
-  `hint.tech.*` i18n keys, e.g. `candidateReduction`) become dead code. Delete
-  in a follow-up to keep the diff reviewable.
+- **Academy is English-only.** Technique names/text are hardcoded. The in-game
+  hint titles are localized, so in Serbian the per-technique ×N usage badge in
+  the Academy won't match. Move Academy strings to i18n if multi-language polish
+  is wanted.
+- **Exotic techniques are not learnable in-game.** Skyscraper, two-string-kite,
+  empty rectangle, w-wing, unique rectangle, xy-chain, sue de coq, BUG were
+  removed (unreachable on generated boards). If you ever want them taught/used,
+  they'd need porting into the structured `nextHint` layer + generation tuning.
 
 ## Features (decided / parked)
 
@@ -50,3 +41,9 @@ See [IDEAS.md](IDEAS.md) for the original feature roadmap (mostly shipped).
 - Why-wrong mistake explainer; lifetime per-technique stats on win modal.
 - Removed answer-revealing hint fallback; hint panel closes on manual entry.
 - Scoring system + animated win modal + game-feel animations.
+- Sound hint engine: elimination techniques remove candidates (never place the
+  answer); grader-driven `nextHint` with persistent elimination chain.
+- Deleted ~1700 lines of unreachable exotic hint detectors.
+- Rebuilt Academy: 15 used techniques, every example a real harvested solver
+  state with valid candidates.
+- Mobile responsive fixes (control bar, hint panel) + ambient brand backdrop.
