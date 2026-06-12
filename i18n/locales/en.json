@@ -214,5 +214,108 @@
     "noStatsYet": "No games won yet. Finish a puzzle to start building your stats!",
     "back": "Back to Menu",
     "dash": "—"
+  },
+  "academy": {
+    "title": "Sudoku Academy",
+    "subtitle": "The {n} techniques the analyzer uses — each with a real worked example",
+    "count": "{n} techniques",
+    "colors": "Colors",
+    "placedCell": "Placed cell",
+    "pattern": "Pattern",
+    "eliminated": "Eliminated",
+    "tapHint": "Tap a card to see it worked out",
+    "lookForLabel": "What to look for",
+    "howItHelpsLabel": "How it helps",
+    "workedExample": "Worked example",
+    "back": "Back to Menu",
+    "footer": "These are exactly the techniques the in-game analyzer uses. When you request a hint, it applies them from Basic to Expert and shows the same step-by-step deduction.",
+    "lines": {
+      "two": "two",
+      "three": "three",
+      "four": "four"
+    },
+    "tier": {
+      "Basic": "Basic",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced",
+      "Expert": "Expert",
+      "BasicDesc": "Single-cell logic — the foundation.",
+      "IntermediateDesc": "Locked candidates and naked/hidden subsets.",
+      "AdvancedDesc": "Fish patterns spanning multiple lines.",
+      "ExpertDesc": "Wing patterns built from bivalue chains."
+    },
+    "caption": {
+      "nakedSingle": "{cell} (green) has only one candidate left — {num}. Every other digit is already in its row, column, or box, so {num} is placed here.",
+      "hiddenSingle": "Across this unit, {num} can only go in {cell} (green) — the other empty cells (amber marks) never list it. So {num} must go there.",
+      "pointing": "Inside one box, every candidate for {digits} lies on a single line ({cells}, indigo). So {digits} is removed from the rest of that line — {nElim} cell(s) in rose ({elimList}).",
+      "boxLine": "In one line, {digits} is confined to a single box ({cells}, indigo). So {digits} is removed from the rest of that box — {nElim} cell(s) in rose ({elimList}).",
+      "nakedSubset": "These {k} cells (indigo) hold only the digits {digits} between them, locking them. They're removed from {nElim} other cell(s) in the unit — rose ({elimList}).",
+      "hiddenSubset": "The digits {digits} appear only in these {k} cells (indigo) of the unit, so they must live here — every other candidate in those cells is removed.",
+      "fish": "{num} forms this fish across {lines} lines (indigo corners), locking it into those lines. So {num} is removed from the crossing lines — {nElim} cell(s) in rose ({elimList}).",
+      "xyWing": "A pivot and two pincers (indigo) chain so that one pincer must be {num}. Any cell seeing both pincers loses {num} — {nElim} cell(s) in rose ({elimList}).",
+      "xyzWing": "A 3-candidate pivot and two pincers (indigo) share {num}. One of the three must be {num}, so a cell seeing all three loses it — {nElim} cell(s) in rose ({elimList})."
+    },
+    "tech": {
+      "naked-single": {
+        "lookFor": "A cell where only one digit is a valid candidate — every other digit already appears in its row, column, or box.",
+        "howItHelps": "Place that single remaining candidate. No deduction needed; the answer is forced by elimination."
+      },
+      "hidden-single": {
+        "lookFor": "Within a row, column, or box, a digit that can only fit in one cell — even if that cell has other candidates too.",
+        "howItHelps": "The digit has nowhere else to go in that unit, so it must go there. Place it."
+      },
+      "pointing": {
+        "lookFor": "Inside a box, all candidates for a digit lie on a single row or column.",
+        "howItHelps": "The digit must land on that line within the box, so remove it from the rest of that row or column outside the box."
+      },
+      "box-line": {
+        "lookFor": "All candidates for a digit within a row or column are confined to a single box.",
+        "howItHelps": "The digit must live in that line, so remove it from every other cell of that box."
+      },
+      "naked-pair": {
+        "lookFor": "Two cells in the same unit that each hold exactly the same two candidates and no others.",
+        "howItHelps": "Those two digits fill those two cells in some order. Remove both from every other cell in the unit."
+      },
+      "hidden-pair": {
+        "lookFor": "Two digits that appear as candidates in exactly two cells of a unit, and nowhere else in it.",
+        "howItHelps": "Those two cells must hold those two digits, so all their other candidates can be removed."
+      },
+      "naked-triple": {
+        "lookFor": "Three cells in a unit whose combined candidates are exactly three digits (each cell holds two or three of them).",
+        "howItHelps": "Those three digits are locked into those three cells. Eliminate them from every other cell in the unit."
+      },
+      "hidden-triple": {
+        "lookFor": "Three digits that appear only across three cells of a unit, and nowhere else in it.",
+        "howItHelps": "Those three cells must contain those three digits, so strip all their other candidates."
+      },
+      "naked-quad": {
+        "lookFor": "Four cells in a unit whose combined candidates are exactly four digits.",
+        "howItHelps": "Those four digits are confined to those four cells. Eliminate them from all other cells in the unit."
+      },
+      "hidden-quad": {
+        "lookFor": "Four digits that appear only within four cells of a unit.",
+        "howItHelps": "Those four cells own those four digits, so all their other candidates can be removed."
+      },
+      "x-wing": {
+        "lookFor": "A digit with exactly two candidate cells in each of two rows (or columns), all sharing the same two columns (or rows).",
+        "howItHelps": "The digit is forced into those two lines, so remove it from those columns (or rows) everywhere else."
+      },
+      "swordfish": {
+        "lookFor": "Like an X-Wing but across three rows (or columns), with all candidates spanning exactly three columns (or rows).",
+        "howItHelps": "The digit is locked into those three lines, so remove it from the crossing lines everywhere else."
+      },
+      "jellyfish": {
+        "lookFor": "A four-line X-Wing: a digit across four rows (or columns) confined to the same four columns (or rows).",
+        "howItHelps": "The digit is locked into those four lines, so remove it from the crossing lines everywhere else."
+      },
+      "xy-wing": {
+        "lookFor": "Three bivalue cells: a pivot (X, Y) sharing one candidate with each of two pincers (X, Z) and (Y, Z).",
+        "howItHelps": "Whatever fills the pivot, one pincer becomes Z. Any cell seeing both pincers loses Z."
+      },
+      "xyz-wing": {
+        "lookFor": "Like an XY-Wing, but the pivot holds three candidates (X, Y, Z) and the two pincers are (X, Z) and (Y, Z).",
+        "howItHelps": "One of the three cells must be Z, so any cell seeing all three loses Z."
+      }
+    }
   }
 }

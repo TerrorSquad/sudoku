@@ -214,5 +214,108 @@
     "noStatsYet": "Još nema pobeda. Reši slagalicu da počneš da gradiš statistiku!",
     "back": "Nazad na meni",
     "dash": "—"
+  },
+  "academy": {
+    "title": "Sudoku Akademija",
+    "subtitle": "Tehnike koje analizator koristi — svaka sa stvarnim primerom ({n})",
+    "count": "{n} tehnika",
+    "colors": "Boje",
+    "placedCell": "Upisano polje",
+    "pattern": "Obrazac",
+    "eliminated": "Uklonjeno",
+    "tapHint": "Dodirni karticu da vidiš rešen primer",
+    "lookForLabel": "Šta tražiti",
+    "howItHelpsLabel": "Kako pomaže",
+    "workedExample": "Rešen primer",
+    "back": "Nazad na meni",
+    "footer": "Ovo su tačno tehnike koje koristi analizator u igri. Kada zatražiš pomoć, primenjuje ih od osnovnih do ekspertskih i prikazuje isto zaključivanje korak po korak.",
+    "lines": {
+      "two": "dve",
+      "three": "tri",
+      "four": "četiri"
+    },
+    "tier": {
+      "Basic": "Osnovno",
+      "Intermediate": "Srednje",
+      "Advanced": "Napredno",
+      "Expert": "Ekspert",
+      "BasicDesc": "Logika jednog polja — temelj.",
+      "IntermediateDesc": "Zaključani kandidati i goli/skriveni podskupovi.",
+      "AdvancedDesc": "Riblji obrasci preko više linija.",
+      "ExpertDesc": "Wing obrasci od dvovrednih lanaca."
+    },
+    "caption": {
+      "nakedSingle": "{cell} (zeleno) ima samo jednog kandidata — {num}. Sve ostale cifre već postoje u redu, koloni ili kvadratu, pa se {num} upisuje ovde.",
+      "hiddenSingle": "U ovoj jedinici, {num} može samo u {cell} (zeleno) — ostala prazna polja (žute beleške) je ne sadrže. Zato {num} mora tu.",
+      "pointing": "Unutar jednog kvadrata, svi kandidati za {digits} leže na jednoj liniji ({cells}, indigo). Zato se {digits} uklanja iz ostatka te linije — {nElim} polja u roze ({elimList}).",
+      "boxLine": "U jednoj liniji, {digits} je ograničena na jedan kvadrat ({cells}, indigo). Zato se {digits} uklanja iz ostatka tog kvadrata — {nElim} polja u roze ({elimList}).",
+      "nakedSubset": "Ovih {k} polja (indigo) sadrže samo cifre {digits}, zaključavajući ih. Uklanjaju se iz {nElim} drugih polja u jedinici — roze ({elimList}).",
+      "hiddenSubset": "Cifre {digits} pojavljuju se samo u ovih {k} polja (indigo) jedinice, pa moraju biti tu — svi ostali kandidati u tim poljima se uklanjaju.",
+      "fish": "{num} formira ribu preko {lines} linije (indigo uglovi), zaključavajući je u te linije. Zato se {num} uklanja iz ukrštenih linija — {nElim} polja u roze ({elimList}).",
+      "xyWing": "Pivot i dva kraka (indigo) se lančaju tako da jedan krak mora biti {num}. Svako polje koje vidi oba kraka gubi {num} — {nElim} polja u roze ({elimList}).",
+      "xyzWing": "Pivot sa 3 kandidata i dva kraka (indigo) dele {num}. Jedno od tri mora biti {num}, pa polje koje vidi sva tri gubi tu cifru — {nElim} polja u roze ({elimList})."
+    },
+    "tech": {
+      "naked-single": {
+        "lookFor": "Polje gde je samo jedna cifra moguća — sve ostale već postoje u redu, koloni ili kvadratu.",
+        "howItHelps": "Upiši tog jedinog preostalog kandidata. Bez zaključivanja; odgovor je iznuđen eliminacijom."
+      },
+      "hidden-single": {
+        "lookFor": "U redu, koloni ili kvadratu, cifra koja staje samo u jedno polje — čak i ako to polje ima druge kandidate.",
+        "howItHelps": "Cifra nema gde drugde u toj jedinici, pa mora tu. Upiši je."
+      },
+      "pointing": {
+        "lookFor": "Unutar kvadrata, svi kandidati za cifru leže na jednom redu ili koloni.",
+        "howItHelps": "Cifra mora na tu liniju u kvadratu, pa je ukloni iz ostatka tog reda ili kolone van kvadrata."
+      },
+      "box-line": {
+        "lookFor": "Svi kandidati za cifru u redu ili koloni su ograničeni na jedan kvadrat.",
+        "howItHelps": "Cifra mora biti u toj liniji, pa je ukloni iz svih drugih polja tog kvadrata."
+      },
+      "naked-pair": {
+        "lookFor": "Dva polja u istoj jedinici koja sadrže potpuno ista dva kandidata i ništa drugo.",
+        "howItHelps": "Te dve cifre popunjavaju ta dva polja nekim redom. Ukloni obe iz svih drugih polja jedinice."
+      },
+      "hidden-pair": {
+        "lookFor": "Dve cifre koje se kao kandidati pojavljuju tačno u dva polja jedinice, i nigde drugde.",
+        "howItHelps": "Ta dva polja moraju sadržati te dve cifre, pa se svi njihovi ostali kandidati uklanjaju."
+      },
+      "naked-triple": {
+        "lookFor": "Tri polja u jedinici čiji su zajednički kandidati tačno tri cifre (svako drži dve ili tri).",
+        "howItHelps": "Te tri cifre su zaključane u ta tri polja. Ukloni ih iz svih drugih polja jedinice."
+      },
+      "hidden-triple": {
+        "lookFor": "Tri cifre koje se pojavljuju samo u tri polja jedinice, i nigde drugde.",
+        "howItHelps": "Ta tri polja moraju sadržati te tri cifre, pa ukloni sve njihove ostale kandidate."
+      },
+      "naked-quad": {
+        "lookFor": "Četiri polja u jedinici čiji su zajednički kandidati tačno četiri cifre.",
+        "howItHelps": "Te četiri cifre su ograničene na ta četiri polja. Ukloni ih iz svih drugih polja jedinice."
+      },
+      "hidden-quad": {
+        "lookFor": "Četiri cifre koje se pojavljuju samo u četiri polja jedinice.",
+        "howItHelps": "Ta četiri polja drže te četiri cifre, pa se svi njihovi ostali kandidati uklanjaju."
+      },
+      "x-wing": {
+        "lookFor": "Cifra sa tačno dva polja-kandidata u svakom od dva reda (ili kolone), koja dele iste dve kolone (ili reda).",
+        "howItHelps": "Cifra je iznuđena u te dve linije, pa je ukloni iz tih kolona (ili redova) svuda drugde."
+      },
+      "swordfish": {
+        "lookFor": "Kao X-Wing ali preko tri reda (ili kolone), gde svi kandidati obuhvataju tačno tri kolone (ili reda).",
+        "howItHelps": "Cifra je zaključana u te tri linije, pa je ukloni iz ukrštenih linija svuda drugde."
+      },
+      "jellyfish": {
+        "lookFor": "X-Wing preko četiri linije: cifra preko četiri reda (ili kolone) ograničena na iste četiri kolone (ili reda).",
+        "howItHelps": "Cifra je zaključana u te četiri linije, pa je ukloni iz ukrštenih linija svuda drugde."
+      },
+      "xy-wing": {
+        "lookFor": "Tri dvovredna polja: pivot (X, Y) koji deli po jednog kandidata sa dva kraka (X, Z) i (Y, Z).",
+        "howItHelps": "Šta god popuni pivot, jedan krak postaje Z. Svako polje koje vidi oba kraka gubi Z."
+      },
+      "xyz-wing": {
+        "lookFor": "Kao XY-Wing, ali pivot drži tri kandidata (X, Y, Z), a krakovi su (X, Z) i (Y, Z).",
+        "howItHelps": "Jedno od tri polja mora biti Z, pa svako polje koje vidi sva tri gubi Z."
+      }
+    }
   }
 }
