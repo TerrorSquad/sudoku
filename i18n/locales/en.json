@@ -9,7 +9,9 @@
     "dailyCompleted": "Daily — Completed ✓",
     "customPuzzle": "Custom Puzzle",
     "academy": "Sudoku Academy",
-    "dailyStreak": "{n}-day streak"
+    "dailyStreak": "{n}-day streak",
+    "stats": "Statistics",
+    "back": "Menu"
   },
   "difficulty": {
     "title": "Choose a Challenge",
@@ -194,5 +196,23 @@
   },
   "a11y": {
     "switchLanguage": "Switch language"
+  },
+  "stats": {
+    "title": "Your Statistics",
+    "subtitle": "Lifetime progress, saved on this device",
+    "lifetimeScore": "Lifetime score",
+    "gamesWon": "Games won",
+    "dailyStreak": "Daily streak",
+    "days": "{n} day(s)",
+    "perDifficulty": "By difficulty",
+    "difficulty": "Difficulty",
+    "wins": "Wins",
+    "bestScore": "Best score",
+    "bestTime": "Best time",
+    "topTechniques": "Most-used techniques",
+    "noTechniquesYet": "No techniques used yet — request a hint in a game to start tracking.",
+    "noStatsYet": "No games won yet. Finish a puzzle to start building your stats!",
+    "back": "Back to Menu",
+    "dash": "—"
   }
 }

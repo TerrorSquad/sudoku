@@ -10,6 +10,7 @@ import ControlPanel from './components/ControlPanel.vue';
 import Numpad from './components/Numpad.vue';
 import SideExplanationPanel from './components/SideExplanationPanel.vue';
 import SudokuAcademy from './components/SudokuAcademy.vue';
+import StatsScreen from './components/StatsScreen.vue';
 import CustomImport from './components/CustomImport.vue';
 import LocaleSwitcher from './components/LocaleSwitcher.vue';
 
@@ -71,7 +72,7 @@ const showAllCandidates = ref<boolean>(false);
 const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t('game.ready'));
 const hintBody = ref<string>('');
-const currentScreen = ref<'menu' | 'difficulty' | 'game' | 'academy' | 'custom-import'>('menu');
+const currentScreen = ref<'menu' | 'difficulty' | 'game' | 'academy' | 'custom-import' | 'stats'>('menu');
 const activeDifficulty = ref<Difficulty>('medium');
 
 const showModal = ref<boolean>(false);
@@ -164,7 +165,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
     });
-    const result = score.record(activeDifficulty.value, breakdown.total);
+    const result = score.record(activeDifficulty.value, breakdown.total, timer.timerSeconds.value);
     lastScore.value = breakdown;
     isNewBest.value = result.isNewBest;
     lifetimeTotal.value = result.stats.total;
@@ -483,6 +484,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
           </svg>
           {{ $t('menu.academy') }}
         </button>
+
+        <!-- Statistics -->
+        <button
+          @click="currentScreen = 'stats'"
+          class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          {{ $t('menu.stats') }}
+        </button>
       </div>
     </div>
 
@@ -497,6 +509,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- ACADEMY -->
     <SudokuAcademy
       v-else-if="currentScreen === 'academy'"
+      @back-to-menu="currentScreen = 'menu'"
+    />
+
+    <!-- STATISTICS -->
+    <StatsScreen
+      v-else-if="currentScreen === 'stats'"
       @back-to-menu="currentScreen = 'menu'"
     />
 

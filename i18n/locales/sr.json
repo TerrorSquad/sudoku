@@ -9,7 +9,9 @@
     "dailyCompleted": "Dnevni izazov — Završeno ✓",
     "customPuzzle": "Prilagođena slagalica",
     "academy": "Sudoku akademija",
-    "dailyStreak": "niz od {n} dana"
+    "dailyStreak": "niz od {n} dana",
+    "stats": "Statistika",
+    "back": "Meni"
   },
   "difficulty": {
     "title": "Izaberi izazov",
@@ -194,5 +196,23 @@
   },
   "a11y": {
     "switchLanguage": "Promeni jezik"
+  },
+  "stats": {
+    "title": "Tvoja statistika",
+    "subtitle": "Napredak tokom vremena, sačuvan na ovom uređaju",
+    "lifetimeScore": "Ukupno poena",
+    "gamesWon": "Pobeda",
+    "dailyStreak": "Dnevni niz",
+    "days": "{n} dan(a)",
+    "perDifficulty": "Po težini",
+    "difficulty": "Težina",
+    "wins": "Pobede",
+    "bestScore": "Najbolji skor",
+    "bestTime": "Najbolje vreme",
+    "topTechniques": "Najčešće tehnike",
+    "noTechniquesYet": "Još nema korišćenih tehnika — zatraži pomoć u igri da počneš praćenje.",
+    "noStatsYet": "Još nema pobeda. Reši slagalicu da počneš da gradiš statistiku!",
+    "back": "Nazad na meni",
+    "dash": "—"
   }
 }
