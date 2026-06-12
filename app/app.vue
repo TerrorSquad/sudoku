@@ -403,7 +403,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
 <template>
   <UApp :locale="localeMap[locale] ?? uiLocales.en">
-  <div class="min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
+  <div class="app-shell min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
 
     <!-- Theme + locale switcher -->
     <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
@@ -713,6 +713,20 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 }
 :deep(.bg-indigo-500\/30) { animation: trigger-glow    1.2s infinite ease-in-out !important; }
 :deep(.bg-rose-500\/30)   { animation: elimination-blink 1.2s infinite ease-in-out !important; }
+</style>
+
+<!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's
+     scope, so the dark backdrop needs a global rule. Only the gradient is set
+     here (background-image), leaving the base color to the Tailwind utilities. -->
+<style>
+.app-shell {
+  background-image: radial-gradient(1100px 560px at 50% -12%, rgba(139, 92, 246, 0.06), transparent 60%);
+}
+.dark .app-shell {
+  background-image:
+    radial-gradient(1100px 600px at 50% -14%, rgba(139, 92, 246, 0.14), transparent 56%),
+    radial-gradient(900px 520px at 88% 6%, rgba(34, 211, 238, 0.07), transparent 60%);
+}
 
 @keyframes modal-pop {
   0%   { transform: scale(0.85) translateY(8px); opacity: 0; }
