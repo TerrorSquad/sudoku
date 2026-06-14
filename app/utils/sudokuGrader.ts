@@ -80,9 +80,9 @@ interface SolveState {
 }
 
 function initState(puzzle: Grid): SolveState {
-  const board = new Array<number>(81).fill(0);
+  const board = Array.from({ length: 81 }).fill(0);
   for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) board[r * 9 + c] = puzzle[r]![c]!;
-  const cands = new Array<number>(81).fill(0);
+  const cands = Array.from({ length: 81 }).fill(0);
   for (let i = 0; i < 81; i++) {
     if (board[i] !== 0) continue;
     let mask = ALL_MASK;
@@ -241,7 +241,7 @@ function eliminateHiddenSubset(s: SolveState, k: number): boolean {
 
 function eliminateFish(s: SolveState, k: number): boolean {
   let changed = false;
-  for (const [base, cover] of [
+  for (const [base, _cover] of [
     [ROWS, COLS],
     [COLS, ROWS],
   ] as const) {
