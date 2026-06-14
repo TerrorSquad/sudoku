@@ -90,13 +90,13 @@ function loadExample() {
 </script>
 
 <template>
-  <div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto gap-5 px-6 py-10">
+  <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-5 px-6 py-10">
     <div>
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-5 transition-colors dark:hover:text-zinc-300 hover:text-zinc-700"
+        class="mb-5 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-500 uppercase transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
       >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -106,10 +106,10 @@ function loadExample() {
         </svg>
         {{ $t("customImport.back") }}
       </button>
-      <h2 class="text-3xl font-black uppercase tracking-tight dark:text-zinc-100 text-zinc-900">
+      <h2 class="text-3xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100">
         {{ $t("customImport.title") }}
       </h2>
-      <p class="text-sm mt-1 dark:text-zinc-400 text-zinc-600">
+      <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         {{ $t("customImport.description") }}
       </p>
     </div>
@@ -118,31 +118,31 @@ function loadExample() {
       v-model="raw"
       rows="4"
       placeholder="530070000600195000098000060800060003400803001700020006060000280000419005000080079"
-      class="w-full border focus:border-violet-500 text-sm font-game p-3 resize-none outline-none transition-colors dark:bg-zinc-950 dark:border-zinc-700 dark:text-zinc-200 dark:placeholder:text-zinc-700 bg-zinc-50 border-zinc-300 text-zinc-800 placeholder:text-zinc-400"
+      class="w-full resize-none border border-zinc-300 bg-zinc-50 p-3 font-game text-sm text-zinc-800 transition-colors outline-none placeholder:text-zinc-400 focus:border-violet-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:placeholder:text-zinc-700"
       spellcheck="false"
     />
 
     <div class="flex items-center justify-between text-xs">
       <span
-        :class="cleaned.length === 81 ? 'dark:text-emerald-400 text-emerald-600' : 'text-zinc-500'"
+        :class="cleaned.length === 81 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500'"
         class="font-mono font-bold"
       >
         {{ cleaned.length }} / 81
       </span>
       <button
         @click="loadExample"
-        class="text-zinc-500 underline transition-colors dark:hover:text-zinc-300 hover:text-zinc-700"
+        class="text-zinc-500 underline transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
       >
         {{ $t("customImport.loadExample") }}
       </button>
     </div>
 
-    <p v-if="error" class="text-xs dark:text-rose-400 text-rose-600 font-semibold">{{ error }}</p>
+    <p v-if="error" class="text-xs font-semibold text-rose-600 dark:text-rose-400">{{ error }}</p>
 
     <!-- Mini preview -->
     <div
       v-if="preview"
-      class="grid grid-cols-9 gap-px border shrink-0 dark:bg-zinc-700 dark:border-zinc-700 bg-zinc-300 border-zinc-300"
+      class="grid shrink-0 grid-cols-9 gap-px border border-zinc-300 bg-zinc-300 dark:border-zinc-700 dark:bg-zinc-700"
     >
       <template v-for="(row, r) in preview" :key="r">
         <div
@@ -150,12 +150,12 @@ function loadExample() {
           :key="`${r}-${c}`"
           :class="[
             cell !== 0
-              ? 'font-bold dark:text-zinc-100 text-zinc-900'
-              : 'dark:text-zinc-700 text-zinc-300',
+              ? 'font-bold text-zinc-900 dark:text-zinc-100'
+              : 'text-zinc-300 dark:text-zinc-700',
             c === 2 || c === 5 ? 'border-r-2 border-r-zinc-500' : '',
             r === 2 || r === 5 ? 'border-b-2 border-b-zinc-500' : '',
           ]"
-          class="aspect-square flex items-center justify-center text-[11px] font-game dark:bg-zinc-900 bg-zinc-100"
+          class="flex aspect-square items-center justify-center bg-zinc-100 font-game text-[11px] dark:bg-zinc-900"
         >
           {{ cell !== 0 ? cell : "·" }}
         </div>
@@ -167,10 +167,10 @@ function loadExample() {
       :disabled="!isValid"
       :class="
         isValid
-          ? 'bg-violet-700 hover:bg-violet-600 border-violet-600 text-white'
-          : 'dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-100 border-zinc-300 text-zinc-600 cursor-not-allowed'
+          ? 'border-violet-600 bg-violet-700 text-white hover:bg-violet-600'
+          : 'cursor-not-allowed border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900'
       "
-      class="w-full py-4 border font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
+      class="w-full border py-4 text-sm font-bold tracking-wider uppercase transition-all active:scale-95"
     >
       {{ $t("customImport.playPuzzle") }}
     </button>

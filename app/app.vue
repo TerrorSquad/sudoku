@@ -415,7 +415,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
 <template>
   <UApp :locale="localeMap[locale] ?? uiLocales.en">
     <div
-      class="app-shell min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white"
+      class="app-shell flex min-h-screen w-full flex-col bg-white text-zinc-900 antialiased dark:bg-[#0c0a09] dark:text-zinc-100"
     >
       <!-- Theme + locale switcher - temporarily disabled -->
       <!-- <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
@@ -426,30 +426,30 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       <!-- MENU -->
       <div
         v-if="currentScreen === 'menu'"
-        class="flex flex-col justify-center items-center flex-1 px-6 py-12 gap-10"
+        class="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
       >
         <div class="text-center">
           <h1
-            class="text-5xl sm:text-6xl font-black bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent tracking-tight"
+            class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-6xl"
           >
             {{ $t("menu.title") }}
           </h1>
-          <p class="text-[11px] text-zinc-500 mt-3 uppercase tracking-widest font-semibold">
+          <p class="mt-3 text-[11px] font-semibold tracking-widest text-zinc-500 uppercase">
             {{ $t("menu.subtitle") }}
           </p>
         </div>
-        <div class="flex flex-col items-center gap-3 w-full max-w-xs">
+        <div class="flex w-full max-w-xs flex-col items-center gap-3">
           <!-- Continue saved game -->
           <div v-if="gameSave.hasSave.value" class="w-full">
             <button
               @click="handleContinueGame"
-              class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 dark:bg-emerald-900/40 dark:border-emerald-600/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 dark:hover:border-emerald-500 bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400"
+              class="w-full border border-emerald-300 bg-emerald-50 px-6 py-4 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
             >
               {{ $t("menu.continue") }}
             </button>
             <p
               v-if="savedInfo"
-              class="text-[11px] text-zinc-500 text-center mt-1.5 uppercase tracking-wider font-semibold"
+              class="mt-1.5 text-center text-[11px] font-semibold tracking-wider text-zinc-500 uppercase"
             >
               {{
                 $t("menu.continueSub", { difficulty: savedInfo.difficulty, time: savedInfo.time })
@@ -460,7 +460,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           <!-- New game -->
           <button
             @click="currentScreen = 'difficulty'"
-            class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 dark:bg-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:border-zinc-600 bg-zinc-50 border-zinc-300 hover:bg-zinc-100 hover:border-zinc-400"
+            class="w-full border border-zinc-300 bg-zinc-50 px-6 py-4 text-sm font-bold transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
           >
             {{ $t("menu.start") }}
           </button>
@@ -471,12 +471,12 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
             :disabled="!!dailyRecord"
             :class="
               dailyRecord
-                ? 'dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-600 bg-emerald-50 border-emerald-300 text-emerald-700 cursor-default'
-                : 'dark:bg-zinc-900 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:border-zinc-600 dark:text-zinc-100 bg-zinc-50 border-zinc-300 hover:bg-zinc-100 hover:border-zinc-400 text-zinc-900'
+                ? 'cursor-default border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-600'
+                : 'border-zinc-300 bg-zinc-50 text-zinc-900 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800'
             "
-            class="w-full py-4 px-6 border font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+            class="flex w-full items-center justify-center gap-2 border px-6 py-4 text-sm font-bold transition-all active:scale-95"
           >
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -489,7 +489,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           </button>
           <p
             v-if="dailyStreak > 0"
-            class="text-[11px] text-amber-600 dark:text-amber-400 text-center -mt-1 uppercase tracking-wider font-semibold"
+            class="-mt-1 text-center text-[11px] font-semibold tracking-wider text-amber-600 uppercase dark:text-amber-400"
           >
             🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}
           </p>
@@ -497,9 +497,9 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           <!-- Custom puzzle -->
           <button
             @click="currentScreen = 'custom-import'"
-            class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
+            class="flex w-full items-center justify-center gap-2 border border-zinc-300 bg-transparent px-6 py-3 text-xs font-semibold tracking-widest text-zinc-500 uppercase transition-all hover:border-zinc-400 hover:text-zinc-700 active:scale-95 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
           >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -513,9 +513,9 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           <!-- Academy -->
           <button
             @click="currentScreen = 'academy'"
-            class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
+            class="flex w-full items-center justify-center gap-2 border border-zinc-300 bg-transparent px-6 py-3 text-xs font-semibold tracking-widest text-zinc-500 uppercase transition-all hover:border-zinc-400 hover:text-zinc-700 active:scale-95 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
           >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -529,9 +529,9 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           <!-- Statistics -->
           <button
             @click="currentScreen = 'stats'"
-            class="w-full py-3 px-6 bg-transparent border font-semibold text-xs text-zinc-500 uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 dark:border-zinc-800 dark:hover:text-zinc-300 dark:hover:border-zinc-700 border-zinc-300 hover:text-zinc-700 hover:border-zinc-400"
+            class="flex w-full items-center justify-center gap-2 border border-zinc-300 bg-transparent px-6 py-3 text-xs font-semibold tracking-widest text-zinc-500 uppercase transition-all hover:border-zinc-400 hover:text-zinc-700 active:scale-95 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
           >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -571,12 +571,12 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       <!-- GAME -->
       <div
         v-else-if="currentScreen === 'game'"
-        class="flex flex-col lg:grid lg:max-3xl:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] sm:px-5 3xl:px-8 sm:py-3"
+        class="flex w-full max-w-7xl flex-col gap-4 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
       >
         <!-- 3xl left sidebar: shortcuts & branding -->
-        <div class="hidden 3xl:flex flex-col gap-6 sticky top-3 3xl:col-span-1">
+        <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
           <div>
-            <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">
+            <p class="mb-4 text-xs font-bold tracking-widest text-zinc-600 uppercase">
               {{ $t("sidebar.keyboard") }}
             </p>
             <ul class="space-y-3">
@@ -592,37 +592,37 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
                 class="flex items-center gap-3"
               >
                 <kbd
-                  class="font-game text-xs font-bold px-2 py-1 border shrink-0 min-w-[60px] text-center dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-100 border-zinc-300 text-zinc-700"
+                  class="min-w-[60px] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                   >{{ s.key }}</kbd
                 >
-                <span class="text-sm dark:text-zinc-400 text-zinc-600">{{ s.desc }}</span>
+                <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
               </li>
             </ul>
           </div>
 
-          <div class="border-t pt-4 dark:border-zinc-800 border-zinc-200">
-            <p class="text-xs font-bold text-zinc-600 uppercase tracking-widest mb-4">
+          <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <p class="mb-4 text-xs font-bold tracking-widest text-zinc-600 uppercase">
               {{ $t("sidebar.legend") }}
             </p>
-            <ul class="space-y-3 text-sm dark:text-zinc-400 text-zinc-600">
+            <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
               <li class="flex items-center gap-3">
                 <span
-                  class="w-4 h-4 shrink-0 border dark:bg-zinc-100 dark:border-zinc-600 bg-zinc-900 border-zinc-400"
+                  class="h-4 w-4 shrink-0 border border-zinc-400 bg-zinc-900 dark:border-zinc-600 dark:bg-zinc-100"
                 />
                 {{ $t("sidebar.legendGiven") }}
               </li>
               <li class="flex items-center gap-3">
                 <span
-                  class="w-4 h-4 shrink-0 border dark:bg-violet-300/30 dark:border-violet-400 bg-violet-600/30 border-violet-500"
+                  class="h-4 w-4 shrink-0 border border-violet-500 bg-violet-600/30 dark:border-violet-400 dark:bg-violet-300/30"
                 />
                 {{ $t("sidebar.legendEntry") }}
               </li>
               <li class="flex items-center gap-3">
-                <span class="w-4 h-4 shrink-0 bg-rose-500/20 border border-rose-400" />
+                <span class="h-4 w-4 shrink-0 border border-rose-400 bg-rose-500/20" />
                 {{ $t("sidebar.legendConflict") }}
               </li>
               <li class="flex items-center gap-3">
-                <span class="w-4 h-4 shrink-0 bg-violet-950/60 border border-violet-400" />
+                <span class="h-4 w-4 shrink-0 border border-violet-400 bg-violet-950/60" />
                 {{ $t("sidebar.legendSelected") }}
               </li>
             </ul>
@@ -630,7 +630,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
         </div>
 
         <!-- Center / main game column -->
-        <div class="lg:max-3xl:col-span-7 3xl:col-span-1 flex flex-col gap-3 w-full">
+        <div class="flex w-full flex-col gap-3 3xl:col-span-1 lg:max-3xl:col-span-7">
           <div class="flex flex-col">
             <GameDashboard
               :formatted-time="timer.formatTime(timer.timerSeconds.value)"
@@ -645,13 +645,13 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
             <!-- Why-wrong explainer -->
             <div
               v-if="mistakeExplainer"
-              class="flex items-start justify-between gap-2 border px-3 py-2 text-xs leading-relaxed bg-rose-500/10 border-rose-500/30 dark:text-rose-300 text-rose-700"
+              class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
             >
               <p>{{ mistakeExplainer }}</p>
               <button
                 @click="mistakeExplainer = ''"
                 :aria-label="$t('modal.close')"
-                class="shrink-0 font-bold px-1 transition-colors dark:hover:text-rose-100 hover:text-rose-900"
+                class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
               >
                 ✕
               </button>
@@ -672,7 +672,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
               @select-cell="handleSelectCell"
             />
           </div>
-          <div class="flex flex-col gap-2 mx-2 sm:mx-0">
+          <div class="mx-2 flex flex-col gap-2 sm:mx-0">
             <ControlPanel
               :notes-mode="notesMode"
               @undo="undoMove"
@@ -689,7 +689,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
         <!-- Right / hint panel — on mobile only takes space once a hint is active -->
         <div
           :class="activeComplexHint ? 'block' : 'hidden lg:block'"
-          class="lg:max-3xl:col-span-5 3xl:col-span-1 lg:sticky lg:top-3 text-sm font-medium 3xl:min-w-0"
+          class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
         >
           <SideExplanationPanel
             :active-complex-hint="activeComplexHint"
@@ -705,81 +705,81 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       <!-- MODAL -->
       <div
         v-if="showModal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center px-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop border w-full max-w-sm p-6 shadow-2xl text-center dark:bg-zinc-900 bg-white"
+          class="modal-pop w-full max-w-sm border bg-white p-6 text-center shadow-2xl dark:bg-zinc-900"
           :class="
             isWinState
-              ? 'border-emerald-500/60 border-t-4 border-t-emerald-500'
-              : 'border-rose-500/40 border-t-4 border-t-rose-500'
+              ? 'border-t-4 border-emerald-500/60 border-t-emerald-500'
+              : 'border-t-4 border-rose-500/40 border-t-rose-500'
           "
         >
           <h3
-            class="text-xl font-black mb-2 uppercase tracking-tight dark:text-zinc-100 text-zinc-900"
+            class="mb-2 text-xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100"
           >
             {{ modalTitle }}
           </h3>
-          <p class="text-sm mb-4 leading-relaxed dark:text-zinc-400 text-zinc-600">
+          <p class="mb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             {{ modalMessage }}
           </p>
 
           <!-- Score headline -->
           <div v-if="isWinState && lastScore" class="mb-5">
-            <p class="text-[11px] text-zinc-500 uppercase tracking-widest font-semibold">
+            <p class="text-[11px] font-semibold tracking-widest text-zinc-500 uppercase">
               {{ $t("modal.scoreTotal") }}
             </p>
             <p
-              class="text-5xl font-black tabular-nums bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent leading-tight"
+              class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-5xl leading-tight font-black text-transparent tabular-nums"
             >
               {{ displayedScore }}
             </p>
             <p
               v-if="isNewBest"
-              class="score-badge inline-block mt-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-amber-500/15 border border-amber-500/40 dark:text-amber-300 text-amber-700"
+              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-black tracking-widest text-amber-700 uppercase dark:text-amber-300"
             >
               ★ {{ $t("modal.scoreNewBest") }}
             </p>
 
             <!-- breakdown -->
             <div
-              class="mt-3 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y text-xs"
+              class="mt-3 divide-y divide-zinc-200 border border-zinc-200 text-left text-xs dark:divide-zinc-800 dark:border-zinc-800"
             >
               <div class="flex justify-between px-3 py-1.5">
                 <span class="text-zinc-500">{{ $t("modal.scoreBase") }}</span>
-                <span class="font-bold tabular-nums dark:text-zinc-200 text-zinc-800">{{
+                <span class="font-bold text-zinc-800 tabular-nums dark:text-zinc-200">{{
                   lastScore.base
                 }}</span>
               </div>
               <div v-if="lastScore.speedBonus" class="flex justify-between px-3 py-1.5">
                 <span class="text-zinc-500">{{ $t("modal.scoreSpeed") }}</span>
-                <span class="font-bold tabular-nums dark:text-emerald-400 text-emerald-600"
+                <span class="font-bold text-emerald-600 tabular-nums dark:text-emerald-400"
                   >+{{ lastScore.speedBonus }}</span
                 >
               </div>
               <div v-if="lastScore.flawlessBonus" class="flex justify-between px-3 py-1.5">
                 <span class="text-zinc-500">{{ $t("modal.scoreFlawless") }}</span>
-                <span class="font-bold tabular-nums dark:text-emerald-400 text-emerald-600"
+                <span class="font-bold text-emerald-600 tabular-nums dark:text-emerald-400"
                   >+{{ lastScore.flawlessBonus }}</span
                 >
               </div>
               <div v-if="lastScore.mistakePenalty" class="flex justify-between px-3 py-1.5">
                 <span class="text-zinc-500">{{ $t("modal.scoreMistakePenalty") }}</span>
-                <span class="font-bold tabular-nums dark:text-rose-400 text-rose-600"
+                <span class="font-bold text-rose-600 tabular-nums dark:text-rose-400"
                   >−{{ lastScore.mistakePenalty }}</span
                 >
               </div>
               <div v-if="lastScore.hintPenalty" class="flex justify-between px-3 py-1.5">
                 <span class="text-zinc-500">{{ $t("modal.scoreHintPenalty") }}</span>
-                <span class="font-bold tabular-nums dark:text-amber-400 text-amber-700"
+                <span class="font-bold text-amber-700 tabular-nums dark:text-amber-400"
                   >−{{ lastScore.hintPenalty }}</span
                 >
               </div>
-              <div class="flex justify-between px-3 py-1.5 bg-zinc-500/5">
-                <span class="text-zinc-500 uppercase tracking-wider font-semibold">{{
+              <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
+                <span class="font-semibold tracking-wider text-zinc-500 uppercase">{{
                   $t("modal.scoreLifetime")
                 }}</span>
-                <span class="font-bold tabular-nums dark:text-zinc-300 text-zinc-700">{{
+                <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
                   lifetimeTotal
                 }}</span>
               </div>
@@ -789,46 +789,46 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           <!-- Win summary -->
           <div
             v-if="isWinState"
-            class="mb-5 text-left border dark:border-zinc-800 dark:divide-zinc-800 border-zinc-200 divide-zinc-200 divide-y"
+            class="mb-5 divide-y divide-zinc-200 border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800"
           >
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{
+              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
                 $t("modal.difficulty")
               }}</span>
-              <span class="text-xs font-bold capitalize dark:text-zinc-200 text-zinc-800">{{
+              <span class="text-xs font-bold text-zinc-800 capitalize dark:text-zinc-200">{{
                 activeDifficulty
               }}</span>
             </div>
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{
+              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
                 $t("game.mistakes")
               }}</span>
               <span
                 class="text-xs font-bold"
                 :class="
                   mistakes === 0
-                    ? 'dark:text-emerald-400 text-emerald-600'
-                    : 'dark:text-rose-400 text-rose-600'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
                 "
                 >{{ mistakes }} / 3</span
               >
             </div>
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{{
+              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
                 $t("modal.hintsUsed")
               }}</span>
               <span
                 class="text-xs font-bold"
                 :class="
                   hintsUsed === 0
-                    ? 'dark:text-emerald-400 text-emerald-600'
-                    : 'dark:text-amber-400 text-amber-700'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-amber-700 dark:text-amber-400'
                 "
                 >{{ hintsUsed }}</span
               >
             </div>
             <div v-if="techniqueLog.length" class="px-3 py-2">
-              <p class="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-2">
+              <p class="mb-2 text-xs font-semibold tracking-wider text-zinc-500 uppercase">
                 {{ $t("modal.techniquesUsed") }}
               </p>
               <div class="flex flex-wrap gap-1">
@@ -836,7 +836,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
                   v-for="name in techniqueLog"
                   :key="name"
                   :title="$t('modal.usedTotal', { n: techStatsTotals[name] ?? 1 })"
-                  class="text-[10px] px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/30 dark:text-amber-400 text-amber-700 font-semibold"
+                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
                   >{{ name }}
                   <span class="opacity-70">×{{ techStatsTotals[name] ?? 1 }}</span></span
                 >
@@ -846,7 +846,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
 
           <button
             @click="handleModalClose"
-            class="w-full py-3 text-sm font-bold uppercase transition-all border dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border-zinc-300"
+            class="w-full border border-zinc-300 bg-zinc-100 py-3 text-sm font-bold text-zinc-900 uppercase transition-all hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
           >
             {{ $t("modal.close") }}
           </button>

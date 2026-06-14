@@ -46,16 +46,16 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
 </script>
 
 <template>
-  <div class="min-h-screen w-full flex flex-col">
+  <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 backdrop-blur border-b pl-4 sm:pl-8 pr-4 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
     >
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
+        class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -65,59 +65,59 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
         </svg>
         <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
       </button>
-      <div class="flex-1 min-w-0">
+      <div class="min-w-0 flex-1">
         <h1
-          class="text-lg sm:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100"
         >
           {{ $t("stats.title") }}
         </h1>
-        <p class="text-xs text-zinc-500 hidden sm:block">{{ $t("stats.subtitle") }}</p>
+        <p class="hidden text-xs text-zinc-500 sm:block">{{ $t("stats.subtitle") }}</p>
       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 px-4 sm:px-8 py-6 sm:py-8 max-w-3xl mx-auto w-full">
-      <p v-if="!hasStats" class="text-center text-sm text-zinc-500 py-16">
+    <div class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
+      <p v-if="!hasStats" class="py-16 text-center text-sm text-zinc-500">
         {{ $t("stats.noStatsYet") }}
       </p>
 
       <template v-else>
         <!-- Headline cards -->
-        <div class="grid grid-cols-3 gap-3 mb-8">
+        <div class="mb-8 grid grid-cols-3 gap-3">
           <div
-            class="border p-4 text-center dark:bg-zinc-900/60 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
           >
             <p
-              class="text-2xl sm:text-3xl font-black tabular-nums bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent leading-tight"
+              class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-2xl leading-tight font-black text-transparent tabular-nums sm:text-3xl"
             >
               {{ stats.total.toLocaleString() }}
             </p>
-            <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mt-1">
+            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
               {{ $t("stats.lifetimeScore") }}
             </p>
           </div>
           <div
-            class="border p-4 text-center dark:bg-zinc-900/60 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
           >
             <p
-              class="text-2xl sm:text-3xl font-black tabular-nums dark:text-zinc-100 text-zinc-900 leading-tight"
+              class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-100"
             >
               {{ stats.gamesWon }}
             </p>
-            <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mt-1">
+            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
               {{ $t("stats.gamesWon") }}
             </p>
           </div>
           <div
-            class="border p-4 text-center dark:bg-zinc-900/60 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
           >
             <p
-              class="text-2xl sm:text-3xl font-black tabular-nums dark:text-amber-400 text-amber-600 leading-tight"
+              class="text-2xl leading-tight font-black text-amber-600 tabular-nums sm:text-3xl dark:text-amber-400"
             >
               <span v-if="streak > 0">🔥 {{ streak }}</span>
               <span v-else class="text-zinc-400">{{ $t("stats.dash") }}</span>
             </p>
-            <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mt-1">
+            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
               {{ $t("stats.dailyStreak") }}
             </p>
           </div>
@@ -125,33 +125,33 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
 
         <!-- Per-difficulty table -->
         <div v-if="difficultyRows.length" class="mb-8">
-          <h2 class="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">
+          <h2 class="mb-3 text-xs font-bold tracking-widest text-zinc-500 uppercase">
             {{ $t("stats.perDifficulty") }}
           </h2>
-          <div class="border dark:border-zinc-800 border-zinc-200 overflow-hidden">
+          <div class="overflow-hidden border border-zinc-200 dark:border-zinc-800">
             <table class="w-full text-sm">
               <thead>
                 <tr
-                  class="text-[10px] uppercase tracking-wider text-zinc-500 dark:bg-zinc-900/60 bg-zinc-100"
+                  class="bg-zinc-100 text-[10px] tracking-wider text-zinc-500 uppercase dark:bg-zinc-900/60"
                 >
-                  <th class="text-left font-semibold px-3 py-2">{{ $t("stats.difficulty") }}</th>
-                  <th class="text-right font-semibold px-3 py-2">{{ $t("stats.wins") }}</th>
-                  <th class="text-right font-semibold px-3 py-2">{{ $t("stats.bestScore") }}</th>
-                  <th class="text-right font-semibold px-3 py-2">{{ $t("stats.bestTime") }}</th>
+                  <th class="px-3 py-2 text-left font-semibold">{{ $t("stats.difficulty") }}</th>
+                  <th class="px-3 py-2 text-right font-semibold">{{ $t("stats.wins") }}</th>
+                  <th class="px-3 py-2 text-right font-semibold">{{ $t("stats.bestScore") }}</th>
+                  <th class="px-3 py-2 text-right font-semibold">{{ $t("stats.bestTime") }}</th>
                 </tr>
               </thead>
-              <tbody class="divide-y dark:divide-zinc-800 divide-zinc-200">
+              <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
                 <tr
                   v-for="row in difficultyRows"
                   :key="row.difficulty"
-                  class="dark:text-zinc-300 text-zinc-700"
+                  class="text-zinc-700 dark:text-zinc-300"
                 >
-                  <td class="px-3 py-2 font-bold capitalize dark:text-zinc-100 text-zinc-900">
+                  <td class="px-3 py-2 font-bold text-zinc-900 capitalize dark:text-zinc-100">
                     {{ row.difficulty }}
                   </td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.wins }}</td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.best.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right tabular-nums font-mono">
+                  <td class="px-3 py-2 text-right font-mono tabular-nums">
                     {{ formatTime(row.bestTime) }}
                   </td>
                 </tr>
@@ -162,7 +162,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
 
         <!-- Top techniques -->
         <div>
-          <h2 class="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">
+          <h2 class="mb-3 text-xs font-bold tracking-widest text-zinc-500 uppercase">
             {{ $t("stats.topTechniques") }}
           </h2>
           <p v-if="!topTechniques.length" class="text-sm text-zinc-500">
@@ -171,17 +171,17 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
           <div v-else class="space-y-2">
             <div v-for="tech in topTechniques" :key="tech.name" class="flex items-center gap-3">
               <span
-                class="w-32 sm:w-40 shrink-0 text-sm font-semibold dark:text-zinc-300 text-zinc-700 truncate"
+                class="w-32 shrink-0 truncate text-sm font-semibold text-zinc-700 sm:w-40 dark:text-zinc-300"
                 >{{ tech.name }}</span
               >
-              <div class="flex-1 h-4 dark:bg-zinc-800/60 bg-zinc-100 overflow-hidden">
+              <div class="h-4 flex-1 overflow-hidden bg-zinc-100 dark:bg-zinc-800/60">
                 <div
                   class="h-full bg-gradient-to-r from-violet-500/60 to-cyan-500/60"
                   :style="{ width: `${(tech.count / maxTechCount) * 100}%` }"
                 />
               </div>
               <span
-                class="w-8 shrink-0 text-right text-xs font-bold tabular-nums dark:text-zinc-400 text-zinc-600"
+                class="w-8 shrink-0 text-right text-xs font-bold text-zinc-600 tabular-nums dark:text-zinc-400"
                 >{{ tech.count }}</span
               >
             </div>
@@ -190,10 +190,10 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) =
       </template>
 
       <!-- Footer -->
-      <div class="border-t pt-8 mt-10 text-center dark:border-zinc-800 border-zinc-200">
+      <div class="mt-10 border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
         <button
           @click="emit('back-to-menu')"
-          class="px-8 py-3 border text-sm font-bold uppercase tracking-wider transition-all active:scale-95 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-50 hover:bg-zinc-100 border-zinc-300 text-zinc-700"
+          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {{ $t("stats.back") }}
         </button>

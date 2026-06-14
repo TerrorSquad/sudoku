@@ -15,10 +15,10 @@ defineEmits<{
     <!-- Undo -->
     <button
       @click="$emit('undo')"
-      class="flex flex-col items-center justify-center py-3 3xl:py-4 border transition-all active:scale-95 gap-1 3xl:gap-2 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 bg-zinc-50 hover:bg-zinc-100 border-zinc-200"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <svg
-        class="w-5 h-5 3xl:w-7 3xl:h-7 dark:text-zinc-400 text-zinc-500"
+        class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -31,7 +31,7 @@ defineEmits<{
         />
       </svg>
       <span
-        class="text-[10px] 3xl:text-xs font-semibold uppercase whitespace-nowrap dark:text-zinc-400 text-zinc-600"
+        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 uppercase 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.undo") }}</span
       >
     </button>
@@ -39,10 +39,10 @@ defineEmits<{
     <!-- Erase -->
     <button
       @click="$emit('erase')"
-      class="flex flex-col items-center justify-center py-3 3xl:py-4 border transition-all active:scale-95 gap-1 3xl:gap-2 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 bg-zinc-50 hover:bg-zinc-100 border-zinc-200"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <svg
-        class="w-5 h-5 3xl:w-7 3xl:h-7 dark:text-zinc-400 text-zinc-500"
+        class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -55,7 +55,7 @@ defineEmits<{
         />
       </svg>
       <span
-        class="text-[10px] 3xl:text-xs font-semibold uppercase whitespace-nowrap dark:text-zinc-400 text-zinc-600"
+        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 uppercase 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.erase") }}</span
       >
     </button>
@@ -63,15 +63,15 @@ defineEmits<{
     <!-- Notes -->
     <button
       @click="$emit('toggle-notes')"
-      class="relative flex flex-col items-center justify-center py-3 3xl:py-4 border transition-all active:scale-95 gap-1 3xl:gap-2 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 bg-zinc-50 hover:bg-zinc-100 border-zinc-200"
+      class="relative flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
       :class="notesMode ? 'border-violet-500/40' : ''"
     >
       <span
-        :class="notesMode ? 'bg-violet-500' : 'dark:bg-zinc-700 bg-zinc-300'"
-        class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full transition-colors"
+        :class="notesMode ? 'bg-violet-500' : 'bg-zinc-300 dark:bg-zinc-700'"
+        class="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full transition-colors"
       />
       <svg
-        class="w-5 h-5 3xl:w-7 3xl:h-7 dark:text-zinc-400 text-zinc-500"
+        class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -84,8 +84,8 @@ defineEmits<{
         />
       </svg>
       <span
-        class="text-[10px] 3xl:text-xs font-semibold uppercase whitespace-nowrap"
-        :class="notesMode ? 'text-violet-400' : 'dark:text-zinc-400 text-zinc-600'"
+        class="text-[10px] font-semibold whitespace-nowrap uppercase 3xl:text-xs"
+        :class="notesMode ? 'text-violet-400' : 'text-zinc-600 dark:text-zinc-400'"
         >{{ $t("controls.notes") }}</span
       >
     </button>
@@ -93,10 +93,10 @@ defineEmits<{
     <!-- Hint -->
     <button
       @click="$emit('trigger-hint')"
-      class="flex flex-col items-center justify-center py-3 3xl:py-4 bg-gradient-to-br from-amber-500/20 to-amber-600/10 hover:from-amber-500/30 border border-amber-500/30 transition-all active:scale-95 gap-1 3xl:gap-2"
+      class="flex flex-col items-center justify-center gap-1 border border-amber-500/30 bg-gradient-to-br from-amber-500/20 to-amber-600/10 py-3 transition-all hover:from-amber-500/30 active:scale-95 3xl:gap-2 3xl:py-4"
     >
       <svg
-        class="w-5 h-5 3xl:w-7 3xl:h-7 dark:text-amber-400 text-amber-700"
+        class="h-5 w-5 text-amber-700 3xl:h-7 3xl:w-7 dark:text-amber-400"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -109,7 +109,7 @@ defineEmits<{
         />
       </svg>
       <span
-        class="text-[10px] 3xl:text-xs dark:text-amber-400 text-amber-700 font-bold uppercase whitespace-nowrap"
+        class="text-[10px] font-bold whitespace-nowrap text-amber-700 uppercase 3xl:text-xs dark:text-amber-400"
         >{{ $t("controls.hint") }}</span
       >
     </button>
@@ -117,9 +117,9 @@ defineEmits<{
     <!-- Auto-fill notes -->
     <button
       @click="$emit('auto-notes')"
-      class="flex flex-col items-center justify-center py-3 3xl:py-4 border transition-all active:scale-95 gap-1 3xl:gap-2 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-violet-400 bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-violet-600"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 text-violet-600 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:text-violet-400 dark:hover:bg-zinc-800"
     >
-      <svg class="w-5 h-5 3xl:w-7 3xl:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="h-5 w-5 3xl:h-7 3xl:w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -127,7 +127,7 @@ defineEmits<{
           d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
         />
       </svg>
-      <span class="text-[10px] 3xl:text-xs font-semibold uppercase whitespace-nowrap">{{
+      <span class="text-[10px] font-semibold whitespace-nowrap uppercase 3xl:text-xs">{{
         $t("controls.auto")
       }}</span>
     </button>

@@ -42,7 +42,7 @@ function hasConflict(r: number, c: number): boolean {
 
 <template>
   <div
-    class="grid grid-cols-9 grid-rows-9 w-full lg:max-w-[calc(100vh-340px)] aspect-square lg:mx-auto overflow-hidden no-select"
+    class="no-select grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden lg:mx-auto lg:max-w-[calc(100vh-340px)]"
   >
     <template v-for="(row, r) in 9" :key="r">
       <SudokuCell

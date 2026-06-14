@@ -33,17 +33,17 @@ const isLastStep = computed(() => {
 
 <template>
   <div
-    class="w-full border p-4 flex flex-col select-none dark:bg-zinc-900/40 dark:border-zinc-800 bg-zinc-50 border-zinc-200 3xl:mt-12"
+    class="flex w-full flex-col border border-zinc-200 bg-zinc-50 p-4 select-none 3xl:mt-12 dark:border-zinc-800 dark:bg-zinc-900/40"
   >
     <!-- Empty state -->
     <div
       v-if="!activeComplexHint"
-      class="flex flex-col items-center justify-center text-center p-6 py-10"
+      class="flex flex-col items-center justify-center p-6 py-10 text-center"
     >
       <div
-        class="p-3 border text-zinc-500 mb-4 dark:bg-zinc-800 dark:border-zinc-700 bg-zinc-100 border-zinc-300"
+        class="mb-4 border border-zinc-300 bg-zinc-100 p-3 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800"
       >
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -53,11 +53,11 @@ const isLastStep = computed(() => {
         </svg>
       </div>
       <h3
-        class="text-sm 3xl:text-base font-bold uppercase tracking-wider dark:text-zinc-400 text-zinc-600"
+        class="text-sm font-bold tracking-wider text-zinc-600 uppercase 3xl:text-base dark:text-zinc-400"
       >
         {{ $t("hint.panelTitle") }}
       </h3>
-      <p class="text-xs 3xl:text-sm text-zinc-500 max-w-xs mt-2 leading-relaxed">
+      <p class="mt-2 max-w-xs text-xs leading-relaxed text-zinc-500 3xl:text-sm">
         {{ $t("hint.panelDesc") }}
       </p>
     </div>
@@ -65,14 +65,14 @@ const isLastStep = computed(() => {
     <!-- Active hint -->
     <div v-else class="flex flex-col gap-4">
       <!-- Technique title -->
-      <div class="border-b pb-3 dark:border-zinc-800 border-zinc-200">
+      <div class="border-b border-zinc-200 pb-3 dark:border-zinc-800">
         <span
-          class="text-[10px] font-bold dark:text-amber-400 text-amber-700 uppercase tracking-widest block mb-1"
+          class="mb-1 block text-[10px] font-bold tracking-widest text-amber-700 uppercase dark:text-amber-400"
         >
           {{ $t("hint.detectedTechnique") }}
         </span>
         <h2
-          class="text-lg 3xl:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 3xl:text-2xl dark:text-zinc-100"
         >
           {{ activeComplexHint.title }}
         </h2>
@@ -83,7 +83,7 @@ const isLastStep = computed(() => {
         <div
           v-for="(step, idx) in activeComplexHint.steps"
           :key="idx"
-          :class="idx <= currentStepIndex ? 'bg-amber-500' : 'dark:bg-zinc-800 bg-zinc-200'"
+          :class="idx <= currentStepIndex ? 'bg-amber-500' : 'bg-zinc-200 dark:bg-zinc-800'"
           class="h-1 flex-grow transition-colors duration-150"
         />
       </div>
@@ -91,48 +91,48 @@ const isLastStep = computed(() => {
       <!-- Step content -->
       <div
         v-if="currentStep"
-        class="border p-4 space-y-2 dark:bg-zinc-950/60 dark:border-zinc-800 bg-zinc-100 border-zinc-200"
+        class="space-y-2 border border-zinc-200 bg-zinc-100 p-4 dark:border-zinc-800 dark:bg-zinc-950/60"
       >
         <h4
-          class="text-xs 3xl:text-sm font-black dark:text-amber-400 text-amber-700 uppercase tracking-wider font-mono"
+          class="font-mono text-xs font-black tracking-wider text-amber-700 uppercase 3xl:text-sm dark:text-amber-400"
         >
           {{ $t("hint.step", { n: currentStepIndex + 1 }) }}: {{ currentStep.label }}
         </h4>
-        <p class="text-sm 3xl:text-base leading-relaxed dark:text-zinc-300 text-zinc-700">
+        <p class="text-sm leading-relaxed text-zinc-700 3xl:text-base dark:text-zinc-300">
           {{ currentStep.description }}
         </p>
       </div>
 
       <!-- Legend -->
       <div
-        class="border-t pt-3 space-y-1.5 text-xs 3xl:text-sm font-medium text-zinc-500 dark:border-zinc-800/60 border-zinc-200"
+        class="space-y-1.5 border-t border-zinc-200 pt-3 text-xs font-medium text-zinc-500 3xl:text-sm dark:border-zinc-800/60"
       >
         <div class="flex items-center gap-2">
-          <span class="w-3 h-3 shrink-0 bg-emerald-500/20 border border-emerald-500" />
+          <span class="h-3 w-3 shrink-0 border border-emerald-500 bg-emerald-500/20" />
           <span>{{ $t("hint.targetCell") }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="w-3 h-3 shrink-0 bg-indigo-500/20 border border-indigo-400" />
+          <span class="h-3 w-3 shrink-0 border border-indigo-400 bg-indigo-500/20" />
           <span>{{ $t("hint.triggerCells") }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="w-3 h-3 shrink-0 bg-rose-500/20 border border-rose-400" />
+          <span class="h-3 w-3 shrink-0 border border-rose-400 bg-rose-500/20" />
           <span>{{ $t("hint.eliminations") }}</span>
         </div>
       </div>
 
       <!-- Navigation -->
-      <div class="flex flex-col gap-2 border-t pt-3 dark:border-zinc-800 border-zinc-200">
+      <div class="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
         <div class="grid grid-cols-2 gap-2">
           <button
             @click="emit('prev-step')"
             :disabled="currentStepIndex === 0"
             :class="
               currentStepIndex === 0
-                ? 'opacity-30 pointer-events-none'
-                : 'dark:hover:bg-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 text-zinc-800'
+                ? 'pointer-events-none opacity-30'
+                : 'text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800'
             "
-            class="py-2.5 3xl:py-3 border text-xs 3xl:text-sm font-bold uppercase transition-all active:scale-95 dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+            class="border border-zinc-200 bg-zinc-50 py-2.5 text-xs font-bold uppercase transition-all active:scale-95 3xl:py-3 3xl:text-sm dark:border-zinc-800 dark:bg-zinc-900"
           >
             {{ $t("hint.prev") }}
           </button>
@@ -141,10 +141,10 @@ const isLastStep = computed(() => {
             @click="emit('next-step')"
             :class="
               isLastStep
-                ? 'bg-emerald-600/20 border-emerald-500 dark:text-emerald-400 text-emerald-700 hover:bg-emerald-600/30'
-                : 'bg-amber-500/10 border-amber-500/30 dark:text-amber-400 text-amber-700 hover:bg-amber-500/20'
+                ? 'border-emerald-500 bg-emerald-600/20 text-emerald-700 hover:bg-emerald-600/30 dark:text-emerald-400'
+                : 'border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400'
             "
-            class="py-2.5 border text-xs font-black uppercase transition-all active:scale-95"
+            class="border py-2.5 text-xs font-black uppercase transition-all active:scale-95"
           >
             {{ isLastStep ? $t("hint.apply") : $t("hint.next") }}
           </button>
@@ -152,7 +152,7 @@ const isLastStep = computed(() => {
 
         <button
           @click="emit('cancel')"
-          class="w-full py-2 3xl:py-3 text-zinc-500 dark:hover:text-rose-400 hover:text-rose-600 text-xs 3xl:text-sm uppercase font-bold tracking-wider transition-colors"
+          class="w-full py-2 text-xs font-bold tracking-wider text-zinc-500 uppercase transition-colors hover:text-rose-600 3xl:py-3 3xl:text-sm dark:hover:text-rose-400"
         >
           {{ $t("hint.cancel") }}
         </button>

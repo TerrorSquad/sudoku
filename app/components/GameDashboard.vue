@@ -15,14 +15,14 @@ defineEmits<{
 
 <template>
   <div
-    class="flex items-center justify-between border px-3.5 py-2.5 gap-3 dark:bg-zinc-900/60 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+    class="flex items-center justify-between gap-3 border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60"
   >
     <!-- Exit button-->
     <button
       @click="$emit('exit-game')"
-      class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
+      class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
     >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -34,24 +34,24 @@ defineEmits<{
 
     <!-- Difficulty label-->
     <span
-      class="px-2.5 py-0.5 text-[10px] font-bold bg-violet-500/10 dark:text-violet-400 text-violet-600 border border-violet-500/20 uppercase tracking-wide"
+      class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 uppercase dark:text-violet-400"
     >
       {{ difficulty }}
     </span>
 
     <!-- Timer -->
-    <div class="flex items-center gap-2 shrink-0">
+    <div class="flex shrink-0 items-center gap-2">
       <span
-        class="font-mono font-bold text-base 3xl:text-xl tabular-nums dark:text-zinc-100 text-zinc-900"
+        class="font-mono text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
         >{{ formattedTime }}</span
       >
       <button
         @click="$emit('toggle-pause')"
-        class="p-1 transition-colors rounded dark:hover:bg-zinc-800 hover:bg-zinc-200"
+        class="rounded p-1 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800"
       >
         <svg
           v-if="!isPaused"
-          class="w-4 h-4 dark:text-violet-400 text-violet-600"
+          class="h-4 w-4 text-violet-600 dark:text-violet-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -65,7 +65,7 @@ defineEmits<{
         </svg>
         <svg
           v-else
-          class="w-4 h-4 dark:text-emerald-400 text-emerald-600"
+          class="h-4 w-4 text-emerald-600 dark:text-emerald-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -82,10 +82,10 @@ defineEmits<{
 
     <!-- Mistakes -->
     <div
-      class="flex items-center gap-1 text-xs 3xl:text-sm shrink-0 dark:text-zinc-400 text-zinc-600"
+      class="flex shrink-0 items-center gap-1 text-xs text-zinc-600 3xl:text-sm dark:text-zinc-400"
     >
       <span>{{ $t("game.mistakes") }}:</span>
-      <span class="font-bold dark:text-rose-400 text-rose-600">{{ mistakes }}</span>
+      <span class="font-bold text-rose-600 dark:text-rose-400">{{ mistakes }}</span>
       <span>/ {{ maxMistakes }}</span>
     </div>
   </div>

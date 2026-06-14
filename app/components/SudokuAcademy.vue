@@ -138,16 +138,16 @@ const total = computed(() => techniques.length);
 </script>
 
 <template>
-  <div class="min-h-screen w-full flex flex-col">
+  <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 backdrop-blur border-b pl-4 sm:pl-8 pr-4 py-4 flex items-center gap-4 dark:bg-[#0c0a09]/95 dark:border-zinc-800 bg-white/95 border-zinc-200"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
     >
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider transition-colors dark:text-zinc-400 dark:hover:text-zinc-100 text-zinc-600 hover:text-zinc-900"
+        class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -157,86 +157,86 @@ const total = computed(() => techniques.length);
         </svg>
         <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
       </button>
-      <div class="flex-1 min-w-0">
+      <div class="min-w-0 flex-1">
         <h1
-          class="text-lg sm:text-2xl font-black tracking-tight leading-tight dark:text-zinc-100 text-zinc-900"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100"
         >
           {{ $t("academy.title") }}
         </h1>
-        <p class="text-xs text-zinc-500 hidden sm:block">
+        <p class="hidden text-xs text-zinc-500 sm:block">
           {{ $t("academy.subtitle", { n: total }) }}
         </p>
       </div>
-      <span class="shrink-0 text-xs text-zinc-600 font-semibold hidden sm:inline">{{
+      <span class="hidden shrink-0 text-xs font-semibold text-zinc-600 sm:inline">{{
         $t("academy.count", { n: total })
       }}</span>
     </div>
 
     <!-- Content -->
-    <div class="flex-1 px-4 sm:px-8 py-6 sm:py-8 max-w-5xl mx-auto w-full">
+    <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <!-- Example legend -->
       <div
-        class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 sm:mb-8 px-3 sm:px-4 py-3 border text-[11px] dark:bg-zinc-900/40 dark:border-zinc-800 dark:text-zinc-400 bg-zinc-50 border-zinc-200 text-zinc-600"
+        class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-zinc-200 bg-zinc-50 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400"
       >
-        <span class="font-bold uppercase tracking-widest dark:text-zinc-300 text-zinc-700">{{
+        <span class="font-bold tracking-widest text-zinc-700 uppercase dark:text-zinc-300">{{
           $t("academy.colors")
         }}</span>
         <span class="flex items-center gap-1.5"
-          ><span class="w-3 h-3 bg-emerald-500/30 ring-1 ring-emerald-500 inline-block"></span>
+          ><span class="inline-block h-3 w-3 bg-emerald-500/30 ring-1 ring-emerald-500"></span>
           {{ $t("academy.placedCell") }}</span
         >
         <span class="flex items-center gap-1.5"
-          ><span class="w-3 h-3 bg-indigo-500/40 ring-1 ring-indigo-400 inline-block"></span>
+          ><span class="inline-block h-3 w-3 bg-indigo-500/40 ring-1 ring-indigo-400"></span>
           {{ $t("academy.pattern") }}</span
         >
         <span class="flex items-center gap-1.5"
-          ><span class="w-3 h-3 bg-rose-500/40 ring-1 ring-rose-400 inline-block"></span>
+          ><span class="inline-block h-3 w-3 bg-rose-500/40 ring-1 ring-rose-400"></span>
           {{ $t("academy.eliminated") }}</span
         >
-        <span class="ml-auto text-zinc-600 hidden sm:inline">{{ $t("academy.tapHint") }}</span>
+        <span class="ml-auto hidden text-zinc-600 sm:inline">{{ $t("academy.tapHint") }}</span>
       </div>
 
       <div v-for="tier in tiers" :key="tier" class="mb-10 sm:mb-12">
         <!-- Tier heading -->
-        <div class="flex items-center gap-3 mb-2">
+        <div class="mb-2 flex items-center gap-3">
           <h2
             :class="tierHeading[tier]"
-            class="text-lg sm:text-xl font-black uppercase tracking-widest"
+            class="text-lg font-black tracking-widest uppercase sm:text-xl"
           >
             {{ $t(`academy.tier.${tier}`) }}
           </h2>
           <span
             :class="tierBadgeClass[tier]"
-            class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border"
+            class="border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
           >
             {{ byTier(tier).length }}
           </span>
-          <div class="flex-1 h-px dark:bg-zinc-800 bg-zinc-200" />
+          <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
         </div>
-        <p class="text-xs text-zinc-500 mb-4">{{ $t(`academy.tier.${tier}Desc`) }}</p>
+        <p class="mb-4 text-xs text-zinc-500">{{ $t(`academy.tier.${tier}Desc`) }}</p>
 
         <!-- Cards grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div
             v-for="tech in byTier(tier)"
             :key="tech.id"
             :class="tierBorder[tier]"
-            class="border p-4 sm:p-5 transition-colors cursor-pointer dark:bg-zinc-900/60 bg-zinc-50"
+            class="cursor-pointer border bg-zinc-50 p-4 transition-colors sm:p-5 dark:bg-zinc-900/60"
             @click="toggleExample(tech.id)"
           >
-            <div class="flex items-start justify-between gap-3 mb-3">
-              <h3 class="text-base font-black leading-tight dark:text-zinc-100 text-zinc-900">
+            <div class="mb-3 flex items-start justify-between gap-3">
+              <h3 class="text-base leading-tight font-black text-zinc-900 dark:text-zinc-100">
                 {{ techName(tech.id) }}
               </h3>
-              <div class="flex items-center gap-1.5 shrink-0">
+              <div class="flex shrink-0 items-center gap-1.5">
                 <span
                   v-if="techStats.getCount(techName(tech.id)) > 0"
-                  class="text-[9px] font-bold px-1.5 py-0.5 border dark:bg-zinc-700/60 dark:border-zinc-600 dark:text-zinc-400 bg-zinc-200 border-zinc-300 text-zinc-600"
+                  class="border border-zinc-300 bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400"
                   :title="$t('modal.usedTotal', { n: techStats.getCount(techName(tech.id)) })"
                   >×{{ techStats.getCount(techName(tech.id)) }}</span
                 >
                 <svg
-                  class="w-4 h-4 text-zinc-500 transition-transform"
+                  class="h-4 w-4 text-zinc-500 transition-transform"
                   :class="{ 'rotate-180': expanded.has(tech.id) }"
                   fill="none"
                   stroke="currentColor"
@@ -254,18 +254,18 @@ const total = computed(() => techniques.length);
 
             <div class="space-y-3">
               <div>
-                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                   {{ $t("academy.lookForLabel") }}
                 </p>
-                <p class="text-sm leading-relaxed dark:text-zinc-300 text-zinc-700">
+                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                   {{ $t(`academy.tech.${tech.id}.lookFor`) }}
                 </p>
               </div>
               <div>
-                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
                   {{ $t("academy.howItHelpsLabel") }}
                 </p>
-                <p class="text-sm leading-relaxed dark:text-zinc-400 text-zinc-600">
+                <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                   {{ $t(`academy.tech.${tech.id}.howItHelps`) }}
                 </p>
               </div>
@@ -273,11 +273,11 @@ const total = computed(() => techniques.length);
 
             <div
               v-if="expanded.has(tech.id) && exampleFor(tech.id)"
-              class="mt-4 pt-4 border-t dark:border-zinc-800 border-zinc-200"
+              class="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
               @click.stop
             >
               <p
-                class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 text-center"
+                class="mb-3 text-center text-[10px] font-bold tracking-widest text-zinc-500 uppercase"
               >
                 {{ $t("academy.workedExample") }}
               </p>
@@ -289,7 +289,7 @@ const total = computed(() => techniques.length);
                 :elimination="elimDisplay(exampleFor(tech.id)!)"
               />
               <p
-                class="text-xs leading-relaxed mt-3 text-center max-w-sm mx-auto dark:text-zinc-400 text-zinc-600"
+                class="mx-auto mt-3 max-w-sm text-center text-xs leading-relaxed text-zinc-600 dark:text-zinc-400"
               >
                 {{ caption(tech.id, exampleFor(tech.id)!) }}
               </p>
@@ -299,13 +299,13 @@ const total = computed(() => techniques.length);
       </div>
 
       <!-- Footer -->
-      <div class="border-t pt-8 text-center dark:border-zinc-800 border-zinc-200">
-        <p class="text-xs text-zinc-600 leading-relaxed max-w-lg mx-auto">
+      <div class="border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
+        <p class="mx-auto max-w-lg text-xs leading-relaxed text-zinc-600">
           {{ $t("academy.footer") }}
         </p>
         <button
           @click="emit('back-to-menu')"
-          class="mt-6 px-8 py-3 border text-sm font-bold uppercase tracking-wider transition-all active:scale-95 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-300 bg-zinc-50 hover:bg-zinc-100 border-zinc-300 text-zinc-700"
+          class="mt-6 border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {{ $t("academy.back") }}
         </button>

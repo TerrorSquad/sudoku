@@ -61,7 +61,7 @@ const cellClasses = computed(() => {
   <div
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border-zinc-400 dark:border-zinc-600 cursor-pointer transition-all duration-100 p-0.5 no-select"
+    class="no-select relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 3xl:text-4xl dark:border-zinc-600 dark:bg-[#141417]"
   >
     <span
       v-if="value !== 0"
@@ -73,12 +73,12 @@ const cellClasses = computed(() => {
 
     <div
       v-else-if="showAllCandidates"
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px text-[10px] 3xl:text-[13px] font-semibold dark:text-zinc-400 text-zinc-600 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-semibold text-zinc-600 3xl:text-[13px] dark:text-zinc-400"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span
           :class="{
-            'dark:text-amber-400 text-amber-600 font-black': dynamicCandidates.includes(n),
+            'font-black text-amber-600 dark:text-amber-400': dynamicCandidates.includes(n),
           }"
         >
           {{ dynamicCandidates.includes(n) ? n : "" }}
@@ -88,7 +88,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px text-[10px] 3xl:text-[13px] font-black dark:text-zinc-400 text-zinc-600 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-black text-zinc-600 3xl:text-[13px] dark:text-zinc-400"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>

@@ -18,22 +18,22 @@ defineEmits<{
       :disabled="9 - counts[n]! <= 0"
       :class="
         9 - counts[n]! <= 0
-          ? 'opacity-30 pointer-events-none'
-          : 'dark:hover:bg-zinc-800 hover:bg-zinc-100 active:scale-95'
+          ? 'pointer-events-none opacity-30'
+          : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800'
       "
-      class="relative py-4 sm:py-5 3xl:py-6 text-2xl sm:text-3xl 3xl:text-4xl font-black font-game transition-all border flex items-center justify-center dark:bg-zinc-900 dark:border-zinc-800 bg-zinc-50 border-zinc-200"
+      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-4 font-game text-2xl font-black transition-all 3xl:py-6 3xl:text-4xl sm:py-5 sm:text-3xl dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span>{{ n }}</span>
       <span
         v-if="9 - counts[n]! > 0"
-        class="absolute top-1 right-1.5 text-[10px] 3xl:text-[13px] dark:text-violet-400 text-violet-600 font-extrabold tabular-nums leading-none"
+        class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-400"
       >
         {{ Math.max(0, 9 - counts[n]!) }}
       </span>
       <span
         v-else
         :key="`done-${n}`"
-        class="digit-done absolute top-1 right-1.5 text-[11px] 3xl:text-[14px] dark:text-emerald-400 text-emerald-600 font-black leading-none"
+        class="digit-done absolute top-1 right-1.5 text-[11px] leading-none font-black text-emerald-600 3xl:text-[14px] dark:text-emerald-400"
         >✓</span
       >
     </button>
