@@ -8,6 +8,8 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "generate": "nuxt generate",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
     "test": "vitest run"
@@ -25,6 +27,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "@vite-pwa/nuxt": "^1.1.1",
     "oxfmt": "^0.54.0",
+    "oxlint": "^1.69.0",
     "vitest": "^4.1.8"
   }
 }
