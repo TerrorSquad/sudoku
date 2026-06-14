@@ -28,6 +28,3 @@ logs
 .claude/
 .agents/
 .playwright-mcp/
-
-# VS Code — machine-specific settings
-.vscode/
