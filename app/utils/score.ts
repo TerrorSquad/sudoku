@@ -49,7 +49,12 @@ export function baseScore(difficulty: string): number {
   return BASE[difficulty] ?? BASE.custom!;
 }
 
-export function computeScore({ difficulty, timeSeconds, mistakes, hintsUsed }: ScoreInput): ScoreBreakdown {
+export function computeScore({
+  difficulty,
+  timeSeconds,
+  mistakes,
+  hintsUsed,
+}: ScoreInput): ScoreBreakdown {
   const base = baseScore(difficulty);
   const par = PAR[difficulty] ?? PAR.custom!;
 

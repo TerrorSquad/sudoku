@@ -15,8 +15,8 @@ const props = defineProps<{
   notes: boolean[];
   showAllCandidates: boolean;
   dynamicCandidates: number[];
-  isHintTrigger: boolean,
-isHintElimination: boolean
+  isHintTrigger: boolean;
+  isHintElimination: boolean;
 }>();
 
 defineEmits<{
@@ -25,8 +25,8 @@ defineEmits<{
 
 // A player entry that's wrong (conflict or not matching the solution) shakes
 // instead of popping, for immediate tactile feedback on a mistake.
-const isWrong = computed(() =>
-  props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict)
+const isWrong = computed(
+  () => props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict),
 );
 
 // Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
@@ -43,12 +43,15 @@ const cellClasses = computed(() => {
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
     "dark:text-rose-400 text-rose-600 dark:!bg-rose-950/20 !bg-rose-100":
       !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
-    "dark:bg-zinc-800/40 bg-zinc-300/50 dark:border-zinc-400 border-zinc-600": props.isHighlighted && !props.isSelected,
+    "dark:bg-zinc-800/40 bg-zinc-300/50 dark:border-zinc-400 border-zinc-600":
+      props.isHighlighted && !props.isSelected,
     "!bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
-    "dark:!bg-violet-950/60 !bg-violet-200 ring-2 dark:ring-violet-400 ring-violet-600 z-10": props.isSelected && !props.hasConflict,
-    "dark:!bg-rose-950/50 !bg-rose-200 ring-2 dark:ring-rose-500 ring-rose-600 z-10": props.isSelected && props.hasConflict,
-    '!bg-indigo-500/30 ring-1 ring-indigo-400 z-10': props.isHintTrigger,
-'!bg-rose-500/30 ring-1 ring-rose-400 z-10': props.isHintElimination,
+    "dark:!bg-violet-950/60 !bg-violet-200 ring-2 dark:ring-violet-400 ring-violet-600 z-10":
+      props.isSelected && !props.hasConflict,
+    "dark:!bg-rose-950/50 !bg-rose-200 ring-2 dark:ring-rose-500 ring-rose-600 z-10":
+      props.isSelected && props.hasConflict,
+    "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
+    "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
   };
 });
 </script>
@@ -59,14 +62,24 @@ const cellClasses = computed(() => {
     :class="cellClasses"
     class="relative flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border-zinc-400 dark:border-zinc-600 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
-    <span v-if="value !== 0" :key="value" class="font-game" :class="isWrong ? 'cell-shake' : 'cell-pop'">{{ value }}</span>
+    <span
+      v-if="value !== 0"
+      :key="value"
+      class="font-game"
+      :class="isWrong ? 'cell-shake' : 'cell-pop'"
+      >{{ value }}</span
+    >
 
     <div
       v-else-if="showAllCandidates"
       class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px text-[10px] 3xl:text-[13px] font-semibold dark:text-zinc-400 text-zinc-600 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
-        <span :class="{ 'dark:text-amber-400 text-amber-600 font-black': dynamicCandidates.includes(n) }">
+        <span
+          :class="{
+            'dark:text-amber-400 text-amber-600 font-black': dynamicCandidates.includes(n),
+          }"
+        >
           {{ dynamicCandidates.includes(n) ? n : "" }}
         </span>
       </div>
@@ -85,20 +98,40 @@ const cellClasses = computed(() => {
 
 <style scoped>
 @keyframes cell-pop {
-  0%   { transform: scale(0.4); opacity: 0; }
-  60%  { transform: scale(1.18); }
-  100% { transform: scale(1);   opacity: 1; }
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 .cell-pop {
   animation: cell-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes cell-shake {
-  0%   { transform: translateX(0); }
-  20%  { transform: translateX(-4px); }
-  40%  { transform: translateX(4px); }
-  60%  { transform: translateX(-3px); }
-  80%  { transform: translateX(2px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 .cell-shake {
   animation: cell-shake 0.32s ease-in-out both;

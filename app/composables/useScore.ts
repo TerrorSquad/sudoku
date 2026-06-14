@@ -1,15 +1,15 @@
-const KEY = 'sudoku_v1_score';
+const KEY = "sudoku_v1_score";
 
 export interface DifficultyStat {
-  best: number;      // best single-game score
-  wins: number;      // games won at this difficulty
-  bestTime: number;  // fastest win in seconds (0 = none yet)
+  best: number; // best single-game score
+  wins: number; // games won at this difficulty
+  bestTime: number; // fastest win in seconds (0 = none yet)
 }
 
 export interface ScoreStats {
-  total: number;                          // lifetime points
+  total: number; // lifetime points
   gamesWon: number;
-  best: Record<string, number>;           // best score per difficulty (kept for the win modal)
+  best: Record<string, number>; // best score per difficulty (kept for the win modal)
   perDifficulty: Record<string, DifficultyStat>;
 }
 
@@ -25,7 +25,7 @@ export interface RecordResult {
 
 export function useScore() {
   function getStats(): ScoreStats {
-    if (typeof window === 'undefined') return empty();
+    if (typeof window === "undefined") return empty();
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return empty();
@@ -59,13 +59,16 @@ export function useScore() {
     const d = stats.perDifficulty[difficulty] ?? { best: 0, wins: 0, bestTime: 0 };
     d.wins += 1;
     d.best = Math.max(d.best, points);
-    if (timeSeconds > 0) d.bestTime = d.bestTime === 0 ? timeSeconds : Math.min(d.bestTime, timeSeconds);
+    if (timeSeconds > 0)
+      d.bestTime = d.bestTime === 0 ? timeSeconds : Math.min(d.bestTime, timeSeconds);
     stats.perDifficulty[difficulty] = d;
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
         localStorage.setItem(KEY, JSON.stringify(stats));
-      } catch { /* storage full / unavailable — score is non-critical */ }
+      } catch {
+        /* storage full / unavailable — score is non-critical */
+      }
     }
     return { stats, isNewBest, previousBest };
   }

@@ -1,13 +1,13 @@
-import type { Grid } from '../types/sudoku';
-import { generatePuzzle, makeRng, seedFromString } from '../utils/sudokuCore';
+import type { Grid } from "../types/sudoku";
+import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
 const DAILY_REMOVE_TARGET = 45;
 
 /** Local calendar date (YYYY-MM-DD) — the daily rolls over at local midnight, not UTC. */
 export function localDateKey(date: Date = new Date()): string {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
@@ -21,7 +21,10 @@ export function generateDailyBoard(dateStr: string): Grid {
  * today's puzzle hasn't been finished yet (an unplayed today doesn't
  * break the streak until the day is over).
  */
-export function computeStreak(isCompleted: (key: string) => boolean, today: Date = new Date()): number {
+export function computeStreak(
+  isCompleted: (key: string) => boolean,
+  today: Date = new Date(),
+): number {
   const day = new Date(today);
   if (!isCompleted(localDateKey(day))) day.setDate(day.getDate() - 1);
   let streak = 0;
@@ -32,7 +35,7 @@ export function computeStreak(isCompleted: (key: string) => boolean, today: Date
   return streak;
 }
 
-const SAVE_PREFIX = 'sudoku_v1_daily_';
+const SAVE_PREFIX = "sudoku_v1_daily_";
 
 interface DailyRecord {
   completed: boolean;
@@ -48,7 +51,7 @@ export function useDailyPuzzle() {
   }
 
   function getRecordFor(dateKey: string): DailyRecord | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     try {
       const raw = localStorage.getItem(SAVE_PREFIX + dateKey);
       return raw ? (JSON.parse(raw) as DailyRecord) : null;
@@ -62,14 +65,14 @@ export function useDailyPuzzle() {
   }
 
   function markComplete(time: number, mistakes: number): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     try {
       localStorage.setItem(SAVE_PREFIX + key, JSON.stringify({ completed: true, time, mistakes }));
-    } catch { }
+    } catch {}
   }
 
   function getStreak(): number {
-    return computeStreak(k => getRecordFor(k)?.completed === true);
+    return computeStreak((k) => getRecordFor(k)?.completed === true);
   }
 
   return { getBoard, getRecord, markComplete, getStreak, dateKey: key };

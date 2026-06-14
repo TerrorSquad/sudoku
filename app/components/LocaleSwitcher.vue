@@ -2,7 +2,7 @@
 const { locale, locales, setLocale } = useI18n();
 
 const items = computed(() =>
-  locales.value.map((l) => ({ label: l.name ?? l.code, value: l.code }))
+  locales.value.map((l) => ({ label: l.name ?? l.code, value: l.code })),
 );
 
 const selected = computed({

@@ -1,4 +1,4 @@
-import type { Grid, CellCoord } from '../types/sudoku';
+import type { Grid, CellCoord } from "../types/sudoku";
 
 // Pure sudoku logic: no Vue, no i18n — unit-testable and reusable
 // (engine composable, daily puzzle, difficulty grader).
@@ -9,19 +9,20 @@ export type Rng = () => number;
 export function makeRng(seed: number): Rng {
   let s = seed;
   return () => {
-    s |= 0; s = s + 0x6D2B79F5 | 0;
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
   };
 }
 
 export function seedFromString(str: string): number {
-  return str.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 1);
+  return str.split("").reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0, 1);
 }
 
 export function cloneGrid(board: Grid): Grid {
-  return board.map(row => [...row]);
+  return board.map((row) => [...row]);
 }
 
 export function isValidPlacement(board: Grid, row: number, col: number, num: number): boolean {
@@ -57,7 +58,7 @@ export function getConflictCells(board: Grid, row: number, col: number, num: num
       const r = startRow + i;
       const c = startCol + j;
       if ((r !== row || c !== col) && board[r]![c] === num) {
-        if (!conflicts.some(item => item.r === r && item.c === c)) {
+        if (!conflicts.some((item) => item.r === r && item.c === c)) {
           conflicts.push({ r, c });
         }
       }
@@ -69,7 +70,7 @@ export function getConflictCells(board: Grid, row: number, col: number, num: num
 /** Candidate digits per empty cell (empty array for filled cells). */
 export function getGridCandidates(board: Grid): number[][][] {
   const candidates: number[][][] = Array.from({ length: 9 }, () =>
-    Array.from({ length: 9 }, () => [] as number[])
+    Array.from({ length: 9 }, () => [] as number[]),
   );
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
@@ -85,13 +86,20 @@ export function getGridCandidates(board: Grid): number[][][] {
 
 function popcount(x: number): number {
   let count = 0;
-  while (x) { x &= x - 1; count++; }
+  while (x) {
+    x &= x - 1;
+    count++;
+  }
   return count;
 }
 
 const boxIndex = (r: number, c: number) => Math.floor(r / 3) * 3 + Math.floor(c / 3);
 
-interface Masks { rows: number[]; cols: number[]; boxes: number[] }
+interface Masks {
+  rows: number[];
+  cols: number[];
+  boxes: number[];
+}
 
 /** Build bitmasks of used digits per row/col/box. Returns null if givens conflict. */
 function buildMasks(board: Grid): Masks | null {
@@ -104,8 +112,10 @@ function buildMasks(board: Grid): Masks | null {
       if (v === 0) continue;
       const bit = 1 << (v - 1);
       const b = boxIndex(r, c);
-      if ((rows[r] & bit) || (cols[c] & bit) || (boxes[b] & bit)) return null;
-      rows[r] |= bit; cols[c] |= bit; boxes[b] |= bit;
+      if (rows[r] & bit || cols[c] & bit || boxes[b] & bit) return null;
+      rows[r] |= bit;
+      cols[c] |= bit;
+      boxes[b] |= bit;
     }
   }
   return { rows, cols, boxes };
@@ -125,31 +135,47 @@ export function countSolutions(board: Grid, limit = 2): number {
   function search(): void {
     if (count >= limit) return;
 
-    let bestR = -1; let bestC = -1; let bestMask = 0; let bestCount = 10;
+    let bestR = -1;
+    let bestC = -1;
+    let bestMask = 0;
+    let bestCount = 10;
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         if (b[r]![c] !== 0) continue;
-        const mask = ~(rows[r]! | cols[c]! | boxes[boxIndex(r, c)]!) & 0x1FF;
+        const mask = ~(rows[r]! | cols[c]! | boxes[boxIndex(r, c)]!) & 0x1ff;
         const n = popcount(mask);
         if (n === 0) return; // dead end
         if (n < bestCount) {
-          bestCount = n; bestR = r; bestC = c; bestMask = mask;
-          if (n === 1) { r = 9; break; }
+          bestCount = n;
+          bestR = r;
+          bestC = c;
+          bestMask = mask;
+          if (n === 1) {
+            r = 9;
+            break;
+          }
         }
       }
     }
 
-    if (bestR === -1) { count++; return; }
+    if (bestR === -1) {
+      count++;
+      return;
+    }
 
     const bIdx = boxIndex(bestR, bestC);
     for (let v = 0; v < 9; v++) {
       const bit = 1 << v;
       if (!(bestMask & bit)) continue;
       b[bestR]![bestC] = v + 1;
-      rows[bestR]! |= bit; cols[bestC]! |= bit; boxes[bIdx]! |= bit;
+      rows[bestR]! |= bit;
+      cols[bestC]! |= bit;
+      boxes[bIdx]! |= bit;
       search();
       b[bestR]![bestC] = 0;
-      rows[bestR]! &= ~bit; cols[bestC]! &= ~bit; boxes[bIdx]! &= ~bit;
+      rows[bestR]! &= ~bit;
+      cols[bestC]! &= ~bit;
+      boxes[bIdx]! &= ~bit;
       if (count >= limit) return;
     }
   }
@@ -170,16 +196,25 @@ export function solveBoard(board: Grid): Grid | null {
   const { rows, cols, boxes } = masks;
 
   function search(): boolean {
-    let bestR = -1; let bestC = -1; let bestMask = 0; let bestCount = 10;
+    let bestR = -1;
+    let bestC = -1;
+    let bestMask = 0;
+    let bestCount = 10;
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         if (b[r]![c] !== 0) continue;
-        const mask = ~(rows[r]! | cols[c]! | boxes[boxIndex(r, c)]!) & 0x1FF;
+        const mask = ~(rows[r]! | cols[c]! | boxes[boxIndex(r, c)]!) & 0x1ff;
         const n = popcount(mask);
         if (n === 0) return false;
         if (n < bestCount) {
-          bestCount = n; bestR = r; bestC = c; bestMask = mask;
-          if (n === 1) { r = 9; break; }
+          bestCount = n;
+          bestR = r;
+          bestC = c;
+          bestMask = mask;
+          if (n === 1) {
+            r = 9;
+            break;
+          }
         }
       }
     }
@@ -190,10 +225,14 @@ export function solveBoard(board: Grid): Grid | null {
       const bit = 1 << v;
       if (!(bestMask & bit)) continue;
       b[bestR]![bestC] = v + 1;
-      rows[bestR]! |= bit; cols[bestC]! |= bit; boxes[bIdx]! |= bit;
+      rows[bestR]! |= bit;
+      cols[bestC]! |= bit;
+      boxes[bIdx]! |= bit;
       if (search()) return true;
       b[bestR]![bestC] = 0;
-      rows[bestR]! &= ~bit; cols[bestC]! &= ~bit; boxes[bIdx]! &= ~bit;
+      rows[bestR]! &= ~bit;
+      cols[bestC]! &= ~bit;
+      boxes[bIdx]! &= ~bit;
     }
     return false;
   }
@@ -212,7 +251,9 @@ function shuffled<T>(arr: T[], rng: Rng): T[] {
 
 /** Generate a random fully-solved grid via randomized backtracking. */
 export function generateSolvedGrid(rng: Rng = Math.random): Grid {
-  const b: Grid = Array(9).fill(null).map(() => Array(9).fill(0));
+  const b: Grid = Array(9)
+    .fill(null)
+    .map(() => Array(9).fill(0));
 
   function fill(idx: number): boolean {
     if (idx === 81) return true;
@@ -247,7 +288,10 @@ export interface GeneratedPuzzle {
 export function generatePuzzle(removeTarget: number, rng: Rng = Math.random): GeneratedPuzzle {
   const solution = generateSolvedGrid(rng);
   const puzzle = cloneGrid(solution);
-  const order = shuffled(Array.from({ length: 81 }, (_, i) => i), rng);
+  const order = shuffled(
+    Array.from({ length: 81 }, (_, i) => i),
+    rng,
+  );
 
   let removed = 0;
   for (const idx of order) {

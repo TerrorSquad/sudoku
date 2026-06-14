@@ -1,14 +1,19 @@
-import { ref, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import type { Grid, NotesGrid, CellCoord, HintCoordinate } from '../types/sudoku';
+import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
+import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
 import {
   solveBoard,
   cloneGrid,
   isValidPlacement,
   getGridCandidates,
   getConflictCells as findConflictCells,
-} from '../utils/sudokuCore';
-import { generateGradedPuzzle, nextHint, type SolveMove, type DigitAt } from '../utils/sudokuGrader';
+} from "../utils/sudokuCore";
+import {
+  generateGradedPuzzle,
+  nextHint,
+  type SolveMove,
+  type DigitAt,
+} from "../utils/sudokuGrader";
 
 export interface ExplanationStep {
   label: string;
@@ -26,10 +31,30 @@ export interface ComplexHint {
 export function useSudokuEngine() {
   const { t } = useI18n();
 
-  const currentBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
-  const initialBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
-  const solvedBoard = ref<Grid>(Array(9).fill(null).map(() => Array(9).fill(0)));
-  const notesBoard = ref<NotesGrid>(Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false))));
+  const currentBoard = ref<Grid>(
+    Array(9)
+      .fill(null)
+      .map(() => Array(9).fill(0)),
+  );
+  const initialBoard = ref<Grid>(
+    Array(9)
+      .fill(null)
+      .map(() => Array(9).fill(0)),
+  );
+  const solvedBoard = ref<Grid>(
+    Array(9)
+      .fill(null)
+      .map(() => Array(9).fill(0)),
+  );
+  const notesBoard = ref<NotesGrid>(
+    Array(9)
+      .fill(null)
+      .map(() =>
+        Array(9)
+          .fill(null)
+          .map(() => Array(10).fill(false)),
+      ),
+  );
   const boardHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
 
   const selectedCell = ref<CellCoord | null>(null);
@@ -87,11 +112,17 @@ export function useSudokuEngine() {
   function startNewGame(difficulty: string) {
     const { puzzle, solution } = generateGradedPuzzle(difficulty);
 
-    initialBoard.value = puzzle.map(row => [...row]);
-    currentBoard.value = puzzle.map(row => [...row]);
+    initialBoard.value = puzzle.map((row) => [...row]);
+    currentBoard.value = puzzle.map((row) => [...row]);
     solvedBoard.value = solution;
 
-    notesBoard.value = Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false)));
+    notesBoard.value = Array(9)
+      .fill(null)
+      .map(() =>
+        Array(9)
+          .fill(null)
+          .map(() => Array(10).fill(false)),
+      );
     boardHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
@@ -99,13 +130,19 @@ export function useSudokuEngine() {
   }
 
   function loadCustomBoard(board: Grid) {
-    initialBoard.value = board.map(row => [...row]);
-    currentBoard.value = board.map(row => [...row]);
+    initialBoard.value = board.map((row) => [...row]);
+    currentBoard.value = board.map((row) => [...row]);
 
     const solved = solveBoard(board);
     solvedBoard.value = solved ?? cloneGrid(board);
 
-    notesBoard.value = Array(9).fill(null).map(() => Array(9).fill(null).map(() => Array(10).fill(false)));
+    notesBoard.value = Array(9)
+      .fill(null)
+      .map(() =>
+        Array(9)
+          .fill(null)
+          .map(() => Array(10).fill(false)),
+      );
     boardHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
@@ -139,8 +176,8 @@ export function useSudokuEngine() {
   }
 
   function saveHistory() {
-    const boardCopy = currentBoard.value.map(row => [...row]);
-    const notesCopy = notesBoard.value.map(row => row.map(cell => [...cell]));
+    const boardCopy = currentBoard.value.map((row) => [...row]);
+    const notesCopy = notesBoard.value.map((row) => row.map((cell) => [...cell]));
     boardHistory.value.push({ board: boardCopy, notes: notesCopy });
     if (boardHistory.value.length > 25) boardHistory.value.shift();
   }
@@ -172,30 +209,45 @@ export function useSudokuEngine() {
   // hint can never place a digit its own explanation didn't justify.
   function buildHintFromMove(move: SolveMove): ComplexHint {
     const tech = move.technique;
-    const digitsStr = move.digits.join(', ');
+    const digitsStr = move.digits.join(", ");
     const findDesc = t(`hint.move.${tech}.desc`, {
       num: move.digits[0] ?? 0,
       digits: digitsStr,
       count: move.eliminations.length,
     });
-    const triggerCoords: HintCoordinate[] = move.triggers.map(c => ({ r: c.r, c: c.c, type: 'trigger' }));
+    const triggerCoords: HintCoordinate[] = move.triggers.map((c) => ({
+      r: c.r,
+      c: c.c,
+      type: "trigger",
+    }));
 
     let targetCell: CellCoord;
     let actionStep: ExplanationStep;
     if (move.placement) {
       targetCell = { r: move.placement.r, c: move.placement.c };
       actionStep = {
-        label: t('hint.move.placeLabel'),
-        description: t('hint.move.placeStep', { num: move.placement.num, row: move.placement.r + 1, col: move.placement.c + 1 }),
-        highlightCoords: [{ r: targetCell.r, c: targetCell.c, type: 'trigger' }],
+        label: t("hint.move.placeLabel"),
+        description: t("hint.move.placeStep", {
+          num: move.placement.num,
+          row: move.placement.r + 1,
+          col: move.placement.c + 1,
+        }),
+        highlightCoords: [{ r: targetCell.r, c: targetCell.c, type: "trigger" }],
       };
     } else {
       const focus = move.triggers[0] ?? move.eliminations[0]!;
       targetCell = { r: focus.r, c: focus.c };
       actionStep = {
-        label: t('hint.move.eliminateLabel'),
-        description: t('hint.move.eliminateStep', { digits: digitsStr, count: move.eliminations.length }),
-        highlightCoords: move.eliminations.map(e => ({ r: e.r, c: e.c, type: 'elimination' as const })),
+        label: t("hint.move.eliminateLabel"),
+        description: t("hint.move.eliminateStep", {
+          digits: digitsStr,
+          count: move.eliminations.length,
+        }),
+        highlightCoords: move.eliminations.map((e) => ({
+          r: e.r,
+          c: e.c,
+          type: "elimination" as const,
+        })),
       };
     }
 
@@ -204,7 +256,7 @@ export function useSudokuEngine() {
       targetCell,
       targetNum: move.placement?.num ?? 0,
       steps: [
-        { label: t('hint.move.findLabel'), description: findDesc, highlightCoords: triggerCoords },
+        { label: t("hint.move.findLabel"), description: findDesc, highlightCoords: triggerCoords },
         actionStep,
       ],
     };
@@ -214,7 +266,7 @@ export function useSudokuEngine() {
     const move = nextHint(currentBoard.value, appliedEliminations.value);
     if (!move) {
       activeMove.value = null;
-      hintStatus.value = t('hint.move.none');
+      hintStatus.value = t("hint.move.none");
       return;
     }
     activeMove.value = move;
@@ -273,7 +325,7 @@ export function useSudokuEngine() {
         byCell.get(key)!.delete(e.num);
       }
       for (const [key, set] of byCell) {
-        const [r, c] = key.split(',').map(Number) as [number, number];
+        const [r, c] = key.split(",").map(Number) as [number, number];
         const notes = Array(10).fill(false);
         for (const n of set) notes[n] = true;
         notesBoard.value[r]![c] = notes;
@@ -302,8 +354,8 @@ export function useSudokuEngine() {
     const step = activeComplexHint.value.steps[currentStepIndex.value];
     if (!step) return;
     activeHintCell.value = activeComplexHint.value.targetCell;
-    hintTriggers.value = step.highlightCoords.filter(c => c.type === 'trigger');
-    hintEliminations.value = step.highlightCoords.filter(c => c.type === 'elimination');
+    hintTriggers.value = step.highlightCoords.filter((c) => c.type === "trigger");
+    hintEliminations.value = step.highlightCoords.filter((c) => c.type === "elimination");
   }
 
   function restoreGame(save: {
@@ -312,10 +364,10 @@ export function useSudokuEngine() {
     solvedBoard: Grid;
     notesBoard: NotesGrid;
   }): void {
-    currentBoard.value = save.currentBoard.map(row => [...row]) as Grid;
-    initialBoard.value = save.initialBoard.map(row => [...row]) as Grid;
-    solvedBoard.value = save.solvedBoard.map(row => [...row]) as Grid;
-    notesBoard.value = save.notesBoard.map(row => row.map(cell => [...cell])) as NotesGrid;
+    currentBoard.value = save.currentBoard.map((row) => [...row]) as Grid;
+    initialBoard.value = save.initialBoard.map((row) => [...row]) as Grid;
+    solvedBoard.value = save.solvedBoard.map((row) => [...row]) as Grid;
+    notesBoard.value = save.notesBoard.map((row) => row.map((cell) => [...cell])) as NotesGrid;
     selectedCell.value = null;
     activeComplexHint.value = null;
     currentStepIndex.value = 0;

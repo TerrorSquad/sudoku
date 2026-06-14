@@ -7,7 +7,7 @@ export interface CellCoord {
 }
 
 export interface HintCoordinate extends CellCoord {
-  type: 'trigger' | 'elimination';
+  type: "trigger" | "elimination";
 }
 
 export interface HintResult {
@@ -19,4 +19,4 @@ export interface HintResult {
   explanationBody: string;
 }
 
-export type Difficulty = 'beginner' | 'easy' | 'medium' | 'hard' | 'expert' | 'master' | 'custom';
+export type Difficulty = "beginner" | "easy" | "medium" | "hard" | "expert" | "master" | "custom";

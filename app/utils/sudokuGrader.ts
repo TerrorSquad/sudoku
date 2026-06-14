@@ -1,5 +1,5 @@
-import type { Grid } from '../types/sudoku';
-import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from './sudokuCore';
+import type { Grid } from "../types/sudoku";
+import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sudokuCore";
 
 // Logical solver used to grade puzzles by the hardest technique required,
 // instead of guessing difficulty from clue count alone.
@@ -20,11 +20,14 @@ export type Grade = 1 | 2 | 3 | 4 | 5 | 6;
 export const STUCK: Grade = 6;
 
 const bit = (v: number) => 1 << (v - 1);
-const ALL_MASK = 0x1FF;
+const ALL_MASK = 0x1ff;
 
 function popcount(x: number): number {
   let count = 0;
-  while (x) { x &= x - 1; count++; }
+  while (x) {
+    x &= x - 1;
+    count++;
+  }
   return count;
 }
 
@@ -59,7 +62,10 @@ const PEERS: number[][] = Array.from({ length: 81 }, (_, i) => {
 });
 
 function* combos(items: number[], k: number, start = 0, acc: number[] = []): Generator<number[]> {
-  if (acc.length === k) { yield [...acc]; return; }
+  if (acc.length === k) {
+    yield [...acc];
+    return;
+  }
   for (let i = start; i <= items.length - (k - acc.length); i++) {
     acc.push(items[i]!);
     yield* combos(items, k, i + 1, acc);
@@ -68,8 +74,8 @@ function* combos(items: number[], k: number, start = 0, acc: number[] = []): Gen
 }
 
 interface SolveState {
-  board: number[];   // 81 cells, 0 = empty
-  cands: number[];   // candidate bitmask per cell, 0 for filled
+  board: number[]; // 81 cells, 0 = empty
+  cands: number[]; // candidate bitmask per cell, 0 for filled
 }
 
 function initState(puzzle: Grid): SolveState {
@@ -114,7 +120,7 @@ function placeHiddenSingles(s: SolveState): boolean {
       let only = -1;
       let count = 0;
       for (const i of unit) {
-        if (s.board[i] === 0 && (s.cands[i]! & b)) {
+        if (s.board[i] === 0 && s.cands[i]! & b) {
           only = i;
           if (++count > 1) break;
         }
@@ -136,20 +142,26 @@ function eliminateBoxLine(s: SolveState): boolean {
   for (const box of BOXES) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
-      const cells = box.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      const cells = box.filter((i) => s.board[i] === 0 && s.cands[i]! & b);
       if (cells.length < 2) continue;
-      const rows = new Set(cells.map(i => Math.floor(i / 9)));
-      const cols = new Set(cells.map(i => i % 9));
+      const rows = new Set(cells.map((i) => Math.floor(i / 9)));
+      const cols = new Set(cells.map((i) => i % 9));
       if (rows.size === 1) {
         const r = [...rows][0]!;
         for (const i of ROWS[r]!) {
-          if (!box.includes(i) && (s.cands[i]! & b)) { s.cands[i]! &= ~b; changed = true; }
+          if (!box.includes(i) && s.cands[i]! & b) {
+            s.cands[i]! &= ~b;
+            changed = true;
+          }
         }
       }
       if (cols.size === 1) {
         const c = [...cols][0]!;
         for (const i of COLS[c]!) {
-          if (!box.includes(i) && (s.cands[i]! & b)) { s.cands[i]! &= ~b; changed = true; }
+          if (!box.includes(i) && s.cands[i]! & b) {
+            s.cands[i]! &= ~b;
+            changed = true;
+          }
         }
       }
     }
@@ -158,13 +170,18 @@ function eliminateBoxLine(s: SolveState): boolean {
   for (const line of [...ROWS, ...COLS]) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
-      const cells = line.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      const cells = line.filter((i) => s.board[i] === 0 && s.cands[i]! & b);
       if (cells.length < 2) continue;
-      const boxes = new Set(cells.map(i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3)));
+      const boxes = new Set(
+        cells.map((i) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3)),
+      );
       if (boxes.size === 1) {
         const boxIdx = [...boxes][0]!;
         for (const i of BOXES[boxIdx]!) {
-          if (!line.includes(i) && (s.cands[i]! & b)) { s.cands[i]! &= ~b; changed = true; }
+          if (!line.includes(i) && s.cands[i]! & b) {
+            s.cands[i]! &= ~b;
+            changed = true;
+          }
         }
       }
     }
@@ -177,14 +194,14 @@ function eliminateBoxLine(s: SolveState): boolean {
 function eliminateNakedSubset(s: SolveState, k: number): boolean {
   let changed = false;
   for (const unit of ALL_UNITS) {
-    const empty = unit.filter(i => s.board[i] === 0 && popcount(s.cands[i]!) <= k);
+    const empty = unit.filter((i) => s.board[i] === 0 && popcount(s.cands[i]!) <= k);
     if (empty.length < k) continue;
     for (const combo of combos(empty, k)) {
       let union = 0;
       for (const i of combo) union |= s.cands[i]!;
       if (popcount(union) !== k) continue;
       for (const i of unit) {
-        if (s.board[i] === 0 && !combo.includes(i) && (s.cands[i]! & union)) {
+        if (s.board[i] === 0 && !combo.includes(i) && s.cands[i]! & union) {
           s.cands[i]! &= ~union;
           changed = true;
         }
@@ -197,7 +214,7 @@ function eliminateNakedSubset(s: SolveState, k: number): boolean {
 function eliminateHiddenSubset(s: SolveState, k: number): boolean {
   let changed = false;
   for (const unit of ALL_UNITS) {
-    const empty = unit.filter(i => s.board[i] === 0);
+    const empty = unit.filter((i) => s.board[i] === 0);
     if (empty.length <= k) continue;
     let present = 0;
     for (const i of empty) present |= s.cands[i]!;
@@ -206,7 +223,7 @@ function eliminateHiddenSubset(s: SolveState, k: number): boolean {
     for (const combo of combos(digits, k)) {
       let comboMask = 0;
       for (const v of combo) comboMask |= bit(v);
-      const holders = empty.filter(i => s.cands[i]! & comboMask);
+      const holders = empty.filter((i) => s.cands[i]! & comboMask);
       if (holders.length !== k) continue;
       for (const i of holders) {
         if (s.cands[i]! & ~comboMask) {
@@ -223,28 +240,33 @@ function eliminateHiddenSubset(s: SolveState, k: number): boolean {
 
 function eliminateFish(s: SolveState, k: number): boolean {
   let changed = false;
-  for (const [base, cover] of [[ROWS, COLS], [COLS, ROWS]] as const) {
+  for (const [base, cover] of [
+    [ROWS, COLS],
+    [COLS, ROWS],
+  ] as const) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
       const baseSets: { unit: number; positions: number[] }[] = [];
       for (let u = 0; u < 9; u++) {
-        const positions = base[u]!
-          .map((i, pos) => ({ i, pos }))
-          .filter(({ i }) => s.board[i] === 0 && (s.cands[i]! & b))
+        const positions = base[u]!.map((i, pos) => ({ i, pos }))
+          .filter(({ i }) => s.board[i] === 0 && s.cands[i]! & b)
           .map(({ pos }) => pos);
         if (positions.length >= 2 && positions.length <= k) baseSets.push({ unit: u, positions });
       }
       if (baseSets.length < k) continue;
-      for (const combo of combos(baseSets.map((_, idx) => idx), k)) {
+      for (const combo of combos(
+        baseSets.map((_, idx) => idx),
+        k,
+      )) {
         const cols = new Set<number>();
         for (const idx of combo) for (const p of baseSets[idx]!.positions) cols.add(p);
         if (cols.size !== k) continue;
-        const baseUnits = new Set(combo.map(idx => baseSets[idx]!.unit));
+        const baseUnits = new Set(combo.map((idx) => baseSets[idx]!.unit));
         for (const c of cols) {
           for (let u = 0; u < 9; u++) {
             if (baseUnits.has(u)) continue;
             const i = base[u]![c]!;
-            if (s.board[i] === 0 && (s.cands[i]! & b)) {
+            if (s.board[i] === 0 && s.cands[i]! & b) {
               s.cands[i]! &= ~b;
               changed = true;
             }
@@ -265,8 +287,9 @@ function eliminateXYWing(s: SolveState): boolean {
   }
   for (const pivot of bivalue) {
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(i =>
-      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & pm) && s.cands[i]! !== pm
+    const pincers = PEERS[pivot]!.filter(
+      (i) =>
+        s.board[i] === 0 && popcount(s.cands[i]!) === 2 && s.cands[i]! & pm && s.cands[i]! !== pm,
     );
     for (let a = 0; a < pincers.length; a++) {
       for (let b = a + 1; b < pincers.length; b++) {
@@ -279,7 +302,7 @@ function eliminateXYWing(s: SolveState): boolean {
         let changed = false;
         for (const i of PEERS[pincers[a]!]!) {
           if (i === pivot || i === pincers[b]) continue;
-          if (s.board[i] === 0 && (s.cands[i]! & z) && PEERS[pincers[b]!]!.includes(i)) {
+          if (s.board[i] === 0 && s.cands[i]! & z && PEERS[pincers[b]!]!.includes(i)) {
             s.cands[i]! &= ~z;
             changed = true;
           }
@@ -299,21 +322,25 @@ function eliminateXYZWing(s: SolveState): boolean {
   for (let pivot = 0; pivot < 81; pivot++) {
     if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(i =>
-      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0
+    const pincers = PEERS[pivot]!.filter(
+      (i) => s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0,
     );
     for (let a = 0; a < pincers.length; a++) {
       for (let b = a + 1; b < pincers.length; b++) {
         const ma = s.cands[pincers[a]!]!;
         const mb = s.cands[pincers[b]!]!;
-        if ((ma | mb) !== pm) continue;       // together cover all three digits
-        const z = ma & mb;                    // shared digit, eliminable
+        if ((ma | mb) !== pm) continue; // together cover all three digits
+        const z = ma & mb; // shared digit, eliminable
         if (popcount(z) !== 1) continue;
         let changed = false;
         for (let i = 0; i < 81; i++) {
           if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
           if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
-          if (PEERS[pivot]!.includes(i) && PEERS[pincers[a]!]!.includes(i) && PEERS[pincers[b]!]!.includes(i)) {
+          if (
+            PEERS[pivot]!.includes(i) &&
+            PEERS[pincers[a]!]!.includes(i) &&
+            PEERS[pincers[b]!]!.includes(i)
+          ) {
             s.cands[i]! &= ~z;
             changed = true;
           }
@@ -336,24 +363,39 @@ function eliminateXYZWing(s: SolveState): boolean {
 // ===========================================================================
 
 export type TechniqueId =
-  | 'naked-single' | 'hidden-single'
-  | 'pointing' | 'box-line'
-  | 'naked-pair' | 'hidden-pair'
-  | 'naked-triple' | 'hidden-triple'
-  | 'naked-quad' | 'hidden-quad'
-  | 'x-wing' | 'swordfish' | 'jellyfish'
-  | 'xy-wing' | 'xyz-wing';
+  | "naked-single"
+  | "hidden-single"
+  | "pointing"
+  | "box-line"
+  | "naked-pair"
+  | "hidden-pair"
+  | "naked-triple"
+  | "hidden-triple"
+  | "naked-quad"
+  | "hidden-quad"
+  | "x-wing"
+  | "swordfish"
+  | "jellyfish"
+  | "xy-wing"
+  | "xyz-wing";
 
-export interface CellRC { r: number; c: number; }
-export interface DigitAt { r: number; c: number; num: number; }
+export interface CellRC {
+  r: number;
+  c: number;
+}
+export interface DigitAt {
+  r: number;
+  c: number;
+  num: number;
+}
 
 export interface SolveMove {
   technique: TechniqueId;
   tier: Grade;
-  placement?: DigitAt;        // present for single techniques
-  eliminations: DigitAt[];    // candidates removed (elimination techniques)
-  triggers: CellRC[];         // the pattern cells that justify the move
-  digits: number[];           // the digit(s) the technique is about
+  placement?: DigitAt; // present for single techniques
+  eliminations: DigitAt[]; // candidates removed (elimination techniques)
+  triggers: CellRC[]; // the pattern cells that justify the move
+  digits: number[]; // the digit(s) the technique is about
 }
 
 const rc = (i: number): CellRC => ({ r: Math.floor(i / 9), c: i % 9 });
@@ -363,8 +405,15 @@ function findNakedSingleMove(s: SolveState): SolveMove | null {
   for (let i = 0; i < 81; i++) {
     if (s.board[i] === 0 && popcount(s.cands[i]!) === 1) {
       const num = maskDigits(s.cands[i]!)[0]!;
-      const triggers = PEERS[i]!.filter(p => s.board[p] !== 0).map(rc);
-      return { technique: 'naked-single', tier: 1, placement: { ...rc(i), num }, eliminations: [], triggers, digits: [num] };
+      const triggers = PEERS[i]!.filter((p) => s.board[p] !== 0).map(rc);
+      return {
+        technique: "naked-single",
+        tier: 1,
+        placement: { ...rc(i), num },
+        eliminations: [],
+        triggers,
+        digits: [num],
+      };
     }
   }
   return null;
@@ -374,13 +423,24 @@ function findHiddenSingleMove(s: SolveState): SolveMove | null {
   for (const unit of ALL_UNITS) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
-      let only = -1; let count = 0;
+      let only = -1;
+      let count = 0;
       for (const i of unit) {
-        if (s.board[i] === 0 && (s.cands[i]! & b)) { only = i; if (++count > 1) break; }
+        if (s.board[i] === 0 && s.cands[i]! & b) {
+          only = i;
+          if (++count > 1) break;
+        }
       }
       if (count === 1) {
-        const triggers = unit.filter(i => i !== only && s.board[i] !== 0).map(rc);
-        return { technique: 'hidden-single', tier: 1, placement: { ...rc(only), num: v }, eliminations: [], triggers, digits: [v] };
+        const triggers = unit.filter((i) => i !== only && s.board[i] !== 0).map(rc);
+        return {
+          technique: "hidden-single",
+          tier: 1,
+          placement: { ...rc(only), num: v },
+          eliminations: [],
+          triggers,
+          digits: [v],
+        };
       }
     }
   }
@@ -392,15 +452,22 @@ function findBoxLineMove(s: SolveState): SolveMove | null {
   for (const box of BOXES) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
-      const cells = box.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      const cells = box.filter((i) => s.board[i] === 0 && s.cands[i]! & b);
       if (cells.length < 2) continue;
-      const rows = new Set(cells.map(i => Math.floor(i / 9)));
-      const cols = new Set(cells.map(i => i % 9));
-      const line = rows.size === 1 ? ROWS[[...rows][0]!]! : cols.size === 1 ? COLS[[...cols][0]!]! : null;
+      const rows = new Set(cells.map((i) => Math.floor(i / 9)));
+      const cols = new Set(cells.map((i) => i % 9));
+      const line =
+        rows.size === 1 ? ROWS[[...rows][0]!]! : cols.size === 1 ? COLS[[...cols][0]!]! : null;
       if (!line) continue;
-      const elims = line.filter(i => !box.includes(i) && s.board[i] === 0 && (s.cands[i]! & b));
+      const elims = line.filter((i) => !box.includes(i) && s.board[i] === 0 && s.cands[i]! & b);
       if (elims.length) {
-        return { technique: 'pointing', tier: 2, eliminations: elims.map(i => ({ ...rc(i), num: v })), triggers: cells.map(rc), digits: [v] };
+        return {
+          technique: "pointing",
+          tier: 2,
+          eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+          triggers: cells.map(rc),
+          digits: [v],
+        };
       }
     }
   }
@@ -408,27 +475,45 @@ function findBoxLineMove(s: SolveState): SolveMove | null {
   for (const lineSet of [...ROWS, ...COLS]) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
-      const cells = lineSet.filter(i => s.board[i] === 0 && (s.cands[i]! & b));
+      const cells = lineSet.filter((i) => s.board[i] === 0 && s.cands[i]! & b);
       if (cells.length < 2) continue;
-      const boxes = new Set(cells.map(i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3)));
+      const boxes = new Set(
+        cells.map((i) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3)),
+      );
       if (boxes.size !== 1) continue;
       const box = BOXES[[...boxes][0]!]!;
-      const elims = box.filter(i => !lineSet.includes(i) && s.board[i] === 0 && (s.cands[i]! & b));
+      const elims = box.filter((i) => !lineSet.includes(i) && s.board[i] === 0 && s.cands[i]! & b);
       if (elims.length) {
-        return { technique: 'box-line', tier: 2, eliminations: elims.map(i => ({ ...rc(i), num: v })), triggers: cells.map(rc), digits: [v] };
+        return {
+          technique: "box-line",
+          tier: 2,
+          eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+          triggers: cells.map(rc),
+          digits: [v],
+        };
       }
     }
   }
   return null;
 }
 
-const NAKED_SUBSET_TECH: Record<number, TechniqueId> = { 2: 'naked-pair', 3: 'naked-triple', 4: 'naked-quad' };
-const HIDDEN_SUBSET_TECH: Record<number, TechniqueId> = { 2: 'hidden-pair', 3: 'hidden-triple', 4: 'hidden-quad' };
+const NAKED_SUBSET_TECH: Record<number, TechniqueId> = {
+  2: "naked-pair",
+  3: "naked-triple",
+  4: "naked-quad",
+};
+const HIDDEN_SUBSET_TECH: Record<number, TechniqueId> = {
+  2: "hidden-pair",
+  3: "hidden-triple",
+  4: "hidden-quad",
+};
 const SUBSET_TIER: Record<number, Grade> = { 2: 2, 3: 3, 4: 4 };
 
 function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
   for (const unit of ALL_UNITS) {
-    const empty = unit.filter(i => s.board[i] === 0 && popcount(s.cands[i]!) <= k && popcount(s.cands[i]!) >= 2);
+    const empty = unit.filter(
+      (i) => s.board[i] === 0 && popcount(s.cands[i]!) <= k && popcount(s.cands[i]!) >= 2,
+    );
     if (empty.length < k) continue;
     for (const combo of combos(empty, k)) {
       let union = 0;
@@ -436,12 +521,18 @@ function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
       if (popcount(union) !== k) continue;
       const elims: DigitAt[] = [];
       for (const i of unit) {
-        if (s.board[i] === 0 && !combo.includes(i) && (s.cands[i]! & union)) {
+        if (s.board[i] === 0 && !combo.includes(i) && s.cands[i]! & union) {
           for (const num of maskDigits(s.cands[i]! & union)) elims.push({ ...rc(i), num });
         }
       }
       if (elims.length) {
-        return { technique: NAKED_SUBSET_TECH[k]!, tier: SUBSET_TIER[k]!, eliminations: elims, triggers: combo.map(rc), digits: maskDigits(union) };
+        return {
+          technique: NAKED_SUBSET_TECH[k]!,
+          tier: SUBSET_TIER[k]!,
+          eliminations: elims,
+          triggers: combo.map(rc),
+          digits: maskDigits(union),
+        };
       }
     }
   }
@@ -450,7 +541,7 @@ function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
 
 function findHiddenSubsetMove(s: SolveState, k: number): SolveMove | null {
   for (const unit of ALL_UNITS) {
-    const empty = unit.filter(i => s.board[i] === 0);
+    const empty = unit.filter((i) => s.board[i] === 0);
     if (empty.length <= k) continue;
     let present = 0;
     for (const i of empty) present |= s.cands[i]!;
@@ -459,7 +550,7 @@ function findHiddenSubsetMove(s: SolveState, k: number): SolveMove | null {
     for (const combo of combos(digits, k)) {
       let comboMask = 0;
       for (const v of combo) comboMask |= bit(v);
-      const holders = empty.filter(i => s.cands[i]! & comboMask);
+      const holders = empty.filter((i) => s.cands[i]! & comboMask);
       if (holders.length !== k) continue;
       const elims: DigitAt[] = [];
       for (const i of holders) {
@@ -468,35 +559,46 @@ function findHiddenSubsetMove(s: SolveState, k: number): SolveMove | null {
         }
       }
       if (elims.length) {
-        return { technique: HIDDEN_SUBSET_TECH[k]!, tier: SUBSET_TIER[k]!, eliminations: elims, triggers: holders.map(rc), digits: combo };
+        return {
+          technique: HIDDEN_SUBSET_TECH[k]!,
+          tier: SUBSET_TIER[k]!,
+          eliminations: elims,
+          triggers: holders.map(rc),
+          digits: combo,
+        };
       }
     }
   }
   return null;
 }
 
-const FISH_TECH: Record<number, TechniqueId> = { 2: 'x-wing', 3: 'swordfish', 4: 'jellyfish' };
+const FISH_TECH: Record<number, TechniqueId> = { 2: "x-wing", 3: "swordfish", 4: "jellyfish" };
 const FISH_TIER: Record<number, Grade> = { 2: 3, 3: 4, 4: 5 };
 
 function findFishMove(s: SolveState, k: number): SolveMove | null {
-  for (const [base] of [[ROWS, COLS], [COLS, ROWS]] as const) {
+  for (const [base] of [
+    [ROWS, COLS],
+    [COLS, ROWS],
+  ] as const) {
     const baseIsRow = base === ROWS;
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
       const baseSets: { unit: number; positions: number[] }[] = [];
       for (let u = 0; u < 9; u++) {
-        const positions = base[u]!
-          .map((i, pos) => ({ i, pos }))
-          .filter(({ i }) => s.board[i] === 0 && (s.cands[i]! & b))
+        const positions = base[u]!.map((i, pos) => ({ i, pos }))
+          .filter(({ i }) => s.board[i] === 0 && s.cands[i]! & b)
           .map(({ pos }) => pos);
         if (positions.length >= 2 && positions.length <= k) baseSets.push({ unit: u, positions });
       }
       if (baseSets.length < k) continue;
-      for (const combo of combos(baseSets.map((_, i) => i), k)) {
+      for (const combo of combos(
+        baseSets.map((_, i) => i),
+        k,
+      )) {
         const lines = new Set<number>();
         for (const ci of combo) for (const p of baseSets[ci]!.positions) lines.add(p);
         if (lines.size !== k) continue;
-        const baseUnits = new Set(combo.map(ci => baseSets[ci]!.unit));
+        const baseUnits = new Set(combo.map((ci) => baseSets[ci]!.unit));
         const elims: DigitAt[] = [];
         const triggers: CellRC[] = [];
         for (const ci of combo) {
@@ -509,11 +611,17 @@ function findFishMove(s: SolveState, k: number): SolveMove | null {
           for (let u = 0; u < 9; u++) {
             if (baseUnits.has(u)) continue;
             const i = baseIsRow ? idx(u, p) : idx(p, u);
-            if (s.board[i] === 0 && (s.cands[i]! & b)) elims.push({ ...rc(i), num: v });
+            if (s.board[i] === 0 && s.cands[i]! & b) elims.push({ ...rc(i), num: v });
           }
         }
         if (elims.length) {
-          return { technique: FISH_TECH[k]!, tier: FISH_TIER[k]!, eliminations: elims, triggers, digits: [v] };
+          return {
+            technique: FISH_TECH[k]!,
+            tier: FISH_TIER[k]!,
+            eliminations: elims,
+            triggers,
+            digits: [v],
+          };
         }
       }
     }
@@ -526,8 +634,9 @@ function findXYWingMove(s: SolveState): SolveMove | null {
   for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
   for (const pivot of bivalue) {
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(i =>
-      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & pm) && s.cands[i]! !== pm
+    const pincers = PEERS[pivot]!.filter(
+      (i) =>
+        s.board[i] === 0 && popcount(s.cands[i]!) === 2 && s.cands[i]! & pm && s.cands[i]! !== pm,
     );
     for (let a = 0; a < pincers.length; a++) {
       for (let b = a + 1; b < pincers.length; b++) {
@@ -540,10 +649,17 @@ function findXYWingMove(s: SolveState): SolveMove | null {
         const elims: DigitAt[] = [];
         for (const i of PEERS[pincers[a]!]!) {
           if (i === pivot || i === pincers[b]) continue;
-          if (s.board[i] === 0 && (s.cands[i]! & z) && PEERS[pincers[b]!]!.includes(i)) elims.push({ ...rc(i), num: zNum });
+          if (s.board[i] === 0 && s.cands[i]! & z && PEERS[pincers[b]!]!.includes(i))
+            elims.push({ ...rc(i), num: zNum });
         }
         if (elims.length) {
-          return { technique: 'xy-wing', tier: 4, eliminations: elims, triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)], digits: [zNum] };
+          return {
+            technique: "xy-wing",
+            tier: 4,
+            eliminations: elims,
+            triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)],
+            digits: [zNum],
+          };
         }
       }
     }
@@ -555,8 +671,8 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
   for (let pivot = 0; pivot < 81; pivot++) {
     if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(i =>
-      s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0
+    const pincers = PEERS[pivot]!.filter(
+      (i) => s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0,
     );
     for (let a = 0; a < pincers.length; a++) {
       for (let b = a + 1; b < pincers.length; b++) {
@@ -570,12 +686,22 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
         for (let i = 0; i < 81; i++) {
           if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
           if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
-          if (PEERS[pivot]!.includes(i) && PEERS[pincers[a]!]!.includes(i) && PEERS[pincers[b]!]!.includes(i)) {
+          if (
+            PEERS[pivot]!.includes(i) &&
+            PEERS[pincers[a]!]!.includes(i) &&
+            PEERS[pincers[b]!]!.includes(i)
+          ) {
             elims.push({ ...rc(i), num: zNum });
           }
         }
         if (elims.length) {
-          return { technique: 'xyz-wing', tier: 5, eliminations: elims, triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)], digits: [zNum] };
+          return {
+            technique: "xyz-wing",
+            tier: 5,
+            eliminations: elims,
+            triggers: [rc(pivot), rc(pincers[a]!), rc(pincers[b]!)],
+            digits: [zNum],
+          };
         }
       }
     }
@@ -585,20 +711,22 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
 
 // Easiest-first dispatch — mirrors the grading tier order.
 function findNextMove(s: SolveState): SolveMove | null {
-  return findNakedSingleMove(s)
-    ?? findHiddenSingleMove(s)
-    ?? findBoxLineMove(s)
-    ?? findNakedSubsetMove(s, 2)
-    ?? findHiddenSubsetMove(s, 2)
-    ?? findNakedSubsetMove(s, 3)
-    ?? findHiddenSubsetMove(s, 3)
-    ?? findFishMove(s, 2)
-    ?? findNakedSubsetMove(s, 4)
-    ?? findHiddenSubsetMove(s, 4)
-    ?? findFishMove(s, 3)
-    ?? findXYWingMove(s)
-    ?? findFishMove(s, 4)
-    ?? findXYZWingMove(s);
+  return (
+    findNakedSingleMove(s) ??
+    findHiddenSingleMove(s) ??
+    findBoxLineMove(s) ??
+    findNakedSubsetMove(s, 2) ??
+    findHiddenSubsetMove(s, 2) ??
+    findNakedSubsetMove(s, 3) ??
+    findHiddenSubsetMove(s, 3) ??
+    findFishMove(s, 2) ??
+    findNakedSubsetMove(s, 4) ??
+    findHiddenSubsetMove(s, 4) ??
+    findFishMove(s, 3) ??
+    findXYWingMove(s) ??
+    findFishMove(s, 4) ??
+    findXYZWingMove(s)
+  );
 }
 
 /**
@@ -629,13 +757,26 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
 
   const tiers: { tier: Grade; run: () => boolean }[] = [
     { tier: 1, run: () => placeNakedSingles(s) || placeHiddenSingles(s) },
-    { tier: 2, run: () => eliminateBoxLine(s) || eliminateNakedSubset(s, 2) || eliminateHiddenSubset(s, 2) },
-    { tier: 3, run: () => eliminateNakedSubset(s, 3) || eliminateHiddenSubset(s, 3) || eliminateFish(s, 2) },
-    { tier: 4, run: () => eliminateNakedSubset(s, 4) || eliminateHiddenSubset(s, 4) || eliminateFish(s, 3) || eliminateXYWing(s) },
+    {
+      tier: 2,
+      run: () => eliminateBoxLine(s) || eliminateNakedSubset(s, 2) || eliminateHiddenSubset(s, 2),
+    },
+    {
+      tier: 3,
+      run: () => eliminateNakedSubset(s, 3) || eliminateHiddenSubset(s, 3) || eliminateFish(s, 2),
+    },
+    {
+      tier: 4,
+      run: () =>
+        eliminateNakedSubset(s, 4) ||
+        eliminateHiddenSubset(s, 4) ||
+        eliminateFish(s, 3) ||
+        eliminateXYWing(s),
+    },
     { tier: 5, run: () => eliminateFish(s, 4) || eliminateXYZWing(s) },
   ];
 
-  outer: while (s.board.some(v => v === 0)) {
+  outer: while (s.board.some((v) => v === 0)) {
     for (const { tier, run } of tiers) {
       if (run()) {
         if (tier > grade) grade = tier;
@@ -648,7 +789,7 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
 
   const board: Grid = [];
   for (let r = 0; r < 9; r++) board.push(s.board.slice(r * 9, r * 9 + 9));
-  return { grade, solved: s.board.every(v => v !== 0), board };
+  return { grade, solved: s.board.every((v) => v !== 0), board };
 }
 
 export function gradePuzzle(puzzle: Grid): Grade {
@@ -661,8 +802,8 @@ export interface GradedPuzzle extends GeneratedPuzzle {
 
 interface DifficultyTarget {
   removeTarget: number;
-  min: Grade;   // lowest acceptable tier (inclusive)
-  max: Grade;   // highest acceptable tier (inclusive)
+  min: Grade; // lowest acceptable tier (inclusive)
+  max: Grade; // highest acceptable tier (inclusive)
   ideal: Grade; // preferred tier; closest-to-ideal solved board is the fallback
 }
 
@@ -686,8 +827,17 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
  * returned, so difficulty degrades gracefully rather than ever shipping a
  * guess-only puzzle.
  */
-export function generateGradedPuzzle(difficulty: string, rng: Rng = Math.random, maxAttempts = 60): GradedPuzzle {
-  const target = DIFFICULTY_TARGETS[difficulty] ?? { removeTarget: 42, min: 1 as Grade, max: STUCK, ideal: 3 as Grade };
+export function generateGradedPuzzle(
+  difficulty: string,
+  rng: Rng = Math.random,
+  maxAttempts = 60,
+): GradedPuzzle {
+  const target = DIFFICULTY_TARGETS[difficulty] ?? {
+    removeTarget: 42,
+    min: 1 as Grade,
+    max: STUCK,
+    ideal: 3 as Grade,
+  };
   const removeTarget = target.removeTarget;
 
   let best: GradedPuzzle | null = null;
