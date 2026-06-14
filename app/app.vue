@@ -406,11 +406,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   <UApp :locale="localeMap[locale] ?? uiLocales.en">
   <div class="app-shell min-h-screen w-full antialiased flex flex-col dark:text-zinc-100 dark:bg-[#0c0a09] text-zinc-900 bg-white">
 
-    <!-- Theme + locale switcher -->
-    <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
+    <!-- Theme + locale switcher - temporarily disabled -->
+    <!-- <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
       <LocaleSwitcher />
       <UColorModeButton />
-    </div>
+    </div> -->
 
     <!-- MENU -->
     <div v-if="currentScreen === 'menu'" class="flex flex-col justify-center items-center flex-1 px-6 py-12 gap-10">
@@ -528,7 +528,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <!-- GAME -->
     <div
       v-else-if="currentScreen === 'game'"
-      class="flex flex-col lg:grid lg:max-3xl:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px] mx-auto px-3 sm:px-5 3xl:px-8 py-3 flex-1 items-start"
+      class="flex flex-col lg:grid lg:max-3xl:grid-cols-12 3xl:grid-cols-[240px_minmax(0,1fr)_420px] gap-4 lg:gap-6 3xl:gap-6 w-full max-w-7xl 3xl:max-w-[1900px]  sm:px-5 3xl:px-8 sm:py-3"
     >
 
       <!-- 3xl left sidebar: shortcuts & branding -->
@@ -561,14 +561,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       </div>
 
       <!-- Center / main game column -->
-      <div class="lg:max-3xl:col-span-7 3xl:col-span-1 flex flex-col gap-3">
-        <div class="flex flex-col gap-3 w-full mx-auto">
+      <div class="lg:max-3xl:col-span-7 3xl:col-span-1 flex flex-col gap-3 w-full">
+        <div class="flex flex-col">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"
             :mistakes="mistakes"
             :max-mistakes="3"
-            :hint-status="hintStatus"
             :difficulty="activeDifficulty"
             @toggle-pause="timer.togglePause()"
             @exit-game="exitToMenu"
@@ -601,18 +600,19 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
             :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
             @select-cell="handleSelectCell"
           />
-
-          <ControlPanel
-            :notes-mode="notesMode"
-            @undo="undoMove"
-            @erase="eraseCell(selectedCell)"
-            @toggle-notes="notesMode = !notesMode"
-            @trigger-hint="handleTriggerHint"
-            @auto-notes="handleAutoFillNotes"
-          />
-
-          <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
         </div>
+         <div class="flex flex-col gap-2 mx-2 sm:mx-0">
+            <ControlPanel
+              :notes-mode="notesMode"
+              @undo="undoMove"
+              @erase="eraseCell(selectedCell)"
+              @toggle-notes="notesMode = !notesMode"
+              @trigger-hint="handleTriggerHint"
+              @auto-notes="handleAutoFillNotes"
+            />
+
+            <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
+          </div>
       </div>
 
       <!-- Right / hint panel — on mobile only takes space once a hint is active -->

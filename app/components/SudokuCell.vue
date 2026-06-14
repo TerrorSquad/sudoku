@@ -29,11 +29,15 @@ const isWrong = computed(() =>
   props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict)
 );
 
-// Dinamičke klase za Genina stil (oštre ivice, debeli 3x3 borderi)
+// Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
 const cellClasses = computed(() => {
   return {
-    "sudoku-border-r": props.col === 2 || props.col === 5,
-    "sudoku-border-b": props.row === 2 || props.row === 5,
+    "border-l": props.col === 0,
+    "border-t": props.row === 0,
+    "border-r": props.col !== 2 && props.col !== 5,
+    "border-r-2": props.col === 2 || props.col === 5,
+    "border-b": props.row !== 2 && props.row !== 5,
+    "border-b-2": props.row === 2 || props.row === 5,
     "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
     "dark:text-violet-300 text-violet-600 font-semibold":
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
@@ -53,13 +57,13 @@ const cellClasses = computed(() => {
   <div
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative aspect-square flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border border-zinc-500 cursor-pointer transition-all duration-100 p-0.5 no-select"
+    class="relative flex items-center justify-center text-3xl 3xl:text-4xl font-bold dark:bg-[#141417] bg-zinc-100 border-zinc-400 dark:border-zinc-600 cursor-pointer transition-all duration-100 p-0.5 no-select"
   >
     <span v-if="value !== 0" :key="value" class="font-game" :class="isWrong ? 'cell-shake' : 'cell-pop'">{{ value }}</span>
 
     <div
       v-else-if="showAllCandidates"
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] 3xl:text-[13px] font-semibold text-zinc-500 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px text-[10px] 3xl:text-[13px] font-semibold dark:text-zinc-400 text-zinc-600 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span :class="{ 'dark:text-amber-400 text-amber-600 font-black': dynamicCandidates.includes(n) }">
@@ -70,7 +74,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-[1px] text-[10px] 3xl:text-[13px] font-black text-zinc-500 font-game"
+      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px text-[10px] 3xl:text-[13px] font-black dark:text-zinc-400 text-zinc-600 font-game"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>
@@ -80,12 +84,6 @@ const cellClasses = computed(() => {
 </template>
 
 <style scoped>
-.sudoku-border-r {
-  border-right-width: 3px !important;
-}
-.sudoku-border-b {
-  border-bottom-width: 3px !important;
-}
 @keyframes cell-pop {
   0%   { transform: scale(0.4); opacity: 0; }
   60%  { transform: scale(1.18); }
