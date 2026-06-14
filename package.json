@@ -3,6 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "build": "nuxt build",
     "dev": "TMPDIR=/tmp nuxt dev",
     "generate": "nuxt generate",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
     "@vite-pwa/nuxt": "^1.1.1",
+    "oxfmt": "^0.54.0",
     "vitest": "^4.1.8"
   }
 }
