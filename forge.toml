@@ -8,6 +8,14 @@ type = "node"
 restage = true
 group = "format"
 
+[hooks.pre-commit.tools.oxlint]
+command = "oxlint"
+args = ["--no-error-on-unmatched-pattern"]
+extensions = [".js", ".mjs", ".cjs", ".ts", ".vue"]
+type = "node"
+restage = true
+group = "format"
+
 # [hooks.pre-commit.tools.eslint]
 # command = "eslint"
 # args = ["--fix", "--cache", "--no-warn-ignored"]
