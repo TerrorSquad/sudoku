@@ -1,0 +1,28 @@
+[hooks.pre-commit]
+enabled = true
+
+[hooks.pre-commit.tools.oxfmt]
+command = "oxfmt"
+args = ["--no-error-on-unmatched-pattern"]
+type = "node"
+restage = true
+group = "format"
+
+# [hooks.pre-commit.tools.eslint]
+# command = "eslint"
+# args = ["--fix", "--cache", "--no-warn-ignored"]
+# type = "node"
+# extensions = [".js", ".jsx", ".ts", ".tsx", ".vue"]
+# restage = true
+# group = "lint"
+
+[hooks.commit-msg]
+enabled = true
+
+[hooks.commit-msg.policy]
+conventional_commits = true
+append_ticket_footer = true
+require_ticket = false
+
+[hooks.pre-push]
+enabled = false
