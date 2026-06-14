@@ -1,6 +1,8 @@
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
+
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
+
 import {
   solveBoard,
   cloneGrid,

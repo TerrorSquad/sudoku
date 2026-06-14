@@ -1,4 +1,5 @@
 import type { Grid } from "../types/sudoku";
+
 import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sudokuCore";
 
 // Logical solver used to grade puzzles by the hardest technique required,

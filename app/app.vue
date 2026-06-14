@@ -1,27 +1,27 @@
 <script setup lang="ts">
+import * as uiLocales from "@nuxt/ui/locale";
+import confetti from "canvas-confetti";
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useSudokuEngine } from "./composables/useSudokuEngine";
-import { useTimer } from "./composables/useTimer";
-
-import GameDashboard from "./components/GameDashboard.vue";
-import DifficultySelector from "./components/DifficultySelector.vue";
-import SudokuGrid from "./components/SudokuGrid.vue";
-import ControlPanel from "./components/ControlPanel.vue";
-import Numpad from "./components/Numpad.vue";
-import SideExplanationPanel from "./components/SideExplanationPanel.vue";
-import SudokuAcademy from "./components/SudokuAcademy.vue";
-import StatsScreen from "./components/StatsScreen.vue";
-import CustomImport from "./components/CustomImport.vue";
-import LocaleSwitcher from "./components/LocaleSwitcher.vue";
 
 import type { CellCoord, Difficulty } from "./types/sudoku";
-import confetti from "canvas-confetti";
-import { useGameSave } from "./composables/useGameSave";
-import { useTechniqueStats } from "./composables/useTechniqueStats";
+
+import ControlPanel from "./components/ControlPanel.vue";
+import CustomImport from "./components/CustomImport.vue";
+import DifficultySelector from "./components/DifficultySelector.vue";
+import GameDashboard from "./components/GameDashboard.vue";
+import LocaleSwitcher from "./components/LocaleSwitcher.vue";
+import Numpad from "./components/Numpad.vue";
+import SideExplanationPanel from "./components/SideExplanationPanel.vue";
+import StatsScreen from "./components/StatsScreen.vue";
+import SudokuAcademy from "./components/SudokuAcademy.vue";
+import SudokuGrid from "./components/SudokuGrid.vue";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
+import { useGameSave } from "./composables/useGameSave";
 import { useScore } from "./composables/useScore";
+import { useSudokuEngine } from "./composables/useSudokuEngine";
+import { useTechniqueStats } from "./composables/useTechniqueStats";
+import { useTimer } from "./composables/useTimer";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
-import * as uiLocales from "@nuxt/ui/locale";
 
 const { t, locale, locales } = useI18n();
 const localeMap = uiLocales as Record<string, typeof uiLocales.en>;

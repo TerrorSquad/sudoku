@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+
+import type { Grid } from "../types/sudoku";
+
 import {
   makeRng,
   seedFromString,
@@ -12,7 +15,6 @@ import {
   getGridCandidates,
   DIFFICULTY_REMOVE_COUNT,
 } from "../utils/sudokuCore";
-import type { Grid } from "../types/sudoku";
 
 function isCompleteValidGrid(board: Grid): boolean {
   for (let r = 0; r < 9; r++) {

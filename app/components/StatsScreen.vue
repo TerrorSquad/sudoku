@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+
+import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { useScore } from "../composables/useScore";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 
 const emit = defineEmits<{ (e: "back-to-menu"): void }>();
 

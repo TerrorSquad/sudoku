@@ -1,4 +1,5 @@
 import { ref, readonly } from "vue";
+
 import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
 
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert", "master"] as const;

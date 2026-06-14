@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+
+import type { Grid } from "../types/sudoku";
+
 import { makeRng, generatePuzzle, isValidPlacement, getGridCandidates } from "../utils/sudokuCore";
 import { nextHint, solveLogically, type SolveMove } from "../utils/sudokuGrader";
-import type { Grid } from "../types/sudoku";
 
 // Apply a move to a board the way the engine will, returning a fresh board.
 function applyPlacement(board: Grid, move: SolveMove): Grid {

@@ -1,4 +1,5 @@
 import type { Grid } from "../types/sudoku";
+
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
 const DAILY_REMOVE_TARGET = 45;

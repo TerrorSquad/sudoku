@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { useTechniqueStats } from "../composables/useTechniqueStats";
-import ExampleGrid from "./ExampleGrid.vue";
-import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+
 import type { TechniqueId } from "../utils/sudokuGrader";
+
+import { useTechniqueStats } from "../composables/useTechniqueStats";
+import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+import ExampleGrid from "./ExampleGrid.vue";
 
 const emit = defineEmits<{
   (e: "back-to-menu"): void;

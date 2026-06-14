@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+
 import type { Grid } from "../types/sudoku";
+
 import { countSolutions } from "../utils/sudokuCore";
 
 const emit = defineEmits<{

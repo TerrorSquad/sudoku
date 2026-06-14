@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import SudokuCell from "./SudokuCell.vue";
 import type { Grid, NotesGrid, CellCoord } from "../types/sudoku";
+
+import SudokuCell from "./SudokuCell.vue";
 
 const props = defineProps<{
   currentBoard: Grid;

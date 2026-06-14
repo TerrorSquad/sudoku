@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+
+import type { Grid } from "../types/sudoku";
+
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
 import { solveLogically, gradePuzzle, generateGradedPuzzle, STUCK } from "../utils/sudokuGrader";
-import type { Grid } from "../types/sudoku";
 
 describe("sudokuGrader — logical solver", () => {
   it("grades a nearly-full puzzle as singles (grade 1)", () => {
