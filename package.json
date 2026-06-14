@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
     "build": "nuxt build",
     "dev": "TMPDIR=/tmp nuxt dev",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "generate": "nuxt generate",
+    "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
-    "test": "vitest run",
-    "postinstall": "nuxt prepare"
+    "test": "vitest run"
   },
   "dependencies": {
     "@nuxt/ui": "^4.8.2",
