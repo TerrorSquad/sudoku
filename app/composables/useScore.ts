@@ -32,7 +32,7 @@ export function useScore() {
       const parsed = JSON.parse(raw) as Partial<ScoreStats>;
       const best = parsed.best ?? {};
       // Migrate older saves (no perDifficulty) from the flat best map.
-      const perDifficulty: Record<string, DifficultyStat> = { ...(parsed.perDifficulty ?? {}) };
+      const perDifficulty: Record<string, DifficultyStat> = { ...parsed.perDifficulty };
       for (const [diff, score] of Object.entries(best)) {
         if (!perDifficulty[diff]) perDifficulty[diff] = { best: score, wins: 0, bestTime: 0 };
       }
