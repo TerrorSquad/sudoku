@@ -3,6 +3,8 @@ import { computed } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
+import { SUDOKU_COLORS } from "../utils/sudokuColors";
+
 const props = defineProps<{
   row: number;
   col: number;
@@ -18,6 +20,7 @@ const props = defineProps<{
   dynamicCandidates: number[];
   isHintTrigger: boolean;
   isHintElimination: boolean;
+  colorMode: boolean;
 }>();
 
 defineEmits<{
@@ -63,8 +66,14 @@ const cellClasses = computed(() => {
     :class="cellClasses"
     class="no-select relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 3xl:text-4xl dark:border-zinc-600 dark:bg-[#141417]"
   >
+    <div
+      v-if="value !== 0 && colorMode"
+      :key="value"
+      :class="[SUDOKU_COLORS[value], isWrong ? 'cell-shake' : 'cell-pop']"
+      class="h-[60%] w-[60%] rounded-full"
+    />
     <span
-      v-if="value !== 0"
+      v-else-if="value !== 0"
       :key="value"
       class="font-game"
       :class="isWrong ? 'cell-shake' : 'cell-pop'"

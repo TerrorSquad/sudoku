@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
-defineProps<{ activeDifficulty: Difficulty }>();
+defineProps<{ activeDifficulty: Difficulty; colorMode: boolean }>();
 
 const emit = defineEmits<{
   (e: "select-difficulty", level: Difficulty): void;
   (e: "back-to-menu"): void;
+  (e: "update:colorMode", value: boolean): void;
 }>();
 </script>
 
@@ -19,6 +20,18 @@ const emit = defineEmits<{
       </h2>
       <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ $t("difficulty.subtitle") }}</p>
     </div>
+
+    <label
+      class="flex items-center justify-between border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{
+        $t("difficulty.colorMode")
+      }}</span>
+      <USwitch
+        :model-value="colorMode"
+        @update:model-value="(v: boolean) => emit('update:colorMode', v)"
+      />
+    </label>
 
     <div class="grid grid-cols-2 gap-3">
       <button

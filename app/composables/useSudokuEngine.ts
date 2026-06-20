@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { ref, computed, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
@@ -16,6 +16,7 @@ import {
   type SolveMove,
   type DigitAt,
 } from "../utils/sudokuGrader";
+import { digitLabel } from "../utils/sudokuColors";
 
 export interface ExplanationStep {
   label: string;
@@ -30,7 +31,7 @@ export interface ComplexHint {
   steps: ExplanationStep[];
 }
 
-export function useSudokuEngine() {
+export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
   const { t } = useI18n();
 
   const currentBoard = ref<Grid>(
@@ -211,9 +212,9 @@ export function useSudokuEngine() {
   // hint can never place a digit its own explanation didn't justify.
   function buildHintFromMove(move: SolveMove): ComplexHint {
     const tech = move.technique;
-    const digitsStr = move.digits.join(", ");
+    const digitsStr = move.digits.map((d) => digitLabel(d, colorMode.value, t)).join(", ");
     const findDesc = t(`hint.move.${tech}.desc`, {
-      num: move.digits[0] ?? 0,
+      num: digitLabel(move.digits[0] ?? 0, colorMode.value, t),
       digits: digitsStr,
       count: move.eliminations.length,
     });
@@ -230,7 +231,7 @@ export function useSudokuEngine() {
       actionStep = {
         label: t("hint.move.placeLabel"),
         description: t("hint.move.placeStep", {
-          num: move.placement.num,
+          num: digitLabel(move.placement.num, colorMode.value, t),
           row: move.placement.r + 1,
           col: move.placement.c + 1,
         }),

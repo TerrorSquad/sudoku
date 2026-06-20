@@ -22,6 +22,7 @@ import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
+import { digitLabel } from "./utils/sudokuColors";
 
 const { t, locale, locales } = useI18n();
 const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
@@ -30,7 +31,8 @@ useHead(() => ({
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
-const engine = useSudokuEngine();
+const colorMode = ref<boolean>(false);
+const engine = useSudokuEngine(colorMode);
 const timer = useTimer();
 
 const {
@@ -267,10 +269,14 @@ function handleInputNumber(num: number) {
                 : t("game.whereCell");
           hintStatus.value = t("game.conflictWith", { where });
           const first = conflicts[0]!;
-          mistakeExplainer.value = t("game.whyConflict", { num, r: first.r + 1, c: first.c + 1 });
+          mistakeExplainer.value = t("game.whyConflict", {
+            num: digitLabel(num, colorMode.value, t),
+            r: first.r + 1,
+            c: first.c + 1,
+          });
         } else {
           hintStatus.value = t("game.wrongDigit");
-          mistakeExplainer.value = t("game.whyWrong", { num });
+          mistakeExplainer.value = t("game.whyWrong", { num: digitLabel(num, colorMode.value, t) });
         }
         if (mistakes.value >= 3) {
           triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
@@ -418,10 +424,10 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       class="app-shell flex min-h-screen w-full flex-col bg-white text-zinc-900 antialiased dark:bg-[#0c0a09] dark:text-zinc-100"
     >
       <!-- Theme + locale switcher - temporarily disabled -->
-      <!-- <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
+    <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
       <LocaleSwitcher />
       <UColorModeButton />
-    </div> -->
+    </div>
 
       <!-- MENU -->
       <div
@@ -548,6 +554,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       <DifficultySelector
         v-else-if="currentScreen === 'difficulty'"
         :active-difficulty="activeDifficulty"
+        v-model:color-mode="colorMode"
         @select-difficulty="handleStartGame"
         @back-to-menu="currentScreen = 'menu'"
       />
@@ -668,6 +675,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
               :hint-eliminations="hintEliminations"
               :conflict-cells="conflictCells"
               :show-all-candidates="showAllCandidates"
+              :color-mode="colorMode"
               :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
               @select-cell="handleSelectCell"
             />
@@ -682,7 +690,11 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
               @auto-notes="handleAutoFillNotes"
             />
 
-            <Numpad :counts="numberCounts" @input-number="handleInputNumber" />
+            <Numpad
+              :counts="numberCounts"
+              :color-mode="colorMode"
+              @input-number="handleInputNumber"
+            />
           </div>
         </div>
 

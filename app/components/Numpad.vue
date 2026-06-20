@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { SUDOKU_COLORS } from "../utils/sudokuColors";
+
 interface Props {
   counts: number[];
+  colorMode: boolean;
 }
 
 defineProps<Props>();
@@ -23,7 +26,12 @@ defineEmits<{
       "
       class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-4 font-game text-2xl font-black transition-all 3xl:py-6 3xl:text-4xl sm:py-5 sm:text-3xl dark:border-zinc-800 dark:bg-zinc-900"
     >
-      <span>{{ n }}</span>
+      <span
+        v-if="colorMode"
+        :class="SUDOKU_COLORS[n]"
+        class="h-6 w-6 rounded-full 3xl:h-9 3xl:w-9 sm:h-7 sm:w-7"
+      />
+      <span v-else>{{ n }}</span>
       <span
         v-if="9 - counts[n]! > 0"
         class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-400"

@@ -15,6 +15,7 @@ const props = defineProps<{
   conflictCells: CellCoord[];
   showAllCandidates: boolean;
   dynamicCandidates: number[][][];
+  colorMode: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -62,6 +63,7 @@ function hasConflict(r: number, c: number): boolean {
         :is-same-value="isSameValue(r, c)"
         :notes="notesBoard[r][c]"
         :show-all-candidates="showAllCandidates"
+        :color-mode="colorMode"
         :dynamic-candidates="
           dynamicCandidates && dynamicCandidates[r] && dynamicCandidates[r][c]
             ? dynamicCandidates[r][c]

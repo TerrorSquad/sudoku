@@ -16,6 +16,7 @@
   "difficulty": {
     "title": "Izaberi izazov",
     "subtitle": "Izaberi nivo težine:",
+    "colorMode": "Režim boja",
     "beginner": "Početnik",
     "easy": "Lako",
     "medium": "Srednje",
@@ -55,6 +56,17 @@
     "notes": "Beleške",
     "hint": "Savet",
     "auto": "Auto"
+  },
+  "colors": {
+    "1": "crvena",
+    "2": "narandžasta",
+    "3": "žuta",
+    "4": "limeta",
+    "5": "zelena",
+    "6": "tirkizna",
+    "7": "plava",
+    "8": "ljubičasta",
+    "9": "roza"
   },
   "sidebar": {
     "keyboard": "Tastatura",
