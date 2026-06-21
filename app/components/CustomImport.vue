@@ -96,14 +96,7 @@ function loadExample() {
         @click="emit('back-to-menu')"
         class="mb-5 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-500 uppercase transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
       >
-        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-          />
-        </svg>
+        <AppIcon class="h-3.5 w-3.5" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         {{ $t("customImport.back") }}
       </button>
       <h2 class="text-3xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100">

@@ -23,14 +23,7 @@ defineEmits<{
       :aria-label="$t('game.exitToMenu')"
       class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
     >
-      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-      </svg>
+      <AppIcon class="h-5 w-5" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
     </button>
 
     <!-- Difficulty label-->
@@ -51,34 +44,16 @@ defineEmits<{
         :aria-label="isPaused ? $t('game.resume') : $t('game.pause')"
         class="rounded p-1 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800"
       >
-        <svg
+        <AppIcon
           v-if="!isPaused"
           class="h-4 w-4 text-violet-600 dark:text-violet-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <svg
+          path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+        <AppIcon
           v-else
           class="h-4 w-4 text-emerald-600 dark:text-emerald-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-          />
-        </svg>
+          path="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+        />
       </button>
     </div>
 

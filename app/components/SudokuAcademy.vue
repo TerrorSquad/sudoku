@@ -46,25 +46,27 @@ const tiers: Tier[] = ["Basic", "Intermediate", "Advanced", "Expert"];
 
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
-const tierBadgeClass: Record<Tier, string> = {
-  Basic: "bg-emerald-500/15 dark:text-emerald-400 text-emerald-600 border-emerald-500/30",
-  Intermediate: "bg-amber-500/15 dark:text-amber-400 text-amber-700 border-amber-500/30",
-  Advanced: "bg-violet-500/15 dark:text-violet-400 text-violet-600 border-violet-500/30",
-  Expert: "bg-rose-500/15 dark:text-rose-400 text-rose-600 border-rose-500/30",
-};
-
-const tierHeading: Record<Tier, string> = {
-  Basic: "dark:text-emerald-400 text-emerald-600",
-  Intermediate: "dark:text-amber-400 text-amber-700",
-  Advanced: "dark:text-violet-400 text-violet-600",
-  Expert: "dark:text-rose-400 text-rose-600",
-};
-
-const tierBorder: Record<Tier, string> = {
-  Basic: "border-emerald-500/20 hover:border-emerald-500/50",
-  Intermediate: "border-amber-500/20 hover:border-amber-500/50",
-  Advanced: "border-violet-500/20 hover:border-violet-500/50",
-  Expert: "border-rose-500/20 hover:border-rose-500/50",
+const tierStyles: Record<Tier, { badge: string; heading: string; border: string }> = {
+  Basic: {
+    badge: "bg-emerald-500/15 dark:text-emerald-400 text-emerald-600 border-emerald-500/30",
+    heading: "dark:text-emerald-400 text-emerald-600",
+    border: "border-emerald-500/20 hover:border-emerald-500/50",
+  },
+  Intermediate: {
+    badge: "bg-amber-500/15 dark:text-amber-400 text-amber-700 border-amber-500/30",
+    heading: "dark:text-amber-400 text-amber-700",
+    border: "border-amber-500/20 hover:border-amber-500/50",
+  },
+  Advanced: {
+    badge: "bg-violet-500/15 dark:text-violet-400 text-violet-600 border-violet-500/30",
+    heading: "dark:text-violet-400 text-violet-600",
+    border: "border-violet-500/20 hover:border-violet-500/50",
+  },
+  Expert: {
+    badge: "bg-rose-500/15 dark:text-rose-400 text-rose-600 border-rose-500/30",
+    heading: "dark:text-rose-400 text-rose-600",
+    border: "border-rose-500/20 hover:border-rose-500/50",
+  },
 };
 
 function byTier(tier: Tier) {
@@ -147,14 +149,7 @@ const total = computed(() => techniques.length);
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-          />
-        </svg>
+        <AppIcon class="h-4 w-4" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
       </button>
       <div class="min-w-0 flex-1">
@@ -200,13 +195,13 @@ const total = computed(() => techniques.length);
         <!-- Tier heading -->
         <div class="mb-2 flex items-center gap-3">
           <h2
-            :class="tierHeading[tier]"
+            :class="tierStyles[tier].heading"
             class="text-lg font-black tracking-widest uppercase sm:text-xl"
           >
             {{ $t(`academy.tier.${tier}`) }}
           </h2>
           <span
-            :class="tierBadgeClass[tier]"
+            :class="tierStyles[tier].badge"
             class="border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
           >
             {{ byTier(tier).length }}
@@ -220,7 +215,7 @@ const total = computed(() => techniques.length);
           <div
             v-for="tech in byTier(tier)"
             :key="tech.id"
-            :class="tierBorder[tier]"
+            :class="tierStyles[tier].border"
             class="cursor-pointer border bg-zinc-50 p-4 transition-colors sm:p-5 dark:bg-zinc-900/60"
             @click="toggleExample(tech.id)"
           >
@@ -235,20 +230,11 @@ const total = computed(() => techniques.length);
                   :title="$t('modal.usedTotal', { n: techStats.getCount(techName(tech.id)) })"
                   >×{{ techStats.getCount(techName(tech.id)) }}</span
                 >
-                <svg
+                <AppIcon
                   class="h-4 w-4 text-zinc-500 transition-transform"
                   :class="{ 'rotate-180': expanded.has(tech.id) }"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                  path="M19 9l-7 7-7-7"
+                />
               </div>
             </div>
 

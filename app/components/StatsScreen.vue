@@ -55,14 +55,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-          />
-        </svg>
+        <AppIcon class="h-4 w-4" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
         <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
       </button>
       <div class="min-w-0 flex-1">

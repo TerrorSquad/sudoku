@@ -25,8 +25,8 @@ function cellClass(r: number, c: number) {
   const isTrigger = props.trigger?.some((p) => p.r === r && p.c === c);
   const isElim = props.elimination?.some((p) => p.r === r && p.c === c);
   return {
-    "sudoku-border-r": c === 2 || c === 5,
-    "sudoku-border-b": r === 2 || r === 5,
+    "border-r-2 border-r-zinc-400": c === 2 || c === 5,
+    "border-b-2 border-b-zinc-400": r === 2 || r === 5,
     "bg-emerald-500/20 ring-1 ring-emerald-500 z-10": isTarget,
     "bg-indigo-500/30 ring-1 ring-indigo-400 z-10": isTrigger,
     "bg-rose-500/30 ring-1 ring-rose-400 z-10": isElim,
@@ -58,12 +58,3 @@ function cellClass(r: number, c: number) {
     </template>
   </div>
 </template>
-
-<style scoped>
-.sudoku-border-r {
-  border-right: 3px solid #a1a1aa !important;
-}
-.sudoku-border-b {
-  border-bottom: 3px solid #a1a1aa !important;
-}
-</style>
