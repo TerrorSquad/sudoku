@@ -58,6 +58,7 @@ export default defineNuxtConfig({
         // ssr:false doesn't auto-inject the manifest link, so add it explicitly
         // (relative href so it respects app.baseURL on sub-path deploys).
         { rel: "manifest", href: "manifest.webmanifest" },
+        { rel: "icon", type: "image/x-icon", href: "favicon.ico" },
         { rel: "apple-touch-icon", href: "apple-touch-icon.png" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
