@@ -24,12 +24,12 @@ defineEmits<{
           ? 'pointer-events-none opacity-30'
           : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800'
       "
-      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-4 font-game text-2xl font-black transition-all 3xl:py-6 3xl:text-4xl sm:py-5 sm:text-3xl dark:border-zinc-800 dark:bg-zinc-900"
+      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-3 font-game text-2xl font-black transition-all 3xl:py-6 3xl:text-4xl dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span
         v-if="colorMode"
         :class="SUDOKU_COLORS[n]"
-        class="h-6 w-6 rounded-full 3xl:h-9 3xl:w-9 sm:h-7 sm:w-7"
+        class="h-6 w-6 rounded-full 3xl:h-9 3xl:w-9"
       />
       <span v-else>{{ n }}</span>
       <span
