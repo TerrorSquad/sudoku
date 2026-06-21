@@ -440,8 +440,21 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener("keydown", handleKeyDown));
-onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
+// Switching tabs/apps shouldn't quietly burn time against the player's score.
+function handlePageHidden() {
+  if (document.hidden && currentScreen.value === "game" && !timer.isPaused.value) {
+    timer.togglePause();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("visibilitychange", handlePageHidden);
+});
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+  document.removeEventListener("visibilitychange", handlePageHidden);
+});
 </script>
 
 <template>
