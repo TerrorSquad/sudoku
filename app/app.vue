@@ -9,8 +9,8 @@ import ControlPanel from "./components/ControlPanel.vue";
 import CustomImport from "./components/CustomImport.vue";
 import DifficultySelector from "./components/DifficultySelector.vue";
 import GameDashboard from "./components/GameDashboard.vue";
-import LocaleSwitcher from "./components/LocaleSwitcher.vue";
 import Numpad from "./components/Numpad.vue";
+import SettingsScreen from "./components/SettingsScreen.vue";
 import SideExplanationPanel from "./components/SideExplanationPanel.vue";
 import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
@@ -80,9 +80,9 @@ const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t("game.ready"));
 const hintBody = ref<string>("");
-const currentScreen = ref<"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats">(
-  "menu",
-);
+const currentScreen = ref<
+  "menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats" | "settings"
+>("menu");
 const activeDifficulty = ref<Difficulty>("medium");
 
 const showModal = ref<boolean>(false);
@@ -509,19 +509,10 @@ onUnmounted(() => {
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-white text-zinc-900 antialiased dark:bg-[#0c0a09] dark:text-zinc-100"
     >
-      <!-- Theme + locale switcher — hidden during gameplay so it doesn't float over the dashboard -->
-      <div
-        v-if="currentScreen !== 'game'"
-        class="absolute top-3 right-3 z-40 flex items-center gap-2"
-      >
-        <LocaleSwitcher />
-        <UColorModeButton />
-      </div>
-
       <!-- MENU -->
       <div
         v-if="currentScreen === 'menu'"
-        class="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
+        class="menu-grid-bg flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
       >
         <div class="text-center">
           <h1
@@ -537,7 +528,7 @@ onUnmounted(() => {
           <!-- New game -->
           <button
             @click="currentScreen = 'difficulty'"
-            class="w-full border border-zinc-300 bg-zinc-50 px-6 py-4 text-sm font-bold transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+            class="w-full bg-gradient-to-r from-violet-500 to-cyan-500 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:brightness-110 active:scale-95"
           >
             {{ $t("menu.start") }}
           </button>
@@ -548,10 +539,10 @@ onUnmounted(() => {
             :disabled="!!dailyRecord"
             :class="
               dailyRecord
-                ? 'cursor-default border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-600'
-                : 'border-zinc-300 bg-zinc-50 text-zinc-900 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800'
+                ? 'cursor-default border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-600'
+                : 'border-zinc-300 text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-900'
             "
-            class="flex w-full items-center justify-center gap-2 border px-6 py-4 text-sm font-bold transition-all active:scale-95"
+            class="flex w-full items-center justify-center gap-2 border bg-transparent px-6 py-4 text-sm font-bold transition-all active:scale-95"
           >
             <AppIcon
               class="h-4 w-4 shrink-0"
@@ -602,6 +593,18 @@ onUnmounted(() => {
             />
             {{ $t("menu.stats") }}
           </button>
+
+          <!-- Settings -->
+          <button
+            @click="currentScreen = 'settings'"
+            class="flex w-full items-center justify-center gap-2 border border-zinc-300 bg-transparent px-6 py-3 text-xs font-semibold tracking-widest text-zinc-500 uppercase transition-all hover:border-zinc-400 hover:text-zinc-700 active:scale-95 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+          >
+            <AppIcon
+              class="h-3.5 w-3.5"
+              path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            {{ $t("menu.settings") }}
+          </button>
         </div>
       </div>
 
@@ -609,8 +612,6 @@ onUnmounted(() => {
       <DifficultySelector
         v-else-if="currentScreen === 'difficulty'"
         :active-difficulty="activeDifficulty"
-        v-model:color-mode="colorMode"
-        v-model:sound-enabled="soundEnabled"
         @select-difficulty="handleChooseDifficulty"
         @back-to-menu="currentScreen = 'menu'"
       />
@@ -623,6 +624,14 @@ onUnmounted(() => {
 
       <!-- STATISTICS -->
       <StatsScreen v-else-if="currentScreen === 'stats'" @back-to-menu="currentScreen = 'menu'" />
+
+      <!-- SETTINGS -->
+      <SettingsScreen
+        v-else-if="currentScreen === 'settings'"
+        v-model:color-mode="colorMode"
+        v-model:sound-enabled="soundEnabled"
+        @back-to-menu="currentScreen = 'menu'"
+      />
 
       <!-- CUSTOM IMPORT -->
       <CustomImport
@@ -693,7 +702,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Center / main game column -->
-        <div class="flex w-full flex-col lg:gap-3 3xl:col-span-1 lg:max-3xl:col-span-7">
+        <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
           <GameDashboard
             :formatted-time="timer.formatTime(timer.timerSeconds.value)"
             :is-paused="timer.isPaused.value"
@@ -756,7 +765,10 @@ onUnmounted(() => {
               v-if="timer.isPaused.value"
               class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
             >
-              <AppIcon class="h-12 w-12 text-zinc-300" path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <AppIcon
+                class="h-12 w-12 text-zinc-300"
+                path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
               <p class="text-xl font-black tracking-widest text-zinc-100 uppercase">
                 {{ $t("game.pausedTitle") }}
               </p>
@@ -1030,6 +1042,17 @@ onUnmounted(() => {
   background-image:
     radial-gradient(1100px 600px at 50% -14%, rgba(139, 92, 246, 0.14), transparent 56%),
     radial-gradient(900px 520px at 88% 6%, rgba(34, 211, 238, 0.07), transparent 60%);
+}
+
+.menu-grid-bg {
+  background-image:
+    repeating-linear-gradient(to right, rgba(139, 92, 246, 0.07) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(to bottom, rgba(139, 92, 246, 0.07) 0 1px, transparent 1px 12.5%);
+}
+.dark .menu-grid-bg {
+  background-image:
+    repeating-linear-gradient(to right, rgba(34, 211, 238, 0.08) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(to bottom, rgba(34, 211, 238, 0.08) 0 1px, transparent 1px 12.5%);
 }
 
 @keyframes modal-pop {

@@ -46,7 +46,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full flex-col">
+  <div class="menu-grid-bg flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
@@ -55,12 +55,15 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
-        <AppIcon class="h-4 w-4" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+        <AppIcon
+          class="h-4 w-4"
+          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+        />
         <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
       </button>
       <div class="min-w-0 flex-1">
         <h1
-          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-100"
+          class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-lg leading-tight font-black tracking-tight text-transparent sm:text-2xl"
         >
           {{ $t("stats.title") }}
         </h1>

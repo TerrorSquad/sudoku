@@ -1,6 +1,6 @@
 {
   "menu.title": "SUDOKU PRO",
-  "menu.subtitle": "Vue 3 / Nuxt · Step-by-step hint system",
+  "menu.subtitle": "Step-by-step hint system",
   "menu.start": "New Game",
   "menu.dailyChallenge": "Daily Challenge",
   "menu.dailyCompleted": "Daily — Completed ✓",
@@ -8,6 +8,7 @@
   "menu.academy": "Sudoku Academy",
   "menu.dailyStreak": "{n}-day streak",
   "menu.stats": "Statistics",
+  "menu.settings": "Settings",
   "menu.back": "Menu",
   "resume.title": "Saved game found",
   "resume.message": "You have a saved {difficulty} game at {time}. Continue it or start a new one?",
@@ -16,8 +17,6 @@
   "resume.cancel": "Cancel",
   "difficulty.title": "Choose a Challenge",
   "difficulty.subtitle": "Pick your difficulty level:",
-  "difficulty.colorMode": "Color mode",
-  "difficulty.sound": "Sound",
   "difficulty.beginner": "Beginner",
   "difficulty.easy": "Easy",
   "difficulty.medium": "Medium",
@@ -240,5 +239,12 @@
   "academy.tech.xy-wing.lookFor": "Three bivalue cells: a pivot (X, Y) sharing one candidate with each of two pincers (X, Z) and (Y, Z).",
   "academy.tech.xy-wing.howItHelps": "Whatever fills the pivot, one pincer becomes Z. Any cell seeing both pincers loses Z.",
   "academy.tech.xyz-wing.lookFor": "Like an XY-Wing, but the pivot holds three candidates (X, Y, Z) and the two pincers are (X, Z) and (Y, Z).",
-  "academy.tech.xyz-wing.howItHelps": "One of the three cells must be Z, so any cell seeing all three loses Z."
+  "academy.tech.xyz-wing.howItHelps": "One of the three cells must be Z, so any cell seeing all three loses Z.",
+  "settings.title": "Settings",
+  "settings.subtitle": "Language, theme and game preferences",
+  "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.colorMode": "Color mode",
+  "settings.sound": "Sound",
+  "settings.back": "Back to Menu"
 }

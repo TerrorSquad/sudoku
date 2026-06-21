@@ -1,6 +1,6 @@
 {
   "menu.title": "SUDOKU PRO",
-  "menu.subtitle": "Vue 3 / Nuxt · Sistem nagoveštaja korak po korak",
+  "menu.subtitle": "Sistem nagoveštaja korak po korak",
   "menu.start": "Nova igra",
   "menu.dailyChallenge": "Dnevni izazov",
   "menu.dailyCompleted": "Dnevni izazov — Završeno ✓",
@@ -8,6 +8,7 @@
   "menu.academy": "Sudoku akademija",
   "menu.dailyStreak": "niz od {n} dana",
   "menu.stats": "Statistika",
+  "menu.settings": "Podešavanja",
   "menu.back": "Meni",
   "resume.title": "Pronađena sačuvana igra",
   "resume.message": "Imaš sačuvanu {difficulty} igru na {time}. Nastaviti je ili započeti novu?",
@@ -16,8 +17,6 @@
   "resume.cancel": "Otkaži",
   "difficulty.title": "Izaberi izazov",
   "difficulty.subtitle": "Izaberi nivo težine:",
-  "difficulty.colorMode": "Režim boja",
-  "difficulty.sound": "Zvuk",
   "difficulty.beginner": "Početnik",
   "difficulty.easy": "Lako",
   "difficulty.medium": "Srednje",
@@ -240,5 +239,12 @@
   "academy.tech.xy-wing.lookFor": "Tri dvovredna polja: pivot (X, Y) koji deli po jednog kandidata sa dva kraka (X, Z) i (Y, Z).",
   "academy.tech.xy-wing.howItHelps": "Šta god popuni pivot, jedan krak postaje Z. Svako polje koje vidi oba kraka gubi Z.",
   "academy.tech.xyz-wing.lookFor": "Kao XY-Wing, ali pivot drži tri kandidata (X, Y, Z), a krakovi su (X, Z) i (Y, Z).",
-  "academy.tech.xyz-wing.howItHelps": "Jedno od tri polja mora biti Z, pa svako polje koje vidi sva tri gubi Z."
+  "academy.tech.xyz-wing.howItHelps": "Jedno od tri polja mora biti Z, pa svako polje koje vidi sva tri gubi Z.",
+  "settings.title": "Podešavanja",
+  "settings.subtitle": "Jezik, tema i podešavanja igre",
+  "settings.language": "Jezik",
+  "settings.theme": "Tema",
+  "settings.colorMode": "Režim boja",
+  "settings.sound": "Zvuk",
+  "settings.back": "Nazad na meni"
 }

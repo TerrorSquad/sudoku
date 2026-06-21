@@ -36,10 +36,10 @@ This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generat
 ### Two separate Sudoku solvers, for different jobs
 
 - **`app/utils/sudokuCore.ts`** — array-based backtracking solver (`solveBoard`, `isValidPlacement`, `countSolutions`/`hasUniqueSolution`) used for puzzle generation and uniqueness checks. This is the "can this board be solved at all / does it have exactly one solution" layer.
-- **`app/utils/sudokuGrader.ts`** — a separate bitmask-based solver that mimics *human* solving techniques (naked/hidden singles through XYZ-wing, see `TechniqueId`). It never peeks at the answer key: every move it returns (`SolveMove`) is justified by the technique itself, either a forced `placement` or a list of candidate `eliminations`. This same engine powers three things at once:
+- **`app/utils/sudokuGrader.ts`** — a separate bitmask-based solver that mimics _human_ solving techniques (naked/hidden singles through XYZ-wing, see `TechniqueId`). It never peeks at the answer key: every move it returns (`SolveMove`) is justified by the technique itself, either a forced `placement` or a list of candidate `eliminations`. This same engine powers three things at once:
   1. **Hints** — `nextHint()` returns the next logically-justified move, replayed by `useSudokuEngine`'s `triggerComplexHint`/`applyComplexHint`.
   2. **Difficulty grading** — `solveLogically`/`gradePuzzle` grade a puzzle 1–5 (or `STUCK` if no technique applies and brute force would be required).
-  3. **Puzzle generation** — `generateGradedPuzzle` digs cells out of a solved grid (via `sudokuCore`) and keeps retrying until the result grades within the target's `[min, max]` tier (`DIFFICULTY_TARGETS`), falling back to the closest-to-ideal *solved* (never `STUCK`) board it saw. Generation never ships a guess-only puzzle.
+  3. **Puzzle generation** — `generateGradedPuzzle` digs cells out of a solved grid (via `sudokuCore`) and keeps retrying until the result grades within the target's `[min, max]` tier (`DIFFICULTY_TARGETS`), falling back to the closest-to-ideal _solved_ (never `STUCK`) board it saw. Generation never ships a guess-only puzzle.
 
 ### State composables
 
