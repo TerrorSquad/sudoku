@@ -68,7 +68,7 @@ const tierBorder: Record<Tier, string> = {
 };
 
 function byTier(tier: Tier) {
-  return techniques.filter((t) => t.tier === tier);
+  return techniques.filter((tech) => tech.tier === tier);
 }
 
 function exampleFor(id: TechniqueId): AcademyExample | undefined {
@@ -80,7 +80,7 @@ const RC = (p: { r: number; c: number }) => `R${p.r + 1}C${p.c + 1}`;
 // For hidden subsets the eliminations fall inside the pattern cells themselves;
 // keep those as indigo pattern cells rather than double-marking them rose.
 function elimDisplay(ex: AcademyExample): { r: number; c: number }[] {
-  return ex.elimination.filter((e) => !ex.trigger.some((t) => t.r === e.r && t.c === e.c));
+  return ex.elimination.filter((e) => !ex.trigger.some((pos) => pos.r === e.r && pos.c === e.c));
 }
 
 // A specific, board-accurate caption generated from the real move data + i18n.

@@ -21,14 +21,14 @@ const difficultyRows = computed(() => {
   const keys = Object.keys(stats.perDifficulty);
   return DIFFICULTY_ORDER.filter((d) => keys.includes(d))
     .concat(keys.filter((k) => !DIFFICULTY_ORDER.includes(k)))
-    .map((d) => ({ difficulty: d, ...stats.perDifficulty[d]! }))
+    .map((d) => Object.assign({ difficulty: d }, stats.perDifficulty[d]!))
     .filter((r) => r.wins > 0 || r.best > 0);
 });
 
 const topTechniques = computed(() => {
   const all = techStats.getAll();
   return Object.entries(all)
-    .sort((a, b) => b[1] - a[1])
+    .toSorted((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([name, count]) => ({ name, count }));
 });
@@ -42,7 +42,7 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((t) => t.count)));
+const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech) => tech.count)));
 </script>
 
 <template>

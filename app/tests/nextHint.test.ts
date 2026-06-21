@@ -16,7 +16,7 @@ describe("nextHint — soundness", () => {
   it("a placement is always the value that actually solves the cell", () => {
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const { puzzle, solution } = generatePuzzle(45, makeRng(seed));
-      let board = puzzle.map((r) => [...r]);
+      let board = puzzle.map((r) => r.concat());
       const elims: { r: number; c: number; num: number }[] = [];
       // Walk the whole solve via hints; every placement must match the solution.
       for (let step = 0; step < 200; step++) {
@@ -50,15 +50,26 @@ describe("nextHint — soundness", () => {
   });
 
   it("eliminations never remove a candidate the cell needs (the solution digit)", () => {
+    expect.hasAssertions();
     for (const seed of [21, 22, 23]) {
       const { puzzle, solution } = generatePuzzle(52, makeRng(seed));
-      const move = nextHint(puzzle);
-      if (move && move.eliminations.length) {
+      let board = puzzle.map((r) => r.concat());
+      const elims: { r: number; c: number; num: number }[] = [];
+      // Naked singles come first; walk those off so an elimination move surfaces.
+      for (let step = 0; step < 200; step++) {
+        const move = nextHint(board, elims);
+        if (!move) break;
+        if (move.placement) {
+          board = applyPlacement(board, move);
+          continue;
+        }
         for (const e of move.eliminations) {
           expect(solution[e.r]![e.c]).not.toBe(e.num);
           // the eliminated digit must currently be a candidate there
-          expect(isValidPlacement(puzzle, e.r, e.c, e.num)).toBe(true);
+          expect(isValidPlacement(board, e.r, e.c, e.num)).toBe(true);
         }
+        elims.push(...move.eliminations);
+        break;
       }
     }
   });
@@ -68,7 +79,7 @@ describe("nextHint — soundness", () => {
       const { puzzle, solution } = generatePuzzle(50, makeRng(seed));
       // Only proceed for puzzles the logical solver can finish (all generated ones are).
       if (!solveLogically(puzzle).solved) continue;
-      let board = puzzle.map((r) => [...r]);
+      let board = puzzle.map((r) => r.concat());
       const elims: { r: number; c: number; num: number }[] = [];
       let guard = 0;
       while (board.flat().some((v) => v === 0) && guard++ < 400) {

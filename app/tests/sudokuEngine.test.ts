@@ -64,8 +64,8 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       [2, 8, 7, 4, 1, 9, 6, 3, 5],
       [3, 4, 5, 2, 8, 6, 1, 7, 9],
     ];
-    engine.currentBoard.value = testSolved.map((row) => [...row]);
-    engine.solvedBoard.value = testSolved.map((row) => [...row]);
+    engine.currentBoard.value = testSolved.map((row) => row.concat());
+    engine.solvedBoard.value = testSolved.map((row) => row.concat());
 
     const won = engine.checkWinCondition();
     expect(won).toBe(true);

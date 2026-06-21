@@ -36,7 +36,7 @@ function handleLoad() {
     else error.value = t("customImport.errorOnlyDigits");
     return;
   }
-  const board = preview.value!.map((row) => [...row]) as Grid;
+  const board = preview.value!.map((row) => row.concat()) as Grid;
   // Minimal validity: check no two same non-zero values share row/col/box
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {

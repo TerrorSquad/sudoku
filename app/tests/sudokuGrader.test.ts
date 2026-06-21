@@ -5,6 +5,8 @@ import type { Grid } from "../types/sudoku";
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
 import { solveLogically, gradePuzzle, generateGradedPuzzle, STUCK } from "../utils/sudokuGrader";
 
+const grade = (d: string, seed: number) => generateGradedPuzzle(d, makeRng(seed)).grade;
+
 describe("sudokuGrader — logical solver", () => {
   it("grades a nearly-full puzzle as singles (grade 1)", () => {
     const { puzzle } = generatePuzzle(20, makeRng(5));
@@ -12,6 +14,7 @@ describe("sudokuGrader — logical solver", () => {
   });
 
   it("logical solution matches the backtracking solution when solvable", () => {
+    expect.hasAssertions();
     for (const seed of [11, 22, 33, 44, 55]) {
       const { puzzle, solution } = generatePuzzle(45, makeRng(seed));
       const result = solveLogically(puzzle);
@@ -67,7 +70,6 @@ describe("sudokuGrader — graded generation", () => {
   });
 
   it("harder difficulties trend to higher tiers than easier ones", () => {
-    const grade = (d: string, seed: number) => generateGradedPuzzle(d, makeRng(seed)).grade;
     // Average across seeds keeps this robust against the rare fallback board.
     const avg = (d: string) => [1, 2, 3, 4, 5].reduce((s, seed) => s + grade(d, seed), 0) / 5;
     expect(avg("beginner")).toBeLessThanOrEqual(avg("hard"));

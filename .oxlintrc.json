@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "vue", "import", "promise", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {},
+  "overrides": [
+    {
+      // Solver tests branch on which logical state a randomized seed landed
+      // in (e.g. solved vs STUCK) and assert in every branch — sound branch
+      // coverage, not a vacuous check, so this rule is just noise here.
+      "files": ["app/tests/**"],
+      "rules": {
+        "vitest/no-conditional-expect": "off"
+      }
+    }
+  ],
+  "env": {
+    "builtin": true
+  }
+}

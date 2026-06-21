@@ -1,5 +1,13 @@
 import { ref } from "vue";
 
+function formatTime(seconds: number): string {
+  const min = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
+  const sec = (seconds % 60).toString().padStart(2, "0");
+  return `${min}:${sec}`;
+}
+
 export function useTimer() {
   const timerSeconds = ref<number>(0);
   const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
@@ -33,14 +41,6 @@ export function useTimer() {
       stopTimer();
       isPaused.value = true;
     }
-  }
-
-  function formatTime(seconds: number): string {
-    const min = Math.floor(seconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const sec = (seconds % 60).toString().padStart(2, "0");
-    return `${min}:${sec}`;
   }
 
   return {

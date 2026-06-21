@@ -3,6 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
 
+import { digitLabel } from "../utils/sudokuColors";
 import {
   solveBoard,
   cloneGrid,
@@ -16,7 +17,6 @@ import {
   type SolveMove,
   type DigitAt,
 } from "../utils/sudokuGrader";
-import { digitLabel } from "../utils/sudokuColors";
 
 export interface ExplanationStep {
   label: string;
@@ -114,8 +114,8 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
   function startNewGame(difficulty: string) {
     const { puzzle, solution } = generateGradedPuzzle(difficulty);
 
-    initialBoard.value = puzzle.map((row) => [...row]);
-    currentBoard.value = puzzle.map((row) => [...row]);
+    initialBoard.value = puzzle.map((row) => row.concat());
+    currentBoard.value = puzzle.map((row) => row.concat());
     solvedBoard.value = solution;
 
     notesBoard.value = Array(9)

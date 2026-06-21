@@ -465,7 +465,7 @@ function findBoxLineMove(s: SolveState): SolveMove | null {
         return {
           technique: "pointing",
           tier: 2,
-          eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+          eliminations: elims.map((i) => Object.assign(rc(i), { num: v })),
           triggers: cells.map(rc),
           digits: [v],
         };
@@ -488,7 +488,7 @@ function findBoxLineMove(s: SolveState): SolveMove | null {
         return {
           technique: "box-line",
           tier: 2,
-          eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+          eliminations: elims.map((i) => Object.assign(rc(i), { num: v })),
           triggers: cells.map(rc),
           digits: [v],
         };

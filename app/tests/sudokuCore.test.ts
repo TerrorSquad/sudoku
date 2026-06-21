@@ -103,10 +103,12 @@ describe("sudokuCore — generator", () => {
 
   it("puzzle cells match the solution where given", () => {
     const { puzzle, solution } = generatePuzzle(45, makeRng(7));
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (puzzle[r]![c] !== 0) expect(puzzle[r]![c]).toBe(solution[r]![c]);
-      }
+    const given = puzzle
+      .flatMap((row, r) => row.map((v, c) => ({ v, sol: solution[r]![c] })))
+      .filter((cell) => cell.v !== 0);
+    expect(given.length).toBeGreaterThan(0);
+    for (const cell of given) {
+      expect(cell.v).toBe(cell.sol);
     }
   });
 
