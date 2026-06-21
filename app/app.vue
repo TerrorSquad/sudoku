@@ -96,6 +96,9 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 const mistakeExplainer = ref<string>("");
 
+const flashCells = ref<CellCoord[]>([]);
+let flashTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const score = useScore();
 const lastScore = ref<ScoreBreakdown | null>(null);
 const isNewBest = ref<boolean>(false);
@@ -201,6 +204,7 @@ function resumeSavedGame(s: GameSave) {
   hintStatus.value = t("game.ready");
   hintBody.value = "";
   mistakeExplainer.value = "";
+  flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -217,6 +221,7 @@ function handleStartGame(level: Difficulty) {
   hintStatus.value = t("game.newBoard");
   hintBody.value = "";
   mistakeExplainer.value = "";
+  flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -250,6 +255,44 @@ function handleResumeDecline() {
 
 function handleSelectCell(coord: CellCoord) {
   selectedCell.value = coord;
+}
+
+// A correct placement may finish a row, column, and/or box — flash every
+// cell of each newly-completed unit. "Complete" means every cell already
+// matches the solution, not just non-empty (a wrong-but-unconflicting digit
+// can sit in a cell without being flagged, so equality is the real check).
+function flashCompletedUnits(r: number, c: number) {
+  const cells: CellCoord[] = [];
+
+  if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
+    for (let i = 0; i < 9; i++) cells.push({ r, c: i });
+  }
+  if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
+    for (let i = 0; i < 9; i++) cells.push({ r: i, c });
+  }
+  const boxR = r - (r % 3);
+  const boxC = c - (c % 3);
+  let boxComplete = true;
+  for (let i = 0; i < 3 && boxComplete; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (currentBoard.value[boxR + i]![boxC + j] !== solvedBoard.value[boxR + i]![boxC + j]) {
+        boxComplete = false;
+        break;
+      }
+    }
+  }
+  if (boxComplete) {
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) cells.push({ r: boxR + i, c: boxC + j });
+    }
+  }
+
+  if (!cells.length) return;
+  if (flashTimeout) clearTimeout(flashTimeout);
+  flashCells.value = cells;
+  flashTimeout = setTimeout(() => {
+    flashCells.value = [];
+  }, 600);
 }
 
 function handleInputNumber(num: number) {
@@ -308,6 +351,7 @@ function handleInputNumber(num: number) {
         if (soundEnabled.value) playPlace();
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
+        flashCompletedUnits(r, c);
         if (checkWinCondition()) {
           triggerLocalModal(
             t("modal.win"),
@@ -395,6 +439,7 @@ function handleStartDaily() {
   hintStatus.value = t("game.newBoard");
   hintBody.value = "";
   mistakeExplainer.value = "";
+  flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -410,6 +455,7 @@ function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
   hintStatus.value = t("game.newBoard");
   hintBody.value = "";
   mistakeExplainer.value = "";
+  flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
@@ -454,6 +500,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
   document.removeEventListener("visibilitychange", handlePageHidden);
+  if (flashTimeout) clearTimeout(flashTimeout);
 });
 </script>
 
@@ -700,6 +747,7 @@ onUnmounted(() => {
               :hint-eliminations="hintEliminations"
               :conflict-cells="conflictCells"
               :color-mode="colorMode"
+              :flash-cells="flashCells"
               @select-cell="handleSelectCell"
             />
           </div>

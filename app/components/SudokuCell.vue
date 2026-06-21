@@ -19,6 +19,7 @@ const props = defineProps<{
   isHintTrigger: boolean;
   isHintElimination: boolean;
   colorMode: boolean;
+  isFlashing: boolean;
 }>();
 
 defineEmits<{
@@ -54,6 +55,7 @@ const cellClasses = computed(() => {
       props.isSelected && props.hasConflict,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
+    "cell-flash": props.isFlashing,
   };
 });
 </script>
@@ -128,5 +130,16 @@ const cellClasses = computed(() => {
 }
 .cell-shake {
   animation: cell-shake 0.32s ease-in-out both;
+}
+@keyframes cell-flash {
+  0% {
+    background-color: rgba(16, 185, 129, 0.4);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.cell-flash {
+  animation: cell-flash 0.6s ease-out;
 }
 </style>

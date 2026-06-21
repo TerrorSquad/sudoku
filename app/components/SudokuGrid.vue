@@ -14,6 +14,7 @@ const props = defineProps<{
   hintEliminations: CellCoord[]; // Novo
   conflictCells: CellCoord[];
   colorMode: boolean;
+  flashCells: CellCoord[];
 }>();
 
 const emit = defineEmits<{
@@ -26,6 +27,10 @@ function isCellHighlighted(r: number, c: number): boolean {
   const inSameBox =
     Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3);
   return r === selR || c === selC || inSameBox;
+}
+
+function isFlashing(r: number, c: number): boolean {
+  return props.flashCells.some((cell) => cell.r === r && cell.c === c);
 }
 
 function isSameValue(r: number, c: number): boolean {
@@ -61,6 +66,7 @@ function hasConflict(r: number, c: number): boolean {
         :is-same-value="isSameValue(r, c)"
         :notes="notesBoard[r][c]"
         :color-mode="colorMode"
+        :is-flashing="isFlashing(r, c)"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
         @click="emit('select-cell', { r, c })"
