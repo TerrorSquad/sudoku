@@ -34,6 +34,8 @@
   "game.exitToMenu": "Izlaz",
   "game.mistakes": "Greške",
   "game.ready": "Spreman za igru",
+  "game.pausedTitle": "Pauzirano",
+  "game.resume": "Nastavi",
   "game.newBoard": "Nova tabla učitana!",
   "game.notesFilled": "Beleške automatski popunjene!",
   "game.cellFilled": "Polje popunjeno!",

@@ -34,6 +34,8 @@
   "game.exitToMenu": "Exit",
   "game.mistakes": "Mistakes",
   "game.ready": "Ready to play",
+  "game.pausedTitle": "Paused",
+  "game.resume": "Resume",
   "game.newBoard": "New board loaded!",
   "game.notesFilled": "Notes auto-filled!",
   "game.cellFilled": "Cell filled!",

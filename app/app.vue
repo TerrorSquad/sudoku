@@ -710,32 +710,32 @@ onUnmounted(() => {
 
         <!-- Center / main game column -->
         <div class="flex w-full flex-col gap-3 3xl:col-span-1 lg:max-3xl:col-span-7">
-          <div class="flex flex-col">
-            <GameDashboard
-              :formatted-time="timer.formatTime(timer.timerSeconds.value)"
-              :is-paused="timer.isPaused.value"
-              :mistakes="mistakes"
-              :max-mistakes="3"
-              :difficulty="activeDifficulty"
-              @toggle-pause="timer.togglePause()"
-              @exit-game="exitToMenu"
-            />
+          <GameDashboard
+            :formatted-time="timer.formatTime(timer.timerSeconds.value)"
+            :is-paused="timer.isPaused.value"
+            :mistakes="mistakes"
+            :max-mistakes="3"
+            :difficulty="activeDifficulty"
+            @toggle-pause="timer.togglePause()"
+            @exit-game="exitToMenu"
+          />
 
-            <!-- Why-wrong explainer -->
-            <div
-              v-if="mistakeExplainer"
-              class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
+          <!-- Why-wrong explainer -->
+          <div
+            v-if="mistakeExplainer"
+            class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
+          >
+            <p>{{ mistakeExplainer }}</p>
+            <button
+              @click="mistakeExplainer = ''"
+              :aria-label="$t('modal.close')"
+              class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
             >
-              <p>{{ mistakeExplainer }}</p>
-              <button
-                @click="mistakeExplainer = ''"
-                :aria-label="$t('modal.close')"
-                class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
-              >
-                ✕
-              </button>
-            </div>
+              ✕
+            </button>
+          </div>
 
+          <div class="relative flex flex-col gap-3">
             <SudokuGrid
               :current-board="currentBoard"
               :initial-board="initialBoard"
@@ -750,22 +750,46 @@ onUnmounted(() => {
               :flash-cells="flashCells"
               @select-cell="handleSelectCell"
             />
-          </div>
-          <div class="mx-2 flex flex-col gap-2 sm:mx-0">
-            <ControlPanel
-              :notes-mode="notesMode"
-              @undo="undoMove"
-              @erase="eraseCell(selectedCell)"
-              @toggle-notes="notesMode = !notesMode"
-              @trigger-hint="handleTriggerHint"
-              @auto-notes="handleAutoFillNotes"
-            />
+            <div class="mx-2 flex flex-col gap-2 sm:mx-0">
+              <ControlPanel
+                :notes-mode="notesMode"
+                @undo="undoMove"
+                @erase="eraseCell(selectedCell)"
+                @toggle-notes="notesMode = !notesMode"
+                @trigger-hint="handleTriggerHint"
+                @auto-notes="handleAutoFillNotes"
+              />
 
-            <Numpad
-              :counts="numberCounts"
-              :color-mode="colorMode"
-              @input-number="handleInputNumber"
-            />
+              <Numpad
+                :counts="numberCounts"
+                :color-mode="colorMode"
+                @input-number="handleInputNumber"
+              />
+            </div>
+
+            <!-- PAUSE OVERLAY -->
+            <div
+              v-if="timer.isPaused.value"
+              class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
+            >
+              <svg class="h-12 w-12 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p class="text-xl font-black tracking-widest text-zinc-100 uppercase">
+                {{ $t("game.pausedTitle") }}
+              </p>
+              <button
+                @click="timer.togglePause()"
+                class="border-2 border-emerald-500 bg-emerald-600 px-10 py-4 text-base font-black tracking-wider text-white uppercase transition-all hover:bg-emerald-700 active:scale-95"
+              >
+                {{ $t("game.resume") }}
+              </button>
+            </div>
           </div>
         </div>
 
