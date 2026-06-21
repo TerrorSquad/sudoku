@@ -16,8 +16,6 @@ const props = defineProps<{
   isHighlighted: boolean;
   isSameValue: boolean;
   notes: boolean[];
-  showAllCandidates: boolean;
-  dynamicCandidates: number[];
   isHintTrigger: boolean;
   isHintElimination: boolean;
   colorMode: boolean;
@@ -79,21 +77,6 @@ const cellClasses = computed(() => {
       :class="isWrong ? 'cell-shake' : 'cell-pop'"
       >{{ value }}</span
     >
-
-    <div
-      v-else-if="showAllCandidates"
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-semibold text-zinc-600 3xl:text-[13px] dark:text-zinc-400"
-    >
-      <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
-        <span
-          :class="{
-            'font-black text-amber-600 dark:text-amber-400': dynamicCandidates.includes(n),
-          }"
-        >
-          {{ dynamicCandidates.includes(n) ? n : "" }}
-        </span>
-      </div>
-    </div>
 
     <div
       v-else

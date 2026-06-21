@@ -309,12 +309,3 @@ export function generatePuzzle(removeTarget: number, rng: Rng = Math.random): Ge
 
   return { puzzle, solution, removed };
 }
-
-export const DIFFICULTY_REMOVE_COUNT: Record<string, number> = {
-  beginner: 20,
-  easy: 30,
-  medium: 42,
-  hard: 52,
-  expert: 58,
-  master: 62,
-};

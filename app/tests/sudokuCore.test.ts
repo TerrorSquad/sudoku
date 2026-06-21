@@ -13,7 +13,6 @@ import {
   isValidPlacement,
   getConflictCells,
   getGridCandidates,
-  DIFFICULTY_REMOVE_COUNT,
 } from "../utils/sudokuCore";
 
 function isCompleteValidGrid(board: Grid): boolean {
@@ -111,9 +110,9 @@ describe("sudokuCore — generator", () => {
     }
   });
 
-  it.each(Object.entries(DIFFICULTY_REMOVE_COUNT))(
-    "generates a uniquely solvable %s puzzle",
-    (_difficulty, removeCount) => {
+  it.each([20, 30, 42, 52, 58, 62])(
+    "generates a uniquely solvable puzzle removing %d cells",
+    (removeCount) => {
       const { puzzle, solution, removed } = generatePuzzle(removeCount, makeRng(123));
       expect(hasUniqueSolution(puzzle)).toBe(true);
       expect(solveBoard(puzzle)).toEqual(solution);

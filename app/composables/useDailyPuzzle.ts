@@ -1,5 +1,6 @@
 import type { Grid } from "../types/sudoku";
 
+import { readJSON, writeJSON } from "../utils/safeJson";
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
 const DAILY_REMOVE_TARGET = 45;
@@ -52,13 +53,7 @@ export function useDailyPuzzle() {
   }
 
   function getRecordFor(dateKey: string): DailyRecord | null {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = localStorage.getItem(SAVE_PREFIX + dateKey);
-      return raw ? (JSON.parse(raw) as DailyRecord) : null;
-    } catch {
-      return null;
-    }
+    return readJSON<DailyRecord | null>(SAVE_PREFIX + dateKey, null);
   }
 
   function getRecord(): DailyRecord | null {
@@ -66,10 +61,7 @@ export function useDailyPuzzle() {
   }
 
   function markComplete(time: number, mistakes: number): void {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(SAVE_PREFIX + key, JSON.stringify({ completed: true, time, mistakes }));
-    } catch {}
+    writeJSON(SAVE_PREFIX + key, { completed: true, time, mistakes });
   }
 
   function getStreak(): number {

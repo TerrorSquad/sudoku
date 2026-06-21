@@ -10,13 +10,4 @@ export interface HintCoordinate extends CellCoord {
   type: "trigger" | "elimination";
 }
 
-export interface HintResult {
-  r: number;
-  c: number;
-  targetNum: number;
-  highlightCoords: HintCoordinate[];
-  explanationTitle: string;
-  explanationBody: string;
-}
-
 export type Difficulty = "beginner" | "easy" | "medium" | "hard" | "expert" | "master" | "custom";

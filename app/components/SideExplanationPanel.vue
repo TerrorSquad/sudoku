@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-interface ExplanationStep {
-  label: string;
-  description: string;
-}
-
-interface ComplexHint {
-  title: string;
-  targetCell: { r: number; c: number };
-  targetNum: number;
-  steps: ExplanationStep[];
-}
+import type { ComplexHint, ExplanationStep } from "../composables/useSudokuEngine";
 
 const props = defineProps<{
   activeComplexHint: ComplexHint | null;

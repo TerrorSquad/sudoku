@@ -13,8 +13,6 @@ const props = defineProps<{
   hintTriggers: CellCoord[]; // Novo
   hintEliminations: CellCoord[]; // Novo
   conflictCells: CellCoord[];
-  showAllCandidates: boolean;
-  dynamicCandidates: number[][][];
   colorMode: boolean;
 }>();
 
@@ -62,13 +60,7 @@ function hasConflict(r: number, c: number): boolean {
         :is-highlighted="isCellHighlighted(r, c)"
         :is-same-value="isSameValue(r, c)"
         :notes="notesBoard[r][c]"
-        :show-all-candidates="showAllCandidates"
         :color-mode="colorMode"
-        :dynamic-candidates="
-          dynamicCandidates && dynamicCandidates[r] && dynamicCandidates[r][c]
-            ? dynamicCandidates[r][c]
-            : []
-        "
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
         @click="emit('select-cell', { r, c })"

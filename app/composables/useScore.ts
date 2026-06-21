@@ -1,3 +1,5 @@
+import { readJSON, writeJSON } from "../utils/safeJson";
+
 const KEY = "sudoku_v1_score";
 
 export interface DifficultyStat {
@@ -13,10 +15,6 @@ export interface ScoreStats {
   perDifficulty: Record<string, DifficultyStat>;
 }
 
-function empty(): ScoreStats {
-  return { total: 0, gamesWon: 0, best: {}, perDifficulty: {} };
-}
-
 export interface RecordResult {
   stats: ScoreStats;
   isNewBest: boolean;
@@ -25,26 +23,19 @@ export interface RecordResult {
 
 export function useScore() {
   function getStats(): ScoreStats {
-    if (typeof window === "undefined") return empty();
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return empty();
-      const parsed = JSON.parse(raw) as Partial<ScoreStats>;
-      const best = parsed.best ?? {};
-      // Migrate older saves (no perDifficulty) from the flat best map.
-      const perDifficulty: Record<string, DifficultyStat> = { ...parsed.perDifficulty };
-      for (const [diff, score] of Object.entries(best)) {
-        if (!perDifficulty[diff]) perDifficulty[diff] = { best: score, wins: 0, bestTime: 0 };
-      }
-      return {
-        total: parsed.total ?? 0,
-        gamesWon: parsed.gamesWon ?? 0,
-        best,
-        perDifficulty,
-      };
-    } catch {
-      return empty();
+    const parsed = readJSON<Partial<ScoreStats>>(KEY, {});
+    const best = parsed.best ?? {};
+    // Migrate older saves (no perDifficulty) from the flat best map.
+    const perDifficulty: Record<string, DifficultyStat> = { ...parsed.perDifficulty };
+    for (const [diff, score] of Object.entries(best)) {
+      if (!perDifficulty[diff]) perDifficulty[diff] = { best: score, wins: 0, bestTime: 0 };
     }
+    return {
+      total: parsed.total ?? 0,
+      gamesWon: parsed.gamesWon ?? 0,
+      best,
+      perDifficulty,
+    };
   }
 
   function record(difficulty: string, points: number, timeSeconds = 0): RecordResult {
@@ -63,13 +54,7 @@ export function useScore() {
       d.bestTime = d.bestTime === 0 ? timeSeconds : Math.min(d.bestTime, timeSeconds);
     stats.perDifficulty[difficulty] = d;
 
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(stats));
-      } catch {
-        /* storage full / unavailable — score is non-critical */
-      }
-    }
+    writeJSON(KEY, stats);
     return { stats, isNewBest, previousBest };
   }
 

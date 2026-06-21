@@ -60,7 +60,6 @@ const {
   prevHintStep,
   cancelComplexHint,
   checkWinCondition,
-  getGridCandidates,
   loadCustomBoard,
 } = engine;
 
@@ -70,7 +69,6 @@ const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
 
 const notesMode = ref<boolean>(false);
-const showAllCandidates = ref<boolean>(false);
 const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t("game.ready"));
 const hintBody = ref<string>("");
@@ -674,9 +672,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
               :hint-triggers="hintTriggers"
               :hint-eliminations="hintEliminations"
               :conflict-cells="conflictCells"
-              :show-all-candidates="showAllCandidates"
               :color-mode="colorMode"
-              :dynamic-candidates="currentBoard ? getGridCandidates(currentBoard) : []"
               @select-cell="handleSelectCell"
             />
           </div>

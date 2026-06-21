@@ -2,6 +2,8 @@ import { ref, readonly } from "vue";
 
 import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
 
+import { readJSON, writeJSON } from "../utils/safeJson";
+
 const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert", "master"] as const;
 const saveKey = (d: Difficulty) => `sudoku_v1_save_${d}`;
 
@@ -26,25 +28,14 @@ if (typeof window !== "undefined") recheck();
 
 export function useGameSave() {
   function save(state: Omit<GameSave, "savedAt">): void {
-    try {
-      const full: GameSave = { ...state, savedAt: Date.now() };
-      localStorage.setItem(saveKey(state.difficulty), JSON.stringify(full));
-      _hasSave.value = true;
-    } catch {
-      // quota exceeded — silently ignore
-    }
+    const full: GameSave = { ...state, savedAt: Date.now() };
+    if (writeJSON(saveKey(state.difficulty), full)) _hasSave.value = true;
   }
 
   function loadMostRecent(): GameSave | null {
-    const saves = DIFFICULTIES.map((d) => {
-      const raw = localStorage.getItem(saveKey(d));
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw) as GameSave;
-      } catch {
-        return null;
-      }
-    }).filter(Boolean) as GameSave[];
+    const saves = DIFFICULTIES.map((d) => readJSON<GameSave | null>(saveKey(d), null)).filter(
+      Boolean,
+    ) as GameSave[];
 
     if (!saves.length) return null;
     return saves.sort((a, b) => b.savedAt - a.savedAt)[0]!;

@@ -27,7 +27,6 @@ export interface ExplanationStep {
 export interface ComplexHint {
   title: string;
   targetCell: CellCoord;
-  targetNum: number;
   steps: ExplanationStep[];
 }
 
@@ -257,7 +256,6 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     return {
       title: t(`hint.move.${tech}.name`),
       targetCell,
-      targetNum: move.placement?.num ?? 0,
       steps: [
         { label: t("hint.move.findLabel"), description: findDesc, highlightCoords: triggerCoords },
         actionStep,
