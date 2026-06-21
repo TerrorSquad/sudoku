@@ -770,7 +770,7 @@ onUnmounted(() => {
             <!-- PAUSE OVERLAY -->
             <div
               v-if="timer.isPaused.value"
-              class="absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
+              class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
             >
               <svg class="h-12 w-12 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

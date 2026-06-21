@@ -20,6 +20,7 @@ defineEmits<{
     <!-- Exit button-->
     <button
       @click="$emit('exit-game')"
+      :aria-label="$t('game.exitToMenu')"
       class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
     >
       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,6 +48,7 @@ defineEmits<{
       >
       <button
         @click="$emit('toggle-pause')"
+        :aria-label="isPaused ? $t('game.resume') : $t('game.pause')"
         class="rounded p-1 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800"
       >
         <svg

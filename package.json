@@ -12,7 +12,8 @@
     "lint:fix": "oxlint --fix",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@nuxt/ui": "^4.8.2",
@@ -24,6 +25,7 @@
     "vue-router": "^5.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/canvas-confetti": "^1.9.0",
     "@vite-pwa/nuxt": "^1.1.1",
     "oxfmt": "^0.54.0",
