@@ -439,11 +439,14 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-white text-zinc-900 antialiased dark:bg-[#0c0a09] dark:text-zinc-100"
     >
-      <!-- Theme + locale switcher - temporarily disabled -->
-    <div class="absolute top-3 right-3 z-40 flex items-center gap-2">
-      <LocaleSwitcher />
-      <UColorModeButton />
-    </div>
+      <!-- Theme + locale switcher — hidden during gameplay so it doesn't float over the dashboard -->
+      <div
+        v-if="currentScreen !== 'game'"
+        class="absolute top-3 right-3 z-40 flex items-center gap-2"
+      >
+        <LocaleSwitcher />
+        <UColorModeButton />
+      </div>
 
       <!-- MENU -->
       <div
