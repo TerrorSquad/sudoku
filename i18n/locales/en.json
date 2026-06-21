@@ -2,8 +2,6 @@
   "menu": {
     "title": "SUDOKU PRO",
     "subtitle": "Vue 3 / Nuxt · Step-by-step hint system",
-    "continue": "Continue",
-    "continueSub": "{difficulty} · {time}",
     "start": "New Game",
     "dailyChallenge": "Daily Challenge",
     "dailyCompleted": "Daily — Completed ✓",
@@ -12,6 +10,13 @@
     "dailyStreak": "{n}-day streak",
     "stats": "Statistics",
     "back": "Menu"
+  },
+  "resume": {
+    "title": "Saved game found",
+    "message": "You have a saved {difficulty} game at {time}. Continue it or start a new one?",
+    "continue": "Continue",
+    "newGame": "Start New",
+    "cancel": "Cancel"
   },
   "difficulty": {
     "title": "Choose a Challenge",

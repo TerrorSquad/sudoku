@@ -16,11 +16,12 @@ import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { useGameSave } from "./composables/useGameSave";
+import { useGameSave, type GameSave } from "./composables/useGameSave";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { digitLabel } from "./utils/sudokuColors";
 
@@ -31,7 +32,9 @@ useHead(() => ({
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
-const colorMode = ref<boolean>(false);
+const COLOR_MODE_KEY = "sudoku_v1_pref_color_mode";
+const colorMode = ref<boolean>(readJSON(COLOR_MODE_KEY, false));
+watch(colorMode, (v) => writeJSON(COLOR_MODE_KEY, v));
 const engine = useSudokuEngine(colorMode);
 const timer = useTimer();
 
@@ -82,6 +85,8 @@ const modalTitle = ref<string>("");
 const modalMessage = ref<string>("");
 const isWinState = ref<boolean>(false);
 
+const pendingResume = ref<{ save: GameSave; level: Difficulty } | null>(null);
+
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 const mistakeExplainer = ref<string>("");
@@ -122,13 +127,6 @@ const dailyRecord = computed(() => {
 const dailyStreak = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getStreak();
-});
-
-const savedInfo = computed(() => {
-  if (!gameSave.hasSave.value) return null;
-  const s = gameSave.loadMostRecent();
-  if (!s) return null;
-  return { difficulty: s.difficulty, time: timer.formatTime(s.timerSeconds) };
 });
 
 // Auto-save on every meaningful state change while a game is active.
@@ -190,9 +188,7 @@ function handleModalClose() {
   timer.resetTimer();
 }
 
-function handleContinueGame() {
-  const s = gameSave.loadMostRecent();
-  if (!s) return;
+function resumeSavedGame(s: GameSave) {
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -222,6 +218,28 @@ function handleStartGame(level: Difficulty) {
   timer.resetTimer();
   timer.startTimer();
   currentScreen.value = "game";
+}
+
+// A difficulty already has a saved game — ask before silently overwriting it.
+function handleChooseDifficulty(level: Difficulty) {
+  const existing = gameSave.loadDifficulty(level);
+  if (existing) {
+    pendingResume.value = { save: existing, level };
+  } else {
+    handleStartGame(level);
+  }
+}
+
+function handleResumeConfirm() {
+  if (!pendingResume.value) return;
+  resumeSavedGame(pendingResume.value.save);
+  pendingResume.value = null;
+}
+
+function handleResumeDecline() {
+  if (!pendingResume.value) return;
+  handleStartGame(pendingResume.value.level);
+  pendingResume.value = null;
 }
 
 function handleSelectCell(coord: CellCoord) {
@@ -443,24 +461,6 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           </p>
         </div>
         <div class="flex w-full max-w-xs flex-col items-center gap-3">
-          <!-- Continue saved game -->
-          <div v-if="gameSave.hasSave.value" class="w-full">
-            <button
-              @click="handleContinueGame"
-              class="w-full border border-emerald-300 bg-emerald-50 px-6 py-4 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
-            >
-              {{ $t("menu.continue") }}
-            </button>
-            <p
-              v-if="savedInfo"
-              class="mt-1.5 text-center text-[11px] font-semibold tracking-wider text-zinc-500 uppercase"
-            >
-              {{
-                $t("menu.continueSub", { difficulty: savedInfo.difficulty, time: savedInfo.time })
-              }}
-            </p>
-          </div>
-
           <!-- New game -->
           <button
             @click="currentScreen = 'difficulty'"
@@ -553,7 +553,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
         v-else-if="currentScreen === 'difficulty'"
         :active-difficulty="activeDifficulty"
         v-model:color-mode="colorMode"
-        @select-difficulty="handleStartGame"
+        @select-difficulty="handleChooseDifficulty"
         @back-to-menu="currentScreen = 'menu'"
       />
 
@@ -858,6 +858,50 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
           >
             {{ $t("modal.close") }}
           </button>
+        </div>
+      </div>
+
+      <!-- RESUME PROMPT -->
+      <div
+        v-if="pendingResume"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+      >
+        <div
+          class="modal-pop w-full max-w-sm border border-t-4 border-t-violet-500 bg-white p-6 text-center shadow-2xl dark:bg-zinc-900"
+        >
+          <h3
+            class="mb-2 text-xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100"
+          >
+            {{ $t("resume.title") }}
+          </h3>
+          <p class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            {{
+              $t("resume.message", {
+                difficulty: $t(`difficulty.${pendingResume.level}`),
+                time: timer.formatTime(pendingResume.save.timerSeconds),
+              })
+            }}
+          </p>
+          <div class="flex flex-col gap-2">
+            <button
+              @click="handleResumeConfirm"
+              class="w-full border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-700 uppercase transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
+            >
+              {{ $t("resume.continue") }}
+            </button>
+            <button
+              @click="handleResumeDecline"
+              class="w-full border border-zinc-300 bg-zinc-50 py-3 text-sm font-bold uppercase transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+            >
+              {{ $t("resume.newGame") }}
+            </button>
+            <button
+              @click="pendingResume = null"
+              class="w-full py-2 text-xs font-bold tracking-wider text-zinc-500 uppercase transition-colors hover:text-rose-600 dark:hover:text-rose-400"
+            >
+              {{ $t("resume.cancel") }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

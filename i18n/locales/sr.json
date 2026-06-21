@@ -2,8 +2,6 @@
   "menu": {
     "title": "SUDOKU PRO",
     "subtitle": "Vue 3 / Nuxt · Sistem nagoveštaja korak po korak",
-    "continue": "Nastavi",
-    "continueSub": "{difficulty} · {time}",
     "start": "Nova igra",
     "dailyChallenge": "Dnevni izazov",
     "dailyCompleted": "Dnevni izazov — Završeno ✓",
@@ -12,6 +10,13 @@
     "dailyStreak": "niz od {n} dana",
     "stats": "Statistika",
     "back": "Meni"
+  },
+  "resume": {
+    "title": "Pronađena sačuvana igra",
+    "message": "Imaš sačuvanu {difficulty} igru na {time}. Nastaviti je ili započeti novu?",
+    "continue": "Nastavi",
+    "newGame": "Nova igra",
+    "cancel": "Otkaži"
   },
   "difficulty": {
     "title": "Izaberi izazov",
