@@ -23,6 +23,7 @@ import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
+import { playMistake, playPlace, playWin } from "./utils/sound";
 import { digitLabel } from "./utils/sudokuColors";
 
 const { t, locale, locales } = useI18n();
@@ -35,6 +36,10 @@ useHead(() => ({
 const COLOR_MODE_KEY = "sudoku_v1_pref_color_mode";
 const colorMode = ref<boolean>(readJSON(COLOR_MODE_KEY, false));
 watch(colorMode, (v) => writeJSON(COLOR_MODE_KEY, v));
+
+const SOUND_KEY = "sudoku_v1_pref_sound";
+const soundEnabled = ref<boolean>(readJSON(SOUND_KEY, true));
+watch(soundEnabled, (v) => writeJSON(SOUND_KEY, v));
 const engine = useSudokuEngine(colorMode);
 const timer = useTimer();
 
@@ -158,6 +163,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   timer.stopTimer();
   gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
+    if (soundEnabled.value) playWin();
     if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
     const breakdown = computeScore({
       difficulty: activeDifficulty.value,
@@ -271,6 +277,7 @@ function handleInputNumber(num: number) {
 
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
+        if (soundEnabled.value) playMistake();
         mistakes.value++;
         if (conflicts.length > 0) {
           const inRow = conflicts.some((cc) => cc.r === r);
@@ -298,6 +305,7 @@ function handleInputNumber(num: number) {
           triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
         }
       } else {
+        if (soundEnabled.value) playPlace();
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
         if (checkWinCondition()) {
@@ -324,6 +332,7 @@ function handleNextStep() {
       techStats.record(title);
     }
     hintsUsed.value++;
+    if (wasPlacement && soundEnabled.value) playPlace();
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
@@ -353,6 +362,7 @@ function handleInstantApplyHint() {
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
   engine.applyComplexHint();
+  if (wasPlacement && soundEnabled.value) playPlace();
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
@@ -556,6 +566,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
         v-else-if="currentScreen === 'difficulty'"
         :active-difficulty="activeDifficulty"
         v-model:color-mode="colorMode"
+        v-model:sound-enabled="soundEnabled"
         @select-difficulty="handleChooseDifficulty"
         @back-to-menu="currentScreen = 'menu'"
       />

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
-defineProps<{ activeDifficulty: Difficulty; colorMode: boolean }>();
+defineProps<{ activeDifficulty: Difficulty; colorMode: boolean; soundEnabled: boolean }>();
 
 const emit = defineEmits<{
   (e: "select-difficulty", level: Difficulty): void;
   (e: "back-to-menu"): void;
   (e: "update:colorMode", value: boolean): void;
+  (e: "update:soundEnabled", value: boolean): void;
 }>();
 </script>
 
@@ -30,6 +31,18 @@ const emit = defineEmits<{
       <USwitch
         :model-value="colorMode"
         @update:model-value="(v: boolean) => emit('update:colorMode', v)"
+      />
+    </label>
+
+    <label
+      class="flex items-center justify-between border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{{
+        $t("difficulty.sound")
+      }}</span>
+      <USwitch
+        :model-value="soundEnabled"
+        @update:model-value="(v: boolean) => emit('update:soundEnabled', v)"
       />
     </label>
 
