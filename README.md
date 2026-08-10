@@ -17,13 +17,15 @@ The board follows standard Sudoku rules: fill every row, column, and 3×3 box wi
 | Enter a number    | `1`–`9`                | Number pad at the bottom |
 | Erase a cell      | `Backspace` / `Delete` | Erase button             |
 | Toggle notes mode | `N`                    | Notes button             |
-| Request a hint    | `H`                    | CSP Savjet button        |
-| Auto-fill notes   | `A`                    | Auto Bilješke button     |
-| Undo last move    | —                      | Nazad button             |
+| Request a hint    | `H`                    | Hint button              |
+| Auto-fill notes   | `A`                    | Auto button              |
+| Undo last move    | —                      | Undo button              |
+
+The interface ships in English and Serbian (`en` / `rs`), English by default.
 
 ### Notes mode
 
-Press **N** (or the Notes button) to toggle pencil-mark mode. In this mode, numbers are entered as small candidates inside the cell rather than as a final answer. Use **Auto Bilješke** to instantly fill in all valid candidates for every empty cell — a great starting point before applying the solving techniques below.
+Press **N** (or the Notes button) to toggle pencil-mark mode. In this mode, numbers are entered as small candidates inside the cell rather than as a final answer. Use **Auto** to instantly fill in all valid candidates for every empty cell — a great starting point before applying the solving techniques below.
 
 ---
 
