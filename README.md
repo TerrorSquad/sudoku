@@ -1,8 +1,12 @@
 # Sudoku Pro
 
+[![Deploy](https://github.com/TerrorSquad/sudoku/actions/workflows/deploy.yml/badge.svg)](https://github.com/TerrorSquad/sudoku/actions/workflows/deploy.yml)
+[![Play](https://img.shields.io/badge/play-live%20demo-0EA5E9)](https://terrorsquad.github.io/sudoku/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A Sudoku game built with **Nuxt 4 / Vue 3** that teaches you how to solve Sudoku through step-by-step interactive hints.
 
-**Live demo:** https://terrorsquad.github.io/sudoku/
+**[▶ Play it in your browser](https://terrorsquad.github.io/sudoku/)** — no install, works offline once loaded.
 
 ![The hint system naming the technique and highlighting the evidence cells](docs/screenshots/hint-hidden-single.png)
 
@@ -135,3 +139,7 @@ The live URL will be: `https://terrorsquad.github.io/sudoku/`
 - [Vue 3](https://vuejs.org) with Composition API
 - [Tailwind CSS](https://tailwindcss.com)
 - TypeScript (strict mode + `noUncheckedIndexedAccess`)
+
+## License
+
+[MIT](LICENSE) © Goran Ninković
