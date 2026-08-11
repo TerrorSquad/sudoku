@@ -4,6 +4,8 @@ A Sudoku game built with **Nuxt 4 / Vue 3** that teaches you how to solve Sudoku
 
 **Live demo:** https://terrorsquad.github.io/sudoku/
 
+![The hint system naming the technique and highlighting the evidence cells](docs/screenshots/hint-hidden-single.png)
+
 ---
 
 ## How to play
