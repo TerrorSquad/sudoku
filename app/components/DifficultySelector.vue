@@ -91,7 +91,7 @@ const DIFFICULTIES: {
           :class="d.hoverClass"
           class="group border border-zinc-200 bg-zinc-50 p-5 text-left transition-all active:scale-95 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <span class="mb-2 flex items-center justify-between">
+          <span class="mb-2 flex h-5 items-center justify-between">
             <!-- Six pips, filled up to this level: one consistent difficulty scale. -->
             <span class="flex gap-0.5" aria-hidden="true">
               <span
