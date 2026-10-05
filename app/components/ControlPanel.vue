@@ -1,8 +1,9 @@
 <script setup lang="ts">
-defineProps<{ notesMode: boolean }>();
+defineProps<{ notesMode: boolean; canUndo: boolean; canRedo: boolean }>();
 
 defineEmits<{
   (e: "undo"): void;
+  (e: "redo"): void;
   (e: "erase"): void;
   (e: "toggle-notes"): void;
   (e: "trigger-hint"): void;
@@ -11,11 +12,13 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="grid grid-cols-5 gap-1.5 sm:gap-2">
+  <div class="grid grid-cols-6 gap-1.5 sm:gap-2">
     <!-- Undo -->
     <button
       @click="$emit('undo')"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      :disabled="!canUndo"
+      :aria-label="$t('controls.undo')"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -24,6 +27,23 @@ defineEmits<{
       <span
         class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 uppercase 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.undo") }}</span
+      >
+    </button>
+
+    <!-- Redo -->
+    <button
+      @click="$emit('redo')"
+      :disabled="!canRedo"
+      :aria-label="$t('controls.redo')"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+    >
+      <AppIcon
+        class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
+        path="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"
+      />
+      <span
+        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 uppercase 3xl:text-xs dark:text-zinc-400"
+        >{{ $t("controls.redo") }}</span
       >
     </button>
 

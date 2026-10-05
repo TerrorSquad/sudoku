@@ -68,6 +68,9 @@ const {
   clearRelationalNotes,
   saveHistory,
   undoMove,
+  redoMove,
+  redoHistory,
+  boardHistory,
   triggerComplexHint,
   nextHintStep,
   prevHintStep,
@@ -514,6 +517,16 @@ function exitToMenu() {
 
 function handleKeyDown(e: KeyboardEvent) {
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
+  // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
+  // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
+  if (e.metaKey || e.ctrlKey) {
+    const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey) undoMove();
+    else if ((k === "z" && e.shiftKey) || k === "y") redoMove();
+    else return;
+    e.preventDefault();
+    return;
+  }
   if (e.key >= "1" && e.key <= "9") {
     handleInputNumber(parseInt(e.key));
   } else if (e.key === "Backspace" || e.key === "Delete") {
@@ -741,6 +754,8 @@ onUnmounted(() => {
                   { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
                   { key: 'H', desc: $t('sidebar.shortcutGetHint') },
                   { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
+                  { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
+                  { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
                 ]"
                 :key="i"
                 class="flex items-center gap-3"
@@ -836,7 +851,10 @@ onUnmounted(() => {
             <div class="mx-2 flex flex-col gap-2 sm:mx-0">
               <ControlPanel
                 :notes-mode="notesMode"
+                :can-undo="boardHistory.length > 0"
+                :can-redo="redoHistory.length > 0"
                 @undo="undoMove"
+                @redo="redoMove"
                 @erase="eraseCell(selectedCell)"
                 @toggle-notes="notesMode = !notesMode"
                 @trigger-hint="handleTriggerHint"

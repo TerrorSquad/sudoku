@@ -58,6 +58,8 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
       ),
   );
   const boardHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
+  // Undone states, newest first to redo; cleared by any fresh edit or a new game.
+  const redoHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
 
   const selectedCell = ref<CellCoord | null>(null);
 
@@ -126,6 +128,7 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
           .map(() => Array(10).fill(false)),
       );
     boardHistory.value = [];
+    redoHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
     resetHintChain();
@@ -146,6 +149,7 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
           .map(() => Array(10).fill(false)),
       );
     boardHistory.value = [];
+    redoHistory.value = [];
     selectedCell.value = null;
     cancelComplexHint();
     resetHintChain();
@@ -182,15 +186,32 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     const notesCopy = notesBoard.value.map((row) => row.map((cell) => [...cell]));
     boardHistory.value.push({ board: boardCopy, notes: notesCopy });
     if (boardHistory.value.length > 25) boardHistory.value.shift();
+    redoHistory.value = [];
+  }
+
+  function snapshot() {
+    return {
+      board: currentBoard.value.map((row) => [...row]),
+      notes: notesBoard.value.map((row) => row.map((cell) => [...cell])),
+    };
   }
 
   function undoMove() {
-    if (boardHistory.value.length === 0) return;
     const prevState = boardHistory.value.pop();
-    if (prevState) {
-      currentBoard.value = prevState.board;
-      notesBoard.value = prevState.notes;
-    }
+    if (!prevState) return;
+    redoHistory.value.push(snapshot());
+    currentBoard.value = prevState.board;
+    notesBoard.value = prevState.notes;
+    cancelComplexHint();
+    resetHintChain();
+  }
+
+  function redoMove() {
+    const nextState = redoHistory.value.pop();
+    if (!nextState) return;
+    boardHistory.value.push(snapshot());
+    currentBoard.value = nextState.board;
+    notesBoard.value = nextState.notes;
     cancelComplexHint();
     resetHintChain();
   }
@@ -376,6 +397,7 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     hintEliminations.value = [];
     activeHintCell.value = null;
     boardHistory.value = [];
+    redoHistory.value = [];
     resetHintChain();
   }
 
@@ -403,6 +425,9 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     clearRelationalNotes,
     saveHistory,
     undoMove,
+    redoMove,
+    redoHistory,
+    boardHistory,
     checkWinCondition,
     triggerComplexHint,
     nextHintStep,
