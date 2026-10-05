@@ -46,10 +46,11 @@ const cellClasses = computed(() => {
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
     "dark:text-rose-400 text-rose-600 dark:!bg-rose-950/20 !bg-rose-100":
       !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
-    "dark:bg-zinc-800/40 bg-zinc-300/50 dark:border-zinc-400 border-zinc-600":
+    "dark:bg-zinc-700/60 bg-zinc-300 dark:border-zinc-400 border-zinc-600":
       props.isHighlighted && !props.isSelected,
-    "!bg-violet-900/20": props.isSameValue && props.value !== 0 && !props.isSelected,
-    "dark:!bg-violet-950/60 !bg-violet-200 ring-2 dark:ring-violet-400 ring-violet-600 z-10":
+    "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
+      props.isSameValue && props.value !== 0 && !props.isSelected,
+    "dark:!bg-violet-700/70 !bg-violet-300 ring-2 dark:ring-violet-400 ring-violet-600 z-10":
       props.isSelected && !props.hasConflict,
     "dark:!bg-rose-950/50 !bg-rose-200 ring-2 dark:ring-rose-500 ring-rose-600 z-10":
       props.isSelected && props.hasConflict,
