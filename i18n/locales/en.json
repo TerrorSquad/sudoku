@@ -176,6 +176,7 @@
   "stats.topTechniques": "Most-used techniques",
   "stats.noTechniquesYet": "No techniques used yet — request a hint in a game to start tracking.",
   "stats.noStatsYet": "No games won yet. Finish a puzzle to start building your stats!",
+  "stats.startFirst": "Start your first puzzle",
   "stats.back": "Back to Menu",
   "stats.dash": "—",
   "academy.title": "Sudoku Academy",

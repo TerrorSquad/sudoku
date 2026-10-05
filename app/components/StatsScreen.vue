@@ -5,7 +5,7 @@ import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { useScore } from "../composables/useScore";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 
-const emit = defineEmits<{ (e: "back-to-menu"): void }>();
+const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "start-game"): void }>();
 
 const { t } = useI18n();
 const score = useScore();
@@ -73,9 +73,24 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
-      <p v-if="!hasStats" class="py-16 text-center text-sm text-zinc-500">
-        {{ $t("stats.noStatsYet") }}
-      </p>
+      <div
+        v-if="!hasStats"
+        class="flex flex-col items-center gap-5 border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700"
+      >
+        <AppIcon
+          class="h-10 w-10 text-zinc-400 dark:text-zinc-600"
+          path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+        <p class="max-w-xs text-sm text-zinc-600 dark:text-zinc-400">
+          {{ $t("stats.noStatsYet") }}
+        </p>
+        <button
+          @click="emit('start-game')"
+          class="bg-gradient-to-r from-violet-500 to-cyan-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:brightness-110 active:scale-95"
+        >
+          {{ $t("stats.startFirst") }}
+        </button>
+      </div>
 
       <template v-else>
         <!-- Headline cards -->
@@ -186,7 +201,10 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       </template>
 
       <!-- Footer -->
-      <div class="mt-10 border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
+      <div
+        v-if="hasStats"
+        class="mt-10 border-t border-zinc-200 pt-8 text-center dark:border-zinc-800"
+      >
         <button
           @click="emit('back-to-menu')"
           class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"

@@ -625,7 +625,11 @@ onUnmounted(() => {
       />
 
       <!-- STATISTICS -->
-      <StatsScreen v-else-if="currentScreen === 'stats'" @back-to-menu="currentScreen = 'menu'" />
+      <StatsScreen
+        v-else-if="currentScreen === 'stats'"
+        @back-to-menu="currentScreen = 'menu'"
+        @start-game="currentScreen = 'difficulty'"
+      />
 
       <!-- SETTINGS -->
       <SettingsScreen

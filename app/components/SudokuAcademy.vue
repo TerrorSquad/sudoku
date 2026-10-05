@@ -241,22 +241,37 @@ const total = computed(() => techniques.length);
               </div>
             </div>
 
-            <div class="space-y-3">
-              <div>
-                <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-                  {{ $t("academy.lookForLabel") }}
-                </p>
-                <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {{ $t(`academy.tech.${tech.id}.lookFor`) }}
-                </p>
+            <div class="flex items-start gap-4">
+              <div class="min-w-0 flex-1 space-y-3">
+                <div>
+                  <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                    {{ $t("academy.lookForLabel") }}
+                  </p>
+                  <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                    {{ $t(`academy.tech.${tech.id}.lookFor`) }}
+                  </p>
+                </div>
+                <div>
+                  <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                    {{ $t("academy.howItHelpsLabel") }}
+                  </p>
+                  <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                    {{ $t(`academy.tech.${tech.id}.howItHelps`) }}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
-                  {{ $t("academy.howItHelpsLabel") }}
-                </p>
-                <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  {{ $t(`academy.tech.${tech.id}.howItHelps`) }}
-                </p>
+              <!-- Thumbnail of the worked example; the full one opens on click. -->
+              <div
+                v-if="!expanded.has(tech.id) && exampleFor(tech.id)"
+                class="hidden w-[104px] shrink-0 sm:block"
+              >
+                <ExampleGrid
+                  mini
+                  :board="exampleFor(tech.id)!.board"
+                  :target="exampleFor(tech.id)!.target"
+                  :trigger="exampleFor(tech.id)!.trigger"
+                  :elimination="elimDisplay(exampleFor(tech.id)!)"
+                />
               </div>
             </div>
 
