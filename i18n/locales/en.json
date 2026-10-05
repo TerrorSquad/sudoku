@@ -327,5 +327,19 @@
   "a11y.cellEntry": "your entry {v}",
   "a11y.cellWrong": "wrong entry {v}",
   "a11y.cellEmpty": "empty",
-  "a11y.cellNotes": "empty, notes {notes}"
+  "a11y.cellNotes": "empty, notes {notes}",
+  "settings.groupGame": "Game",
+  "settings.groupFeedback": "Feedback",
+  "settings.digitFirst": "Digit-first input",
+  "settings.digitFirstHint": "Tap a digit, then tap cells to place it.",
+  "settings.showTimer": "Show timer",
+  "settings.mistakeLimit": "Mistake limit",
+  "settings.limitNone": "Unlimited",
+  "settings.highlightErrors": "Highlight mistakes",
+  "settings.highlightErrorsHint": "When off, wrong entries aren't marked and can't end the game. They still count toward your score.",
+  "settings.hintStyle": "Hint style",
+  "settings.hintStyleHint": "A nudge points to a box before explaining.",
+  "settings.hintFull": "Full explanation",
+  "settings.hintNudge": "Nudge first",
+  "settings.haptics": "Vibration"
 }

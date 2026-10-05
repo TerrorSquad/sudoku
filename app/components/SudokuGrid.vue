@@ -15,6 +15,7 @@ const props = defineProps<{
   conflictCells: CellCoord[];
   colorMode: boolean;
   flashCells: CellCoord[];
+  showErrors: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -70,6 +71,7 @@ function hasConflict(r: number, c: number): boolean {
         :notes="notesBoard[r][c]"
         :color-mode="colorMode"
         :is-flashing="isFlashing(r, c)"
+        :show-errors="showErrors"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"

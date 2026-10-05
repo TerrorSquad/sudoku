@@ -21,15 +21,16 @@ import SudokuGrid from "./components/SudokuGrid.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave } from "./composables/useGameSave";
+import { usePreferences } from "./composables/usePreferences";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { haptic } from "./utils/haptics";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
-import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
-import { playMistake, playPlace, playWin } from "./utils/sound";
+import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
 
@@ -41,13 +42,23 @@ useHead(() => ({
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
-const COLOR_MODE_KEY = "sudoku_v1_pref_color_mode";
-const colorMode = ref<boolean>(readJSON(COLOR_MODE_KEY, false));
-watch(colorMode, (v) => writeJSON(COLOR_MODE_KEY, v));
+const { colorMode, soundEnabled, hapticsEnabled, showTimer, mistakeLimit, highlightErrors } =
+  usePreferences();
 
-const SOUND_KEY = "sudoku_v1_pref_sound";
-const soundEnabled = ref<boolean>(readJSON(SOUND_KEY, true));
-watch(soundEnabled, (v) => writeJSON(SOUND_KEY, v));
+// One call per game event: the sound and the vibration, each respecting its own setting.
+const CUES = {
+  place: [playPlace, "place"],
+  mistake: [playMistake, "mistake"],
+  complete: [playComplete, "complete"],
+  win: [playWin, "win"],
+  hint: [playHint, null],
+  unlock: [playUnlock, null],
+} as const;
+function cue(kind: keyof typeof CUES) {
+  const [sound, vibration] = CUES[kind];
+  if (soundEnabled.value) sound();
+  if (vibration && hapticsEnabled.value) haptic(vibration);
+}
 const engine = useSudokuEngine(colorMode);
 const timer = useTimer();
 
@@ -199,7 +210,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   timer.stopTimer();
   if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
-    if (soundEnabled.value) playWin();
+    cue("win");
     if (practiceTechnique.value) {
       lastScore.value = null;
     } else {
@@ -221,21 +232,21 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       const before = levelFor(result.previousTotal).level;
       const after = levelFor(result.stats.total).level;
       reachedLevel.value = after > before ? after : null;
-      toastIds.value.push(
-        ...achievements.evaluate({
-          difficulty: activeDifficulty.value,
-          timeSeconds: timer.timerSeconds.value,
-          mistakes: mistakes.value,
-          hintsUsed: hintsUsed.value,
-          isDaily: isDailyMode.value,
-          colorMode: colorMode.value,
-          hour: new Date().getHours(),
-          gamesWon: result.stats.gamesWon,
-          winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
-          dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
-          distinctTechniques: Object.keys(techStats.getAll()).length,
-        }),
-      );
+      const unlocked = achievements.evaluate({
+        difficulty: activeDifficulty.value,
+        timeSeconds: timer.timerSeconds.value,
+        mistakes: mistakes.value,
+        hintsUsed: hintsUsed.value,
+        isDaily: isDailyMode.value,
+        colorMode: colorMode.value,
+        hour: new Date().getHours(),
+        gamesWon: result.stats.gamesWon,
+        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+        dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
+        distinctTechniques: Object.keys(techStats.getAll()).length,
+      });
+      toastIds.value.push(...unlocked);
+      if (unlocked.length) cue("unlock");
       animateScoreCountUp(breakdown.total);
     }
     confetti({
@@ -351,6 +362,7 @@ function flashCompletedUnits(r: number, c: number) {
   }
 
   if (!cells.length) return;
+  cue("complete");
   if (flashTimeout) clearTimeout(flashTimeout);
   flashCells.value = cells;
   flashTimeout = setTimeout(() => {
@@ -383,35 +395,41 @@ function handleInputNumber(num: number) {
 
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
-        if (soundEnabled.value) playMistake();
         mistakes.value++;
-        if (conflicts.length > 0) {
-          const inRow = conflicts.some((cc) => cc.r === r);
-          const inCol = conflicts.some((cc) => cc.c === c);
-          const inBox = conflicts.some((cc) => cc.r !== r && cc.c !== c);
-          const where = inRow
-            ? t("game.whereRow", { n: r + 1 })
-            : inCol
-              ? t("game.whereCol", { n: c + 1 })
-              : inBox
-                ? t("game.whereBox")
-                : t("game.whereCell");
-          hintStatus.value = t("game.conflictWith", { where });
-          const first = conflicts[0]!;
-          mistakeExplainer.value = t("game.whyConflict", {
-            num: digitLabel(num, colorMode.value, t),
-            r: first.r + 1,
-            c: first.c + 1,
-          });
-        } else {
-          hintStatus.value = t("game.wrongDigit");
-          mistakeExplainer.value = t("game.whyWrong", { num: digitLabel(num, colorMode.value, t) });
-        }
-        if (mistakes.value >= 3) {
-          triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+        // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
+        // it still counts toward the score.
+        if (highlightErrors.value) {
+          cue("mistake");
+          if (conflicts.length > 0) {
+            const inRow = conflicts.some((cc) => cc.r === r);
+            const inCol = conflicts.some((cc) => cc.c === c);
+            const inBox = conflicts.some((cc) => cc.r !== r && cc.c !== c);
+            const where = inRow
+              ? t("game.whereRow", { n: r + 1 })
+              : inCol
+                ? t("game.whereCol", { n: c + 1 })
+                : inBox
+                  ? t("game.whereBox")
+                  : t("game.whereCell");
+            hintStatus.value = t("game.conflictWith", { where });
+            const first = conflicts[0]!;
+            mistakeExplainer.value = t("game.whyConflict", {
+              num: digitLabel(num, colorMode.value, t),
+              r: first.r + 1,
+              c: first.c + 1,
+            });
+          } else {
+            hintStatus.value = t("game.wrongDigit");
+            mistakeExplainer.value = t("game.whyWrong", {
+              num: digitLabel(num, colorMode.value, t),
+            });
+          }
+          if (mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
+            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+          }
         }
       } else {
-        if (soundEnabled.value) playPlace();
+        cue("place");
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
         flashCompletedUnits(r, c);
@@ -439,7 +457,7 @@ function handleNextStep() {
       techStats.record(title);
     }
     hintsUsed.value++;
-    if (wasPlacement && soundEnabled.value) playPlace();
+    if (wasPlacement) cue("place");
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
@@ -457,6 +475,7 @@ function handleTriggerHint() {
   if (activeComplexHint.value) {
     handleInstantApplyHint();
   } else {
+    cue("hint");
     triggerComplexHint(hintStatus, hintBody);
   }
 }
@@ -469,7 +488,7 @@ function handleInstantApplyHint() {
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
   engine.applyComplexHint();
-  if (wasPlacement && soundEnabled.value) playPlace();
+  if (wasPlacement) cue("place");
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
@@ -819,8 +838,6 @@ onUnmounted(() => {
         <!-- SETTINGS -->
         <SettingsScreen
           v-else-if="currentScreen === 'settings'"
-          v-model:color-mode="colorMode"
-          v-model:sound-enabled="soundEnabled"
           @back-to-menu="currentScreen = 'menu'"
         />
 
@@ -908,7 +925,9 @@ onUnmounted(() => {
               :formatted-time="timer.formatTime(timer.timerSeconds.value)"
               :is-paused="timer.isPaused.value"
               :mistakes="mistakes"
-              :max-mistakes="3"
+              :max-mistakes="mistakeLimit"
+              :show-timer="showTimer"
+              :show-mistakes="highlightErrors"
               :difficulty="
                 practiceTechnique
                   ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
@@ -946,6 +965,7 @@ onUnmounted(() => {
                 :conflict-cells="conflictCells"
                 :color-mode="colorMode"
                 :flash-cells="flashCells"
+                :show-errors="highlightErrors"
                 @select-cell="handleSelectCell"
               />
               <div class="mx-2 flex flex-col gap-2 sm:mx-0">
@@ -1152,7 +1172,7 @@ onUnmounted(() => {
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-rose-600 dark:text-rose-400'
                 "
-                >{{ mistakes }} / 3</span
+                >{{ mistakes }}{{ mistakeLimit ? ` / ${mistakeLimit}` : "" }}</span
               >
             </div>
             <div class="flex justify-between px-3 py-2">

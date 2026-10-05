@@ -20,6 +20,7 @@ const props = defineProps<{
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
+  showErrors: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
 }>();
@@ -30,8 +31,13 @@ defineEmits<{
 
 // A player entry that's wrong (conflict or not matching the solution) shakes
 // instead of popping, for immediate tactile feedback on a mistake.
+// With "Highlight mistakes" off nothing is marked wrong, visually or to screen readers.
 const isWrong = computed(
-  () => props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict),
+  () =>
+    props.showErrors &&
+    props.value !== 0 &&
+    !props.isInitial &&
+    (!props.isCorrect || props.hasConflict),
 );
 
 // A wrong or conflicting player entry keeps its red treatment while selected.
@@ -67,7 +73,7 @@ const label = computed(() => {
     : `${pos}, ${t("a11y.cellEmpty")}`;
 });
 
-const isBad = computed(() => isWrong.value || props.hasConflict);
+const isBad = computed(() => isWrong.value || (props.showErrors && props.hasConflict));
 
 // Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
 const cellClasses = computed(() => {
@@ -80,9 +86,8 @@ const cellClasses = computed(() => {
     "border-b-2 border-b-zinc-600 dark:border-b-zinc-400": props.row === 2 || props.row === 5,
     "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
     "dark:text-violet-300 text-violet-600 font-semibold":
-      !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
-    "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100":
-      !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
+      !props.isInitial && props.value !== 0 && !isWrong.value,
+    "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100": isWrong.value,
     "dark:bg-zinc-700/60 bg-zinc-200 dark:border-zinc-400 border-zinc-600":
       props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":

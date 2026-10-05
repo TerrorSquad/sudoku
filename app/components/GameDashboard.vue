@@ -3,7 +3,10 @@ defineProps<{
   formattedTime: string;
   isPaused: boolean;
   mistakes: number;
+  /** 0 = unlimited. */
   maxMistakes: number;
+  showTimer: boolean;
+  showMistakes: boolean;
   difficulty: string;
 }>();
 
@@ -41,6 +44,7 @@ defineEmits<{
     <!-- Timer -->
     <div class="flex shrink-0 items-center gap-2">
       <span
+        v-if="showTimer"
         class="font-mono text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
         >{{ formattedTime }}</span
       >
@@ -64,11 +68,12 @@ defineEmits<{
 
     <!-- Mistakes -->
     <div
+      v-if="showMistakes"
       class="flex shrink-0 items-center gap-1 text-xs text-zinc-600 3xl:text-sm dark:text-zinc-400"
     >
       <span>{{ $t("game.mistakes") }}:</span>
       <span class="font-bold text-rose-600 dark:text-rose-400">{{ mistakes }}</span>
-      <span>/ {{ maxMistakes }}</span>
+      <span v-if="maxMistakes">/ {{ maxMistakes }}</span>
     </div>
   </div>
 </template>
