@@ -5,6 +5,8 @@ const ALMOST_SOLVED =
   "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
 
 async function winCustomPuzzle(page: import("@playwright/test").Page) {
+  // Night Owl keys off the real hour; pin the clock so the unlock count is deterministic.
+  await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
   await page.getByRole("button", { name: "Custom Puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);

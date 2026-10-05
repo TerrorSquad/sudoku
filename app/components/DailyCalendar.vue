@@ -11,7 +11,7 @@ const days = calendarDays(new Date(), WEEKS).map((d) => ({
   done: !d.future && daily.getRecordFor(d.key)?.completed === true,
 }));
 const completed = days.filter((d) => d.done).length;
-const today = daily.dateKey;
+const today = daily.todayKey();
 </script>
 
 <template>

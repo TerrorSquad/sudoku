@@ -12,6 +12,8 @@ export interface GameSave {
   difficulty: Difficulty;
   timerSeconds: number;
   mistakes: number;
+  /** Optional: saves from before hints were persisted restore as 0. */
+  hintsUsed?: number;
   savedAt: number;
 }
 

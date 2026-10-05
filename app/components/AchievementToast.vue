@@ -14,20 +14,29 @@ const TIER_BORDER: Record<AchievementTier, string> = {
 
 const tierOf = (id: string) => ACHIEVEMENTS.find((a) => a.id === id)?.tier ?? "common";
 
-// Each toast clears itself; ids arrive one win at a time so a single sweep timer is enough.
+// Each toast clears itself after 5s, but hovering or focusing it pauses the countdown
+// (WCAG 2.2.1: timed content shouldn't vanish while someone is reading or using it).
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
+function disarm(id: string) {
+  clearTimeout(timers.get(id));
+  timers.delete(id);
+}
 function arm() {
   for (const id of props.ids) {
     if (!timers.has(id))
       timers.set(
         id,
-        setTimeout(() => emit("dismiss", id), 5000),
+        setTimeout(() => dismiss(id), 5000),
       );
   }
 }
+function dismiss(id: string) {
+  disarm(id);
+  emit("dismiss", id);
+}
 onMounted(arm);
 watch(() => props.ids.slice(), arm);
-onUnmounted(() => timers.forEach(clearTimeout));
+onUnmounted(() => [...timers.keys()].forEach(disarm));
 </script>
 
 <template>
@@ -40,7 +49,11 @@ onUnmounted(() => timers.forEach(clearTimeout));
       :key="id"
       :class="TIER_BORDER[tierOf(id)]"
       class="toast-in pointer-events-auto flex w-full max-w-sm items-center gap-3 border border-l-4 border-zinc-200 bg-white px-4 py-3 text-left shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
-      @click="emit('dismiss', id)"
+      @click="dismiss(id)"
+      @mouseenter="disarm(id)"
+      @focusin="disarm(id)"
+      @mouseleave="arm"
+      @focusout="arm"
     >
       <AppIcon
         class="h-7 w-7 shrink-0 text-amber-500"

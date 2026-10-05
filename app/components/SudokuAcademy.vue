@@ -53,7 +53,9 @@ const MASTERY_STYLE = [
 const countOf = (id: TechniqueId) => techStats.getCount(techName(id));
 const masteryOf = (id: TechniqueId) => masteryFor(countOf(id));
 const masteryTitle = (id: TechniqueId) =>
-  `${t(`academy.mastery.${masteryOf(id)}`)} · ${t("modal.usedTotal", { n: countOf(id) })}`;
+  countOf(id) === 0
+    ? undefined
+    : `${t(`academy.mastery.${masteryOf(id)}`)} · ${t("modal.usedTotal", { n: countOf(id) })}`;
 
 const tiers: Tier[] = ["Basic", "Intermediate", "Advanced", "Expert"];
 
