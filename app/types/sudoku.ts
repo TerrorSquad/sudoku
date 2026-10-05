@@ -6,6 +6,11 @@ export interface CellCoord {
   c: number;
 }
 
+/** A cell in a completion flash; `delay` (ms) staggers the ripple outward from the placed digit. */
+export interface FlashCell extends CellCoord {
+  delay: number;
+}
+
 export interface HintCoordinate extends CellCoord {
   type: "trigger" | "elimination";
 }

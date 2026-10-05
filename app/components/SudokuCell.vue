@@ -20,6 +20,7 @@ const props = defineProps<{
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
+  flashDelay?: number;
   showErrors: boolean;
   /** Digit-first input: the armed digit could still go here. */
   isCandidate?: boolean;
@@ -115,7 +116,13 @@ const cellClasses = computed(() => {
     :aria-selected="isSelected"
     :tabindex="tabStop ? 0 : -1"
     :data-cell="`${row}-${col}`"
-    :style="entering ? { animationDelay: `${(row + col) * 22}ms` } : undefined"
+    :style="
+      isFlashing
+        ? { animationDelay: `${flashDelay ?? 0}ms` }
+        : entering
+          ? { animationDelay: `${(row + col) * 22}ms` }
+          : undefined
+    "
     @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
@@ -201,15 +208,23 @@ const cellClasses = computed(() => {
 .cell-shake {
   animation: cell-shake 0.32s ease-in-out both;
 }
+/* A bright pulse that rides outward from the digit just placed (the delay is set inline). */
 @keyframes cell-flash {
   0% {
-    background-color: rgba(16, 185, 129, 0.4);
+    background-color: rgba(16, 185, 129, 0);
+    transform: scale(1);
+  }
+  30% {
+    background-color: rgba(16, 185, 129, 0.55);
+    transform: scale(1.09);
+    z-index: 20;
   }
   100% {
-    background-color: transparent;
+    background-color: rgba(16, 185, 129, 0);
+    transform: scale(1);
   }
 }
 .cell-flash {
-  animation: cell-flash 0.6s ease-out;
+  animation: cell-flash 0.7s ease-out backwards;
 }
 </style>

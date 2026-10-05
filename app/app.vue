@@ -3,7 +3,7 @@ import * as uiLocales from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
-import type { CellCoord, Difficulty } from "./types/sudoku";
+import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
@@ -138,7 +138,7 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 const mistakeExplainer = ref<string>("");
 
-const flashCells = ref<CellCoord[]>([]);
+const flashCells = ref<FlashCell[]>([]);
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const score = useScore();
@@ -218,6 +218,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
     cue("win");
+    flashWin();
     if (practiceTechnique.value) {
       lastScore.value = null;
     } else {
@@ -367,13 +368,17 @@ watch(numberCounts, (counts) => {
 // matches the solution, not just non-empty (a wrong-but-unconflicting digit
 // can sit in a cell without being flagged, so equality is the real check).
 function flashCompletedUnits(r: number, c: number) {
-  const cells: CellCoord[] = [];
+  // Cells ripple outward from the digit just placed: 45 ms per step of distance.
+  const RIPPLE_MS = 45;
+  const cells: FlashCell[] = [];
+  const add = (cr: number, cc: number) =>
+    cells.push({ r: cr, c: cc, delay: Math.max(Math.abs(cr - r), Math.abs(cc - c)) * RIPPLE_MS });
 
   if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
-    for (let i = 0; i < 9; i++) cells.push({ r, c: i });
+    for (let i = 0; i < 9; i++) add(r, i);
   }
   if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
-    for (let i = 0; i < 9; i++) cells.push({ r: i, c });
+    for (let i = 0; i < 9; i++) add(i, c);
   }
   const boxR = r - (r % 3);
   const boxC = c - (c % 3);
@@ -388,17 +393,32 @@ function flashCompletedUnits(r: number, c: number) {
   }
   if (boxComplete) {
     for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) cells.push({ r: boxR + i, c: boxC + j });
+      for (let j = 0; j < 3; j++) add(boxR + i, boxC + j);
     }
   }
 
   if (!cells.length) return;
   cue("complete");
+  runFlash(cells);
+}
+
+// Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
+function runFlash(cells: FlashCell[]) {
   if (flashTimeout) clearTimeout(flashTimeout);
   flashCells.value = cells;
+  const longest = Math.max(...cells.map((c) => c.delay));
   flashTimeout = setTimeout(() => {
     flashCells.value = [];
-  }, 600);
+  }, longest + 900);
+}
+
+// Winning sweeps a diagonal wave across the whole board before the result appears.
+function flashWin() {
+  const cells: FlashCell[] = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) cells.push({ r, c, delay: (r + c) * 45 });
+  }
+  runFlash(cells);
 }
 
 function handleInputNumber(num: number) {
@@ -1084,6 +1104,7 @@ onUnmounted(() => {
       <!-- MODAL -->
       <div
         v-if="showModal"
+        :class="isWinState ? 'modal-delay' : ''"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
@@ -1370,6 +1391,19 @@ onUnmounted(() => {
   opacity: 0;
 }
 
+/* The result appears after the win wave has swept the board. */
+@keyframes modal-delay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.modal-delay {
+  animation: modal-delay 0.3s 0.9s ease-out both;
+}
+
 /* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1377,6 +1411,7 @@ onUnmounted(() => {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }

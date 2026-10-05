@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Grid, NotesGrid, CellCoord } from "../types/sudoku";
+import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
 
 import SudokuCell from "./SudokuCell.vue";
 
@@ -14,7 +14,7 @@ const props = defineProps<{
   hintEliminations: CellCoord[]; // Novo
   conflictCells: CellCoord[];
   colorMode: boolean;
-  flashCells: CellCoord[];
+  flashCells: FlashCell[];
   showErrors: boolean;
   /** Digit-first input: highlights this digit and where it can still go. */
   activeDigit?: number | null;
@@ -32,8 +32,8 @@ function isCellHighlighted(r: number, c: number): boolean {
   return r === selR || c === selC || inSameBox;
 }
 
-function isFlashing(r: number, c: number): boolean {
-  return props.flashCells.some((cell) => cell.r === r && cell.c === c);
+function flashFor(r: number, c: number): FlashCell | undefined {
+  return props.flashCells.find((cell) => cell.r === r && cell.c === c);
 }
 
 function isSameValue(r: number, c: number): boolean {
@@ -86,7 +86,8 @@ function hasConflict(r: number, c: number): boolean {
         :is-same-value="isSameValue(r, c)"
         :notes="notesBoard[r][c]"
         :color-mode="colorMode"
-        :is-flashing="isFlashing(r, c)"
+        :is-flashing="!!flashFor(r, c)"
+        :flash-delay="flashFor(r, c)?.delay ?? 0"
         :show-errors="showErrors"
         :is-candidate="isCandidate(r, c)"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
