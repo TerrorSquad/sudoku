@@ -356,5 +356,6 @@
   "settings.importCancel": "Otkaži",
   "settings.importError.invalid": "Taj fajl nije rezervna kopija Sudoku Pro.",
   "settings.importError.empty": "Ta rezervna kopija je prazna.",
-  "settings.importError.tooLarge": "Taj fajl je prevelik da bi bio rezervna kopija."
+  "settings.importError.tooLarge": "Taj fajl je prevelik da bi bio rezervna kopija.",
+  "settings.importError.storage": "Nije moguće sačuvati tu kopiju (memorija je puna ili blokirana). Tvoj trenutni napredak je sačuvan."
 }

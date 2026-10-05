@@ -6,6 +6,7 @@ import {
   backupFilename,
   createBackup,
   parseBackup,
+  MAX_BACKUP_BYTES,
   type Backup,
 } from "../utils/progressBackup";
 
@@ -34,7 +35,8 @@ function exportProgress() {
   a.href = url;
   a.download = backupFilename();
   a.click();
-  URL.revokeObjectURL(url);
+  // Revoking straight away can cancel the download in Safari and older Firefox.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // A parsed file waits for explicit confirmation: importing replaces everything.
@@ -48,6 +50,11 @@ async function onFile(e: Event) {
   pending.value = null;
   importError.value = null;
   if (!file) return;
+  if (file.size > MAX_BACKUP_BYTES) {
+    importError.value = "tooLarge";
+    input.value = "";
+    return;
+  }
   const result = parseBackup(await file.text());
   if (result.ok) pending.value = { backup: result.backup, items: result.items };
   else importError.value = result.error;
@@ -56,7 +63,14 @@ async function onFile(e: Event) {
 
 function confirmImport() {
   if (!pending.value) return;
-  applyBackup(localStorage, pending.value.backup);
+  try {
+    applyBackup(localStorage, pending.value.backup);
+  } catch {
+    // applyBackup has already restored the previous data.
+    importError.value = "storage";
+    pending.value = null;
+    return;
+  }
   // Every composable reads storage on load, so a reload is the simplest way to pick it all up.
   location.reload();
 }

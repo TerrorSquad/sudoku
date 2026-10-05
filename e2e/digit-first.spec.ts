@@ -73,3 +73,13 @@ test("the numpad keeps accessible names in colour mode", async ({ page }) => {
   await page.getByRole("button", { name: /Beginner/ }).click();
   await expect(page.getByTestId("numpad").getByRole("button", { name: "red" })).toBeVisible();
 });
+
+test("a stray tap with another digit armed never replaces an existing entry", async ({ page }) => {
+  await startDigitFirstGame(page);
+  await pad(page, "3").click();
+  await cell(page, 0).click(); // wrong 3 into cell 0
+  await expect(cell(page, 0)).toHaveText("3");
+  await pad(page, "4").click();
+  await cell(page, 0).click(); // 4 is armed; cell 0 already holds a different entry
+  await expect(cell(page, 0)).toHaveText("3");
+});

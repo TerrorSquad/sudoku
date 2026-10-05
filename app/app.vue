@@ -67,7 +67,10 @@ function cue(kind: keyof typeof CUES) {
   if (soundEnabled.value) sound();
   if (vibration && hapticsEnabled.value) haptic(vibration);
 }
-const engine = useSudokuEngine(colorMode);
+const engine = useSudokuEngine(
+  colorMode,
+  computed(() => !highlightErrors.value),
+);
 const timer = useTimer();
 
 const {
@@ -214,6 +217,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalMessage.value = message;
   isWinState.value = win;
   showModal.value = true;
+  activeDigit.value = null;
   reachedLevel.value = null;
   timer.stopTimer();
   if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
@@ -350,9 +354,12 @@ function handleNumpad(num: number) {
 
 function handleSelectCell(coord: CellCoord) {
   selectedCell.value = coord;
-  if (digitFirst.value && activeDigit.value && initialBoard.value[coord.r]![coord.c] === 0) {
-    handleInputNumber(activeDigit.value);
-  }
+  if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
+    return;
+  // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
+  // different entry must not silently replace it (and cost a mistake).
+  const held = currentBoard.value[coord.r]![coord.c];
+  if (held === 0 || held === activeDigit.value) handleInputNumber(activeDigit.value);
 }
 
 // An armed digit is meaningless once the player leaves the game, turns the mode off, or has
@@ -423,7 +430,7 @@ function flashWin() {
 }
 
 function handleInputNumber(num: number) {
-  if (timer.isPaused.value || !selectedCell.value) return;
+  if (timer.isPaused.value || showModal.value || !selectedCell.value) return;
   const { r, c } = selectedCell.value;
 
   if (initialBoard.value[r]![c] !== 0) return;
@@ -450,7 +457,9 @@ function handleInputNumber(num: number) {
         mistakes.value++;
         // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
         // it still counts toward the score.
-        if (highlightErrors.value) {
+        if (!highlightErrors.value) {
+          cue("place"); // sounds identical to a correct entry
+        } else {
           cue("mistake");
           if (conflicts.length > 0) {
             const inRow = conflicts.some((cc) => cc.r === r);
@@ -484,7 +493,8 @@ function handleInputNumber(num: number) {
         cue("place");
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
-        flashCompletedUnits(r, c);
+        // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
+        if (highlightErrors.value) flashCompletedUnits(r, c);
         if (checkWinCondition()) {
           triggerLocalModal(
             t("modal.win"),
@@ -534,14 +544,19 @@ watch(currentScreen, () => (nudge.value = null));
 function handleTriggerHint() {
   if (activeComplexHint.value) {
     handleInstantApplyHint();
-  } else if (hintStyle.value === "nudge" && !nudge.value && engine.peekHintCell()) {
-    nudge.value = engine.peekHintCell();
-    cue("hint");
-  } else {
-    nudge.value = null;
-    cue("hint");
-    triggerComplexHint(hintStatus, hintBody);
+    return;
   }
+  if (hintStyle.value === "nudge" && !nudge.value) {
+    const at = engine.peekHintCell();
+    if (at) {
+      nudge.value = at;
+      cue("hint");
+      return;
+    }
+  }
+  nudge.value = null;
+  cue("hint");
+  triggerComplexHint(hintStatus, hintBody);
 }
 
 function handleInstantApplyHint() {
@@ -1421,16 +1436,18 @@ onUnmounted(() => {
 }
 
 /* The result appears after the win wave has swept the board. */
+.modal-delay {
+  animation: modal-delay 0.3s 0.9s ease-out both;
+}
 @keyframes modal-delay {
   from {
     opacity: 0;
+    pointer-events: none;
   }
   to {
     opacity: 1;
+    pointer-events: auto;
   }
-}
-.modal-delay {
-  animation: modal-delay 0.3s 0.9s ease-out both;
 }
 
 /* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */

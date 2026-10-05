@@ -29,6 +29,9 @@ class MemoryStore {
 
 const NOW = new Date("2026-03-04T10:00:00Z");
 
+const wrap = (data: Record<string, string>) =>
+  JSON.stringify({ app: "sudoku-pro", version: 1, exportedAt: "x", data });
+
 function seeded() {
   const s = new MemoryStore();
   s.setItem("sudoku_v1_score", JSON.stringify({ total: 900 }));
@@ -106,6 +109,53 @@ describe("progress backup", () => {
     ["too large", "x".repeat(5_000_001), "tooLarge"],
   ])("rejects %s", (_name, text, error) => {
     expect(parseBackup(text)).toEqual({ ok: false, error });
+  });
+
+  it("restores the previous data when a write fails part-way", () => {
+    const store = seeded();
+    const before = createBackup(store, NOW).data;
+    // A store whose quota runs out on the second key written.
+    let writes = 0;
+    const flaky = {
+      get length() {
+        return store.length;
+      },
+      key: (i: number) => store.key(i),
+      getItem: (k: string) => store.getItem(k),
+      removeItem: (k: string) => store.removeItem(k),
+      setItem: (k: string, v: string) => {
+        if (++writes === 2) throw new Error("QuotaExceededError");
+        store.setItem(k, v);
+      },
+    };
+    const incoming: Backup = {
+      app: "sudoku-pro",
+      version: 1,
+      exportedAt: "x",
+      data: { sudoku_v1_a: "1", sudoku_v1_b: "2", sudoku_v1_c: "3" },
+    };
+    expect(() => applyBackup(flaky, incoming)).toThrow("QuotaExceeded");
+    expect(createBackup(store, NOW).data).toEqual(before);
+  });
+
+  it("rejects entries whose shape would crash or mislead the app", () => {
+    const bad = (key: string, value: unknown) =>
+      parseBackup(wrap({ [key]: JSON.stringify(value) }));
+    expect(bad("sudoku_v1_save_hard", {})).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_pref_mistake_limit", 7)).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_pref_hint_style", "x")).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_pref_sound", "yes")).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_score", 5)).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_pref_mistake_limit", 5)).toMatchObject({ ok: true });
+    const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
+    expect(
+      bad("sudoku_v1_save_hard", {
+        currentBoard: grid,
+        initialBoard: grid,
+        solvedBoard: grid,
+        notesBoard: [],
+      }),
+    ).toMatchObject({ ok: true });
   });
 
   it("names the file by date", () => {

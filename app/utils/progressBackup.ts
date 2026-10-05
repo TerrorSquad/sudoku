@@ -3,7 +3,7 @@
 // tests/progressBackup.test.ts.
 
 export const BACKUP_PREFIX = "sudoku_v1_";
-const MAX_BYTES = 5_000_000;
+export const MAX_BACKUP_BYTES = 5_000_000;
 
 export interface Backup {
   app: "sudoku-pro";
@@ -32,18 +32,37 @@ export type ParseResult =
   | { ok: true; backup: Backup; items: number }
   | { ok: false; error: "invalid" | "tooLarge" | "empty" };
 
-const isJson = (s: string) => {
+const isGrid = (v: unknown) =>
+  Array.isArray(v) && v.length === 9 && v.every((row) => Array.isArray(row) && row.length === 9);
+
+/** Parses a stored value and checks the few keys whose shape would crash or mislead the app. */
+function validEntry(key: string, value: string): boolean {
+  let parsed: unknown;
   try {
-    JSON.parse(s);
-    return true;
+    parsed = JSON.parse(value);
   } catch {
     return false;
   }
-};
+  if (key.startsWith("sudoku_v1_save_")) {
+    const save = parsed as Record<string, unknown> | null;
+    return (
+      !!save &&
+      isGrid(save.currentBoard) &&
+      isGrid(save.initialBoard) &&
+      isGrid(save.solvedBoard) &&
+      Array.isArray(save.notesBoard)
+    );
+  }
+  if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);
+  if (key === "sudoku_v1_pref_hint_style") return parsed === "full" || parsed === "nudge";
+  if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
+  if (key === "sudoku_v1_score") return !!parsed && typeof parsed === "object";
+  return true;
+}
 
 /** Validates a backup file's text. Anything not under our prefix, or not valid JSON, rejects it. */
 export function parseBackup(text: string): ParseResult {
-  if (text.length > MAX_BYTES) return { ok: false, error: "tooLarge" };
+  if (text.length > MAX_BACKUP_BYTES) return { ok: false, error: "tooLarge" };
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -60,22 +79,44 @@ export function parseBackup(text: string): ParseResult {
   const entries = Object.entries(b.data);
   if (entries.length === 0) return { ok: false, error: "empty" };
   for (const [key, value] of entries) {
-    if (!key.startsWith(BACKUP_PREFIX) || typeof value !== "string" || !isJson(value)) {
+    if (!key.startsWith(BACKUP_PREFIX) || typeof value !== "string" || !validEntry(key, value)) {
       return { ok: false, error: "invalid" };
     }
   }
   return { ok: true, backup: b as Backup, items: entries.length };
 }
 
-/** Replaces all game data with the backup's. Returns how many keys were written. */
-export function applyBackup(store: Store, backup: Backup): number {
-  const existing: string[] = [];
+function snapshot(store: Store): [string, string][] {
+  const out: [string, string][] = [];
   for (let i = 0; i < store.length; i++) {
     const key = store.key(i);
-    if (key?.startsWith(BACKUP_PREFIX)) existing.push(key);
+    if (key?.startsWith(BACKUP_PREFIX)) out.push([key, store.getItem(key) ?? ""]);
   }
-  for (const key of existing) store.removeItem(key);
-  const entries = Object.entries(backup.data);
+  return out;
+}
+
+function write(store: Store, entries: [string, string][]) {
+  for (const [key] of snapshot(store)) store.removeItem(key);
   for (const [key, value] of entries) store.setItem(key, value);
+}
+
+/**
+ * Replaces all game data with the backup's and returns how many keys were written. If a write
+ * fails part-way (quota, private mode), the previous data is restored and the error rethrown, so
+ * a failed import never leaves the player with nothing.
+ */
+export function applyBackup(store: Store, backup: Backup): number {
+  const previous = snapshot(store);
+  const entries = Object.entries(backup.data);
+  try {
+    write(store, entries);
+  } catch (error) {
+    try {
+      write(store, previous);
+    } catch {
+      /* nothing more we can do */
+    }
+    throw error;
+  }
   return entries.length;
 }

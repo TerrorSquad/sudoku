@@ -72,3 +72,26 @@ test("settings persist across a reload", async ({ page }) => {
   await expect(page.getByLabel("Mistake limit")).toHaveValue("5");
   await expect(page.getByRole("switch", { name: "Digit-first input" })).toBeChecked();
 });
+
+test("the numpad's remaining counts don't reveal wrong entries when highlighting is off", async ({
+  page,
+}) => {
+  const pad = (digit: string) =>
+    page.getByTestId("numpad").getByRole("button", { name: digit, exact: true });
+
+  // Highlighting on: a wrong 3 leaves the 3 button available (its count only follows correct digits).
+  await page.goto("/");
+  await playCustom(page);
+  await enterWrongDigits(page, ["3"]);
+  await expect(pad("3")).toBeEnabled();
+
+  // Highlighting off: the same wrong 3 is counted like any entry, so the button is used up
+  // exactly as it would be after a correct one.
+  await page.getByLabel("Exit").click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("switch", { name: "Highlight mistakes" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
+  await playCustom(page);
+  await enterWrongDigits(page, ["3"]);
+  await expect(pad("3")).toBeDisabled();
+});

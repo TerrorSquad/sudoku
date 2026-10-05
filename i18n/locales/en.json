@@ -356,5 +356,6 @@
   "settings.importCancel": "Cancel",
   "settings.importError.invalid": "That file isn't a Sudoku Pro backup.",
   "settings.importError.empty": "That backup is empty.",
-  "settings.importError.tooLarge": "That file is too large to be a backup."
+  "settings.importError.tooLarge": "That file is too large to be a backup.",
+  "settings.importError.storage": "Couldn't save that backup (storage is full or blocked). Your current progress was kept."
 }
