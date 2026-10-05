@@ -306,5 +306,6 @@
   "level.title.apprentice": "Apprentice",
   "level.title.adept": "Adept",
   "level.title.expert": "Expert",
-  "level.title.master": "Master"
+  "level.title.master": "Master",
+  "modal.stars": "{n} out of 3 stars"
 }
