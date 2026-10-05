@@ -3,7 +3,7 @@ import { computed } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
-import { SUDOKU_COLORS } from "../utils/sudokuColors";
+import { dotClass } from "../utils/sudokuColors";
 
 const props = defineProps<{
   row: number;
@@ -73,8 +73,8 @@ const cellClasses = computed(() => {
     <div
       v-if="value !== 0 && colorMode"
       :key="value"
-      :class="[SUDOKU_COLORS[value], isWrong ? 'cell-shake' : 'cell-pop']"
-      class="h-[60%] w-[60%] rounded-full"
+      :class="[dotClass(value), isWrong ? 'cell-shake' : 'cell-pop']"
+      class="h-[60%] w-[60%]"
     />
     <span
       v-else-if="value !== 0"
