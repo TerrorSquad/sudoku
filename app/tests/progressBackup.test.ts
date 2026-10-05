@@ -146,6 +146,7 @@ describe("progress backup", () => {
     expect(bad("sudoku_v1_pref_hint_style", "x")).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_pref_sound", "yes")).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_score", 5)).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_score", { gamesWon: 1 })).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_pref_mistake_limit", 5)).toMatchObject({ ok: true });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
@@ -153,9 +154,20 @@ describe("progress backup", () => {
         currentBoard: grid,
         initialBoard: grid,
         solvedBoard: grid,
-        notesBoard: [],
+        notesBoard: Array.from({ length: 9 }, () => []),
+        difficulty: "hard",
       }),
     ).toMatchObject({ ok: true });
+    // A save filed under the wrong difficulty is rejected.
+    expect(
+      bad("sudoku_v1_save_easy", {
+        currentBoard: grid,
+        initialBoard: grid,
+        solvedBoard: grid,
+        notesBoard: Array.from({ length: 9 }, () => []),
+        difficulty: "hard",
+      }),
+    ).toEqual({ ok: false, error: "invalid" });
   });
 
   it("names the file by date", () => {

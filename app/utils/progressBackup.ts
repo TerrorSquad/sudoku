@@ -50,13 +50,21 @@ function validEntry(key: string, value: string): boolean {
       isGrid(save.currentBoard) &&
       isGrid(save.initialBoard) &&
       isGrid(save.solvedBoard) &&
-      Array.isArray(save.notesBoard)
+      Array.isArray(save.notesBoard) &&
+      save.notesBoard.length === 9 &&
+      save.difficulty === key.slice("sudoku_v1_save_".length)
     );
   }
   if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);
   if (key === "sudoku_v1_pref_hint_style") return parsed === "full" || parsed === "nudge";
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
-  if (key === "sudoku_v1_score") return !!parsed && typeof parsed === "object";
+  if (key === "sudoku_v1_score") {
+    return (
+      !!parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as { total?: unknown }).total === "number"
+    );
+  }
   return true;
 }
 
