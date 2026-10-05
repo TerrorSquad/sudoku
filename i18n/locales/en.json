@@ -30,6 +30,7 @@
   "difficulty.expertDesc": "X-Wing, XY-Wing and advanced chains.",
   "difficulty.masterDesc": "Near-minimal clues — demands expert chains and deep logic.",
   "difficulty.back": "Back to Menu",
+  "difficulty.inProgress": "In progress",
   "game.exitToMenu": "Exit",
   "game.mistakes": "Mistakes",
   "game.ready": "Ready to play",

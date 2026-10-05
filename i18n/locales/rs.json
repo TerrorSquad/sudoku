@@ -30,6 +30,7 @@
   "difficulty.expertDesc": "X-Wing, XY-Wing i napredni lanci.",
   "difficulty.masterDesc": "Skoro minimalan broj datih cifara — zahteva ekspertske lance i duboku logiku.",
   "difficulty.back": "Nazad na meni",
+  "difficulty.inProgress": "U toku",
   "game.exitToMenu": "Izlaz",
   "game.mistakes": "Greške",
   "game.ready": "Spreman za igru",
