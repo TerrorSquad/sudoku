@@ -5,6 +5,7 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+import { masteryFor } from "../utils/mastery";
 import ExampleGrid from "./ExampleGrid.vue";
 
 const emit = defineEmits<{
@@ -41,6 +42,18 @@ const techniques: Technique[] = [
   { id: "xy-wing", tier: "Expert" },
   { id: "xyz-wing", tier: "Expert" },
 ];
+
+const MASTERY_STYLE = [
+  "",
+  "border-zinc-300 bg-zinc-200 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400",
+  "border-cyan-400/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  "border-amber-400/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
+] as const;
+
+const countOf = (id: TechniqueId) => techStats.getCount(techName(id));
+const masteryOf = (id: TechniqueId) => masteryFor(countOf(id));
+const masteryTitle = (id: TechniqueId) =>
+  `${t(`academy.mastery.${masteryOf(id)}`)} · ${t("modal.usedTotal", { n: countOf(id) })}`;
 
 const tiers: Tier[] = ["Basic", "Intermediate", "Advanced", "Expert"];
 
@@ -228,10 +241,11 @@ const total = computed(() => techniques.length);
               </h3>
               <div class="flex shrink-0 items-center gap-1.5">
                 <span
-                  v-if="techStats.getCount(techName(tech.id)) > 0"
-                  class="border border-zinc-300 bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400"
-                  :title="$t('modal.usedTotal', { n: techStats.getCount(techName(tech.id)) })"
-                  >×{{ techStats.getCount(techName(tech.id)) }}</span
+                  v-if="countOf(tech.id) > 0"
+                  :class="MASTERY_STYLE[masteryOf(tech.id)]"
+                  class="border px-1.5 py-0.5 text-[9px] font-bold"
+                  :title="masteryTitle(tech.id)"
+                  >{{ $t(`academy.mastery.${masteryOf(tech.id)}`) }} ×{{ countOf(tech.id) }}</span
                 >
                 <AppIcon
                   class="h-4 w-4 text-zinc-500 transition-transform"
