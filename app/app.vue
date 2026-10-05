@@ -513,8 +513,11 @@ function handleStartDaily() {
   currentScreen.value = "game";
 }
 
-function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
-  practiceTechnique.value = null;
+function handleLoadCustomPuzzle(
+  board: import("./types/sudoku").Grid,
+  practice: TechniqueId | null = null,
+) {
+  practiceTechnique.value = practice;
   activeDifficulty.value = "custom";
   mistakes.value = 0;
   hintStatus.value = t("game.newBoard");
@@ -530,13 +533,16 @@ function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
   currentScreen.value = "game";
 }
 
+let practiceToken = 0;
 async function handlePractice(technique: TechniqueId) {
   if (practiceLoading.value) return; // a double-click must not start two searches
   practiceLoading.value = true;
+  const token = ++practiceToken;
   try {
     const p = await generatePracticePuzzle(technique);
-    handleLoadCustomPuzzle(p.board);
-    practiceTechnique.value = technique;
+    // The player may have left the Academy while the search ran; don't yank them into a game.
+    if (token !== practiceToken || currentScreen.value !== "academy") return;
+    handleLoadCustomPuzzle(p.board, technique);
     if (p.notes) {
       for (const [key, digits] of Object.entries(p.notes)) {
         const [r, c] = key.split("-").map(Number) as [number, number];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
@@ -44,6 +44,8 @@ function onAnimationEnd(e: AnimationEvent) {
   // animationend bubbles from the digit's own pop/shake; only the cell's entrance counts.
   if (e.target === e.currentTarget && e.animationName.startsWith("cell-in")) entering.value = false;
 }
+// animationend never fires if the cell mounts hidden or the screen transition is interrupted.
+onMounted(() => setTimeout(() => (entering.value = false), 1500));
 
 // Screen-reader description: position, state and value (colour name in colour mode), plus notes.
 const label = computed(() => {
