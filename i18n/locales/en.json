@@ -315,5 +315,10 @@
   "stats.dailyDone": "{n} days completed in the last {weeks} weeks",
   "academy.mastery.1": "Familiar",
   "academy.mastery.2": "Practised",
-  "academy.mastery.3": "Fluent"
+  "academy.mastery.3": "Fluent",
+  "practice.label": "Practice",
+  "practice.button": "Practice this technique",
+  "practice.generating": "Finding a puzzle that needs this technique…",
+  "practice.puzzle": "Practice: a puzzle that needs this technique. Press H for a hint.",
+  "practice.drill": "Practice: a curated position — the pencil marks show where it applies."
 }

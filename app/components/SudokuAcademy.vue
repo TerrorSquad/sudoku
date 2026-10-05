@@ -10,6 +10,7 @@ import ExampleGrid from "./ExampleGrid.vue";
 
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
+  (e: "practice", id: TechniqueId): void;
 }>();
 
 const { t } = useI18n();
@@ -290,6 +291,13 @@ const total = computed(() => techniques.length);
                 />
               </div>
             </div>
+
+            <button
+              class="mt-4 w-full border border-violet-500/40 bg-violet-500/5 py-2 text-xs font-bold tracking-wider text-violet-700 uppercase transition-colors hover:bg-violet-500/10 dark:text-violet-300"
+              @click.stop="emit('practice', tech.id)"
+            >
+              {{ $t("practice.button") }}
+            </button>
 
             <div
               v-if="expanded.has(tech.id) && exampleFor(tech.id)"

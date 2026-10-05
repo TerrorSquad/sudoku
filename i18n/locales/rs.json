@@ -315,5 +315,10 @@
   "stats.dailyDone": "{n} završenih dana u poslednjih {weeks} nedelja",
   "academy.mastery.1": "Poznato",
   "academy.mastery.2": "Uvežbano",
-  "academy.mastery.3": "Savladano"
+  "academy.mastery.3": "Savladano",
+  "practice.label": "Vežba",
+  "practice.button": "Vežbaj ovu tehniku",
+  "practice.generating": "Tražim slagalicu koja zahteva ovu tehniku…",
+  "practice.puzzle": "Vežba: slagalica koja zahteva ovu tehniku. Pritisni H za nagoveštaj.",
+  "practice.drill": "Vežba: pripremljena pozicija — beleške pokazuju gde se tehnika primenjuje."
 }

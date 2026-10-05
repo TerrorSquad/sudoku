@@ -4,6 +4,7 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty } from "./types/sudoku";
+import type { TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
 import AchievementToast from "./components/AchievementToast.vue";
@@ -25,6 +26,7 @@ import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { levelBand, levelFor } from "./utils/level";
+import { generatePracticePuzzle } from "./utils/practice";
 import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playMistake, playPlace, playWin } from "./utils/sound";
@@ -86,6 +88,9 @@ const achievements = useAchievements();
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
+// Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
+const practiceTechnique = ref<TechniqueId | null>(null);
+const practiceLoading = ref(false);
 
 const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
@@ -168,7 +173,7 @@ const dailyStreak = computed(() => {
 watch(
   [currentBoard, notesBoard, mistakes, hintsUsed],
   () => {
-    if (currentScreen.value !== "game" || showModal.value) return;
+    if (currentScreen.value !== "game" || showModal.value || practiceTechnique.value) return;
     if (!currentBoard.value || !initialBoard.value) return;
     gameSave.save({
       currentBoard: currentBoard.value,
@@ -189,40 +194,49 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalMessage.value = message;
   isWinState.value = win;
   showModal.value = true;
+  reachedLevel.value = null;
   timer.stopTimer();
-  gameSave.clearDifficulty(activeDifficulty.value);
+  if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
     if (soundEnabled.value) playWin();
-    if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
-    const breakdown = computeScore({
-      difficulty: activeDifficulty.value,
-      timeSeconds: timer.timerSeconds.value,
-      mistakes: mistakes.value,
-      hintsUsed: hintsUsed.value,
-    });
-    const result = score.record(activeDifficulty.value, breakdown.total, timer.timerSeconds.value);
-    lastScore.value = breakdown;
-    isNewBest.value = result.isNewBest;
-    lifetimeTotal.value = result.stats.total;
-    const before = levelFor(result.previousTotal).level;
-    const after = levelFor(result.stats.total).level;
-    reachedLevel.value = after > before ? after : null;
-    toastIds.value.push(
-      ...achievements.evaluate({
+    if (practiceTechnique.value) {
+      lastScore.value = null;
+    } else {
+      if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
+      const breakdown = computeScore({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
         mistakes: mistakes.value,
         hintsUsed: hintsUsed.value,
-        isDaily: isDailyMode.value,
-        colorMode: colorMode.value,
-        hour: new Date().getHours(),
-        gamesWon: result.stats.gamesWon,
-        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
-        dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
-        distinctTechniques: Object.keys(techStats.getAll()).length,
-      }),
-    );
-    animateScoreCountUp(breakdown.total);
+      });
+      const result = score.record(
+        activeDifficulty.value,
+        breakdown.total,
+        timer.timerSeconds.value,
+      );
+      lastScore.value = breakdown;
+      isNewBest.value = result.isNewBest;
+      lifetimeTotal.value = result.stats.total;
+      const before = levelFor(result.previousTotal).level;
+      const after = levelFor(result.stats.total).level;
+      reachedLevel.value = after > before ? after : null;
+      toastIds.value.push(
+        ...achievements.evaluate({
+          difficulty: activeDifficulty.value,
+          timeSeconds: timer.timerSeconds.value,
+          mistakes: mistakes.value,
+          hintsUsed: hintsUsed.value,
+          isDaily: isDailyMode.value,
+          colorMode: colorMode.value,
+          hour: new Date().getHours(),
+          gamesWon: result.stats.gamesWon,
+          winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+          dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
+          distinctTechniques: Object.keys(techStats.getAll()).length,
+        }),
+      );
+      animateScoreCountUp(breakdown.total);
+    }
     confetti({
       particleCount: 160,
       spread: 80,
@@ -236,12 +250,14 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
 
 function handleModalClose() {
   showModal.value = false;
+  practiceTechnique.value = null;
   isDailyMode.value = false;
   currentScreen.value = "menu";
   timer.resetTimer();
 }
 
 function resumeSavedGame(s: GameSave) {
+  practiceTechnique.value = null;
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -259,6 +275,7 @@ function resumeSavedGame(s: GameSave) {
 }
 
 function handleStartGame(level: Difficulty) {
+  practiceTechnique.value = null;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
@@ -477,6 +494,7 @@ function handleAutoFillNotes() {
 }
 
 function handleStartDaily() {
+  practiceTechnique.value = null;
   isDailyMode.value = true;
   activeDifficulty.value = "medium";
   mistakes.value = 0;
@@ -494,6 +512,7 @@ function handleStartDaily() {
 }
 
 function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
+  practiceTechnique.value = null;
   activeDifficulty.value = "custom";
   mistakes.value = 0;
   hintStatus.value = t("game.newBoard");
@@ -509,7 +528,28 @@ function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
   currentScreen.value = "game";
 }
 
+async function handlePractice(technique: TechniqueId) {
+  practiceLoading.value = true;
+  try {
+    const p = await generatePracticePuzzle(technique);
+    handleLoadCustomPuzzle(p.board);
+    practiceTechnique.value = technique;
+    if (p.notes) {
+      for (const [key, digits] of Object.entries(p.notes)) {
+        const [r, c] = key.split("-").map(Number) as [number, number];
+        for (const d of digits) notesBoard.value[r]![c]![d] = true;
+      }
+      hintStatus.value = t("practice.drill");
+    } else {
+      hintStatus.value = t("practice.puzzle");
+    }
+  } finally {
+    practiceLoading.value = false;
+  }
+}
+
 function exitToMenu() {
+  practiceTechnique.value = null;
   timer.stopTimer();
   cancelComplexHint();
   currentScreen.value = "menu";
@@ -705,6 +745,7 @@ onUnmounted(() => {
       <SudokuAcademy
         v-else-if="currentScreen === 'academy'"
         @back-to-menu="currentScreen = 'menu'"
+        @practice="handlePractice"
       />
 
       <!-- STATISTICS -->
@@ -813,7 +854,11 @@ onUnmounted(() => {
             :is-paused="timer.isPaused.value"
             :mistakes="mistakes"
             :max-mistakes="3"
-            :difficulty="activeDifficulty"
+            :difficulty="
+              practiceTechnique
+                ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
+                : activeDifficulty
+            "
             @toggle-pause="timer.togglePause()"
             @exit-game="exitToMenu"
           />
@@ -904,6 +949,17 @@ onUnmounted(() => {
             @cancel="cancelComplexHint"
           />
         </div>
+      </div>
+
+      <div
+        v-if="practiceLoading"
+        class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 px-6 text-center backdrop-blur-sm"
+        role="status"
+      >
+        <span
+          class="h-8 w-8 animate-spin rounded-full border-2 border-violet-300 border-t-transparent"
+        />
+        <p class="text-sm font-semibold text-zinc-100">{{ $t("practice.generating") }}</p>
       </div>
 
       <AchievementToast
