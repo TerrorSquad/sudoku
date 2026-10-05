@@ -46,10 +46,11 @@ interface DailyRecord {
 }
 
 export function useDailyPuzzle() {
-  const key = localDateKey();
+  // Evaluated per call, not once: a tab or PWA left open past midnight must roll over.
+  const todayKey = () => localDateKey();
 
   function getBoard(): Grid {
-    return generateDailyBoard(key);
+    return generateDailyBoard(todayKey());
   }
 
   function getRecordFor(dateKey: string): DailyRecord | null {
@@ -57,16 +58,16 @@ export function useDailyPuzzle() {
   }
 
   function getRecord(): DailyRecord | null {
-    return getRecordFor(key);
+    return getRecordFor(todayKey());
   }
 
   function markComplete(time: number, mistakes: number): void {
-    writeJSON(SAVE_PREFIX + key, { completed: true, time, mistakes });
+    writeJSON(SAVE_PREFIX + todayKey(), { completed: true, time, mistakes });
   }
 
   function getStreak(): number {
     return computeStreak((k) => getRecordFor(k)?.completed === true);
   }
 
-  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, dateKey: key };
+  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, todayKey };
 }

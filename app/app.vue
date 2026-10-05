@@ -163,7 +163,7 @@ const dailyStreak = computed(() => {
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
 // clears the save — without this guard the save would be re-created immediately.
 watch(
-  [currentBoard, notesBoard, mistakes],
+  [currentBoard, notesBoard, mistakes, hintsUsed],
   () => {
     if (currentScreen.value !== "game" || showModal.value) return;
     if (!currentBoard.value || !initialBoard.value) return;
@@ -175,6 +175,7 @@ watch(
       difficulty: activeDifficulty.value,
       timerSeconds: timer.timerSeconds.value,
       mistakes: mistakes.value,
+      hintsUsed: hintsUsed.value,
     });
   },
   { deep: true },
@@ -200,7 +201,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     lastScore.value = breakdown;
     isNewBest.value = result.isNewBest;
     lifetimeTotal.value = result.stats.total;
-    const before = levelFor(result.stats.total - breakdown.total).level;
+    const before = levelFor(result.previousTotal).level;
     const after = levelFor(result.stats.total).level;
     reachedLevel.value = after > before ? after : null;
     toastIds.value.push(
@@ -246,7 +247,7 @@ function resumeSavedGame(s: GameSave) {
   mistakeExplainer.value = "";
   flashCells.value = [];
   notesMode.value = false;
-  hintsUsed.value = 0;
+  hintsUsed.value = s.hintsUsed ?? 0;
   techniqueLog.value = [];
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;

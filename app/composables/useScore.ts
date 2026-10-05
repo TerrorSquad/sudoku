@@ -19,6 +19,8 @@ export interface RecordResult {
   stats: ScoreStats;
   isNewBest: boolean;
   previousBest: number;
+  /** Lifetime total before this win was added. */
+  previousTotal: number;
 }
 
 export function useScore() {
@@ -43,6 +45,7 @@ export function useScore() {
     const previousBest = stats.best[difficulty] ?? 0;
     const isNewBest = points > previousBest;
 
+    const previousTotal = stats.total;
     stats.total += points;
     stats.gamesWon += 1;
     if (isNewBest) stats.best[difficulty] = points;
@@ -55,7 +58,7 @@ export function useScore() {
     stats.perDifficulty[difficulty] = d;
 
     writeJSON(KEY, stats);
-    return { stats, isNewBest, previousBest };
+    return { stats, isNewBest, previousBest, previousTotal };
   }
 
   return { getStats, record };
