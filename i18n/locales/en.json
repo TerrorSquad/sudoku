@@ -307,5 +307,7 @@
   "level.title.adept": "Adept",
   "level.title.expert": "Expert",
   "level.title.master": "Master",
-  "modal.stars": "{n} out of 3 stars"
+  "modal.stars": "{n} out of 3 stars",
+  "stats.dailyActivity": "Daily activity",
+  "stats.dailyDone": "{n} days completed in the last {weeks} weeks"
 }

@@ -53,7 +53,8 @@ function savedGame() {
 }
 
 const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const TIMER = ".font-mono.tabular-nums";
+// The in-game clock only (stats tables also use font-mono/tabular-nums but are static).
+const TIMER = ".font-mono.tabular-nums.font-bold";
 
 async function settle(page: Page) {
   // The first capture after a cold dev-server start can land mid-hydration.
@@ -102,6 +103,19 @@ for (const theme of ["light", "dark"] as const) {
             "sudoku_v1_technique_stats",
             JSON.stringify({ "Naked Single": 14, "Hidden Single": 9, "Pointing Pair": 4 }),
           );
+          // A few Daily completions around the fixed "today" (2026-01-15) for the stats heat-map.
+          for (const day of [
+            "2026-01-14",
+            "2026-01-13",
+            "2026-01-12",
+            "2026-01-08",
+            "2025-12-30",
+          ]) {
+            localStorage.setItem(
+              `sudoku_v1_daily_${day}`,
+              JSON.stringify({ completed: true, time: 500, mistakes: 0 }),
+            );
+          }
           sessionStorage.setItem("seeded", "1");
         }
       }, savedGame());

@@ -307,5 +307,7 @@
   "level.title.adept": "Vešt",
   "level.title.expert": "Stručnjak",
   "level.title.master": "Majstor",
-  "modal.stars": "{n} od 3 zvezdice"
+  "modal.stars": "{n} od 3 zvezdice",
+  "stats.dailyActivity": "Dnevna aktivnost",
+  "stats.dailyDone": "{n} završenih dana u poslednjih {weeks} nedelja"
 }

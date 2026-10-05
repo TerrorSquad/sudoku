@@ -134,6 +134,8 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
           </div>
         </div>
 
+        <DailyCalendar class="mb-8" />
+
         <!-- Per-difficulty table -->
         <div v-if="difficultyRows.length" class="mb-8">
           <h2 class="mb-3 text-xs font-bold tracking-widest text-zinc-500 uppercase">

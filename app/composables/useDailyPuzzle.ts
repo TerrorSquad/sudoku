@@ -68,5 +68,5 @@ export function useDailyPuzzle() {
     return computeStreak((k) => getRecordFor(k)?.completed === true);
   }
 
-  return { getBoard, getRecord, markComplete, getStreak, dateKey: key };
+  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, dateKey: key };
 }
