@@ -140,7 +140,7 @@ const total = computed(() => techniques.length);
 </script>
 
 <template>
-  <div class="menu-grid-bg flex min-h-screen w-full flex-col">
+  <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
