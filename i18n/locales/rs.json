@@ -320,5 +320,12 @@
   "practice.button": "Vežbaj ovu tehniku",
   "practice.generating": "Tražim slagalicu koja zahteva ovu tehniku…",
   "practice.puzzle": "Vežba: slagalica koja zahteva ovu tehniku. Pritisni H za nagoveštaj.",
-  "practice.drill": "Vežba: pripremljena pozicija — beleške pokazuju gde se tehnika primenjuje."
+  "practice.drill": "Vežba: pripremljena pozicija — beleške pokazuju gde se tehnika primenjuje.",
+  "a11y.board": "Sudoku tabla",
+  "a11y.cellPos": "Red {r}, kolona {c}",
+  "a11y.cellGiven": "zadato {v}",
+  "a11y.cellEntry": "tvoj unos {v}",
+  "a11y.cellWrong": "pogrešan unos {v}",
+  "a11y.cellEmpty": "prazno",
+  "a11y.cellNotes": "prazno, beleške {notes}"
 }

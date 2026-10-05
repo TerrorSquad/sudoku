@@ -112,7 +112,7 @@ const DIFFICULTIES: {
             class="block text-lg font-bold text-zinc-900 dark:text-zinc-100"
             >{{ $t(`difficulty.${d.key}`) }}</span
           >
-          <span class="mt-1 block text-xs leading-snug text-zinc-500">{{
+          <span class="mt-1 block text-xs leading-snug text-zinc-500 dark:text-zinc-400">{{
             $t(`difficulty.${d.key}Desc`)
           }}</span>
         </button>

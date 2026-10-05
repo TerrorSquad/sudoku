@@ -3,7 +3,7 @@ import { computed } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
-import { dotClass } from "../utils/sudokuColors";
+import { digitLabel, dotClass } from "../utils/sudokuColors";
 
 const props = defineProps<{
   row: number;
@@ -33,6 +33,28 @@ const isWrong = computed(
 );
 
 // A wrong or conflicting player entry keeps its red treatment while selected.
+const { t } = useI18n();
+
+// Screen-reader description: position, state and value (colour name in colour mode), plus notes.
+const label = computed(() => {
+  const pos = t("a11y.cellPos", { r: props.row + 1, c: props.col + 1 });
+  if (props.value !== 0) {
+    const v = digitLabel(props.value, props.colorMode, t);
+    const kind = props.isInitial
+      ? t("a11y.cellGiven", { v })
+      : isBad.value
+        ? t("a11y.cellWrong", { v })
+        : t("a11y.cellEntry", { v });
+    return `${pos}, ${kind}`;
+  }
+  const marks = props.notes
+    .map((on, n) => (on ? digitLabel(n, props.colorMode, t) : ""))
+    .filter(Boolean);
+  return marks.length
+    ? `${pos}, ${t("a11y.cellNotes", { notes: marks.join(", ") })}`
+    : `${pos}, ${t("a11y.cellEmpty")}`;
+});
+
 const isBad = computed(() => isWrong.value || props.hasConflict);
 
 // Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
@@ -66,6 +88,11 @@ const cellClasses = computed(() => {
 
 <template>
   <div
+    role="gridcell"
+    :aria-label="label"
+    :aria-selected="isSelected"
+    :tabindex="isSelected ? 0 : -1"
+    :data-cell="`${row}-${col}`"
     @click="$emit('click')"
     :class="cellClasses"
     class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#141417]"

@@ -46,9 +46,12 @@ function hasConflict(r: number, c: number): boolean {
 
 <template>
   <div
+    role="grid"
+    :aria-label="$t('a11y.board')"
     class="grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden select-none lg:mx-auto lg:max-w-[calc(100vh-300px)]"
   >
-    <template v-for="(row, r) in 9" :key="r">
+    <!-- display: contents keeps the visual grid flat while giving screen readers real rows. -->
+    <div v-for="(row, r) in 9" :key="r" role="row" class="contents">
       <SudokuCell
         v-for="(col, c) in 9"
         :key="`${r}-${c}`"
@@ -71,6 +74,6 @@ function hasConflict(r: number, c: number): boolean {
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
         @click="emit('select-cell', { r, c })"
       />
-    </template>
+    </div>
   </div>
 </template>

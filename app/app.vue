@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as uiLocales from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty } from "./types/sudoku";
 import type { TechniqueId } from "./utils/sudokuGrader";
@@ -37,6 +37,7 @@ const { t, locale, locales } = useI18n();
 const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
 
 useHead(() => ({
+  title: t("menu.title"),
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
@@ -238,6 +239,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       animateScoreCountUp(breakdown.total);
     }
     confetti({
+      disableForReducedMotion: true,
       particleCount: 160,
       spread: 80,
       origin: { y: 0.55 },
@@ -555,6 +557,25 @@ function exitToMenu() {
   currentScreen.value = "menu";
 }
 
+const ARROW_STEPS: Record<string, [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
+const clamp = (n: number) => Math.min(8, Math.max(0, n));
+
+// Arrow keys walk the grid (clamped at the edges); focus follows so screen readers announce the cell.
+function moveSelection(dr: number, dc: number) {
+  const cur = selectedCell.value;
+  // With nothing selected, the first arrow press lands on the top-left cell.
+  const r = cur ? clamp(cur.r + dr) : 0;
+  const c = cur ? clamp(cur.c + dc) : 0;
+  handleSelectCell({ r, c });
+  nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+}
+
 function handleKeyDown(e: KeyboardEvent) {
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
@@ -565,6 +586,12 @@ function handleKeyDown(e: KeyboardEvent) {
     else if ((k === "z" && e.shiftKey) || k === "y") redoMove();
     else return;
     e.preventDefault();
+    return;
+  }
+  const arrow = ARROW_STEPS[e.key];
+  if (arrow) {
+    e.preventDefault();
+    moveSelection(arrow[0], arrow[1]);
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
@@ -1240,6 +1267,18 @@ onUnmounted(() => {
   background-image:
     radial-gradient(1100px 600px at 50% -14%, rgba(139, 92, 246, 0.14), transparent 56%),
     radial-gradient(900px 520px at 88% 6%, rgba(34, 211, 238, 0.07), transparent 60%);
+}
+
+/* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @keyframes star-pop {

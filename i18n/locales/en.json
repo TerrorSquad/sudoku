@@ -320,5 +320,12 @@
   "practice.button": "Practice this technique",
   "practice.generating": "Finding a puzzle that needs this technique…",
   "practice.puzzle": "Practice: a puzzle that needs this technique. Press H for a hint.",
-  "practice.drill": "Practice: a curated position — the pencil marks show where it applies."
+  "practice.drill": "Practice: a curated position — the pencil marks show where it applies.",
+  "a11y.board": "Sudoku board",
+  "a11y.cellPos": "Row {r}, column {c}",
+  "a11y.cellGiven": "given {v}",
+  "a11y.cellEntry": "your entry {v}",
+  "a11y.cellWrong": "wrong entry {v}",
+  "a11y.cellEmpty": "empty",
+  "a11y.cellNotes": "empty, notes {notes}"
 }
