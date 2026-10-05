@@ -309,5 +309,8 @@
   "level.title.master": "Majstor",
   "modal.stars": "{n} od 3 zvezdice",
   "stats.dailyActivity": "Dnevna aktivnost",
-  "stats.dailyDone": "{n} završenih dana u poslednjih {weeks} nedelja"
+  "stats.dailyDone": "{n} završenih dana u poslednjih {weeks} nedelja",
+  "academy.mastery.1": "Poznato",
+  "academy.mastery.2": "Uvežbano",
+  "academy.mastery.3": "Savladano"
 }

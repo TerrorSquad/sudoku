@@ -309,5 +309,8 @@
   "level.title.master": "Master",
   "modal.stars": "{n} out of 3 stars",
   "stats.dailyActivity": "Daily activity",
-  "stats.dailyDone": "{n} days completed in the last {weeks} weeks"
+  "stats.dailyDone": "{n} days completed in the last {weeks} weeks",
+  "academy.mastery.1": "Familiar",
+  "academy.mastery.2": "Practised",
+  "academy.mastery.3": "Fluent"
 }
