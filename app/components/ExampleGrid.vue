@@ -10,6 +10,8 @@ const props = defineProps<{
   target?: Cell[];
   trigger?: Cell[];
   elimination?: Cell[];
+  /** Thumbnail for card previews: tiny digits, no pencil notes. */
+  mini?: boolean;
 }>();
 
 function noteKey(r: number, c: number) {
@@ -36,18 +38,19 @@ function cellClass(r: number, c: number) {
 
 <template>
   <div
-    class="mx-auto grid w-full max-w-[280px] grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-[#141417]"
+    :class="mini ? 'max-w-[104px]' : 'max-w-[280px]'"
+    class="mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-[#141417]"
   >
     <template v-for="(row, r) in board" :key="r">
       <div
         v-for="(val, c) in row"
         :key="c"
-        :class="cellClass(r, c)"
-        class="relative flex aspect-square items-center justify-center border border-zinc-300 font-game text-sm font-bold text-zinc-800 sm:text-base dark:border-zinc-800 dark:text-zinc-200"
+        class="relative flex aspect-square items-center justify-center border border-zinc-300 font-game font-bold text-zinc-800 dark:border-zinc-800 dark:text-zinc-200"
+        :class="[cellClass(r, c), mini ? 'text-[7px]' : 'text-sm sm:text-base']"
       >
         <span v-if="val !== 0">{{ val }}</span>
         <div
-          v-else-if="candidates(r, c).length"
+          v-else-if="!mini && candidates(r, c).length"
           class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 font-game text-[7px] leading-none font-semibold text-amber-700 sm:text-[8px] dark:text-amber-400"
         >
           <div v-for="n in 9" :key="n" class="flex items-center justify-center">
