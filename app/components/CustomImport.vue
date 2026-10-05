@@ -94,7 +94,7 @@ function loadExample() {
     <div>
       <button
         @click="emit('back-to-menu')"
-        class="mb-5 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-500 uppercase transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
+        class="mb-5 flex items-center gap-1.5 text-xs font-semibold text-zinc-500 transition-colors hover:text-zinc-700 dark:hover:text-zinc-300"
       >
         <AppIcon
           class="h-3.5 w-3.5"
@@ -102,7 +102,7 @@ function loadExample() {
         />
         {{ $t("customImport.back") }}
       </button>
-      <h2 class="text-3xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100">
+      <h2 class="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
         {{ $t("customImport.title") }}
       </h2>
       <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -166,7 +166,7 @@ function loadExample() {
           ? 'border-violet-600 bg-violet-700 text-white hover:bg-violet-600'
           : 'cursor-not-allowed border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900'
       "
-      class="w-full border py-4 text-sm font-bold tracking-wider uppercase transition-all active:scale-95"
+      class="w-full border py-4 text-sm font-bold transition-all active:scale-95"
     >
       {{ $t("customImport.playPuzzle") }}
     </button>

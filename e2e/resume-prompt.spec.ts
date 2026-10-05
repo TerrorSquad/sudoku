@@ -8,7 +8,7 @@ async function createSaveAndReturnToDifficulty(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Easy/ }).click();
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81);
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
   await page.getByLabel("Exit").click();
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Easy/ }).click();
@@ -32,11 +32,11 @@ test("cancel dismisses the prompt without leaving the difficulty screen", async 
 test("continue resumes into the game screen", async ({ page }) => {
   await createSaveAndReturnToDifficulty(page);
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81);
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 });
 
 test("start new dismisses the prompt and starts a fresh game", async ({ page }) => {
   await createSaveAndReturnToDifficulty(page);
   await page.getByRole("button", { name: "Start New" }).click();
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81);
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 });

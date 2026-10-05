@@ -48,7 +48,7 @@ function hasConflict(r: number, c: number): boolean {
   <div
     role="grid"
     :aria-label="$t('a11y.board')"
-    class="grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden select-none lg:mx-auto lg:max-w-[calc(100vh-300px)]"
+    class="grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden border-2 border-zinc-700 select-none lg:mx-auto lg:max-w-[calc(100vh-300px)] dark:border-zinc-400"
   >
     <!-- display: contents keeps the visual grid flat while giving screen readers real rows. -->
     <div v-for="(row, r) in 9" :key="r" role="row" class="contents">

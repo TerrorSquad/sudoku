@@ -628,355 +628,355 @@ onUnmounted(() => {
 <template>
   <UApp :locale="localeMap[locale] ?? uiLocales.en">
     <div
-      class="app-shell flex min-h-screen w-full flex-col bg-white text-zinc-900 antialiased dark:bg-[#0c0a09] dark:text-zinc-100"
+      class="app-shell flex min-h-screen w-full flex-col bg-zinc-50 text-zinc-900 antialiased dark:bg-[#0d141b] dark:text-zinc-100"
     >
-      <!-- MENU -->
-      <div
-        v-if="currentScreen === 'menu'"
-        class="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
-      >
-        <div class="text-center">
-          <h1
-            class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-6xl"
-          >
-            {{ $t("menu.title") }}
-          </h1>
-          <p class="mt-3 text-[11px] font-semibold tracking-widest text-zinc-500 uppercase">
-            {{ $t("menu.subtitle") }}
-          </p>
-          <!-- Level / progress -->
-          <div class="mx-auto mt-5 w-full max-w-[220px]" data-testid="level-badge">
-            <p
-              class="text-[11px] font-bold tracking-widest text-violet-600 uppercase dark:text-violet-300"
+      <Transition name="screen" mode="out-in">
+        <!-- MENU -->
+        <div
+          v-if="currentScreen === 'menu'"
+          class="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
+        >
+          <div class="text-center">
+            <h1
+              class="wordmark relative isolate inline-block text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl dark:text-zinc-50"
             >
-              {{ $t("level.label", { n: playerLevel.level }) }}
-              <span class="text-zinc-500"
-                >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
-              >
+              {{ $t("menu.title") }}
+            </h1>
+            <p class="mt-3 text-[11px] font-semibold text-zinc-500">
+              {{ $t("menu.subtitle") }}
             </p>
-            <div class="mt-1.5 h-1.5 w-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
-              <div
-                class="h-full bg-gradient-to-r from-violet-500 to-cyan-500"
-                :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="flex w-full max-w-sm flex-col items-center gap-3">
-          <!-- New game -->
-          <button
-            @click="currentScreen = 'difficulty'"
-            class="w-full bg-gradient-to-r from-violet-500 to-cyan-500 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:brightness-110 active:scale-95"
-          >
-            {{ $t("menu.start") }}
-          </button>
-
-          <!-- Daily challenge -->
-          <button
-            @click="handleStartDaily"
-            :disabled="!!dailyRecord"
-            :class="
-              dailyRecord
-                ? 'cursor-default border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-600'
-                : 'border-violet-500/60 bg-violet-500/5 text-violet-700 hover:bg-violet-500/10 dark:border-violet-400/50 dark:text-violet-200 dark:hover:bg-violet-400/10'
-            "
-            class="flex w-full items-center justify-center gap-2 border px-6 py-4 text-sm font-bold transition-all active:scale-95"
-          >
-            <AppIcon
-              class="h-4 w-4 shrink-0"
-              path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-            <span v-if="dailyRecord">{{ $t("menu.dailyCompleted") }}</span>
-            <span v-else>{{ $t("menu.dailyChallenge") }}</span>
-          </button>
-          <p
-            v-if="dailyStreak > 0"
-            class="-mt-1 text-center text-[11px] font-semibold tracking-wider text-amber-600 uppercase dark:text-amber-400"
-          >
-            🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}
-          </p>
-
-          <div class="grid w-full grid-cols-2 gap-3">
-            <!-- Custom puzzle -->
-            <button
-              @click="currentScreen = 'custom-import'"
-              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-            >
-              <AppIcon
-                class="h-4 w-4"
-                path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              />
-              {{ $t("menu.customPuzzle") }}
-            </button>
-
-            <!-- Academy -->
-            <button
-              @click="currentScreen = 'academy'"
-              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-            >
-              <AppIcon
-                class="h-4 w-4"
-                path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-              {{ $t("menu.academy") }}
-            </button>
-
-            <!-- Statistics -->
-            <button
-              @click="currentScreen = 'stats'"
-              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-            >
-              <AppIcon
-                class="h-4 w-4"
-                path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-              {{ $t("menu.stats") }}
-            </button>
-
-            <!-- Achievements -->
-            <button
-              @click="currentScreen = 'achievements'"
-              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-            >
-              <AppIcon
-                class="h-4 w-4"
-                path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
-              />
-              {{ $t("menu.achievements") }}
-            </button>
-
-            <!-- Settings -->
-            <button
-              @click="currentScreen = 'settings'"
-              class="col-span-2 flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-            >
-              <AppIcon
-                class="h-4 w-4"
-                path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              {{ $t("menu.settings") }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- DIFFICULTY -->
-      <DifficultySelector
-        v-else-if="currentScreen === 'difficulty'"
-        :active-difficulty="activeDifficulty"
-        @select-difficulty="handleChooseDifficulty"
-        @back-to-menu="currentScreen = 'menu'"
-      />
-
-      <!-- ACADEMY -->
-      <SudokuAcademy
-        v-else-if="currentScreen === 'academy'"
-        @back-to-menu="currentScreen = 'menu'"
-        @practice="handlePractice"
-      />
-
-      <!-- STATISTICS -->
-      <StatsScreen
-        v-else-if="currentScreen === 'stats'"
-        @back-to-menu="currentScreen = 'menu'"
-        @start-game="currentScreen = 'difficulty'"
-      />
-
-      <!-- ACHIEVEMENTS -->
-      <AchievementsScreen
-        v-else-if="currentScreen === 'achievements'"
-        @back-to-menu="currentScreen = 'menu'"
-      />
-
-      <!-- SETTINGS -->
-      <SettingsScreen
-        v-else-if="currentScreen === 'settings'"
-        v-model:color-mode="colorMode"
-        v-model:sound-enabled="soundEnabled"
-        @back-to-menu="currentScreen = 'menu'"
-      />
-
-      <!-- CUSTOM IMPORT -->
-      <CustomImport
-        v-else-if="currentScreen === 'custom-import'"
-        @load-puzzle="handleLoadCustomPuzzle"
-        @back-to-menu="currentScreen = 'menu'"
-      />
-
-      <!-- GAME -->
-      <div
-        v-else-if="currentScreen === 'game'"
-        class="flex w-full max-w-7xl flex-col gap-4 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
-      >
-        <!-- 3xl left sidebar: shortcuts & branding -->
-        <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
-          <div>
-            <p class="mb-4 text-xs font-bold tracking-widest text-zinc-600 uppercase">
-              {{ $t("sidebar.keyboard") }}
-            </p>
-            <ul class="space-y-3">
-              <li
-                v-for="(s, i) in [
-                  { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
-                  { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
-                  { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
-                  { key: 'H', desc: $t('sidebar.shortcutGetHint') },
-                  { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
-                  { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
-                  { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
-                ]"
-                :key="i"
-                class="flex items-center gap-3"
-              >
-                <kbd
-                  class="min-w-[60px] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                  >{{ s.key }}</kbd
+            <!-- Level / progress -->
+            <div class="mx-auto mt-5 w-full max-w-[220px]" data-testid="level-badge">
+              <p class="text-[11px] font-bold text-violet-600 dark:text-violet-300">
+                {{ $t("level.label", { n: playerLevel.level }) }}
+                <span class="text-zinc-500"
+                  >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
                 >
-                <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <p class="mb-4 text-xs font-bold tracking-widest text-zinc-600 uppercase">
-              {{ $t("sidebar.legend") }}
-            </p>
-            <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
-              <li class="flex items-center gap-3">
-                <span
-                  class="h-4 w-4 shrink-0 border border-zinc-400 bg-zinc-900 dark:border-zinc-600 dark:bg-zinc-100"
+              </p>
+              <div class="mt-1.5 h-1.5 w-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+                <div
+                  class="h-full bg-violet-600 hover:bg-violet-700"
+                  :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
                 />
-                {{ $t("sidebar.legendGiven") }}
-              </li>
-              <li class="flex items-center gap-3">
-                <span
-                  class="h-4 w-4 shrink-0 border border-violet-500 bg-violet-600/30 dark:border-violet-400 dark:bg-violet-300/30"
-                />
-                {{ $t("sidebar.legendEntry") }}
-              </li>
-              <li class="flex items-center gap-3">
-                <span class="h-4 w-4 shrink-0 border border-rose-400 bg-rose-500/20" />
-                {{ $t("sidebar.legendConflict") }}
-              </li>
-              <li class="flex items-center gap-3">
-                <span
-                  class="h-4 w-4 shrink-0 border border-violet-300 bg-violet-200 dark:border-violet-400/70 dark:bg-violet-500/35"
-                />
-                {{ $t("sidebar.legendSame") }}
-              </li>
-              <li class="flex items-center gap-3">
-                <span
-                  class="h-4 w-4 shrink-0 border-2 border-violet-700 bg-violet-300 dark:border-violet-300 dark:bg-violet-700/70"
-                />
-                {{ $t("sidebar.legendSelected") }}
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Center / main game column -->
-        <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
-          <GameDashboard
-            :formatted-time="timer.formatTime(timer.timerSeconds.value)"
-            :is-paused="timer.isPaused.value"
-            :mistakes="mistakes"
-            :max-mistakes="3"
-            :difficulty="
-              practiceTechnique
-                ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
-                : activeDifficulty
-            "
-            @toggle-pause="timer.togglePause()"
-            @exit-game="exitToMenu"
-          />
-
-          <!-- Why-wrong explainer -->
-          <div
-            v-if="mistakeExplainer"
-            class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
-          >
-            <p>{{ mistakeExplainer }}</p>
-            <button
-              @click="mistakeExplainer = ''"
-              :aria-label="$t('modal.close')"
-              class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div class="relative flex flex-col gap-3">
-            <SudokuGrid
-              :current-board="currentBoard"
-              :initial-board="initialBoard"
-              :solved-board="solvedBoard"
-              :notes-board="notesBoard"
-              :selected-cell="selectedCell"
-              :active-hint-cell="activeHintCell"
-              :hint-triggers="hintTriggers"
-              :hint-eliminations="hintEliminations"
-              :conflict-cells="conflictCells"
-              :color-mode="colorMode"
-              :flash-cells="flashCells"
-              @select-cell="handleSelectCell"
-            />
-            <div class="mx-2 flex flex-col gap-2 sm:mx-0">
-              <ControlPanel
-                :notes-mode="notesMode"
-                :can-undo="boardHistory.length > 0"
-                :can-redo="redoHistory.length > 0"
-                @undo="undoMove"
-                @redo="redoMove"
-                @erase="eraseCell(selectedCell)"
-                @toggle-notes="notesMode = !notesMode"
-                @trigger-hint="handleTriggerHint"
-                @auto-notes="handleAutoFillNotes"
-              />
-
-              <Numpad
-                :counts="numberCounts"
-                :color-mode="colorMode"
-                @input-number="handleInputNumber"
-              />
+              </div>
             </div>
+          </div>
+          <div class="flex w-full max-w-sm flex-col items-center gap-3">
+            <!-- New game -->
+            <button
+              @click="currentScreen = 'difficulty'"
+              class="w-full bg-violet-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 hover:brightness-110 active:scale-95"
+            >
+              {{ $t("menu.start") }}
+            </button>
 
-            <!-- PAUSE OVERLAY -->
-            <div
-              v-if="timer.isPaused.value"
-              class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
+            <!-- Daily challenge -->
+            <button
+              @click="handleStartDaily"
+              :disabled="!!dailyRecord"
+              :class="
+                dailyRecord
+                  ? 'cursor-default border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-600'
+                  : 'border-violet-500/60 bg-violet-500/5 text-violet-700 hover:bg-violet-500/10 dark:border-violet-400/50 dark:text-violet-200 dark:hover:bg-violet-400/10'
+              "
+              class="flex w-full items-center justify-center gap-2 border px-6 py-4 text-sm font-bold transition-all active:scale-95"
             >
               <AppIcon
-                class="h-12 w-12 text-zinc-300"
-                path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                class="h-4 w-4 shrink-0"
+                path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
-              <p class="text-xl font-black tracking-widest text-zinc-100 uppercase">
-                {{ $t("game.pausedTitle") }}
-              </p>
+              <span v-if="dailyRecord">{{ $t("menu.dailyCompleted") }}</span>
+              <span v-else>{{ $t("menu.dailyChallenge") }}</span>
+            </button>
+            <p
+              v-if="dailyStreak > 0"
+              class="-mt-1 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+            >
+              🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}
+            </p>
+
+            <div class="grid w-full grid-cols-2 gap-3">
+              <!-- Custom puzzle -->
               <button
-                @click="timer.togglePause()"
-                class="border-2 border-emerald-500 bg-emerald-600 px-10 py-4 text-base font-black tracking-wider text-white uppercase transition-all hover:bg-emerald-700 active:scale-95"
+                @click="currentScreen = 'custom-import'"
+                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
               >
-                {{ $t("game.resume") }}
+                <AppIcon
+                  class="h-4 w-4"
+                  path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+                {{ $t("menu.customPuzzle") }}
+              </button>
+
+              <!-- Academy -->
+              <button
+                @click="currentScreen = 'academy'"
+                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              >
+                <AppIcon
+                  class="h-4 w-4"
+                  path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+                {{ $t("menu.academy") }}
+              </button>
+
+              <!-- Statistics -->
+              <button
+                @click="currentScreen = 'stats'"
+                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              >
+                <AppIcon
+                  class="h-4 w-4"
+                  path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+                {{ $t("menu.stats") }}
+              </button>
+
+              <!-- Achievements -->
+              <button
+                @click="currentScreen = 'achievements'"
+                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              >
+                <AppIcon
+                  class="h-4 w-4"
+                  path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
+                />
+                {{ $t("menu.achievements") }}
+              </button>
+
+              <!-- Settings -->
+              <button
+                @click="currentScreen = 'settings'"
+                class="col-span-2 flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              >
+                <AppIcon
+                  class="h-4 w-4"
+                  path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                {{ $t("menu.settings") }}
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Right / hint panel — on mobile only takes space once a hint is active -->
+        <!-- DIFFICULTY -->
+        <DifficultySelector
+          v-else-if="currentScreen === 'difficulty'"
+          :active-difficulty="activeDifficulty"
+          @select-difficulty="handleChooseDifficulty"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- ACADEMY -->
+        <SudokuAcademy
+          v-else-if="currentScreen === 'academy'"
+          @back-to-menu="currentScreen = 'menu'"
+          @practice="handlePractice"
+        />
+
+        <!-- STATISTICS -->
+        <StatsScreen
+          v-else-if="currentScreen === 'stats'"
+          @back-to-menu="currentScreen = 'menu'"
+          @start-game="currentScreen = 'difficulty'"
+        />
+
+        <!-- ACHIEVEMENTS -->
+        <AchievementsScreen
+          v-else-if="currentScreen === 'achievements'"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- SETTINGS -->
+        <SettingsScreen
+          v-else-if="currentScreen === 'settings'"
+          v-model:color-mode="colorMode"
+          v-model:sound-enabled="soundEnabled"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- CUSTOM IMPORT -->
+        <CustomImport
+          v-else-if="currentScreen === 'custom-import'"
+          @load-puzzle="handleLoadCustomPuzzle"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- GAME -->
         <div
-          :class="activeComplexHint ? 'block' : 'hidden lg:block'"
-          class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
+          v-else-if="currentScreen === 'game'"
+          class="flex w-full max-w-7xl flex-col gap-4 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
-          <SideExplanationPanel
-            :active-complex-hint="activeComplexHint"
-            :current-step-index="currentStepIndex"
-            :current-step="currentStep"
-            @next-step="handleNextStep"
-            @prev-step="prevHintStep"
-            @cancel="cancelComplexHint"
-          />
+          <!-- 3xl left sidebar: shortcuts & branding -->
+          <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
+            <div>
+              <p class="mb-4 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                {{ $t("sidebar.keyboard") }}
+              </p>
+              <ul class="space-y-3">
+                <li
+                  v-for="(s, i) in [
+                    { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
+                    { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
+                    { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
+                    { key: 'H', desc: $t('sidebar.shortcutGetHint') },
+                    { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
+                    { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
+                    { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
+                  ]"
+                  :key="i"
+                  class="flex items-center gap-3"
+                >
+                  <kbd
+                    class="min-w-[60px] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                    >{{ s.key }}</kbd
+                  >
+                  <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+              <p class="mb-4 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                {{ $t("sidebar.legend") }}
+              </p>
+              <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+                <li class="flex items-center gap-3">
+                  <span
+                    class="h-4 w-4 shrink-0 border border-zinc-400 bg-zinc-900 dark:border-zinc-600 dark:bg-zinc-100"
+                  />
+                  {{ $t("sidebar.legendGiven") }}
+                </li>
+                <li class="flex items-center gap-3">
+                  <span
+                    class="h-4 w-4 shrink-0 border border-violet-500 bg-violet-600/30 dark:border-violet-400 dark:bg-violet-300/30"
+                  />
+                  {{ $t("sidebar.legendEntry") }}
+                </li>
+                <li class="flex items-center gap-3">
+                  <span class="h-4 w-4 shrink-0 border border-rose-400 bg-rose-500/20" />
+                  {{ $t("sidebar.legendConflict") }}
+                </li>
+                <li class="flex items-center gap-3">
+                  <span
+                    class="h-4 w-4 shrink-0 border border-violet-300 bg-violet-200 dark:border-violet-400/70 dark:bg-violet-500/35"
+                  />
+                  {{ $t("sidebar.legendSame") }}
+                </li>
+                <li class="flex items-center gap-3">
+                  <span
+                    class="h-4 w-4 shrink-0 border-2 border-amber-500 bg-amber-200 dark:border-amber-300 dark:bg-amber-400/30"
+                  />
+                  {{ $t("sidebar.legendSelected") }}
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Center / main game column -->
+          <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
+            <GameDashboard
+              :formatted-time="timer.formatTime(timer.timerSeconds.value)"
+              :is-paused="timer.isPaused.value"
+              :mistakes="mistakes"
+              :max-mistakes="3"
+              :difficulty="
+                practiceTechnique
+                  ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
+                  : activeDifficulty
+              "
+              @toggle-pause="timer.togglePause()"
+              @exit-game="exitToMenu"
+            />
+
+            <!-- Why-wrong explainer -->
+            <div
+              v-if="mistakeExplainer"
+              class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
+            >
+              <p>{{ mistakeExplainer }}</p>
+              <button
+                @click="mistakeExplainer = ''"
+                :aria-label="$t('modal.close')"
+                class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="relative flex flex-col gap-3">
+              <SudokuGrid
+                :current-board="currentBoard"
+                :initial-board="initialBoard"
+                :solved-board="solvedBoard"
+                :notes-board="notesBoard"
+                :selected-cell="selectedCell"
+                :active-hint-cell="activeHintCell"
+                :hint-triggers="hintTriggers"
+                :hint-eliminations="hintEliminations"
+                :conflict-cells="conflictCells"
+                :color-mode="colorMode"
+                :flash-cells="flashCells"
+                @select-cell="handleSelectCell"
+              />
+              <div class="mx-2 flex flex-col gap-2 sm:mx-0">
+                <ControlPanel
+                  :notes-mode="notesMode"
+                  :can-undo="boardHistory.length > 0"
+                  :can-redo="redoHistory.length > 0"
+                  @undo="undoMove"
+                  @redo="redoMove"
+                  @erase="eraseCell(selectedCell)"
+                  @toggle-notes="notesMode = !notesMode"
+                  @trigger-hint="handleTriggerHint"
+                  @auto-notes="handleAutoFillNotes"
+                />
+
+                <Numpad
+                  :counts="numberCounts"
+                  :color-mode="colorMode"
+                  @input-number="handleInputNumber"
+                />
+              </div>
+
+              <!-- PAUSE OVERLAY -->
+              <div
+                v-if="timer.isPaused.value"
+                class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
+              >
+                <AppIcon
+                  class="h-12 w-12 text-zinc-300"
+                  path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+                <p class="text-xl font-black text-zinc-100">
+                  {{ $t("game.pausedTitle") }}
+                </p>
+                <button
+                  @click="timer.togglePause()"
+                  class="border-2 border-emerald-500 bg-emerald-600 px-10 py-4 text-base font-black text-white transition-all hover:bg-emerald-700 active:scale-95"
+                >
+                  {{ $t("game.resume") }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right / hint panel — on mobile only takes space once a hint is active -->
+          <div
+            :class="activeComplexHint ? 'block' : 'hidden lg:block'"
+            class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
+          >
+            <SideExplanationPanel
+              :active-complex-hint="activeComplexHint"
+              :current-step-index="currentStepIndex"
+              :current-step="currentStep"
+              @next-step="handleNextStep"
+              @prev-step="prevHintStep"
+              @cancel="cancelComplexHint"
+            />
+          </div>
         </div>
-      </div>
+      </Transition>
 
       <div
         v-if="practiceLoading"
@@ -1007,9 +1007,7 @@ onUnmounted(() => {
               : 'border-t-4 border-rose-500/40 border-t-rose-500'
           "
         >
-          <h3
-            class="mb-2 text-xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100"
-          >
+          <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ modalTitle }}
           </h3>
           <p class="mb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -1040,24 +1038,24 @@ onUnmounted(() => {
 
           <p
             v-if="isWinState && reachedLevel"
-            class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black tracking-widest text-violet-700 uppercase dark:text-violet-300"
+            class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-700 dark:text-violet-300"
           >
             ▲ {{ $t("level.up", { n: reachedLevel }) }}
           </p>
 
           <!-- Score headline -->
           <div v-if="isWinState && lastScore" class="mb-5">
-            <p class="text-[11px] font-semibold tracking-widest text-zinc-500 uppercase">
+            <p class="text-[11px] font-semibold text-zinc-500">
               {{ $t("modal.scoreTotal") }}
             </p>
             <p
-              class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-5xl leading-tight font-black text-transparent tabular-nums"
+              class="text-5xl leading-tight font-black text-zinc-900 tabular-nums dark:text-zinc-50"
             >
               {{ displayedScore }}
             </p>
             <p
               v-if="isNewBest"
-              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-black tracking-widest text-amber-700 uppercase dark:text-amber-300"
+              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-300"
             >
               ★ {{ $t("modal.scoreNewBest") }}
             </p>
@@ -1097,9 +1095,7 @@ onUnmounted(() => {
                 >
               </div>
               <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
-                <span class="font-semibold tracking-wider text-zinc-500 uppercase">{{
-                  $t("modal.scoreLifetime")
-                }}</span>
+                <span class="font-semibold text-zinc-500">{{ $t("modal.scoreLifetime") }}</span>
                 <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
                   lifetimeTotal
                 }}</span>
@@ -1113,17 +1109,13 @@ onUnmounted(() => {
             class="mb-5 divide-y divide-zinc-200 border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800"
           >
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
-                $t("modal.difficulty")
-              }}</span>
+              <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.difficulty") }}</span>
               <span class="text-xs font-bold text-zinc-800 capitalize dark:text-zinc-200">{{
                 activeDifficulty
               }}</span>
             </div>
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
-                $t("game.mistakes")
-              }}</span>
+              <span class="text-xs font-semibold text-zinc-500">{{ $t("game.mistakes") }}</span>
               <span
                 class="text-xs font-bold"
                 :class="
@@ -1135,9 +1127,7 @@ onUnmounted(() => {
               >
             </div>
             <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold tracking-wider text-zinc-500 uppercase">{{
-                $t("modal.hintsUsed")
-              }}</span>
+              <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.hintsUsed") }}</span>
               <span
                 class="text-xs font-bold"
                 :class="
@@ -1149,7 +1139,7 @@ onUnmounted(() => {
               >
             </div>
             <div v-if="techniqueLog.length" class="px-3 py-2">
-              <p class="mb-2 text-xs font-semibold tracking-wider text-zinc-500 uppercase">
+              <p class="mb-2 text-xs font-semibold text-zinc-500">
                 {{ $t("modal.techniquesUsed") }}
               </p>
               <div class="flex flex-wrap gap-1">
@@ -1167,7 +1157,7 @@ onUnmounted(() => {
 
           <button
             @click="handleModalClose"
-            class="w-full border border-zinc-300 bg-zinc-100 py-3 text-sm font-bold text-zinc-900 uppercase transition-all hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            class="w-full border border-zinc-300 bg-zinc-100 py-3 text-sm font-bold text-zinc-900 transition-all hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
           >
             {{ $t("modal.close") }}
           </button>
@@ -1182,9 +1172,7 @@ onUnmounted(() => {
         <div
           class="modal-pop w-full max-w-sm border border-t-4 border-t-violet-500 bg-white p-6 text-center shadow-2xl dark:bg-zinc-900"
         >
-          <h3
-            class="mb-2 text-xl font-black tracking-tight text-zinc-900 uppercase dark:text-zinc-100"
-          >
+          <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ $t("resume.title") }}
           </h3>
           <p class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -1198,19 +1186,19 @@ onUnmounted(() => {
           <div class="flex flex-col gap-2">
             <button
               @click="handleResumeConfirm"
-              class="w-full border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-700 uppercase transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
+              class="w-full border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
             >
               {{ $t("resume.continue") }}
             </button>
             <button
               @click="handleResumeDecline"
-              class="w-full border border-zinc-300 bg-zinc-50 py-3 text-sm font-bold uppercase transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+              class="w-full border border-zinc-300 bg-zinc-50 py-3 text-sm font-bold transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
             >
               {{ $t("resume.newGame") }}
             </button>
             <button
               @click="pendingResume = null"
-              class="w-full py-2 text-xs font-bold tracking-wider text-zinc-500 uppercase transition-colors hover:text-rose-600 dark:hover:text-rose-400"
+              class="w-full py-2 text-xs font-bold text-zinc-500 transition-colors hover:text-rose-600 dark:hover:text-rose-400"
             >
               {{ $t("resume.cancel") }}
             </button>
@@ -1252,21 +1240,47 @@ onUnmounted(() => {
 }
 </style>
 
-<!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's
-     scope, so the dark backdrop needs a global rule. Only the gradient is set
-     here (background-image), leaving the base color to the Tailwind utilities. -->
+<!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
-.app-shell {
-  background-image: radial-gradient(
-    1100px 560px at 50% -12%,
-    rgba(139, 92, 246, 0.06),
-    transparent 60%
-  );
+/* The one loud thing: a highlighter stroke under the wordmark. */
+.wordmark::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -0.12em;
+  right: -0.12em;
+  bottom: 0.04em;
+  height: 0.36em;
+  background: rgba(252, 211, 77, 0.75);
+  transform: skewX(-8deg) rotate(-0.8deg);
+  transform-origin: left center;
+  animation: swipe 0.7s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.dark .app-shell {
-  background-image:
-    radial-gradient(1100px 600px at 50% -14%, rgba(139, 92, 246, 0.14), transparent 56%),
-    radial-gradient(900px 520px at 88% 6%, rgba(34, 211, 238, 0.07), transparent 60%);
+.dark .wordmark::after {
+  background: rgba(251, 191, 36, 0.38);
+}
+@keyframes swipe {
+  from {
+    transform: skewX(-8deg) rotate(-0.8deg) scaleX(0);
+  }
+  to {
+    transform: skewX(-8deg) rotate(-0.8deg) scaleX(1);
+  }
+}
+
+/* Screen changes: a short fade with a small settle, not a slide. */
+.screen-enter-active,
+.screen-leave-active {
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+.screen-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.screen-leave-to {
+  opacity: 0;
 }
 
 /* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */

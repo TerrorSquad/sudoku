@@ -13,7 +13,7 @@ test("undo and redo step a placement via buttons and keyboard", async ({ page })
   await page.locator("textarea").fill(two);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
 
-  const cell = page.locator(`${BOARD} > div`).nth(1);
+  const cell = page.locator(`${BOARD} [data-cell]`).nth(1);
   const undo = page.getByRole("button", { name: "Undo" });
   const redo = page.getByRole("button", { name: "Redo" });
   await expect(undo).toBeDisabled();

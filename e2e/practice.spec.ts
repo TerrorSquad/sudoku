@@ -13,7 +13,7 @@ test("practising a technique starts a labelled game that doesn't touch progress"
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");
   await card.getByRole("button", { name: "Practice this technique" }).click();
 
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81, { timeout: 30_000 });
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81, { timeout: 30_000 });
   await expect(page.getByText("Practice · Swordfish")).toBeVisible();
 
   // No autosave slot is created for practice games.
@@ -36,5 +36,5 @@ test("a searchable technique yields a real puzzle", async ({ page }) => {
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");
   await card.getByRole("button", { name: "Practice this technique" }).click();
   await expect(page.getByText("Practice · Pointing Pair")).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81);
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 });

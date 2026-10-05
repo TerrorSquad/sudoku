@@ -63,9 +63,9 @@ const cellClasses = computed(() => {
     "border-l": props.col === 0,
     "border-t": props.row === 0,
     "border-r": props.col !== 2 && props.col !== 5,
-    "border-r-2": props.col === 2 || props.col === 5,
+    "border-r-2 border-r-zinc-600 dark:border-r-zinc-400": props.col === 2 || props.col === 5,
     "border-b": props.row !== 2 && props.row !== 5,
-    "border-b-2": props.row === 2 || props.row === 5,
+    "border-b-2 border-b-zinc-600 dark:border-b-zinc-400": props.row === 2 || props.row === 5,
     "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
     "dark:text-violet-300 text-violet-600 font-semibold":
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
@@ -75,7 +75,7 @@ const cellClasses = computed(() => {
       props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
       props.isSameValue && props.value !== 0 && !props.isSelected,
-    "dark:!bg-violet-700/70 !bg-violet-300 ring-[3px] dark:ring-violet-300 ring-violet-700 z-10":
+    "dark:!bg-amber-400/30 !bg-amber-200 ring-[3px] dark:ring-amber-300 ring-amber-500 z-10":
       props.isSelected && !isBad.value,
     "dark:!bg-rose-800/60 !bg-rose-200 ring-[3px] dark:ring-rose-400 ring-rose-600 z-10":
       props.isSelected && isBad.value,
@@ -93,9 +93,10 @@ const cellClasses = computed(() => {
     :aria-selected="isSelected"
     :tabindex="isSelected ? 0 : -1"
     :data-cell="`${row}-${col}`"
+    :style="{ animationDelay: `${(row + col) * 22}ms` }"
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#141417]"
+    class="cell-in relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
   >
     <div
       v-if="value !== 0 && colorMode"
@@ -123,6 +124,21 @@ const cellClasses = computed(() => {
 </template>
 
 <style scoped>
+/* Board "prints in" diagonally from the top-left when a game opens. */
+@keyframes cell-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cell-in {
+  animation: cell-in 0.32s ease-out both;
+}
+
 @keyframes cell-pop {
   0% {
     transform: scale(0.4);

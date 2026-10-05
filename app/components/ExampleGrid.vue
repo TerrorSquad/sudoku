@@ -39,7 +39,7 @@ function cellClass(r: number, c: number) {
 <template>
   <div
     :class="mini ? 'max-w-[104px]' : 'max-w-[280px]'"
-    class="mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-[#141417]"
+    class="mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-[#131b24]"
   >
     <template v-for="(row, r) in board" :key="r">
       <div

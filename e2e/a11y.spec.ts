@@ -7,20 +7,26 @@ import { test, expect, type Page } from "@playwright/test";
 // the keyboard tests below.
 
 async function scan(page: Page, name: string) {
+  // Screens cross-fade; scanning while the old one is still fading out misreads its contrast.
+  await page.waitForFunction(
+    () => document.querySelectorAll(".screen-leave-active, .screen-enter-active").length === 0,
+  );
   const { violations } = await new AxeBuilder({ page })
     // Nuxt DevTools' own floating badge (dev server only) isn't part of the app.
     .exclude("nuxt-devtools-frame")
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   const summary = violations.map(
-    (v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s), e.g. ${v.nodes[0]?.target.join(" ")}`,
+    (v) =>
+      `${v.id} (${v.impact}): ${v.nodes.length} node(s), e.g. ${v.nodes[0]?.target.join(" ")} — ${v.nodes[0]?.any[0]?.message ?? ""}`,
   );
   expect.soft(summary, `${name} should have no axe violations`).toEqual([]);
 }
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(scheme, () => {
-    test.use({ colorScheme: scheme });
+    // Scan the settled state: screens cross-fade in, and axe computes contrast mid-fade otherwise.
+    test.use({ colorScheme: scheme, reducedMotion: "reduce" });
 
     test("menu, difficulty and secondary screens", async ({ page }) => {
       await page.goto("/");

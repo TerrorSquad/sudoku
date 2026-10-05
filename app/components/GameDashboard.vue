@@ -22,7 +22,7 @@ defineEmits<{
       <button
         @click="$emit('exit-game')"
         :aria-label="$t('game.exitToMenu')"
-        class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        class="flex items-center gap-1.5 text-xs font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         <AppIcon
           class="h-5 w-5"
@@ -32,7 +32,7 @@ defineEmits<{
 
       <!-- Difficulty label-->
       <span
-        class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 uppercase dark:text-violet-400"
+        class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold text-violet-600 dark:text-violet-400"
       >
         {{ difficulty }}
       </span>
