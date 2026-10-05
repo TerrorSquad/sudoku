@@ -14,18 +14,32 @@ for (const scheme of ["light", "dark"] as const) {
     await filled.first().click();
 
     const bg = (i: number) => cells.nth(i).evaluate((el) => getComputedStyle(el).backgroundColor);
-    const sameIdx = await cells.evaluateAll(
-      (els, d) => els.flatMap((e, i) => (e.textContent?.trim() === d ? [i] : [])),
-      digit,
-    );
-    // a cell that's in neither the selection's lines nor holds the digit keeps the base color
-    const base = await bg(80 - 0).catch(() => "");
-    const [sel, other] = [sameIdx[0]!, sameIdx[1]];
-    const selBg = await bg(sel);
-    if (other !== undefined) {
-      const otherBg = await bg(other);
-      expect(otherBg).not.toBe(base);
-      expect(otherBg).not.toBe(selBg);
+    const { selected, sameDigit, neutral, peer } = await cells.evaluateAll((els, d) => {
+      const texts = els.map((e) => e.textContent?.trim() ?? "");
+      const sel = texts.findIndex((t) => t === d);
+      const [sr, sc] = [Math.floor(sel / 9), sel % 9];
+      const inBox = (i: number) =>
+        Math.floor(i / 27) === Math.floor(sr / 3) && Math.floor((i % 9) / 3) === Math.floor(sc / 3);
+      const isPeer = (i: number) => Math.floor(i / 9) === sr || i % 9 === sc || inBox(i);
+      const idx = els.map((_, i) => i);
+      return {
+        selected: sel,
+        sameDigit: idx.find((i) => i !== sel && texts[i] === d) ?? -1,
+        neutral: idx.find((i) => !isPeer(i) && texts[i] !== d) ?? -1,
+        peer: idx.find((i) => isPeer(i) && i !== sel && texts[i] !== d) ?? -1,
+      };
+    }, digit);
+
+    expect(neutral).toBeGreaterThan(-1);
+    const [base, selBg, peerBg] = [await bg(neutral), await bg(selected), await bg(peer)];
+    expect(peerBg).not.toBe(base);
+    expect(selBg).not.toBe(base);
+    // A hard puzzle always repeats some digit; if not, the peer check above still holds.
+    if (sameDigit > -1) {
+      const sameBg = await bg(sameDigit);
+      expect(sameBg).not.toBe(base);
+      expect(sameBg).not.toBe(selBg);
+      expect(sameBg).not.toBe(peerBg);
     }
   });
 }
