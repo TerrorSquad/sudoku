@@ -16,6 +16,8 @@ const props = defineProps<{
   colorMode: boolean;
   flashCells: CellCoord[];
   showErrors: boolean;
+  /** Digit-first input: highlights this digit and where it can still go. */
+  activeDigit?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -35,9 +37,23 @@ function isFlashing(r: number, c: number): boolean {
 }
 
 function isSameValue(r: number, c: number): boolean {
+  if (props.activeDigit) return props.currentBoard[r]![c] === props.activeDigit;
   if (!props.selectedCell) return false;
   const selVal = props.currentBoard[props.selectedCell.r][props.selectedCell.c];
   return selVal !== 0 && props.currentBoard[r][c] === selVal;
+}
+
+// An empty cell where the armed digit doesn't already appear in its row, column or box.
+function isCandidate(r: number, c: number): boolean {
+  const d = props.activeDigit;
+  if (!d || props.currentBoard[r]![c] !== 0) return false;
+  const b = props.currentBoard;
+  for (let i = 0; i < 9; i++) if (b[r]![i] === d || b[i]![c] === d) return false;
+  const br = r - (r % 3);
+  const bc = c - (c % 3);
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++) if (b[br + i]![bc + j] === d) return false;
+  return true;
 }
 
 function hasConflict(r: number, c: number): boolean {
@@ -72,6 +88,7 @@ function hasConflict(r: number, c: number): boolean {
         :color-mode="colorMode"
         :is-flashing="isFlashing(r, c)"
         :show-errors="showErrors"
+        :is-candidate="isCandidate(r, c)"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"

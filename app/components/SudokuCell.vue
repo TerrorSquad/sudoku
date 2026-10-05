@@ -21,6 +21,8 @@ const props = defineProps<{
   colorMode: boolean;
   isFlashing: boolean;
   showErrors: boolean;
+  /** Digit-first input: the armed digit could still go here. */
+  isCandidate?: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
 }>();
@@ -98,6 +100,8 @@ const cellClasses = computed(() => {
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
+    "ring-1 ring-inset ring-violet-400/50 !bg-violet-500/10":
+      props.isCandidate && !props.isSelected,
     "cell-flash": props.isFlashing,
     "cell-in": entering.value,
   };

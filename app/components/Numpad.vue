@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { dotClass } from "../utils/sudokuColors";
+import { digitLabel, dotClass } from "../utils/sudokuColors";
 
 interface Props {
   counts: number[];
   colorMode: boolean;
+  /** Digit-first input: the digit currently armed, if any. */
+  activeDigit?: number | null;
+  digitFirst?: boolean;
 }
 
 defineProps<Props>();
+const { t } = useI18n();
 defineEmits<{
   (e: "input-number", num: number): void;
 }>();
@@ -20,11 +24,16 @@ defineEmits<{
       :key="n"
       @click="$emit('input-number', n)"
       :disabled="9 - counts[n]! <= 0"
-      :class="
+      :aria-label="digitLabel(n, colorMode, t)"
+      :aria-pressed="digitFirst ? activeDigit === n : undefined"
+      :class="[
         9 - counts[n]! <= 0
           ? 'pointer-events-none opacity-30'
-          : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800'
-      "
+          : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800',
+        digitFirst && activeDigit === n
+          ? '!border-violet-500 !bg-violet-100 ring-2 ring-violet-500 dark:!bg-violet-500/20'
+          : '',
+      ]"
       class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-5 font-game text-3xl font-black transition-all 3xl:py-5 3xl:text-4xl lg:py-3 lg:text-2xl dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span v-if="colorMode" :class="dotClass(n)" class="h-6 w-6 3xl:h-9 3xl:w-9" />

@@ -42,8 +42,15 @@ useHead(() => ({
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
-const { colorMode, soundEnabled, hapticsEnabled, showTimer, mistakeLimit, highlightErrors } =
-  usePreferences();
+const {
+  colorMode,
+  soundEnabled,
+  hapticsEnabled,
+  digitFirst,
+  showTimer,
+  mistakeLimit,
+  highlightErrors,
+} = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
 const CUES = {
@@ -327,9 +334,33 @@ function handleResumeDecline() {
   pendingResume.value = null;
 }
 
+// Digit-first input: the numpad arms a digit, and tapping a cell places it. Tapping a given
+// does nothing but select; tapping a cell that already holds the armed digit removes it.
+const activeDigit = ref<number | null>(null);
+
+function handleNumpad(num: number) {
+  if (digitFirst.value) {
+    activeDigit.value = activeDigit.value === num ? null : num;
+    return;
+  }
+  handleInputNumber(num);
+}
+
 function handleSelectCell(coord: CellCoord) {
   selectedCell.value = coord;
+  if (digitFirst.value && activeDigit.value && initialBoard.value[coord.r]![coord.c] === 0) {
+    handleInputNumber(activeDigit.value);
+  }
 }
+
+// An armed digit is meaningless once the player leaves the game, turns the mode off, or has
+// placed all nine of it.
+watch([currentScreen, digitFirst], () => {
+  if (currentScreen.value !== "game" || !digitFirst.value) activeDigit.value = null;
+});
+watch(numberCounts, (counts) => {
+  if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
+});
 
 // A correct placement may finish a row, column, and/or box — flash every
 // cell of each newly-completed unit. "Complete" means every cell already
@@ -598,7 +629,7 @@ function moveSelection(dr: number, dc: number) {
   // With nothing selected, the first arrow press lands on the top-left cell.
   const r = cur ? clamp(cur.r + dr) : 0;
   const c = cur ? clamp(cur.c + dc) : 0;
-  handleSelectCell({ r, c });
+  selectedCell.value = { r, c }; // not handleSelectCell: arrows must never place an armed digit
   nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
 }
 
@@ -634,6 +665,10 @@ function handleKeyDown(e: KeyboardEvent) {
     else if ((k === "z" && e.shiftKey) || k === "y") redo();
     else return;
     e.preventDefault();
+    return;
+  }
+  if (e.key === "Escape" && activeDigit.value) {
+    activeDigit.value = null;
     return;
   }
   const arrow = ARROW_STEPS[e.key];
@@ -966,6 +1001,7 @@ onUnmounted(() => {
                 :color-mode="colorMode"
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
+                :active-digit="activeDigit"
                 @select-cell="handleSelectCell"
               />
               <div class="mx-2 flex flex-col gap-2 sm:mx-0">
@@ -984,7 +1020,9 @@ onUnmounted(() => {
                 <Numpad
                   :counts="numberCounts"
                   :color-mode="colorMode"
-                  @input-number="handleInputNumber"
+                  @input-number="handleNumpad"
+                  :active-digit="activeDigit"
+                  :digit-first="digitFirst"
                 />
               </div>
 
