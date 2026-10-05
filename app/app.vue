@@ -5,6 +5,8 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty } from "./types/sudoku";
 
+import AchievementsScreen from "./components/AchievementsScreen.vue";
+import AchievementToast from "./components/AchievementToast.vue";
 import ControlPanel from "./components/ControlPanel.vue";
 import CustomImport from "./components/CustomImport.vue";
 import DifficultySelector from "./components/DifficultySelector.vue";
@@ -15,6 +17,7 @@ import SideExplanationPanel from "./components/SideExplanationPanel.vue";
 import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
+import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave } from "./composables/useGameSave";
 import { useScore } from "./composables/useScore";
@@ -73,6 +76,9 @@ const {
 
 const gameSave = useGameSave();
 const techStats = useTechniqueStats();
+const achievements = useAchievements();
+// Ids of achievements just unlocked, shown as toasts until they time out or are clicked.
+const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
 
@@ -81,7 +87,14 @@ const mistakes = ref<number>(0);
 const hintStatus = ref<string>(t("game.ready"));
 const hintBody = ref<string>("");
 const currentScreen = ref<
-  "menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats" | "settings"
+  | "menu"
+  | "difficulty"
+  | "game"
+  | "academy"
+  | "custom-import"
+  | "stats"
+  | "achievements"
+  | "settings"
 >("menu");
 const activeDifficulty = ref<Difficulty>("medium");
 
@@ -178,6 +191,21 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     lastScore.value = breakdown;
     isNewBest.value = result.isNewBest;
     lifetimeTotal.value = result.stats.total;
+    toastIds.value.push(
+      ...achievements.evaluate({
+        difficulty: activeDifficulty.value,
+        timeSeconds: timer.timerSeconds.value,
+        mistakes: mistakes.value,
+        hintsUsed: hintsUsed.value,
+        isDaily: isDailyMode.value,
+        colorMode: colorMode.value,
+        hour: new Date().getHours(),
+        gamesWon: result.stats.gamesWon,
+        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+        dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
+        distinctTechniques: Object.keys(techStats.getAll()).length,
+      }),
+    );
     animateScoreCountUp(breakdown.total);
     confetti({
       particleCount: 160,
@@ -595,10 +623,22 @@ onUnmounted(() => {
               {{ $t("menu.stats") }}
             </button>
 
+            <!-- Achievements -->
+            <button
+              @click="currentScreen = 'achievements'"
+              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+            >
+              <AppIcon
+                class="h-4 w-4"
+                path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
+              />
+              {{ $t("menu.achievements") }}
+            </button>
+
             <!-- Settings -->
             <button
               @click="currentScreen = 'settings'"
-              class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
+              class="col-span-2 flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold tracking-wider text-zinc-600 uppercase transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
             >
               <AppIcon
                 class="h-4 w-4"
@@ -629,6 +669,12 @@ onUnmounted(() => {
         v-else-if="currentScreen === 'stats'"
         @back-to-menu="currentScreen = 'menu'"
         @start-game="currentScreen = 'difficulty'"
+      />
+
+      <!-- ACHIEVEMENTS -->
+      <AchievementsScreen
+        v-else-if="currentScreen === 'achievements'"
+        @back-to-menu="currentScreen = 'menu'"
       />
 
       <!-- SETTINGS -->
@@ -811,6 +857,11 @@ onUnmounted(() => {
           />
         </div>
       </div>
+
+      <AchievementToast
+        :ids="toastIds"
+        @dismiss="(id) => (toastIds = toastIds.filter((x) => x !== id))"
+      />
 
       <!-- MODAL -->
       <div
