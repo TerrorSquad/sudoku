@@ -30,7 +30,11 @@ export interface ComplexHint {
   steps: ExplanationStep[];
 }
 
-export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
+export function useSudokuEngine(
+  colorMode: Ref<boolean> = ref(false),
+  // "Highlight mistakes" off: remaining-digit counts must not reveal which entries are wrong.
+  countWrongDigits: Ref<boolean> = ref(false),
+) {
   const { t } = useI18n();
 
   const currentBoard = ref<Grid>(
@@ -87,7 +91,8 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const val = currentBoard.value[r]![c]!;
-        if (val !== 0 && val === solvedBoard.value[r]![c]!) counts[val]!++;
+        if (val !== 0 && (countWrongDigits.value || val === solvedBoard.value[r]![c]!))
+          counts[val]!++;
       }
     }
     return counts;
@@ -284,6 +289,13 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     };
   }
 
+  /** Where the next hint would act (a placement, else the first removal), without starting it. */
+  function peekHintCell(): CellCoord | null {
+    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
+    return at ? { r: at.r, c: at.c } : null;
+  }
+
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
     const move = nextHint(currentBoard.value, appliedEliminations.value);
     if (!move) {
@@ -430,6 +442,7 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     boardHistory,
     checkWinCondition,
     triggerComplexHint,
+    peekHintCell,
     nextHintStep,
     prevHintStep,
     applyComplexHint,

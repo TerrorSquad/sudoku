@@ -50,6 +50,15 @@ for (const scheme of ["light", "dark"] as const) {
       }
     });
 
+    test("game screen in colour mode", async ({ page }) => {
+      await page.addInitScript(() => localStorage.setItem("sudoku_v1_pref_color_mode", "true"));
+      await page.goto("/");
+      await page.getByRole("button", { name: "New Game" }).click();
+      await page.getByRole("button", { name: /Easy/ }).click();
+      await expect(page.locator(".grid.aspect-square")).toBeVisible();
+      await scan(page, "game (colour mode)");
+    });
+
     test("game screen", async ({ page }) => {
       await page.goto("/");
       await page.getByRole("button", { name: "New Game" }).click();

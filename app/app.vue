@@ -3,7 +3,7 @@ import * as uiLocales from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
-import type { CellCoord, Difficulty } from "./types/sudoku";
+import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
@@ -21,15 +21,16 @@ import SudokuGrid from "./components/SudokuGrid.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave } from "./composables/useGameSave";
+import { usePreferences } from "./composables/usePreferences";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { haptic } from "./utils/haptics";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
-import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
-import { playMistake, playPlace, playWin } from "./utils/sound";
+import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
 
@@ -41,14 +42,35 @@ useHead(() => ({
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
 
-const COLOR_MODE_KEY = "sudoku_v1_pref_color_mode";
-const colorMode = ref<boolean>(readJSON(COLOR_MODE_KEY, false));
-watch(colorMode, (v) => writeJSON(COLOR_MODE_KEY, v));
+const {
+  colorMode,
+  soundEnabled,
+  hapticsEnabled,
+  digitFirst,
+  showTimer,
+  mistakeLimit,
+  highlightErrors,
+  hintStyle,
+} = usePreferences();
 
-const SOUND_KEY = "sudoku_v1_pref_sound";
-const soundEnabled = ref<boolean>(readJSON(SOUND_KEY, true));
-watch(soundEnabled, (v) => writeJSON(SOUND_KEY, v));
-const engine = useSudokuEngine(colorMode);
+// One call per game event: the sound and the vibration, each respecting its own setting.
+const CUES = {
+  place: [playPlace, "place"],
+  mistake: [playMistake, "mistake"],
+  complete: [playComplete, "complete"],
+  win: [playWin, "win"],
+  hint: [playHint, null],
+  unlock: [playUnlock, null],
+} as const;
+function cue(kind: keyof typeof CUES) {
+  const [sound, vibration] = CUES[kind];
+  if (soundEnabled.value) sound();
+  if (vibration && hapticsEnabled.value) haptic(vibration);
+}
+const engine = useSudokuEngine(
+  colorMode,
+  computed(() => !highlightErrors.value),
+);
 const timer = useTimer();
 
 const {
@@ -120,7 +142,7 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
 const mistakeExplainer = ref<string>("");
 
-const flashCells = ref<CellCoord[]>([]);
+const flashCells = ref<FlashCell[]>([]);
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const score = useScore();
@@ -195,11 +217,13 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalMessage.value = message;
   isWinState.value = win;
   showModal.value = true;
+  activeDigit.value = null;
   reachedLevel.value = null;
   timer.stopTimer();
   if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
   if (win) {
-    if (soundEnabled.value) playWin();
+    cue("win");
+    flashWin();
     if (practiceTechnique.value) {
       lastScore.value = null;
     } else {
@@ -221,21 +245,21 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       const before = levelFor(result.previousTotal).level;
       const after = levelFor(result.stats.total).level;
       reachedLevel.value = after > before ? after : null;
-      toastIds.value.push(
-        ...achievements.evaluate({
-          difficulty: activeDifficulty.value,
-          timeSeconds: timer.timerSeconds.value,
-          mistakes: mistakes.value,
-          hintsUsed: hintsUsed.value,
-          isDaily: isDailyMode.value,
-          colorMode: colorMode.value,
-          hour: new Date().getHours(),
-          gamesWon: result.stats.gamesWon,
-          winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
-          dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
-          distinctTechniques: Object.keys(techStats.getAll()).length,
-        }),
-      );
+      const unlocked = achievements.evaluate({
+        difficulty: activeDifficulty.value,
+        timeSeconds: timer.timerSeconds.value,
+        mistakes: mistakes.value,
+        hintsUsed: hintsUsed.value,
+        isDaily: isDailyMode.value,
+        colorMode: colorMode.value,
+        hour: new Date().getHours(),
+        gamesWon: result.stats.gamesWon,
+        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+        dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
+        distinctTechniques: Object.keys(techStats.getAll()).length,
+      });
+      toastIds.value.push(...unlocked);
+      if (unlocked.length) cue("unlock");
       animateScoreCountUp(breakdown.total);
     }
     confetti({
@@ -316,22 +340,53 @@ function handleResumeDecline() {
   pendingResume.value = null;
 }
 
+// Digit-first input: the numpad arms a digit, and tapping a cell places it. Tapping a given
+// does nothing but select; tapping a cell that already holds the armed digit removes it.
+const activeDigit = ref<number | null>(null);
+
+function handleNumpad(num: number) {
+  if (digitFirst.value) {
+    activeDigit.value = activeDigit.value === num ? null : num;
+    return;
+  }
+  handleInputNumber(num);
+}
+
 function handleSelectCell(coord: CellCoord) {
   selectedCell.value = coord;
+  if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
+    return;
+  // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
+  // different entry must not silently replace it (and cost a mistake).
+  const held = currentBoard.value[coord.r]![coord.c];
+  if (held === 0 || held === activeDigit.value) handleInputNumber(activeDigit.value);
 }
+
+// An armed digit is meaningless once the player leaves the game, turns the mode off, or has
+// placed all nine of it.
+watch([currentScreen, digitFirst], () => {
+  if (currentScreen.value !== "game" || !digitFirst.value) activeDigit.value = null;
+});
+watch(numberCounts, (counts) => {
+  if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
+});
 
 // A correct placement may finish a row, column, and/or box — flash every
 // cell of each newly-completed unit. "Complete" means every cell already
 // matches the solution, not just non-empty (a wrong-but-unconflicting digit
 // can sit in a cell without being flagged, so equality is the real check).
 function flashCompletedUnits(r: number, c: number) {
-  const cells: CellCoord[] = [];
+  // Cells ripple outward from the digit just placed: 45 ms per step of distance.
+  const RIPPLE_MS = 45;
+  const cells: FlashCell[] = [];
+  const add = (cr: number, cc: number) =>
+    cells.push({ r: cr, c: cc, delay: Math.max(Math.abs(cr - r), Math.abs(cc - c)) * RIPPLE_MS });
 
   if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
-    for (let i = 0; i < 9; i++) cells.push({ r, c: i });
+    for (let i = 0; i < 9; i++) add(r, i);
   }
   if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
-    for (let i = 0; i < 9; i++) cells.push({ r: i, c });
+    for (let i = 0; i < 9; i++) add(i, c);
   }
   const boxR = r - (r % 3);
   const boxC = c - (c % 3);
@@ -346,20 +401,36 @@ function flashCompletedUnits(r: number, c: number) {
   }
   if (boxComplete) {
     for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) cells.push({ r: boxR + i, c: boxC + j });
+      for (let j = 0; j < 3; j++) add(boxR + i, boxC + j);
     }
   }
 
   if (!cells.length) return;
+  cue("complete");
+  runFlash(cells);
+}
+
+// Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
+function runFlash(cells: FlashCell[]) {
   if (flashTimeout) clearTimeout(flashTimeout);
   flashCells.value = cells;
+  const longest = Math.max(...cells.map((c) => c.delay));
   flashTimeout = setTimeout(() => {
     flashCells.value = [];
-  }, 600);
+  }, longest + 900);
+}
+
+// Winning sweeps a diagonal wave across the whole board before the result appears.
+function flashWin() {
+  const cells: FlashCell[] = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) cells.push({ r, c, delay: (r + c) * 45 });
+  }
+  runFlash(cells);
 }
 
 function handleInputNumber(num: number) {
-  if (timer.isPaused.value || !selectedCell.value) return;
+  if (timer.isPaused.value || showModal.value || !selectedCell.value) return;
   const { r, c } = selectedCell.value;
 
   if (initialBoard.value[r]![c] !== 0) return;
@@ -383,38 +454,47 @@ function handleInputNumber(num: number) {
 
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
-        if (soundEnabled.value) playMistake();
         mistakes.value++;
-        if (conflicts.length > 0) {
-          const inRow = conflicts.some((cc) => cc.r === r);
-          const inCol = conflicts.some((cc) => cc.c === c);
-          const inBox = conflicts.some((cc) => cc.r !== r && cc.c !== c);
-          const where = inRow
-            ? t("game.whereRow", { n: r + 1 })
-            : inCol
-              ? t("game.whereCol", { n: c + 1 })
-              : inBox
-                ? t("game.whereBox")
-                : t("game.whereCell");
-          hintStatus.value = t("game.conflictWith", { where });
-          const first = conflicts[0]!;
-          mistakeExplainer.value = t("game.whyConflict", {
-            num: digitLabel(num, colorMode.value, t),
-            r: first.r + 1,
-            c: first.c + 1,
-          });
+        // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
+        // it still counts toward the score.
+        if (!highlightErrors.value) {
+          cue("place"); // sounds identical to a correct entry
         } else {
-          hintStatus.value = t("game.wrongDigit");
-          mistakeExplainer.value = t("game.whyWrong", { num: digitLabel(num, colorMode.value, t) });
-        }
-        if (mistakes.value >= 3) {
-          triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+          cue("mistake");
+          if (conflicts.length > 0) {
+            const inRow = conflicts.some((cc) => cc.r === r);
+            const inCol = conflicts.some((cc) => cc.c === c);
+            const inBox = conflicts.some((cc) => cc.r !== r && cc.c !== c);
+            const where = inRow
+              ? t("game.whereRow", { n: r + 1 })
+              : inCol
+                ? t("game.whereCol", { n: c + 1 })
+                : inBox
+                  ? t("game.whereBox")
+                  : t("game.whereCell");
+            hintStatus.value = t("game.conflictWith", { where });
+            const first = conflicts[0]!;
+            mistakeExplainer.value = t("game.whyConflict", {
+              num: digitLabel(num, colorMode.value, t),
+              r: first.r + 1,
+              c: first.c + 1,
+            });
+          } else {
+            hintStatus.value = t("game.wrongDigit");
+            mistakeExplainer.value = t("game.whyWrong", {
+              num: digitLabel(num, colorMode.value, t),
+            });
+          }
+          if (mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
+            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+          }
         }
       } else {
-        if (soundEnabled.value) playPlace();
+        cue("place");
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
-        flashCompletedUnits(r, c);
+        // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
+        if (highlightErrors.value) flashCompletedUnits(r, c);
         if (checkWinCondition()) {
           triggerLocalModal(
             t("modal.win"),
@@ -439,7 +519,7 @@ function handleNextStep() {
       techStats.record(title);
     }
     hintsUsed.value++;
-    if (wasPlacement && soundEnabled.value) playPlace();
+    if (wasPlacement) cue("place");
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
@@ -453,12 +533,30 @@ function handleNextStep() {
   });
 }
 
+// "Nudge first" hint style: the first press only points at a 3x3 box; pressing again (or the
+// banner's Explain button) gives the full step-by-step explanation.
+const nudge = ref<CellCoord | null>(null);
+const nudgeBox = computed(() => (nudge.value ? boxNumber(nudge.value) : 0));
+const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
+watch(currentBoard, () => (nudge.value = null), { deep: true });
+watch(currentScreen, () => (nudge.value = null));
+
 function handleTriggerHint() {
   if (activeComplexHint.value) {
     handleInstantApplyHint();
-  } else {
-    triggerComplexHint(hintStatus, hintBody);
+    return;
   }
+  if (hintStyle.value === "nudge" && !nudge.value) {
+    const at = engine.peekHintCell();
+    if (at) {
+      nudge.value = at;
+      cue("hint");
+      return;
+    }
+  }
+  nudge.value = null;
+  cue("hint");
+  triggerComplexHint(hintStatus, hintBody);
 }
 
 function handleInstantApplyHint() {
@@ -469,7 +567,7 @@ function handleInstantApplyHint() {
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
   engine.applyComplexHint();
-  if (wasPlacement && soundEnabled.value) playPlace();
+  if (wasPlacement) cue("place");
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
@@ -579,7 +677,7 @@ function moveSelection(dr: number, dc: number) {
   // With nothing selected, the first arrow press lands on the top-left cell.
   const r = cur ? clamp(cur.r + dr) : 0;
   const c = cur ? clamp(cur.c + dc) : 0;
-  handleSelectCell({ r, c });
+  selectedCell.value = { r, c }; // not handleSelectCell: arrows must never place an armed digit
   nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
 }
 
@@ -615,6 +713,10 @@ function handleKeyDown(e: KeyboardEvent) {
     else if ((k === "z" && e.shiftKey) || k === "y") redo();
     else return;
     e.preventDefault();
+    return;
+  }
+  if (e.key === "Escape" && activeDigit.value) {
+    activeDigit.value = null;
     return;
   }
   const arrow = ARROW_STEPS[e.key];
@@ -819,8 +921,6 @@ onUnmounted(() => {
         <!-- SETTINGS -->
         <SettingsScreen
           v-else-if="currentScreen === 'settings'"
-          v-model:color-mode="colorMode"
-          v-model:sound-enabled="soundEnabled"
           @back-to-menu="currentScreen = 'menu'"
         />
 
@@ -908,7 +1008,9 @@ onUnmounted(() => {
               :formatted-time="timer.formatTime(timer.timerSeconds.value)"
               :is-paused="timer.isPaused.value"
               :mistakes="mistakes"
-              :max-mistakes="3"
+              :max-mistakes="mistakeLimit"
+              :show-timer="showTimer"
+              :show-mistakes="highlightErrors"
               :difficulty="
                 practiceTechnique
                   ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
@@ -917,6 +1019,21 @@ onUnmounted(() => {
               @toggle-pause="timer.togglePause()"
               @exit-game="exitToMenu"
             />
+
+            <!-- Nudge: points at a box before the full explanation -->
+            <div
+              v-if="nudge"
+              role="status"
+              class="flex items-center justify-between gap-3 border border-amber-500/40 bg-amber-300/25 px-3 py-2 text-xs text-amber-950 dark:bg-amber-400/10 dark:text-amber-200"
+            >
+              <p>{{ $t("hint.nudge.body", { box: nudgeBox }) }}</p>
+              <button
+                @click="handleTriggerHint"
+                class="shrink-0 border border-amber-600/50 px-2 py-1 font-bold transition-colors hover:bg-amber-400/30"
+              >
+                {{ $t("hint.nudge.explain") }}
+              </button>
+            </div>
 
             <!-- Why-wrong explainer -->
             <div
@@ -946,6 +1063,9 @@ onUnmounted(() => {
                 :conflict-cells="conflictCells"
                 :color-mode="colorMode"
                 :flash-cells="flashCells"
+                :show-errors="highlightErrors"
+                :active-digit="activeDigit"
+                :nudge-box="nudge"
                 @select-cell="handleSelectCell"
               />
               <div class="mx-2 flex flex-col gap-2 sm:mx-0">
@@ -964,7 +1084,9 @@ onUnmounted(() => {
                 <Numpad
                   :counts="numberCounts"
                   :color-mode="colorMode"
-                  @input-number="handleInputNumber"
+                  @input-number="handleNumpad"
+                  :active-digit="activeDigit"
+                  :digit-first="digitFirst"
                 />
               </div>
 
@@ -1026,6 +1148,7 @@ onUnmounted(() => {
       <!-- MODAL -->
       <div
         v-if="showModal"
+        :class="isWinState ? 'modal-delay' : ''"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
@@ -1152,7 +1275,7 @@ onUnmounted(() => {
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-rose-600 dark:text-rose-400'
                 "
-                >{{ mistakes }} / 3</span
+                >{{ mistakes }}{{ mistakeLimit ? ` / ${mistakeLimit}` : "" }}</span
               >
             </div>
             <div class="flex justify-between px-3 py-2">
@@ -1312,6 +1435,21 @@ onUnmounted(() => {
   opacity: 0;
 }
 
+/* The result appears after the win wave has swept the board. */
+.modal-delay {
+  animation: modal-delay 0.3s 0.9s ease-out both;
+}
+@keyframes modal-delay {
+  from {
+    opacity: 0;
+    pointer-events: none;
+  }
+  to {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1319,6 +1457,7 @@ onUnmounted(() => {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }

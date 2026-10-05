@@ -20,6 +20,12 @@ const props = defineProps<{
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
+  flashDelay?: number;
+  showErrors: boolean;
+  /** Digit-first input: the armed digit could still go here. */
+  isCandidate?: boolean;
+  /** "Nudge first" hint: this cell is in the box being pointed at. */
+  isNudged?: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
 }>();
@@ -30,8 +36,13 @@ defineEmits<{
 
 // A player entry that's wrong (conflict or not matching the solution) shakes
 // instead of popping, for immediate tactile feedback on a mistake.
+// With "Highlight mistakes" off nothing is marked wrong, visually or to screen readers.
 const isWrong = computed(
-  () => props.value !== 0 && !props.isInitial && (!props.isCorrect || props.hasConflict),
+  () =>
+    props.showErrors &&
+    props.value !== 0 &&
+    !props.isInitial &&
+    (!props.isCorrect || props.hasConflict),
 );
 
 // A wrong or conflicting player entry keeps its red treatment while selected.
@@ -67,7 +78,7 @@ const label = computed(() => {
     : `${pos}, ${t("a11y.cellEmpty")}`;
 });
 
-const isBad = computed(() => isWrong.value || props.hasConflict);
+const isBad = computed(() => isWrong.value || (props.showErrors && props.hasConflict));
 
 // Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
 const cellClasses = computed(() => {
@@ -80,9 +91,8 @@ const cellClasses = computed(() => {
     "border-b-2 border-b-zinc-600 dark:border-b-zinc-400": props.row === 2 || props.row === 5,
     "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
     "dark:text-violet-300 text-violet-600 font-semibold":
-      !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
-    "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100":
-      !props.isInitial && props.value !== 0 && (!props.isCorrect || props.hasConflict),
+      !props.isInitial && props.value !== 0 && !isWrong.value,
+    "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100": isWrong.value,
     "dark:bg-zinc-700/60 bg-zinc-200 dark:border-zinc-400 border-zinc-600":
       props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
@@ -93,6 +103,9 @@ const cellClasses = computed(() => {
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
+    "ring-1 ring-inset ring-violet-400/50 !bg-violet-500/10":
+      props.isCandidate && !props.isSelected,
+    "ring-2 ring-inset ring-amber-400/80 !bg-amber-300/25": props.isNudged && !props.isSelected,
     "cell-flash": props.isFlashing,
     "cell-in": entering.value,
   };
@@ -106,7 +119,13 @@ const cellClasses = computed(() => {
     :aria-selected="isSelected"
     :tabindex="tabStop ? 0 : -1"
     :data-cell="`${row}-${col}`"
-    :style="entering ? { animationDelay: `${(row + col) * 22}ms` } : undefined"
+    :style="
+      isFlashing
+        ? { animationDelay: `${flashDelay ?? 0}ms` }
+        : entering
+          ? { animationDelay: `${(row + col) * 22}ms` }
+          : undefined
+    "
     @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
@@ -192,15 +211,23 @@ const cellClasses = computed(() => {
 .cell-shake {
   animation: cell-shake 0.32s ease-in-out both;
 }
+/* A bright pulse that rides outward from the digit just placed (the delay is set inline). */
 @keyframes cell-flash {
   0% {
-    background-color: rgba(16, 185, 129, 0.4);
+    background-color: rgba(16, 185, 129, 0);
+    transform: scale(1);
+  }
+  30% {
+    background-color: rgba(16, 185, 129, 0.55);
+    transform: scale(1.09);
+    z-index: 20;
   }
   100% {
-    background-color: transparent;
+    background-color: rgba(16, 185, 129, 0);
+    transform: scale(1);
   }
 }
 .cell-flash {
-  animation: cell-flash 0.6s ease-out;
+  animation: cell-flash 0.7s ease-out backwards;
 }
 </style>

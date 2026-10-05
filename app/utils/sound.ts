@@ -33,3 +33,17 @@ export function playMistake(): void {
 export function playWin(): void {
   [523, 659, 784, 1046].forEach((freq, i) => tone(freq, i * 0.12, 0.25));
 }
+
+/** A short rising triple: a row, column or box was just completed. */
+export function playComplete(): void {
+  [587, 740, 880].forEach((freq, i) => tone(freq, i * 0.07, 0.14, 0.12));
+}
+
+export function playHint(): void {
+  tone(880, 0, 0.1, 0.1);
+  tone(1175, 0.09, 0.14, 0.1);
+}
+
+export function playUnlock(): void {
+  [784, 988, 1319].forEach((freq, i) => tone(freq, i * 0.1, 0.22, 0.12));
+}
