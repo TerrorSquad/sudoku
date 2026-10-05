@@ -28,6 +28,7 @@ import { levelBand, levelFor } from "./utils/level";
 import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playMistake, playPlace, playWin } from "./utils/sound";
+import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
 
 const { t, locale, locales } = useI18n();
@@ -913,6 +914,28 @@ onUnmounted(() => {
             {{ modalMessage }}
           </p>
 
+          <!-- Star rating -->
+          <div
+            v-if="isWinState"
+            class="mb-4 flex justify-center gap-1.5"
+            role="img"
+            :aria-label="$t('modal.stars', { n: starsFor(mistakes, hintsUsed) })"
+          >
+            <span
+              v-for="n in 3"
+              :key="n"
+              :style="{ animationDelay: `${n * 120}ms` }"
+              :class="
+                n <= starsFor(mistakes, hintsUsed)
+                  ? 'star-pop text-amber-400'
+                  : 'text-zinc-300 dark:text-zinc-700'
+              "
+              class="text-3xl leading-none"
+              aria-hidden="true"
+              >★</span
+            >
+          </div>
+
           <p
             v-if="isWinState && reachedLevel"
             class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black tracking-widest text-violet-700 uppercase dark:text-violet-300"
@@ -1142,6 +1165,23 @@ onUnmounted(() => {
   background-image:
     radial-gradient(1100px 600px at 50% -14%, rgba(139, 92, 246, 0.14), transparent 56%),
     radial-gradient(900px 520px at 88% 6%, rgba(34, 211, 238, 0.07), transparent 60%);
+}
+
+@keyframes star-pop {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.3) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+.star-pop {
+  animation: star-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes modal-pop {

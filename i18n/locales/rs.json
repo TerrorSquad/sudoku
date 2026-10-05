@@ -306,5 +306,6 @@
   "level.title.apprentice": "Šegrt",
   "level.title.adept": "Vešt",
   "level.title.expert": "Stručnjak",
-  "level.title.master": "Majstor"
+  "level.title.master": "Majstor",
+  "modal.stars": "{n} od 3 zvezdice"
 }
