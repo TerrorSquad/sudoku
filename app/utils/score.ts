@@ -45,6 +45,10 @@ const PAR: Record<string, number> = {
   custom: 600,
 };
 
+export function parSeconds(difficulty: string): number {
+  return PAR[difficulty] ?? PAR.custom!;
+}
+
 export function baseScore(difficulty: string): number {
   return BASE[difficulty] ?? BASE.custom!;
 }
