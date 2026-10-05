@@ -79,6 +79,12 @@ for (const theme of ["light", "dark"] as const) {
         // A real clear must not wipe the seeded save on reload, so only seed once per tab.
         if (!sessionStorage.getItem("seeded")) {
           localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(save));
+          // A few unlocked achievements (noon UTC so the date is stable across timezones).
+          const noon = Date.UTC(2026, 0, 10, 12);
+          localStorage.setItem(
+            "sudoku_v1_achievements",
+            JSON.stringify({ "first-win": noon, flawless: noon, "streak-3": noon, comeback: noon }),
+          );
           sessionStorage.setItem("seeded", "1");
         }
       }, savedGame());
@@ -161,6 +167,11 @@ for (const theme of ["light", "dark"] as const) {
     test("academy", async ({ page }) => {
       await page.getByRole("button", { name: "Sudoku Academy" }).click();
       await shot(page, "academy");
+    });
+
+    test("achievements", async ({ page }) => {
+      await page.getByRole("button", { name: "Achievements" }).click();
+      await shot(page, "achievements");
     });
 
     test("custom puzzle", async ({ page }) => {
