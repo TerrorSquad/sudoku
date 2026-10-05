@@ -11,8 +11,8 @@ async function winCustomPuzzle(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Custom Puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} > div`).nth(49).click();
-  await page.locator(".grid-cols-5").nth(1).locator("button:not([disabled])").first().click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
 }
 

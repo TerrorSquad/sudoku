@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
-import { dotClass } from "../utils/sudokuColors";
+import { digitLabel, dotClass } from "../utils/sudokuColors";
 
 const props = defineProps<{
   row: number;
@@ -20,6 +20,8 @@ const props = defineProps<{
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
+  /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
+  tabStop: boolean;
 }>();
 
 defineEmits<{
@@ -33,6 +35,38 @@ const isWrong = computed(
 );
 
 // A wrong or conflicting player entry keeps its red treatment while selected.
+const { t } = useI18n();
+
+// The diagonal "print-in" plays once on mount. Dropping the class afterwards matters: a later
+// flash/shake would otherwise restart it, and its inline delay would leak into those animations.
+const entering = ref(true);
+function onAnimationEnd(e: AnimationEvent) {
+  // animationend bubbles from the digit's own pop/shake; only the cell's entrance counts.
+  if (e.target === e.currentTarget && e.animationName.startsWith("cell-in")) entering.value = false;
+}
+// animationend never fires if the cell mounts hidden or the screen transition is interrupted.
+onMounted(() => setTimeout(() => (entering.value = false), 1500));
+
+// Screen-reader description: position, state and value (colour name in colour mode), plus notes.
+const label = computed(() => {
+  const pos = t("a11y.cellPos", { r: props.row + 1, c: props.col + 1 });
+  if (props.value !== 0) {
+    const v = digitLabel(props.value, props.colorMode, t);
+    const kind = props.isInitial
+      ? t("a11y.cellGiven", { v })
+      : isBad.value
+        ? t("a11y.cellWrong", { v })
+        : t("a11y.cellEntry", { v });
+    return `${pos}, ${kind}`;
+  }
+  const marks = props.notes
+    .map((on, n) => (on ? digitLabel(n, props.colorMode, t) : ""))
+    .filter(Boolean);
+  return marks.length
+    ? `${pos}, ${t("a11y.cellNotes", { notes: marks.join(", ") })}`
+    : `${pos}, ${t("a11y.cellEmpty")}`;
+});
+
 const isBad = computed(() => isWrong.value || props.hasConflict);
 
 // Dinamičke klase za Genina stil (oštre ivice, 3x3 borderi blago naglašeni)
@@ -41,9 +75,9 @@ const cellClasses = computed(() => {
     "border-l": props.col === 0,
     "border-t": props.row === 0,
     "border-r": props.col !== 2 && props.col !== 5,
-    "border-r-2": props.col === 2 || props.col === 5,
+    "border-r-2 border-r-zinc-600 dark:border-r-zinc-400": props.col === 2 || props.col === 5,
     "border-b": props.row !== 2 && props.row !== 5,
-    "border-b-2": props.row === 2 || props.row === 5,
+    "border-b-2 border-b-zinc-600 dark:border-b-zinc-400": props.row === 2 || props.row === 5,
     "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
     "dark:text-violet-300 text-violet-600 font-semibold":
       !props.isInitial && props.value !== 0 && props.isCorrect && !props.hasConflict,
@@ -53,22 +87,30 @@ const cellClasses = computed(() => {
       props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
       props.isSameValue && props.value !== 0 && !props.isSelected,
-    "dark:!bg-violet-700/70 !bg-violet-300 ring-[3px] dark:ring-violet-300 ring-violet-700 z-10":
+    "dark:!bg-amber-400/30 !bg-amber-200 ring-[3px] dark:ring-amber-300 ring-amber-500 z-10":
       props.isSelected && !isBad.value,
     "dark:!bg-rose-800/60 !bg-rose-200 ring-[3px] dark:ring-rose-400 ring-rose-600 z-10":
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
     "cell-flash": props.isFlashing,
+    "cell-in": entering.value,
   };
 });
 </script>
 
 <template>
   <div
+    role="gridcell"
+    :aria-label="label"
+    :aria-selected="isSelected"
+    :tabindex="tabStop ? 0 : -1"
+    :data-cell="`${row}-${col}`"
+    :style="entering ? { animationDelay: `${(row + col) * 22}ms` } : undefined"
+    @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#141417]"
+    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
   >
     <div
       v-if="value !== 0 && colorMode"
@@ -96,6 +138,21 @@ const cellClasses = computed(() => {
 </template>
 
 <style scoped>
+/* Board "prints in" diagonally from the top-left when a game opens. */
+@keyframes cell-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cell-in {
+  animation: cell-in 0.32s ease-out both;
+}
+
 @keyframes cell-pop {
   0% {
     transform: scale(0.4);

@@ -95,4 +95,40 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     const counts = engine.numberCounts.value;
     expect(counts[5]).toBe(1);
   });
+
+  describe("undo / redo", () => {
+    const edit = (value: number) => {
+      engine.saveHistory();
+      engine.currentBoard.value[0]![0] = value;
+    };
+
+    it("redo restores what undo removed, and undo can step back again", () => {
+      edit(5);
+      edit(7);
+      engine.undoMove();
+      expect(engine.currentBoard.value[0]![0]).toBe(5);
+      engine.redoMove();
+      expect(engine.currentBoard.value[0]![0]).toBe(7);
+      engine.undoMove();
+      engine.undoMove();
+      expect(engine.currentBoard.value[0]![0]).toBe(0);
+      expect(engine.redoHistory.value).toHaveLength(2);
+    });
+
+    it("a fresh edit after undo drops the redo stack", () => {
+      edit(5);
+      engine.undoMove();
+      expect(engine.redoHistory.value).toHaveLength(1);
+      edit(9);
+      expect(engine.redoHistory.value).toHaveLength(0);
+      engine.redoMove();
+      expect(engine.currentBoard.value[0]![0]).toBe(9);
+    });
+
+    it("undo/redo with nothing to do are no-ops", () => {
+      engine.undoMove();
+      engine.redoMove();
+      expect(engine.currentBoard.value[0]![0]).toBe(0);
+    });
+  });
 });

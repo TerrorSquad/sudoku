@@ -5,6 +5,13 @@ export default defineNuxtConfig({
   devtools: { enabled: !process.env.VISUAL_REGRESSION },
   modules: ["@nuxt/ui", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
   css: ["~/assets/css/main.css"],
+  // Self-hosted by @nuxt/fonts at build time, so the PWA keeps them offline.
+  fonts: {
+    families: [
+      { name: "Bricolage Grotesque", provider: "google", weights: [500, 600, 700, 800] },
+      { name: "Instrument Sans", provider: "google", weights: [400, 500, 600, 700] },
+    ],
+  },
   pwa: {
     registerType: "autoUpdate",
     manifest: {
@@ -13,8 +20,8 @@ export default defineNuxtConfig({
       description:
         "Sudoku with a step-by-step hint analyzer, daily puzzles, and a technique academy.",
       lang: "en",
-      theme_color: "#0c0a09",
-      background_color: "#0c0a09",
+      theme_color: "#0d141b",
+      background_color: "#0d141b",
       display: "standalone",
       orientation: "portrait",
       categories: ["games", "puzzle", "education"],
@@ -50,7 +57,7 @@ export default defineNuxtConfig({
     baseURL: process.env.NUXT_APP_BASE_URL ?? "/",
     head: {
       meta: [
-        { name: "theme-color", content: "#0c0a09" },
+        { name: "theme-color", content: "#0d141b" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
         { name: "apple-mobile-web-app-title", content: "Sudoku Pro" },
@@ -61,12 +68,6 @@ export default defineNuxtConfig({
         { rel: "manifest", href: "manifest.webmanifest" },
         { rel: "icon", type: "image/x-icon", href: "favicon.ico" },
         { rel: "apple-touch-icon", href: "apple-touch-icon.png" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;900&display=swap",
-        },
       ],
     },
   },

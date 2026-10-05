@@ -67,7 +67,7 @@ async function openSavedGame(page: Page) {
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Medium/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.locator(`${BOARD} > div`)).toHaveCount(81);
+  await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -151,14 +151,14 @@ for (const theme of ["light", "dark"] as const) {
 
     test("game, given digit selected", async ({ page }) => {
       await openSavedGame(page);
-      await page.locator(`${BOARD} > div`).nth(0).click(); // r1c1 = 5
+      await page.locator(`${BOARD} [data-cell]`).nth(0).click(); // r1c1 = 5
       await shot(page, "game-select-given");
     });
 
     test("game, empty cell selected", async ({ page }) => {
       await openSavedGame(page);
       await page
-        .locator(`${BOARD} > div`)
+        .locator(`${BOARD} [data-cell]`)
         .nth(4 * 9 + 4)
         .click(); // r5c5, empty
       await shot(page, "game-select-empty");
@@ -166,7 +166,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("game, wrong entry selected", async ({ page }) => {
       await openSavedGame(page);
-      await page.locator(`${BOARD} > div`).nth(2).click(); // r1c3 = 9, conflicting
+      await page.locator(`${BOARD} [data-cell]`).nth(2).click(); // r1c3 = 9, conflicting
       await shot(page, "game-select-conflict");
     });
 
@@ -181,7 +181,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("switch", { name: "Color mode" }).click();
       await page.reload(); // preference persists; back to the menu
       await openSavedGame(page);
-      await page.locator(`${BOARD} > div`).nth(0).click();
+      await page.locator(`${BOARD} [data-cell]`).nth(0).click();
       await shot(page, "game-color-mode");
     });
 

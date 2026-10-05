@@ -75,9 +75,7 @@ const DIFFICULTIES: {
       class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 px-6 py-10 select-none"
     >
       <div class="text-center">
-        <h2
-          class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-3xl font-black tracking-tight text-transparent uppercase"
-        >
+        <h2 class="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
           {{ $t("difficulty.title") }}
         </h2>
         <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ $t("difficulty.subtitle") }}</p>
@@ -103,7 +101,7 @@ const DIFFICULTIES: {
             </span>
             <span
               v-if="inProgress.has(d.key)"
-              class="border border-violet-500/40 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-violet-600 uppercase dark:text-violet-300"
+              class="border border-violet-500/40 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:text-violet-300"
               >{{ $t("difficulty.inProgress") }}</span
             >
           </span>
@@ -112,7 +110,7 @@ const DIFFICULTIES: {
             class="block text-lg font-bold text-zinc-900 dark:text-zinc-100"
             >{{ $t(`difficulty.${d.key}`) }}</span
           >
-          <span class="mt-1 block text-xs leading-snug text-zinc-500">{{
+          <span class="mt-1 block text-xs leading-snug text-zinc-500 dark:text-zinc-400">{{
             $t(`difficulty.${d.key}Desc`)
           }}</span>
         </button>
@@ -120,7 +118,7 @@ const DIFFICULTIES: {
 
       <button
         @click="emit('back-to-menu')"
-        class="w-full border border-zinc-200 bg-zinc-50 py-3 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        class="w-full border border-zinc-200 bg-zinc-50 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
       >
         {{ $t("difficulty.back") }}
       </button>

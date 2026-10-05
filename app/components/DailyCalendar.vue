@@ -16,9 +16,7 @@ const today = daily.todayKey();
 
 <template>
   <div>
-    <h2
-      class="mb-3 flex items-baseline justify-between text-xs font-bold tracking-widest text-zinc-500 uppercase"
-    >
+    <h2 class="mb-3 flex items-baseline justify-between text-xs font-bold text-zinc-500">
       <span>{{ $t("stats.dailyActivity") }}</span>
       <span class="font-semibold tracking-normal normal-case tabular-nums">{{
         $t("stats.dailyDone", { n: completed, weeks: WEEKS })
@@ -43,7 +41,7 @@ const today = daily.todayKey();
               ? 'bg-violet-500 dark:bg-violet-400'
               : 'bg-zinc-200 dark:bg-zinc-800',
           d.key === today
-            ? 'ring-1 ring-violet-500 ring-offset-1 dark:ring-violet-300 dark:ring-offset-[#0c0a09]'
+            ? 'ring-1 ring-violet-500 ring-offset-1 dark:ring-violet-300 dark:ring-offset-[#0d141b]'
             : '',
         ]"
         class="h-5 w-5"

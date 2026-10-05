@@ -870,3 +870,24 @@ export function generateGradedPuzzle(
     if (grade < STUCK) return { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
   }
 }
+
+/**
+ * Every technique the logical solver needs to finish `puzzle`, easiest-first
+ * (so a technique appears only if the easier ones ran dry before it), or null
+ * when logic alone can't solve the board.
+ */
+export function techniquesRequired(puzzle: Grid): Set<TechniqueId> | null {
+  const board = cloneGrid(puzzle);
+  const elims: DigitAt[] = [];
+  const used = new Set<TechniqueId>();
+  // 81 cells; eliminations add a handful of steps each, so this cap is never the limiter.
+  for (let step = 0; step < 600; step++) {
+    if (board.every((row) => row.every((v) => v !== 0))) return used;
+    const move = nextHint(board, elims);
+    if (!move) return null;
+    used.add(move.technique);
+    if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
+    else elims.push(...move.eliminations);
+  }
+  return null;
+}

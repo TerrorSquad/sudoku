@@ -11,8 +11,8 @@ test("a fast flawless first win crosses level 2 and the menu shows it", async ({
   await page.getByRole("button", { name: "Custom Puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} > div`).nth(49).click();
-  await page.locator(".grid-cols-5").nth(1).locator("button:not([disabled])").first().click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
 
   await expect(page.getByText("Level up! You reached level 2")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
@@ -24,8 +24,8 @@ test("a clean win shows three stars", async ({ page }) => {
   await page.getByRole("button", { name: "Custom Puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} > div`).nth(49).click();
-  await page.locator(".grid-cols-5").nth(1).locator("button:not([disabled])").first().click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("img", { name: "3 out of 3 stars" })).toBeVisible();
 });
 
@@ -57,8 +57,8 @@ test("hints used before leaving a game still count after resuming it", async ({ 
   await page.getByRole("button", { name: /Medium/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  await page.locator(`${BOARD} > div`).nth(40).click();
-  await page.locator(".grid-cols-5").nth(1).locator("button:not([disabled])").first().click();
+  await page.locator(`${BOARD} [data-cell]`).nth(40).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
 
   await expect(page.getByRole("img", { name: "1 out of 3 stars" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Self-Reliant/ })).toHaveCount(0);

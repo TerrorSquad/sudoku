@@ -10,6 +10,7 @@ import ExampleGrid from "./ExampleGrid.vue";
 
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
+  (e: "practice", id: TechniqueId): void;
 }>();
 
 const { t } = useI18n();
@@ -158,11 +159,11 @@ const total = computed(() => techniques.length);
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
     >
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         <AppIcon
           class="h-4 w-4"
@@ -172,7 +173,7 @@ const total = computed(() => techniques.length);
       </button>
       <div class="min-w-0 flex-1">
         <h1
-          class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-lg leading-tight font-black tracking-tight text-transparent sm:text-2xl"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
         >
           {{ $t("academy.title") }}
         </h1>
@@ -180,9 +181,10 @@ const total = computed(() => techniques.length);
           {{ $t("academy.subtitle", { n: total }) }}
         </p>
       </div>
-      <span class="hidden shrink-0 text-xs font-semibold text-zinc-600 sm:inline">{{
-        $t("academy.count", { n: total })
-      }}</span>
+      <span
+        class="hidden shrink-0 text-xs font-semibold text-zinc-600 sm:inline dark:text-zinc-400"
+        >{{ $t("academy.count", { n: total }) }}</span
+      >
     </div>
 
     <!-- Content -->
@@ -191,9 +193,7 @@ const total = computed(() => techniques.length);
       <div
         class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-zinc-200 bg-zinc-50 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400"
       >
-        <span class="font-bold tracking-widest text-zinc-700 uppercase dark:text-zinc-300">{{
-          $t("academy.colors")
-        }}</span>
+        <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ $t("academy.colors") }}</span>
         <span class="flex items-center gap-1.5"
           ><span class="inline-block h-3 w-3 bg-emerald-500/30 ring-1 ring-emerald-500"></span>
           {{ $t("academy.placedCell") }}</span
@@ -206,22 +206,18 @@ const total = computed(() => techniques.length);
           ><span class="inline-block h-3 w-3 bg-rose-500/40 ring-1 ring-rose-400"></span>
           {{ $t("academy.eliminated") }}</span
         >
-        <span class="ml-auto hidden text-zinc-600 sm:inline">{{ $t("academy.tapHint") }}</span>
+        <span class="ml-auto hidden text-zinc-600 sm:inline dark:text-zinc-400">{{
+          $t("academy.tapHint")
+        }}</span>
       </div>
 
       <div v-for="tier in tiers" :key="tier" class="mb-10 sm:mb-12">
         <!-- Tier heading -->
         <div class="mb-2 flex items-center gap-3">
-          <h2
-            :class="tierStyles[tier].heading"
-            class="text-lg font-black tracking-widest uppercase sm:text-xl"
-          >
+          <h2 :class="tierStyles[tier].heading" class="text-lg font-black sm:text-xl">
             {{ $t(`academy.tier.${tier}`) }}
           </h2>
-          <span
-            :class="tierStyles[tier].badge"
-            class="border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase"
-          >
+          <span :class="tierStyles[tier].badge" class="border px-2 py-0.5 text-[10px] font-bold">
             {{ byTier(tier).length }}
           </span>
           <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
@@ -260,7 +256,7 @@ const total = computed(() => techniques.length);
             <div class="flex items-start gap-4">
               <div class="min-w-0 flex-1 space-y-3">
                 <div>
-                  <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                  <p class="mb-1 text-[10px] font-bold text-zinc-500">
                     {{ $t("academy.lookForLabel") }}
                   </p>
                   <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
@@ -268,7 +264,7 @@ const total = computed(() => techniques.length);
                   </p>
                 </div>
                 <div>
-                  <p class="mb-1 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+                  <p class="mb-1 text-[10px] font-bold text-zinc-500">
                     {{ $t("academy.howItHelpsLabel") }}
                   </p>
                   <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -291,14 +287,19 @@ const total = computed(() => techniques.length);
               </div>
             </div>
 
+            <button
+              class="mt-4 w-full border border-violet-500/40 bg-violet-500/5 py-2 text-xs font-bold text-violet-700 transition-colors hover:bg-violet-500/10 dark:text-violet-300"
+              @click.stop="emit('practice', tech.id)"
+            >
+              {{ $t("practice.button") }}
+            </button>
+
             <div
               v-if="expanded.has(tech.id) && exampleFor(tech.id)"
               class="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
               @click.stop
             >
-              <p
-                class="mb-3 text-center text-[10px] font-bold tracking-widest text-zinc-500 uppercase"
-              >
+              <p class="mb-3 text-center text-[10px] font-bold text-zinc-500">
                 {{ $t("academy.workedExample") }}
               </p>
               <ExampleGrid
@@ -320,12 +321,12 @@ const total = computed(() => techniques.length);
 
       <!-- Footer -->
       <div class="border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
-        <p class="mx-auto max-w-lg text-xs leading-relaxed text-zinc-600">
+        <p class="mx-auto max-w-lg text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
           {{ $t("academy.footer") }}
         </p>
         <button
           @click="emit('back-to-menu')"
-          class="mt-6 border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="mt-6 border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {{ $t("academy.back") }}
         </button>

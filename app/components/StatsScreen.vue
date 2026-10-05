@@ -49,11 +49,11 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
     >
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         <AppIcon
           class="h-4 w-4"
@@ -63,7 +63,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       </button>
       <div class="min-w-0 flex-1">
         <h1
-          class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-lg leading-tight font-black tracking-tight text-transparent sm:text-2xl"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
         >
           {{ $t("stats.title") }}
         </h1>
@@ -86,7 +86,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         </p>
         <button
           @click="emit('start-game')"
-          class="bg-gradient-to-r from-violet-500 to-cyan-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:brightness-110 active:scale-95"
+          class="bg-violet-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 hover:brightness-110 active:scale-95"
         >
           {{ $t("stats.startFirst") }}
         </button>
@@ -99,11 +99,11 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
           >
             <p
-              class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-2xl leading-tight font-black text-transparent tabular-nums sm:text-3xl"
+              class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-50"
             >
               {{ stats.total.toLocaleString() }}
             </p>
-            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
+            <p class="mt-1 text-[10px] font-semibold text-zinc-500">
               {{ $t("stats.lifetimeScore") }}
             </p>
           </div>
@@ -115,7 +115,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             >
               {{ stats.gamesWon }}
             </p>
-            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
+            <p class="mt-1 text-[10px] font-semibold text-zinc-500">
               {{ $t("stats.gamesWon") }}
             </p>
           </div>
@@ -128,7 +128,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               <span v-if="streak > 0">🔥 {{ streak }}</span>
               <span v-else class="text-zinc-400">{{ $t("stats.dash") }}</span>
             </p>
-            <p class="mt-1 text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
+            <p class="mt-1 text-[10px] font-semibold text-zinc-500">
               {{ $t("stats.dailyStreak") }}
             </p>
           </div>
@@ -138,15 +138,13 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 
         <!-- Per-difficulty table -->
         <div v-if="difficultyRows.length" class="mb-8">
-          <h2 class="mb-3 text-xs font-bold tracking-widest text-zinc-500 uppercase">
+          <h2 class="mb-3 text-xs font-bold text-zinc-500">
             {{ $t("stats.perDifficulty") }}
           </h2>
           <div class="overflow-hidden border border-zinc-200 dark:border-zinc-800">
             <table class="w-full text-sm">
               <thead>
-                <tr
-                  class="bg-zinc-100 text-[10px] tracking-wider text-zinc-500 uppercase dark:bg-zinc-900/60"
-                >
+                <tr class="bg-zinc-100 text-[10px] text-zinc-500 dark:bg-zinc-900/60">
                   <th class="px-3 py-2 text-left font-semibold">{{ $t("stats.difficulty") }}</th>
                   <th class="px-3 py-2 text-right font-semibold">{{ $t("stats.wins") }}</th>
                   <th class="px-3 py-2 text-right font-semibold">{{ $t("stats.bestScore") }}</th>
@@ -175,7 +173,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 
         <!-- Top techniques -->
         <div>
-          <h2 class="mb-3 text-xs font-bold tracking-widest text-zinc-500 uppercase">
+          <h2 class="mb-3 text-xs font-bold text-zinc-500">
             {{ $t("stats.topTechniques") }}
           </h2>
           <p v-if="!topTechniques.length" class="text-sm text-zinc-500">
@@ -189,7 +187,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               >
               <div class="h-4 flex-1 overflow-hidden bg-zinc-100 dark:bg-zinc-800/60">
                 <div
-                  class="h-full bg-gradient-to-r from-violet-500/60 to-cyan-500/60"
+                  class="h-full bg-violet-500/70"
                   :style="{ width: `${(tech.count / maxTechCount) * 100}%` }"
                 />
               </div>
@@ -209,7 +207,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       >
         <button
           @click="emit('back-to-menu')"
-          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {{ $t("stats.back") }}
         </button>

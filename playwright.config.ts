@@ -53,13 +53,15 @@ export default defineConfig({
             use: {
               ...devices["Desktop Chrome"],
               viewport: { width: 1920, height: 1080 },
+              // Entrance animations jump to their end state, so captures are deterministic.
+              reducedMotion: "reduce" as const,
               launchOptions,
             },
           },
           {
             name: "visual-mobile",
             ...visual,
-            use: { ...devices["Pixel 7"], launchOptions },
+            use: { ...devices["Pixel 7"], reducedMotion: "reduce" as const, launchOptions },
           },
         ]
       : []),

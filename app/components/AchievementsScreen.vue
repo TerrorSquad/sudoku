@@ -9,9 +9,9 @@ const unlocked = useAchievements().getUnlocked();
 const unlockedCount = ACHIEVEMENTS.filter((a) => a.id in unlocked).length;
 
 const TIER_STYLE: Record<AchievementTier, string> = {
-  common: "border-zinc-300 dark:border-zinc-600",
-  rare: "border-cyan-400/70",
-  epic: "border-amber-400/80",
+  common: "!border-l-zinc-400",
+  rare: "!border-l-cyan-500",
+  epic: "!border-l-amber-400",
 };
 
 const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
@@ -20,11 +20,11 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
 <template>
   <div class="flex min-h-screen w-full flex-col">
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0c0a09]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
     >
       <button
         @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         <AppIcon
           class="h-4 w-4"
@@ -34,7 +34,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
       </button>
       <div class="min-w-0 flex-1">
         <h1
-          class="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-lg leading-tight font-black tracking-tight text-transparent sm:text-2xl"
+          class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
         >
           {{ $t("achievements.title") }}
         </h1>
@@ -53,9 +53,9 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
           :data-unlocked="a.id in unlocked"
           :class="[
             TIER_STYLE[a.tier],
-            a.id in unlocked ? 'bg-zinc-50 dark:bg-zinc-900/60' : 'opacity-60',
+            a.id in unlocked ? 'bg-white dark:bg-zinc-900/60' : 'bg-transparent',
           ]"
-          class="flex items-start gap-3 border border-l-4 p-4"
+          class="flex items-start gap-3 border border-l-4 border-zinc-200 p-4 dark:border-zinc-800"
         >
           <AppIcon
             :class="a.id in unlocked ? 'text-amber-500' : 'text-zinc-400 dark:text-zinc-600'"
@@ -64,14 +64,21 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
           />
           <div class="min-w-0 flex-1">
             <div class="flex items-center justify-between gap-2">
-              <h3 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
+              <h3
+                :class="
+                  a.id in unlocked
+                    ? 'text-zinc-900 dark:text-zinc-100'
+                    : 'text-zinc-600 dark:text-zinc-400'
+                "
+                class="text-sm font-black"
+              >
                 {{
                   a.hidden && !(a.id in unlocked)
                     ? $t("achievements.hidden")
                     : $t(`achievements.${a.id}.name`)
                 }}
               </h3>
-              <span class="text-[9px] font-bold tracking-widest text-zinc-500 uppercase">{{
+              <span class="text-[9px] font-bold text-zinc-500">{{
                 $t(`achievements.tier.${a.tier}`)
               }}</span>
             </div>
@@ -95,7 +102,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
       <div class="mt-10 border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
         <button
           @click="emit('back-to-menu')"
-          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold tracking-wider text-zinc-700 uppercase transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           {{ $t("achievements.back") }}
         </button>

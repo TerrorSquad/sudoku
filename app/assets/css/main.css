@@ -1,7 +1,54 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/* "Solver's notebook": cool graph-paper greys + a blue pencil, with amber as the highlighter.
+   Re-tuning the zinc and violet scales here recolours every existing utility at once. */
 @theme {
   --breakpoint-3xl: 1600px;
-  --font-game: "JetBrains Mono", ui-monospace, monospace;
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Board digits and key caps. Not monospace any more: Bricolage has sturdy, legible numerals. */
+  --font-game: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+
+  /* Ink and graph paper (cool slate instead of neutral grey). */
+  --color-zinc-50: #f6f8fa;
+  --color-zinc-100: #eef1f5;
+  --color-zinc-200: #dde3ea;
+  --color-zinc-300: #c5cdd8;
+  --color-zinc-400: #94a1b2;
+  --color-zinc-500: #566377;
+  --color-zinc-600: #4d5a6c;
+  --color-zinc-700: #3a4556;
+  --color-zinc-800: #252f3d;
+  --color-zinc-900: #17202b;
+  --color-zinc-950: #0d141b;
+
+  /* Blue pencil: player entries, primary actions, links. */
+  --color-violet-50: #eef3fd;
+  --color-violet-100: #dce7fb;
+  --color-violet-200: #bdd1f7;
+  --color-violet-300: #93b3f1;
+  --color-violet-400: #6b92e9;
+  --color-violet-500: #4a74dc;
+  --color-violet-600: #345fc9;
+  --color-violet-700: #2b4fa8;
+  --color-violet-800: #274387;
+  --color-violet-900: #253b6b;
+  --color-violet-950: #172544;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Secondary text is zinc-500 on both paper and slate. Dark needs a lighter step than light
+   does to keep 4.5:1, and swapping the variable keeps every existing utility honest. */
+.dark {
+  --color-zinc-500: #8796a9;
 }
