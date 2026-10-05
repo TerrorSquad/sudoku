@@ -48,3 +48,48 @@ test("browser shortcuts don't trigger game actions", async ({ page }) => {
   // N toggles notes mode; with Ctrl held it must not (the notes dot stays idle).
   await expect(page.locator("span.bg-violet-500.rounded-full")).toHaveCount(0);
 });
+
+const ONE_BLANK =
+  "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
+
+test("shortcuts are inert behind the win modal (no second win, board intact)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.locator("textarea").fill(ONE_BLANK);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+
+  const cell = page.locator(`${BOARD} [data-cell]`).nth(49);
+  const solved = await cell.textContent();
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Backspace");
+  await expect(cell).toHaveText(solved ?? "");
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+});
+
+test("redo restores an edit without declaring a win", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.locator("textarea").fill(ONE_BLANK);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  const cell = page.locator(`${BOARD} [data-cell]`).nth(49);
+  await cell.click();
+  await page.keyboard.press("1"); // wrong digit for this cell
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+y");
+  await expect(cell).toHaveText("1");
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeHidden();
+});
+
+test("the grid has exactly one Tab stop, following the selection", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await expect(page.locator('[data-cell][tabindex="0"]')).toHaveCount(1);
+  await expect(page.locator('[data-cell="0-0"]')).toHaveAttribute("tabindex", "0");
+  await page.locator('[data-cell="4-4"]').click();
+  await expect(page.locator('[data-cell][tabindex="0"]')).toHaveCount(1);
+  await expect(page.locator('[data-cell="4-4"]')).toHaveAttribute("tabindex", "0");
+});

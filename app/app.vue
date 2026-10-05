@@ -243,7 +243,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       particleCount: 160,
       spread: 80,
       origin: { y: 0.55 },
-      colors: ["#8b5cf6", "#a78bfa", "#c4b5fd", "#f59e0b", "#34d399"],
+      colors: ["#345fc9", "#6b92e9", "#bdd1f7", "#fbbf24", "#34d399"],
     });
   } else {
     lastScore.value = null;
@@ -531,6 +531,7 @@ function handleLoadCustomPuzzle(board: import("./types/sudoku").Grid) {
 }
 
 async function handlePractice(technique: TechniqueId) {
+  if (practiceLoading.value) return; // a double-click must not start two searches
   practiceLoading.value = true;
   try {
     const p = await generatePracticePuzzle(technique);
@@ -576,14 +577,36 @@ function moveSelection(dr: number, dc: number) {
   nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
 }
 
+// Undo/redo can both change whether the board is solved, so route them through the same win
+// check as a placement; and never act behind a modal (a second win would double-record).
+function undo() {
+  if (showModal.value || practiceLoading.value) return;
+  undoMove();
+}
+function redo() {
+  if (showModal.value || practiceLoading.value) return;
+  redoMove();
+  if (checkWinCondition()) {
+    triggerLocalModal(
+      t("modal.win"),
+      t("modal.winMsg", {
+        difficulty: activeDifficulty.value,
+        time: timer.formatTime(timer.timerSeconds.value),
+      }),
+      true,
+    );
+  }
+}
+
 function handleKeyDown(e: KeyboardEvent) {
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
+  if (showModal.value || practiceLoading.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
   // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
   if (e.metaKey || e.ctrlKey) {
     const k = e.key.toLowerCase();
-    if (k === "z" && !e.shiftKey) undoMove();
-    else if ((k === "z" && e.shiftKey) || k === "y") redoMove();
+    if (k === "z" && !e.shiftKey) undo();
+    else if ((k === "z" && e.shiftKey) || k === "y") redo();
     else return;
     e.preventDefault();
     return;
@@ -924,8 +947,8 @@ onUnmounted(() => {
                   :notes-mode="notesMode"
                   :can-undo="boardHistory.length > 0"
                   :can-redo="redoHistory.length > 0"
-                  @undo="undoMove"
-                  @redo="redoMove"
+                  @undo="undo"
+                  @redo="redo"
                   @erase="eraseCell(selectedCell)"
                   @toggle-notes="notesMode = !notesMode"
                   @trigger-hint="handleTriggerHint"

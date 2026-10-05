@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
 
@@ -20,6 +20,8 @@ const props = defineProps<{
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
+  /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
+  tabStop: boolean;
 }>();
 
 defineEmits<{
@@ -34,6 +36,14 @@ const isWrong = computed(
 
 // A wrong or conflicting player entry keeps its red treatment while selected.
 const { t } = useI18n();
+
+// The diagonal "print-in" plays once on mount. Dropping the class afterwards matters: a later
+// flash/shake would otherwise restart it, and its inline delay would leak into those animations.
+const entering = ref(true);
+function onAnimationEnd(e: AnimationEvent) {
+  // animationend bubbles from the digit's own pop/shake; only the cell's entrance counts.
+  if (e.target === e.currentTarget && e.animationName.startsWith("cell-in")) entering.value = false;
+}
 
 // Screen-reader description: position, state and value (colour name in colour mode), plus notes.
 const label = computed(() => {
@@ -82,6 +92,7 @@ const cellClasses = computed(() => {
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
     "cell-flash": props.isFlashing,
+    "cell-in": entering.value,
   };
 });
 </script>
@@ -91,12 +102,13 @@ const cellClasses = computed(() => {
     role="gridcell"
     :aria-label="label"
     :aria-selected="isSelected"
-    :tabindex="isSelected ? 0 : -1"
+    :tabindex="tabStop ? 0 : -1"
     :data-cell="`${row}-${col}`"
-    :style="{ animationDelay: `${(row + col) * 22}ms` }"
+    :style="entering ? { animationDelay: `${(row + col) * 22}ms` } : undefined"
+    @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
-    class="cell-in relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
+    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
   >
     <div
       v-if="value !== 0 && colorMode"
