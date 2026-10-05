@@ -61,6 +61,18 @@ This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generat
 
 Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` because i18n-ally was resolving the bare language code to the Suriname flag instead of Serbia's; `language: "sr-Latn-RS"`, the actual BCP-47 tag, is unaffected). Locale files use **flat dot-keys** (e.g. `"menu.title"`, not nested `{ "menu": { "title" } }`) per `.vscode/settings.json`'s `i18n-ally.keystyle: "flat"`. This works because vue-i18n checks for an exact literal-string key match before falling back to nested path resolution — it is not a bug. Keep `en.json` and `rs.json` in exact key parity; nothing currently enforces this automatically.
 
+### Visual regression
+
+`e2e/visual.spec.ts` captures every screen in light + dark against pixel baselines in `e2e/visual-regression-snapshots/<project>/`, at 1920×1080 (`visual`) and Pixel 7 (`visual-mobile`). It is opt-in (`VISUAL_REGRESSION=1`, so plain `pnpm test:e2e` skips it) and seeds a fixed saved game so nothing is random.
+
+```bash
+pnpm visual          # compare against baselines
+pnpm visual:update   # accept intentional UI changes, then commit the PNGs
+pnpm visual:report   # open the expected/actual/diff report
+```
+
+Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers. Baselines are rendered on macOS and are not run in CI (font rasterization differs on Linux), so regenerate them locally.
+
 ### Testing split
 
 - `app/tests/*.test.ts` (vitest) — pure logic: solver, grader, scoring, daily-puzzle seeding. No DOM.

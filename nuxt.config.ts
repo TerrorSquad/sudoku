@@ -1,7 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
+  // Off for visual runs: its badge shows a live timing and overlaps the UI in baselines.
+  devtools: { enabled: !process.env.VISUAL_REGRESSION },
   modules: ["@nuxt/ui", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
   css: ["~/assets/css/main.css"],
   pwa: {
