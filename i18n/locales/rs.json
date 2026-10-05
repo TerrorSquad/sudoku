@@ -75,6 +75,7 @@
   "sidebar.legendGiven": "Data cifra",
   "sidebar.legendEntry": "Tvoj unos",
   "sidebar.legendConflict": "Sukob",
+  "sidebar.legendSame": "Ista cifra",
   "sidebar.legendSelected": "Izabrano",
   "hint.panelTitle": "Panel analize",
   "hint.panelDesc": "Klikni na dugme Nagoveštaj tokom igre da aktiviraš duboku logičku analizu i postepenu dekonstrukciju složenih tehnika rešavanja.",

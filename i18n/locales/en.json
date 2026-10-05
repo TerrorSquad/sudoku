@@ -75,6 +75,7 @@
   "sidebar.legendGiven": "Given digit",
   "sidebar.legendEntry": "Your entry",
   "sidebar.legendConflict": "Conflict",
+  "sidebar.legendSame": "Same digit",
   "sidebar.legendSelected": "Selected",
   "hint.panelTitle": "Analysis Panel",
   "hint.panelDesc": "Click the Hint button during the game to activate deep logical analysis and step-by-step deconstruction of complex solving techniques.",

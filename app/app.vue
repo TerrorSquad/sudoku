@@ -700,7 +700,15 @@ onUnmounted(() => {
                 {{ $t("sidebar.legendConflict") }}
               </li>
               <li class="flex items-center gap-3">
-                <span class="h-4 w-4 shrink-0 border border-violet-400 bg-violet-950/60" />
+                <span
+                  class="h-4 w-4 shrink-0 border border-violet-300 bg-violet-200 dark:border-violet-400/70 dark:bg-violet-500/35"
+                />
+                {{ $t("sidebar.legendSame") }}
+              </li>
+              <li class="flex items-center gap-3">
+                <span
+                  class="h-4 w-4 shrink-0 border-2 border-violet-700 bg-violet-300 dark:border-violet-300 dark:bg-violet-700/70"
+                />
                 {{ $t("sidebar.legendSelected") }}
               </li>
             </ul>

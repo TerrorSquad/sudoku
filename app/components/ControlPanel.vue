@@ -15,7 +15,7 @@ defineEmits<{
     <!-- Undo -->
     <button
       @click="$emit('undo')"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -30,7 +30,7 @@ defineEmits<{
     <!-- Erase -->
     <button
       @click="$emit('erase')"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -45,7 +45,7 @@ defineEmits<{
     <!-- Notes -->
     <button
       @click="$emit('toggle-notes')"
-      class="relative flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="relative flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
       :class="notesMode ? 'border-violet-500/40' : ''"
     >
       <span

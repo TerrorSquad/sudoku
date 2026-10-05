@@ -17,21 +17,26 @@ defineEmits<{
   <div
     class="flex items-center justify-between gap-3 border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60"
   >
-    <!-- Exit button-->
-    <button
-      @click="$emit('exit-game')"
-      :aria-label="$t('game.exitToMenu')"
-      class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-    >
-      <AppIcon class="h-5 w-5" path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
-    </button>
+    <div class="flex items-center gap-3">
+      <!-- Exit button-->
+      <button
+        @click="$emit('exit-game')"
+        :aria-label="$t('game.exitToMenu')"
+        class="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-zinc-600 uppercase transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      >
+        <AppIcon
+          class="h-5 w-5"
+          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+        />
+      </button>
 
-    <!-- Difficulty label-->
-    <span
-      class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 uppercase dark:text-violet-400"
-    >
-      {{ difficulty }}
-    </span>
+      <!-- Difficulty label-->
+      <span
+        class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 uppercase dark:text-violet-400"
+      >
+        {{ difficulty }}
+      </span>
+    </div>
 
     <!-- Timer -->
     <div class="flex shrink-0 items-center gap-2">
