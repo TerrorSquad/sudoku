@@ -24,6 +24,7 @@ import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { levelBand, levelFor } from "./utils/level";
 import { readJSON, writeJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playMistake, playPlace, playWin } from "./utils/sound";
@@ -116,6 +117,8 @@ const score = useScore();
 const lastScore = ref<ScoreBreakdown | null>(null);
 const isNewBest = ref<boolean>(false);
 const lifetimeTotal = ref<number>(0);
+// Set when the just-won game crossed a level threshold, for the win modal banner.
+const reachedLevel = ref<number | null>(null);
 const displayedScore = ref<number>(0); // animated count-up of lastScore.total
 
 // Count `displayedScore` up to the final total over ~0.8s for a little flourish.
@@ -144,6 +147,11 @@ const techStatsTotals = computed(() => {
 const dailyRecord = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getRecord();
+});
+// Lifetime score drives the level; refreshed on screen change like the daily record above.
+const playerLevel = computed(() => {
+  void currentScreen.value;
+  return levelFor(score.getStats().total);
 });
 const dailyStreak = computed(() => {
   void currentScreen.value;
@@ -191,6 +199,9 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     lastScore.value = breakdown;
     isNewBest.value = result.isNewBest;
     lifetimeTotal.value = result.stats.total;
+    const before = levelFor(result.stats.total - breakdown.total).level;
+    const after = levelFor(result.stats.total).level;
+    reachedLevel.value = after > before ? after : null;
     toastIds.value.push(
       ...achievements.evaluate({
         difficulty: activeDifficulty.value,
@@ -551,6 +562,23 @@ onUnmounted(() => {
           <p class="mt-3 text-[11px] font-semibold tracking-widest text-zinc-500 uppercase">
             {{ $t("menu.subtitle") }}
           </p>
+          <!-- Level / progress -->
+          <div class="mx-auto mt-5 w-full max-w-[220px]" data-testid="level-badge">
+            <p
+              class="text-[11px] font-bold tracking-widest text-violet-600 uppercase dark:text-violet-300"
+            >
+              {{ $t("level.label", { n: playerLevel.level }) }}
+              <span class="text-zinc-500"
+                >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
+              >
+            </p>
+            <div class="mt-1.5 h-1.5 w-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+              <div
+                class="h-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
+              />
+            </div>
+          </div>
         </div>
         <div class="flex w-full max-w-sm flex-col items-center gap-3">
           <!-- New game -->
@@ -883,6 +911,13 @@ onUnmounted(() => {
           </h3>
           <p class="mb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             {{ modalMessage }}
+          </p>
+
+          <p
+            v-if="isWinState && reachedLevel"
+            class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black tracking-widest text-violet-700 uppercase dark:text-violet-300"
+          >
+            ▲ {{ $t("level.up", { n: reachedLevel }) }}
           </p>
 
           <!-- Score headline -->

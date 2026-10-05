@@ -85,6 +85,23 @@ for (const theme of ["light", "dark"] as const) {
             "sudoku_v1_achievements",
             JSON.stringify({ "first-win": noon, flawless: noon, "streak-3": noon, comeback: noon }),
           );
+          // Level 3 with some history, so the menu bar and populated stats are captured.
+          localStorage.setItem(
+            "sudoku_v1_score",
+            JSON.stringify({
+              total: 2100,
+              gamesWon: 5,
+              best: { medium: 640, hard: 910 },
+              perDifficulty: {
+                medium: { best: 640, wins: 3, bestTime: 412 },
+                hard: { best: 910, wins: 2, bestTime: 788 },
+              },
+            }),
+          );
+          localStorage.setItem(
+            "sudoku_v1_technique_stats",
+            JSON.stringify({ "Naked Single": 14, "Hidden Single": 9, "Pointing Pair": 4 }),
+          );
           sessionStorage.setItem("seeded", "1");
         }
       }, savedGame());
@@ -162,6 +179,15 @@ for (const theme of ["light", "dark"] as const) {
     test("statistics", async ({ page }) => {
       await page.getByRole("button", { name: "Statistics" }).click();
       await shot(page, "stats");
+    });
+
+    test("statistics, empty", async ({ page }) => {
+      await page.evaluate(() => {
+        localStorage.removeItem("sudoku_v1_score");
+        localStorage.removeItem("sudoku_v1_technique_stats");
+      });
+      await page.getByRole("button", { name: "Statistics" }).click();
+      await shot(page, "stats-empty");
     });
 
     test("academy", async ({ page }) => {

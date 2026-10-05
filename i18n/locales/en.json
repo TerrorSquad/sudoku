@@ -299,5 +299,12 @@
   "achievements.scholar.name": "Scholar",
   "achievements.scholar.desc": "Learn 5 different techniques from hints.",
   "achievements.specialist.name": "Specialist",
-  "achievements.specialist.desc": "Win 10 puzzles on the same difficulty."
+  "achievements.specialist.desc": "Win 10 puzzles on the same difficulty.",
+  "level.label": "Level {n}",
+  "level.up": "Level up! You reached level {n}",
+  "level.title.novice": "Novice",
+  "level.title.apprentice": "Apprentice",
+  "level.title.adept": "Adept",
+  "level.title.expert": "Expert",
+  "level.title.master": "Master"
 }

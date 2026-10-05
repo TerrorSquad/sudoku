@@ -299,5 +299,12 @@
   "achievements.scholar.name": "Učenjak",
   "achievements.scholar.desc": "Nauči 5 različitih tehnika iz nagoveštaja.",
   "achievements.specialist.name": "Specijalista",
-  "achievements.specialist.desc": "Pobedi u 10 slagalica na istom nivou."
+  "achievements.specialist.desc": "Pobedi u 10 slagalica na istom nivou.",
+  "level.label": "Nivo {n}",
+  "level.up": "Novi nivo! Dostigao si nivo {n}",
+  "level.title.novice": "Početnik",
+  "level.title.apprentice": "Šegrt",
+  "level.title.adept": "Vešt",
+  "level.title.expert": "Stručnjak",
+  "level.title.master": "Majstor"
 }
