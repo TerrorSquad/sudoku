@@ -13,7 +13,8 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="grid grid-cols-5 gap-2">
+  <!-- One row of nine from lg up: gives the board the height the second row used. -->
+  <div class="grid grid-cols-5 gap-2 lg:grid-cols-9">
     <button
       v-for="n in 9"
       :key="n"
@@ -24,7 +25,7 @@ defineEmits<{
           ? 'pointer-events-none opacity-30'
           : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800'
       "
-      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-3 font-game text-2xl font-black transition-all 3xl:py-6 3xl:text-4xl dark:border-zinc-800 dark:bg-zinc-900"
+      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-5 font-game text-3xl font-black transition-all 3xl:py-5 3xl:text-4xl lg:py-3 lg:text-2xl dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span v-if="colorMode" :class="dotClass(n)" class="h-6 w-6 3xl:h-9 3xl:w-9" />
       <span v-else>{{ n }}</span>
