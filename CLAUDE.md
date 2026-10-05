@@ -49,9 +49,17 @@ This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generat
 - **`useScore.ts`**, **`useTechniqueStats.ts`** — lifetime score and per-technique usage stats, also via `safeJson.ts`.
 - **`app/utils/safeJson.ts`** — the shared `readJSON`/`writeJSON` pair every persistence composable uses (SSR-safe, try/catch'd). Reach for this instead of hand-rolling another `localStorage` guard.
 
+### Gamification
+
+Progress features are all derived from a win, with the rules in **pure, unit-tested utils** and persistence in thin composables (via `safeJson.ts`):
+
+- **`utils/achievements.ts`** — the 19 achievement rules, each a `check(WinSummary)`. `triggerLocalModal` in `app.vue` builds the summary after `score.record`, calls `useAchievements().evaluate`, and queues the new ids as toasts. Unlock timestamps live in `sudoku_v1_achievements`. Adding an achievement = a rule here + `achievements.<id>.name/desc` in both locales (a test enforces both).
+- **`utils/level.ts`** — lifetime score → level (reaching level n costs 250·n·(n−1) points) and a title band. **`utils/stars.ts`** — 1–3 stars for the win modal. **`utils/mastery.ts`** — Familiar/Practised/Fluent tiers for the Academy badges. **`utils/calendar.ts`** — the 12-week Monday-first grid behind the stats `DailyCalendar`.
+- Hidden achievements are masked as `???` in the trophy case until unlocked.
+
 ### Color mode
 
-`app/utils/sudokuColors.ts` defines `SUDOKU_COLORS` (digit 1–9 → Tailwind color class) and `digitLabel(n, colorMode, t)`, which both the UI (`SudokuCell`, `Numpad`, `DifficultySelector`) and the hint engine use so a digit is rendered/described consistently as a color when the mode is on. The underlying board state is always numeric — color mode is a rendering/copy concern only, toggled before a game starts and locked for its duration.
+`app/utils/sudokuColors.ts` defines `SUDOKU_COLORS` (digit 1–9 → Tailwind color class), `dotClass(n)` (colour + a circle/square/diamond shape cue for colour-blind players) and `digitLabel(n, colorMode, t)`, which both the UI (`SudokuCell`, `Numpad`, `DifficultySelector`) and the hint engine use so a digit is rendered/described consistently as a color when the mode is on. The underlying board state is always numeric — color mode is a rendering/copy concern only, toggled before a game starts and locked for its duration.
 
 ### Academy examples are generated data
 
