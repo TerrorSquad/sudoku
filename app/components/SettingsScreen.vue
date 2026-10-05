@@ -101,94 +101,100 @@ const style = computed({
     <!-- Content -->
     <div class="mx-auto w-full max-w-md flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <div class="flex flex-col gap-3">
-        <label class="row">
-          <span class="label">{{ $t("settings.language") }}</span>
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.language") }}</span>
           <LocaleSwitcher />
         </label>
 
-        <label class="row">
-          <span class="label">{{ $t("settings.theme") }}</span>
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.theme") }}</span>
           <UColorModeButton />
         </label>
 
-        <h2 class="group-title">{{ $t("settings.groupGame") }}</h2>
+        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+          {{ $t("settings.groupGame") }}
+        </h2>
 
-        <label class="row">
-          <span class="label">{{ $t("settings.colorMode") }}</span>
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.colorMode") }}</span>
           <USwitch v-model="colorMode" />
         </label>
 
-        <label class="row">
+        <label class="s-row">
           <span>
-            <span class="label">{{ $t("settings.digitFirst") }}</span>
-            <span class="hint">{{ $t("settings.digitFirstHint") }}</span>
+            <span class="s-label">{{ $t("settings.digitFirst") }}</span>
+            <span class="s-hint">{{ $t("settings.digitFirstHint") }}</span>
           </span>
           <USwitch v-model="digitFirst" />
         </label>
 
-        <label class="row">
-          <span class="label">{{ $t("settings.showTimer") }}</span>
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.showTimer") }}</span>
           <USwitch v-model="showTimer" />
         </label>
 
-        <label class="row">
-          <span class="label">{{ $t("settings.mistakeLimit") }}</span>
-          <select v-model="limit" class="select">
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.mistakeLimit") }}</span>
+          <select v-model="limit" class="s-select">
             <option value="3">3</option>
             <option value="5">5</option>
             <option value="0">{{ $t("settings.limitNone") }}</option>
           </select>
         </label>
 
-        <label class="row">
+        <label class="s-row">
           <span>
-            <span class="label">{{ $t("settings.highlightErrors") }}</span>
-            <span class="hint">{{ $t("settings.highlightErrorsHint") }}</span>
+            <span class="s-label">{{ $t("settings.highlightErrors") }}</span>
+            <span class="s-hint">{{ $t("settings.highlightErrorsHint") }}</span>
           </span>
           <USwitch v-model="highlightErrors" />
         </label>
 
-        <label class="row">
+        <label class="s-row">
           <span>
-            <span class="label">{{ $t("settings.hintStyle") }}</span>
-            <span class="hint">{{ $t("settings.hintStyleHint") }}</span>
+            <span class="s-label">{{ $t("settings.hintStyle") }}</span>
+            <span class="s-hint">{{ $t("settings.hintStyleHint") }}</span>
           </span>
-          <select v-model="style" class="select">
+          <select v-model="style" class="s-select">
             <option value="full">{{ $t("settings.hintFull") }}</option>
             <option value="nudge">{{ $t("settings.hintNudge") }}</option>
           </select>
         </label>
 
-        <h2 class="group-title">{{ $t("settings.groupFeedback") }}</h2>
+        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+          {{ $t("settings.groupFeedback") }}
+        </h2>
 
-        <label class="row">
-          <span class="label">{{ $t("settings.sound") }}</span>
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.sound") }}</span>
           <USwitch v-model="soundEnabled" />
         </label>
 
-        <label v-if="vibrationSupported" class="row">
-          <span class="label">{{ $t("settings.haptics") }}</span>
+        <label v-if="vibrationSupported" class="s-row">
+          <span class="s-label">{{ $t("settings.haptics") }}</span>
           <USwitch v-model="hapticsEnabled" />
         </label>
 
-        <h2 class="group-title">{{ $t("settings.groupData") }}</h2>
+        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+          {{ $t("settings.groupData") }}
+        </h2>
 
-        <div class="row">
+        <div class="s-row">
           <span>
-            <span class="label">{{ $t("settings.export") }}</span>
-            <span class="hint">{{ $t("settings.exportHint") }}</span>
+            <span class="s-label">{{ $t("settings.export") }}</span>
+            <span class="s-hint">{{ $t("settings.exportHint") }}</span>
           </span>
-          <button type="button" class="action" @click="exportProgress">
+          <button type="button" class="s-action" @click="exportProgress">
             {{ $t("settings.exportButton") }}
           </button>
         </div>
 
-        <div class="row">
+        <div class="s-row">
           <span>
-            <span class="label">{{ $t("settings.import") }}</span>
-            <span class="hint">{{ $t("settings.importHint") }}</span>
+            <span class="s-label">{{ $t("settings.import") }}</span>
+            <span class="s-hint">{{ $t("settings.importHint") }}</span>
           </span>
-          <button type="button" class="action" @click="fileInput?.click()">
+          <button type="button" class="s-action" @click="fileInput?.click()">
             {{ $t("settings.importButton") }}
           </button>
           <input
@@ -203,11 +209,11 @@ const style = computed({
           />
         </div>
 
-        <p v-if="importError" role="alert" class="notice error">
+        <p v-if="importError" role="alert" class="s-notice s-error">
           {{ $t(`settings.importError.${importError}`) }}
         </p>
 
-        <div v-if="pending" role="alertdialog" class="notice">
+        <div v-if="pending" role="alertdialog" class="s-notice">
           <p>
             {{
               $t("settings.importConfirm", {
@@ -217,10 +223,10 @@ const style = computed({
             }}
           </p>
           <div class="flex gap-2">
-            <button type="button" class="action danger" @click="confirmImport">
+            <button type="button" class="s-action s-danger" @click="confirmImport">
               {{ $t("settings.importReplace") }}
             </button>
-            <button type="button" class="action" @click="pending = null">
+            <button type="button" class="s-action" @click="pending = null">
               {{ $t("settings.importCancel") }}
             </button>
           </div>
@@ -230,8 +236,8 @@ const style = computed({
   </div>
 </template>
 
-<style scoped>
-.row {
+<style>
+.s-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -240,36 +246,27 @@ const style = computed({
   background: var(--color-zinc-50);
   padding: 0.75rem 1rem;
 }
-:global(.dark) .row {
+.dark .s-row {
   border-color: var(--color-zinc-800);
   background: var(--color-zinc-900);
 }
-.label {
+.s-label {
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-zinc-700);
 }
-:global(.dark) .label {
+.dark .s-label {
   color: var(--color-zinc-300);
 }
-.hint {
+.s-hint {
   display: block;
   margin-top: 0.125rem;
   font-size: 0.75rem;
   line-height: 1.35;
   color: var(--color-zinc-500);
 }
-.group-title {
-  margin-top: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-zinc-600);
-}
-:global(.dark) .group-title {
-  color: var(--color-zinc-400);
-}
-.action {
+.s-action {
   border: 1px solid var(--color-zinc-300);
   padding: 0.35rem 0.75rem;
   font-size: 0.8125rem;
@@ -277,25 +274,25 @@ const style = computed({
   color: var(--color-zinc-700);
   white-space: nowrap;
 }
-.action:hover {
+.s-action:hover {
   background: var(--color-zinc-100);
 }
-.action.danger {
+.s-action.s-danger {
   border-color: var(--color-rose-600);
   color: var(--color-rose-700);
 }
-:global(.dark) .action {
+.dark .s-action {
   border-color: var(--color-zinc-700);
   color: var(--color-zinc-200);
 }
-:global(.dark) .action:hover {
+.dark .s-action:hover {
   background: var(--color-zinc-800);
 }
-:global(.dark) .action.danger {
+.dark .s-action.s-danger {
   border-color: var(--color-rose-500);
   color: var(--color-rose-300);
 }
-.notice {
+.s-notice {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -305,21 +302,21 @@ const style = computed({
   font-size: 0.8125rem;
   color: var(--color-zinc-800);
 }
-.notice.error {
+.s-notice.s-error {
   border-color: var(--color-rose-500);
   background: color-mix(in srgb, var(--color-rose-300) 25%, transparent);
 }
-:global(.dark) .notice {
+.dark .s-notice {
   color: var(--color-zinc-100);
 }
-.select {
+.s-select {
   border: 1px solid var(--color-zinc-300);
   background: white;
   padding: 0.35rem 0.5rem;
   font-size: 0.875rem;
   color: var(--color-zinc-900);
 }
-:global(.dark) .select {
+.dark .s-select {
   border-color: var(--color-zinc-700);
   background: var(--color-zinc-900);
   color: var(--color-zinc-100);
