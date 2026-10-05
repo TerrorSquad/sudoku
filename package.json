@@ -13,7 +13,10 @@
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "visual": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile",
+    "visual:report": "playwright show-report",
+    "visual:update": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile --update-snapshots=changed"
   },
   "dependencies": {
     "@nuxt/ui": "^4.8.2",
