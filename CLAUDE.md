@@ -71,7 +71,7 @@ pnpm visual:update   # accept intentional UI changes, then commit the PNGs
 pnpm visual:report   # open the expected/actual/diff report
 ```
 
-Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers.
+Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers. Baselines are rendered on macOS and are not run in CI (font rasterization differs on Linux), so regenerate them locally.
 
 ### Testing split
 
