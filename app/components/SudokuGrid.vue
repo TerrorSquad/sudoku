@@ -18,6 +18,8 @@ const props = defineProps<{
   showErrors: boolean;
   /** Digit-first input: highlights this digit and where it can still go. */
   activeDigit?: number | null;
+  /** "Nudge first" hints: any cell of the 3x3 box to point at. */
+  nudgeBox?: CellCoord | null;
 }>();
 
 const emit = defineEmits<{
@@ -56,6 +58,13 @@ function isCandidate(r: number, c: number): boolean {
   return true;
 }
 
+function isNudged(r: number, c: number): boolean {
+  const n = props.nudgeBox;
+  return (
+    !!n && Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3)
+  );
+}
+
 function hasConflict(r: number, c: number): boolean {
   return props.conflictCells.some((cell) => cell.r === r && cell.c === c);
 }
@@ -90,6 +99,7 @@ function hasConflict(r: number, c: number): boolean {
         :flash-delay="flashFor(r, c)?.delay ?? 0"
         :show-errors="showErrors"
         :is-candidate="isCandidate(r, c)"
+        :is-nudged="isNudged(r, c)"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"

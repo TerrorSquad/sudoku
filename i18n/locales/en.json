@@ -341,5 +341,7 @@
   "settings.hintStyleHint": "A nudge points to a box before explaining.",
   "settings.hintFull": "Full explanation",
   "settings.hintNudge": "Nudge first",
-  "settings.haptics": "Vibration"
+  "settings.haptics": "Vibration",
+  "hint.nudge.body": "Look closely at box {box}.",
+  "hint.nudge.explain": "Explain it"
 }

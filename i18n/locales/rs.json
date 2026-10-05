@@ -341,5 +341,7 @@
   "settings.hintStyleHint": "Nagoveštaj prvo pokazuje kvadrat, pa tek onda objašnjava.",
   "settings.hintFull": "Potpuno objašnjenje",
   "settings.hintNudge": "Prvo mali nagoveštaj",
-  "settings.haptics": "Vibracija"
+  "settings.haptics": "Vibracija",
+  "hint.nudge.body": "Pogledaj pažljivo kvadrat {box}.",
+  "hint.nudge.explain": "Objasni"
 }

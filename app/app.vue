@@ -50,6 +50,7 @@ const {
   showTimer,
   mistakeLimit,
   highlightErrors,
+  hintStyle,
 } = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
@@ -522,10 +523,22 @@ function handleNextStep() {
   });
 }
 
+// "Nudge first" hint style: the first press only points at a 3x3 box; pressing again (or the
+// banner's Explain button) gives the full step-by-step explanation.
+const nudge = ref<CellCoord | null>(null);
+const nudgeBox = computed(() => (nudge.value ? boxNumber(nudge.value) : 0));
+const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
+watch(currentBoard, () => (nudge.value = null), { deep: true });
+watch(currentScreen, () => (nudge.value = null));
+
 function handleTriggerHint() {
   if (activeComplexHint.value) {
     handleInstantApplyHint();
+  } else if (hintStyle.value === "nudge" && !nudge.value && engine.peekHintCell()) {
+    nudge.value = engine.peekHintCell();
+    cue("hint");
   } else {
+    nudge.value = null;
     cue("hint");
     triggerComplexHint(hintStatus, hintBody);
   }
@@ -992,6 +1005,21 @@ onUnmounted(() => {
               @exit-game="exitToMenu"
             />
 
+            <!-- Nudge: points at a box before the full explanation -->
+            <div
+              v-if="nudge"
+              role="status"
+              class="flex items-center justify-between gap-3 border border-amber-500/40 bg-amber-300/25 px-3 py-2 text-xs text-amber-950 dark:bg-amber-400/10 dark:text-amber-200"
+            >
+              <p>{{ $t("hint.nudge.body", { box: nudgeBox }) }}</p>
+              <button
+                @click="handleTriggerHint"
+                class="shrink-0 border border-amber-600/50 px-2 py-1 font-bold transition-colors hover:bg-amber-400/30"
+              >
+                {{ $t("hint.nudge.explain") }}
+              </button>
+            </div>
+
             <!-- Why-wrong explainer -->
             <div
               v-if="mistakeExplainer"
@@ -1022,6 +1050,7 @@ onUnmounted(() => {
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
                 :active-digit="activeDigit"
+                :nudge-box="nudge"
                 @select-cell="handleSelectCell"
               />
               <div class="mx-2 flex flex-col gap-2 sm:mx-0">

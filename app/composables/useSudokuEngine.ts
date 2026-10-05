@@ -284,6 +284,13 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     };
   }
 
+  /** Where the next hint would act (a placement, else the first removal), without starting it. */
+  function peekHintCell(): CellCoord | null {
+    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
+    return at ? { r: at.r, c: at.c } : null;
+  }
+
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
     const move = nextHint(currentBoard.value, appliedEliminations.value);
     if (!move) {
@@ -430,6 +437,7 @@ export function useSudokuEngine(colorMode: Ref<boolean> = ref(false)) {
     boardHistory,
     checkWinCondition,
     triggerComplexHint,
+    peekHintCell,
     nextHintStep,
     prevHintStep,
     applyComplexHint,
