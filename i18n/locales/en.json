@@ -343,5 +343,18 @@
   "settings.hintNudge": "Nudge first",
   "settings.haptics": "Vibration",
   "hint.nudge.body": "Look closely at box {box}.",
-  "hint.nudge.explain": "Explain it"
+  "hint.nudge.explain": "Explain it",
+  "settings.groupData": "Your data",
+  "settings.export": "Export progress",
+  "settings.exportHint": "Save your scores, achievements, saved games and settings to a file.",
+  "settings.exportButton": "Export",
+  "settings.import": "Import progress",
+  "settings.importHint": "Restore from a backup file. This replaces your current progress.",
+  "settings.importButton": "Import",
+  "settings.importConfirm": "Replace your current progress with this backup (saved {date}, {n} items)?",
+  "settings.importReplace": "Replace",
+  "settings.importCancel": "Cancel",
+  "settings.importError.invalid": "That file isn't a Sudoku Pro backup.",
+  "settings.importError.empty": "That backup is empty.",
+  "settings.importError.tooLarge": "That file is too large to be a backup."
 }

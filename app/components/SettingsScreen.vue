@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { usePreferences, type HintStyle, type MistakeLimit } from "../composables/usePreferences";
 import { canVibrate } from "../utils/haptics";
+import {
+  applyBackup,
+  backupFilename,
+  createBackup,
+  parseBackup,
+  type Backup,
+} from "../utils/progressBackup";
 
 const emit = defineEmits<{ (e: "back-to-menu"): void }>();
 
@@ -16,6 +23,43 @@ const {
 } = usePreferences();
 
 const vibrationSupported = canVibrate();
+
+// --- Export / import of local progress ---
+function exportProgress() {
+  const blob = new Blob([JSON.stringify(createBackup(localStorage), null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = backupFilename();
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// A parsed file waits for explicit confirmation: importing replaces everything.
+const pending = ref<{ backup: Backup; items: number } | null>(null);
+const importError = ref<string | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+
+async function onFile(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  pending.value = null;
+  importError.value = null;
+  if (!file) return;
+  const result = parseBackup(await file.text());
+  if (result.ok) pending.value = { backup: result.backup, items: result.items };
+  else importError.value = result.error;
+  input.value = ""; // allow choosing the same file again
+}
+
+function confirmImport() {
+  if (!pending.value) return;
+  applyBackup(localStorage, pending.value.backup);
+  // Every composable reads storage on load, so a reload is the simplest way to pick it all up.
+  location.reload();
+}
 
 // Native <select> hands back strings; the limit is stored as a number.
 const limit = computed({
@@ -126,6 +170,61 @@ const style = computed({
           <span class="label">{{ $t("settings.haptics") }}</span>
           <USwitch v-model="hapticsEnabled" />
         </label>
+
+        <h2 class="group-title">{{ $t("settings.groupData") }}</h2>
+
+        <div class="row">
+          <span>
+            <span class="label">{{ $t("settings.export") }}</span>
+            <span class="hint">{{ $t("settings.exportHint") }}</span>
+          </span>
+          <button type="button" class="action" @click="exportProgress">
+            {{ $t("settings.exportButton") }}
+          </button>
+        </div>
+
+        <div class="row">
+          <span>
+            <span class="label">{{ $t("settings.import") }}</span>
+            <span class="hint">{{ $t("settings.importHint") }}</span>
+          </span>
+          <button type="button" class="action" @click="fileInput?.click()">
+            {{ $t("settings.importButton") }}
+          </button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="application/json,.json"
+            class="sr-only"
+            tabindex="-1"
+            aria-hidden="true"
+            data-testid="import-file"
+            @change="onFile"
+          />
+        </div>
+
+        <p v-if="importError" role="alert" class="notice error">
+          {{ $t(`settings.importError.${importError}`) }}
+        </p>
+
+        <div v-if="pending" role="alertdialog" class="notice">
+          <p>
+            {{
+              $t("settings.importConfirm", {
+                date: new Date(pending.backup.exportedAt).toLocaleDateString(),
+                n: pending.items,
+              })
+            }}
+          </p>
+          <div class="flex gap-2">
+            <button type="button" class="action danger" @click="confirmImport">
+              {{ $t("settings.importReplace") }}
+            </button>
+            <button type="button" class="action" @click="pending = null">
+              {{ $t("settings.importCancel") }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -169,6 +268,49 @@ const style = computed({
 }
 :global(.dark) .group-title {
   color: var(--color-zinc-400);
+}
+.action {
+  border: 1px solid var(--color-zinc-300);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-zinc-700);
+  white-space: nowrap;
+}
+.action:hover {
+  background: var(--color-zinc-100);
+}
+.action.danger {
+  border-color: var(--color-rose-600);
+  color: var(--color-rose-700);
+}
+:global(.dark) .action {
+  border-color: var(--color-zinc-700);
+  color: var(--color-zinc-200);
+}
+:global(.dark) .action:hover {
+  background: var(--color-zinc-800);
+}
+:global(.dark) .action.danger {
+  border-color: var(--color-rose-500);
+  color: var(--color-rose-300);
+}
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--color-amber-500);
+  background: color-mix(in srgb, var(--color-amber-300) 25%, transparent);
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--color-zinc-800);
+}
+.notice.error {
+  border-color: var(--color-rose-500);
+  background: color-mix(in srgb, var(--color-rose-300) 25%, transparent);
+}
+:global(.dark) .notice {
+  color: var(--color-zinc-100);
 }
 .select {
   border: 1px solid var(--color-zinc-300);

@@ -343,5 +343,18 @@
   "settings.hintNudge": "Prvo mali nagoveštaj",
   "settings.haptics": "Vibracija",
   "hint.nudge.body": "Pogledaj pažljivo kvadrat {box}.",
-  "hint.nudge.explain": "Objasni"
+  "hint.nudge.explain": "Objasni",
+  "settings.groupData": "Tvoji podaci",
+  "settings.export": "Izvezi napredak",
+  "settings.exportHint": "Sačuvaj rezultate, dostignuća, sačuvane igre i podešavanja u fajl.",
+  "settings.exportButton": "Izvezi",
+  "settings.import": "Uvezi napredak",
+  "settings.importHint": "Vrati iz fajla rezervne kopije. Ovo zamenjuje tvoj trenutni napredak.",
+  "settings.importButton": "Uvezi",
+  "settings.importConfirm": "Zameniti trenutni napredak ovom kopijom (sačuvana {date}, stavki: {n})?",
+  "settings.importReplace": "Zameni",
+  "settings.importCancel": "Otkaži",
+  "settings.importError.invalid": "Taj fajl nije rezervna kopija Sudoku Pro.",
+  "settings.importError.empty": "Ta rezervna kopija je prazna.",
+  "settings.importError.tooLarge": "Taj fajl je prevelik da bi bio rezervna kopija."
 }
