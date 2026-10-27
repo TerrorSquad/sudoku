@@ -2,6 +2,7 @@ import type { WinSummary } from "../utils/achievements";
 
 import { newlyUnlocked } from "../utils/achievements";
 import { readJSON, writeJSON } from "../utils/safeJson";
+import { reportAchievements } from "../utils/wavedash";
 
 const KEY = "sudoku_v1_achievements";
 
@@ -20,6 +21,7 @@ export function useAchievements() {
     if (fresh.length) {
       for (const id of fresh) unlocked[id] = now;
       writeJSON(KEY, unlocked);
+      reportAchievements(fresh);
     }
     return fresh;
   }
