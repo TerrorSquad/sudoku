@@ -1,0 +1,138 @@
+{
+  "achievements": [
+    {
+      "identifier": "FIRST_WIN",
+      "display_name": "First Win",
+      "description": "Win your first puzzle.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "WINS_10",
+      "display_name": "Getting Warm",
+      "description": "Win 10 puzzles.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "WINS_50",
+      "display_name": "Regular",
+      "description": "Win 50 puzzles.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "WINS_100",
+      "display_name": "Centurion",
+      "description": "Win 100 puzzles.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "FLAWLESS",
+      "display_name": "Flawless",
+      "description": "Win a puzzle without a single mistake.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "SELF_RELIANT",
+      "display_name": "Self-Reliant",
+      "description": "Win a puzzle without using a hint.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "PURIST",
+      "display_name": "Purist",
+      "description": "Win Hard or above with no mistakes and no hints.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "LIGHTNING",
+      "display_name": "Lightning",
+      "description": "Finish well under the par time for your difficulty.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "EXPERT_WIN",
+      "display_name": "Expert Mind",
+      "description": "Win an Expert puzzle.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "MASTER_WIN",
+      "display_name": "Grandmaster",
+      "description": "Win a Master puzzle.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "DAILY_FIRST",
+      "display_name": "Daily Habit",
+      "description": "Complete a Daily Challenge.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "STREAK_3",
+      "display_name": "On a Roll",
+      "description": "Reach a 3-day Daily streak.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "STREAK_7",
+      "display_name": "Week Warrior",
+      "description": "Reach a 7-day Daily streak.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "STREAK_30",
+      "display_name": "Unstoppable",
+      "description": "Reach a 30-day Daily streak.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "COMEBACK",
+      "display_name": "Comeback",
+      "description": "Win after making two mistakes.",
+      "secret": true,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "NIGHT_OWL",
+      "display_name": "Night Owl",
+      "description": "Win a puzzle between midnight and 5 AM.",
+      "secret": true,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "COLOURFUL",
+      "display_name": "Colourful",
+      "description": "Win a game in colour mode.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "SCHOLAR",
+      "display_name": "Scholar",
+      "description": "Learn 5 different techniques from hints.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "SPECIALIST",
+      "display_name": "Specialist",
+      "description": "Win 10 puzzles on the same difficulty.",
+      "secret": false,
+      "stat_requirement": null
+    }
+  ],
+  "stats": []
+}
