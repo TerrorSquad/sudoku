@@ -33,6 +33,7 @@ import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
+import { submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
 const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
@@ -239,6 +240,14 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         breakdown.total,
         timer.timerSeconds.value,
       );
+      submitWin({
+        difficulty: activeDifficulty.value,
+        seconds: timer.timerSeconds.value,
+        mistakes: mistakes.value,
+        hints: hintsUsed.value,
+        daily: isDailyMode.value ? dailyPuzzle.todayKey() : null,
+        lifetimeTotal: result.stats.total,
+      });
       lastScore.value = breakdown;
       isNewBest.value = result.isNewBest;
       lifetimeTotal.value = result.stats.total;

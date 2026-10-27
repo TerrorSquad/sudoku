@@ -358,5 +358,17 @@
   "settings.importError.invalid": "That file isn't a Sudoku Pro backup.",
   "settings.importError.empty": "That backup is empty.",
   "settings.importError.tooLarge": "That file is too large to be a backup.",
-  "settings.importError.storage": "Couldn't save that backup (storage is full or blocked). Your current progress was kept."
+  "settings.importError.storage": "Couldn't save that backup (storage is full or blocked). Your current progress was kept.",
+  "leaderboard.title": "Leaderboards",
+  "leaderboard.board": "Leaderboard",
+  "leaderboard.lifetime": "Lifetime score",
+  "leaderboard.dailyToday": "Today's Daily",
+  "leaderboard.bestTime": "Best time: {difficulty}",
+  "leaderboard.global": "Global",
+  "leaderboard.friends": "Friends",
+  "leaderboard.loading": "Loading…",
+  "leaderboard.error": "Couldn't load this leaderboard. Try again later.",
+  "leaderboard.empty": "No scores yet. Be the first!",
+  "leaderboard.yourRank": "Your rank: #{rank} ({score})",
+  "leaderboard.notRanked": "You're not on this board yet."
 }

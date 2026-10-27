@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 
 import en from "../../i18n/locales/en.json";
 import { ACHIEVEMENTS } from "../utils/achievements";
-import { flush, wavedashId } from "../utils/wavedash";
+import { flush, scoresFor, wavedashId } from "../utils/wavedash";
 
 const IMPORT_FILE = new URL("../../wavedash-achievements.json", import.meta.url);
 
@@ -45,5 +45,30 @@ describe("wavedash", () => {
   it("wavedash-achievements.json matches the rules (UPDATE_WAVEDASH=1 pnpm test wavedash to regenerate)", () => {
     if (process.env.UPDATE_WAVEDASH) writeFileSync(IMPORT_FILE, importJson());
     expect(readFileSync(IMPORT_FILE, "utf8")).toBe(importJson());
+  });
+
+  const win = {
+    difficulty: "hard",
+    seconds: 300,
+    mistakes: 1,
+    hints: 0,
+    daily: null,
+    lifetimeTotal: 900,
+  };
+
+  it("a regular win posts its time to its difficulty and the lifetime total", () => {
+    expect(scoresFor(win)).toEqual([
+      { board: { name: "best-time-hard", kind: "time" }, score: 300 },
+      { board: { name: "lifetime-score", kind: "score" }, score: 900 },
+    ]);
+  });
+
+  it("a Daily posts its time to that day's board instead", () => {
+    expect(scoresFor({ ...win, daily: "2026-10-27" })[0]!.board.name).toBe("daily-2026-10-27");
+  });
+
+  it("custom puzzles post nothing, and a zero time skips the timed board", () => {
+    expect(scoresFor({ ...win, difficulty: "custom" })).toEqual([]);
+    expect(scoresFor({ ...win, seconds: 0 }).map((s) => s.board.name)).toEqual(["lifetime-score"]);
   });
 });

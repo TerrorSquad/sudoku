@@ -4,6 +4,7 @@ import { computed } from "vue";
 import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { useScore } from "../composables/useScore";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
+import { hasWavedash } from "../utils/wavedash";
 
 const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "start-game"): void }>();
 
@@ -13,6 +14,7 @@ const techStats = useTechniqueStats();
 const daily = useDailyPuzzle();
 
 const stats = score.getStats();
+const onWavedash = hasWavedash();
 const streak = daily.getStreak();
 
 const DIFFICULTY_ORDER = ["beginner", "easy", "medium", "hard", "expert", "master", "custom"];
@@ -73,6 +75,8 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
+      <LeaderboardPanel v-if="onWavedash" />
+
       <div
         v-if="!hasStats"
         class="flex flex-col items-center gap-5 border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700"
