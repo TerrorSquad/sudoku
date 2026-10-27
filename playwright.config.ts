@@ -34,7 +34,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3010",
+    baseURL: "http://localhost:3110",
     trace: "retain-on-failure",
   },
   projects: [
@@ -67,8 +67,8 @@ export default defineConfig({
       : []),
   ],
   webServer: {
-    command: "pnpm dev --port 3010",
-    url: "http://localhost:3010",
+    command: "pnpm dev --port 3110",
+    url: "http://localhost:3110",
     // A reused server ignores the env block below, so never reuse for visual runs.
     reuseExistingServer: !process.env.CI && !process.env.VISUAL_REGRESSION,
     timeout: 60_000,

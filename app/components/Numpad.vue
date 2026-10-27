@@ -24,7 +24,11 @@ defineEmits<{
       :key="n"
       @click="$emit('input-number', n)"
       :disabled="9 - counts[n]! <= 0"
-      :aria-label="digitLabel(n, colorMode, t)"
+      :aria-label="
+        9 - counts[n]! > 0
+          ? t('a11y.digitLeft', { num: digitLabel(n, colorMode, t), count: 9 - counts[n]! })
+          : digitLabel(n, colorMode, t)
+      "
       :aria-pressed="digitFirst ? activeDigit === n : undefined"
       :class="[
         9 - counts[n]! <= 0
@@ -38,6 +42,8 @@ defineEmits<{
     >
       <span v-if="colorMode" :class="dotClass(n)" class="h-6 w-6 3xl:h-9 3xl:w-9" />
       <span v-else>{{ n }}</span>
+      <!-- Keeps the digit and its count separate words in the visible text, which must match the label. -->
+      {{ " " }}
       <span
         v-if="9 - counts[n]! > 0"
         class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-400"

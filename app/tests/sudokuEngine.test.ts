@@ -28,27 +28,27 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       [3, 4, 5, 2, 8, 6, 1, 7, 9],
     ];
     engine.solvedBoard.value = engine.currentBoard.value.map((row) => [...row]);
-    engine.solvedBoard.value[0][0] = 5;
+    engine.solvedBoard.value[0]![0] = 5;
 
     const candidates = engine.getGridCandidates(engine.currentBoard.value);
-    expect(candidates[0][0]).toEqual([5]); // Dokazujemo da je 5 jedini preostali kandidat
+    expect(candidates[0]![0]).toEqual([5]); // Dokazujemo da je 5 jedini preostali kandidat
   });
 
   it("Treba bezbedno da detektuje konfliktne ćelije u realnom vremenu unutar reda i kolone", () => {
-    engine.currentBoard.value[0][0] = 5;
-    engine.currentBoard.value[0][1] = 5; // Dupli broj u istom redu
+    engine.currentBoard.value[0]![0] = 5;
+    engine.currentBoard.value[0]![1] = 5; // Dupli broj u istom redu
 
     const conflicts = engine.getConflictCells(0, 0, 5);
     expect(conflicts).toContainEqual({ r: 0, c: 1 });
   });
 
   it("Mehanizam za istoriju (Undo) mora ispravno da vrati prethodno stanje table i obriše animacije", () => {
-    engine.currentBoard.value[0][0] = 0;
+    engine.currentBoard.value[0]![0] = 0;
     engine.saveHistory();
-    engine.currentBoard.value[0][0] = 9;
+    engine.currentBoard.value[0]![0] = 9;
 
     engine.undoMove();
-    expect(engine.currentBoard.value[0][0]).toBe(0);
+    expect(engine.currentBoard.value[0]![0]).toBe(0);
   });
 
   it("Treba uspešno da validira pobednički uslov (Win Condition) kada se poklope sve ćelije", () => {
@@ -89,7 +89,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     ];
 
     // Upisujemo tačnu peticu na (0,0)
-    engine.currentBoard.value[0][0] = 5;
+    engine.currentBoard.value[0]![0] = 5;
 
     // Proveravamo da li se broj unesenih petica ispravno inkrementirao na 1
     const counts = engine.numberCounts.value;

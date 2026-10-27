@@ -165,6 +165,7 @@
   "customImport.errorBoxDuplicate": "Box at row {row} col {col} has duplicate {value}.",
   "customImport.errorNoSolution": "This puzzle has no solution — check the digits and try again.",
   "customImport.errorMultipleSolutions": "This puzzle has more than one solution, so mistakes could not be checked fairly. Add more givens.",
+  "a11y.digitLeft": "{num}, {count} left",
   "a11y.switchLanguage": "Switch language",
   "stats.title": "Your Statistics",
   "stats.subtitle": "Lifetime progress, saved on this device",

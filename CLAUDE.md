@@ -25,7 +25,7 @@ pnpm lint             # oxlint (also runs automatically on commit, see below)
 
 Don't run `fmt`/`lint` proactively during normal development — `forge.toml` wires `oxfmt` and `oxlint` into a pre-commit hook (auto-fixing and restaging), and `commit-msg` enforces Conventional Commits. They run automatically at commit time.
 
-The e2e suite spins up its own dev server on port 3010 with `NUXT_IGNORE_LOCK=1` (see `playwright.config.ts`), so it can run even while a normal `pnpm dev` is active on another port — Nuxt's dev-server lock is keyed by project directory, not port, so this would otherwise fail with "Another Nuxt dev server is already running." Playwright tests run with `workers: 1`: a single dev-mode Nuxt server backing all tests causes contention/flakiness under parallel workers.
+The e2e suite spins up its own dev server on port 3110 with `NUXT_IGNORE_LOCK=1` (see `playwright.config.ts`), so it can run even while a normal `pnpm dev` is active on another port — Nuxt's dev-server lock is keyed by project directory, not port, so this would otherwise fail with "Another Nuxt dev server is already running." Playwright tests run with `workers: 1`: a single dev-mode Nuxt server backing all tests causes contention/flakiness under parallel workers.
 
 `vitest.config.ts` excludes `e2e/**` — without it, vitest's default glob also picks up the Playwright `.spec.ts` files and fails trying to run them.
 

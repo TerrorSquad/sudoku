@@ -1,5 +1,5 @@
 /* oxlint-disable eslint/no-await-in-loop -- browser steps are inherently sequential */
-import AxeBuilder from "@axe-core/playwright";
+import { AxeBuilder } from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 
 // Automated WCAG 2.x A/AA scan of every screen in both colour schemes. Axe catches roughly a

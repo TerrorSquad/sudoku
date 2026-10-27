@@ -165,6 +165,7 @@
   "customImport.errorBoxDuplicate": "Kvadrant na redu {row}, koloni {col} ima duplikat {value}.",
   "customImport.errorNoSolution": "Ova zagonetka nema rešenje — proveri cifre i pokušaj ponovo.",
   "customImport.errorMultipleSolutions": "Ova zagonetka ima više od jednog rešenja, pa greške ne bi mogle pošteno da se proveravaju. Dodaj još zadatih cifara.",
+  "a11y.digitLeft": "{num}, {count} preostalo",
   "a11y.switchLanguage": "Promeni jezik",
   "stats.title": "Tvoja statistika",
   "stats.subtitle": "Napredak tokom vremena, sačuvan na ovom uređaju",
