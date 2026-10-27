@@ -1,6 +1,6 @@
 # Wavedash platform features: achievements, leaderboards, cloud saves
 
-Status: phases 1 (achievements) and 2 (leaderboards) implemented. Phase 3 is **not yet implemented**.
+Status: all three phases implemented: achievements, leaderboards and cloud saves.
 
 Sudoku Pro ships on Wavedash (https://wavedash.com/games/sudoku-pro, `pnpm wavedash`) as well as the
 static web build and PWA. Everything here was local-only because there was no backend; the
@@ -71,19 +71,44 @@ Wavedash SDK now provides one for players on Wavedash. SDK reference: https://do
   the game page: check the portal's Leaderboards tab after the first scores and make them visible.
   There is no documented anti-cheat: scores are as honest as the client.
 
-## Phase 3: cloud saves (not yet implemented)
+## Phase 3: cloud saves (implemented)
 
-- **Payload.** One file, `progress.json`: `createBackup(localStorage)` from `utils/progressBackup.ts`,
-  which already serialises every `sudoku_v1_*` key with strict validation on the way back in.
-- **Upload.** `writeLocalFile` then `uploadRemoteFile` at checkpoints only: a win, quitting a game,
-  `visibilitychange` to hidden. The limit is 30 uploads/min and 300/hour per player, and an
-  over-limit upload is rejected locally until the wait passes, so debounce to at most one per
-  ~10 s and never retry in a loop.
-- **Restore on boot.** `downloadRemoteFile` → `readLocalFile` → `parseBackup`. Keep whichever of
-  cloud and local has the newer `exportedAt` (newest wins); before applying a cloud copy, save the
-  current local backup under `sudoku_pre_cloud_restore` (outside the `sudoku_v1_` prefix, so it is
-  never itself synced or exported) so a bad restore can be undone. Apply with `applyBackup` and reload, the
-  same path as Settings → Your data → Import.
-- **Open questions.** The docs give no file size limit or conflict model; our payload is well
-  under the existing 5 MB `MAX_BACKUP_BYTES` cap. `listRemoteDirectory` returns absolute keys
-  (`/progress.json`); read files back with exactly that key.
+- **Payload.** One file, `progress.json`: `createBackup(localStorage)` from `utils/progressBackup.ts`
+  (every `sudoku_v1_*` key) plus `updatedAt` (ms at upload). Read back through `parseBackup`, so
+  the Settings import's validation guards it too.
+- **Local bookkeeping**, outside the `sudoku_v1_` prefix so it is never exported or synced:
+  `sudoku_cloud_meta` = `{ syncedAt, syncedHash }`, the `updatedAt` and data hash of the cloud copy
+  this device last uploaded or restored; `sudoku_sync_backup` = `{ reason, savedAt, backup }`,
+  whatever the last sync replaced (local data before a restore, or the cloud copy a conflict
+  upload overwrote), so a bad sync can be undone by hand.
+- **Boot.** The Wavedash plugin is async and awaits `syncFromCloud()`; Nuxt mounts the app only
+  after plugins resolve, so a restore lands before any composable reads `localStorage` and no
+  reload is needed. The platform loader covers the wait, capped at 5 s.
+  `remoteFileExists` → `downloadRemoteFile` → `readLocalFile` (also tried with a leading `/`,
+  the docs' absolute-key gotcha). If the cloud state can't be determined (error, timeout),
+  nothing is restored and **no upload happens that session**, so a device can't overwrite a
+  cloud copy it never saw.
+- **Decision** (`decide` in `utils/cloudSync.ts`, pure and unit-tested). "Changed" is judged
+  against the last sync: local changed = its hash differs from `syncedHash`; cloud changed = its
+  `updatedAt` differs from `syncedAt`. Comparing to the cloud's own timestamp, never this
+  device's clock, means skewed clocks can't make one device overwrite another.
+  - Same data both sides: record the sync.
+  - Only local changed: upload. Only cloud changed (incl. a fresh device): restore.
+  - Both changed (or a device with its own progress that never synced): keep the side with the
+    higher lifetime score, which only grows; a tie goes to the cloud.
+  - Cloud missing or corrupt: upload local (replacing the corrupt file), unless local is empty.
+  - A file from a later version (`version > 1`): left alone, no uploads this session.
+  - Empty local data never uploads, and empty or invalid cloud data is never applied.
+  - Local data cleared after the last sync (Settings → reset) stays cleared until the next
+    upload replaces the cloud copy.
+- **Upload.** `saveToCloud()` after a win (Daily or not; the Daily's completion is written in the
+  same block) and on `visibilitychange` to hidden. It skips when the data hash matches the last
+  sync, uploads at most once per 30 s with a trailing upload for changes inside the gap (5 s when
+  the tab hides, since a hidden tab may never run the timer), and after a failure waits 60 s
+  without retrying: the SDK fails over-limit uploads locally until its wait passes. That keeps
+  well under 30 uploads/min.
+- **Tests.** `app/tests/cloudSync.test.ts` covers `readCloud`, `hashData` and every `decide` branch;
+  `e2e/wavedash.spec.ts` (the fake SDK has an in-memory file store) covers a fresh device
+  restoring, local-newer uploading, a corrupt cloud file leaving local intact, and a win uploading.
+- **Open questions.** The docs give no file size limit or conflict model; our payload stays far
+  under the existing 5 MB `MAX_BACKUP_BYTES` cap. There is no UI: syncing is silent.

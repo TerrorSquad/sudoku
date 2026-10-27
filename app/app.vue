@@ -33,7 +33,7 @@ import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
-import { submitWin } from "./utils/wavedash";
+import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
 const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
@@ -269,6 +269,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       toastIds.value.push(...unlocked);
       if (unlocked.length) cue("unlock");
       animateScoreCountUp(breakdown.total);
+      saveToCloud();
     }
     confetti({
       disableForReducedMotion: true,

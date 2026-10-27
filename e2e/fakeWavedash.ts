@@ -7,17 +7,33 @@ export interface WavedashLog {
   unlocked: string[];
   /** Each upload as [board name, score, keepBest, metadata]. */
   uploads: [string, number, boolean, unknown][];
+  /** The cloud's files, path → text. */
+  remote: Record<string, string>;
+  fileUploads: number;
 }
 
 // A fake of the SDK Wavedash injects. Like the real one, it rejects the first write to each
 // achievement, standing in for the second half of the stats load not having arrived yet. Every
-// leaderboard lists the same entries: three players globally, one with friendsOnly.
-export async function fakeWavedash(page: Page) {
-  await page.addInitScript(() => {
+// leaderboard lists the same entries: three players globally, one with friendsOnly. `remote`
+// seeds the cloud's files (path → text); downloads copy into the SDK's local store, as the real
+// one does.
+export async function fakeWavedash(
+  page: Page,
+  { remote = {} }: { remote?: Record<string, string> } = {},
+) {
+  await page.addInitScript((seed) => {
     const unlocked = new Set<string>();
     const tried = new Set<string>();
     const boards: string[] = [];
-    const log = { inits: 0, stores: 0, unlocked, uploads: [] as unknown[] };
+    const files = new Map<string, Uint8Array>();
+    const log = {
+      inits: 0,
+      stores: 0,
+      unlocked,
+      uploads: [] as unknown[],
+      remote: { ...seed },
+      fileUploads: 0,
+    };
     const entry = (userId: string, username: string, score: number, globalRank: number) => ({
       userId,
       username,
@@ -60,9 +76,21 @@ export async function fakeWavedash(page: Page) {
               : [entry("a", "Ada", 1800, 1), me, entry("b", "Bo", 1200, 3)],
           ),
         getMyLeaderboardEntries: () => ok([me]),
+        writeLocalFile: async (path: string, data: Uint8Array) => (files.set(path, data), true),
+        readLocalFile: async (path: string) => files.get(path) ?? null,
+        remoteFileExists: (path: string) => ok(path in log.remote),
+        downloadRemoteFile: (path: string) => {
+          files.set(path, new TextEncoder().encode(log.remote[path]));
+          return ok(path);
+        },
+        uploadRemoteFile: (path: string) => {
+          log.remote[path] = new TextDecoder().decode(files.get(path));
+          log.fileUploads++;
+          return ok(path);
+        },
       },
     });
-  });
+  }, remote);
 }
 
 export const sdkLog = (page: Page) =>
