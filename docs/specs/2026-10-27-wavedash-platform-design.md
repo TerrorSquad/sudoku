@@ -1,6 +1,6 @@
 # Wavedash platform features: achievements, leaderboards, cloud saves
 
-Status: phase 1 (achievements) implemented. Phases 2 and 3 are **not yet implemented**.
+Status: phases 1 (achievements) and 2 (leaderboards) implemented. Phase 3 is **not yet implemented**.
 
 Sudoku Pro ships on Wavedash (https://wavedash.com/games/sudoku-pro, `pnpm wavedash`) as well as the
 static web build and PWA. Everything here was local-only because there was no backend; the
@@ -42,23 +42,34 @@ Wavedash SDK now provides one for players on Wavedash. SDK reference: https://do
 - **Saving.** Stats auto-save about once a second and nothing flushes on exit, so each flush that
   wrote something calls `storeStats()` immediately.
 
-## Phase 2: leaderboards (not yet implemented)
+## Phase 2: leaderboards (implemented)
 
-- **Boards**, created with `getOrCreateLeaderboard(name, sortOrder, displayType)` once on boot and
-  cached by id:
-  - `best-time-<difficulty>` for beginner … master: `ASC`, `TIME_SECONDS`.
-  - `daily-<YYYY-MM-DD>` (`localDateKey`): `ASC`, `TIME_SECONDS`, one board per day.
-  - `lifetime-score`: `DESC`, `NUMERIC`, the `useScore` total.
-  - Custom puzzles and Academy practice never submit.
-- **Submitting.** After `score.record` in `triggerLocalModal`:
-  `uploadLeaderboardScore(id, seconds, keepBest = true, undefined, { mistakes, hints, colorMode })`.
-  Metadata limits: 16 keys, 2 KB, no nesting; a violation drops the score, so keep it to scalars.
-- **Showing.** The Stats screen gains Global / Friends tabs per board (`listLeaderboardEntries`,
-  `friendsOnly`) plus "my rank" (`getMyLeaderboardEntries`, `listLeaderboardEntriesAroundUser`).
-  Off Wavedash the tabs are hidden. New strings go into `en` and `rs`.
-- **Open questions.** Boards created from game code may count as "player-created" and default to
-  hidden on the game page; check in the portal after the first run. There is no documented
-  anti-cheat: scores are as trustworthy as the client.
+- **Boards** are created on first use with `getOrCreateLeaderboard(name, sortOrder, displayType)`;
+  the id promise is cached per name, and a failed lookup is dropped from the cache so the next call
+  retries. No portal setup is needed.
+  - `best-time-<difficulty>` for beginner … master: ascending (0), time in seconds (1).
+  - `daily-<YYYY-MM-DD>` (`useDailyPuzzle().todayKey()`, the key `markComplete` uses): ascending,
+    time in seconds. A Daily posts here instead of its difficulty's board.
+  - No lifetime-score board: custom puzzles count towards that total, so an imported near-solved
+    grid would farm it.
+  - Custom puzzles (and anything outside the six difficulties) post nothing; Academy practice never
+    reaches the scoring branch. A zero time posts nothing.
+- **Submitting.** `triggerLocalModal` calls `submitWin` right after `score.record`. The pure
+  `scoresFor(win)` picks the boards (unit-tested); each upload is
+  `uploadLeaderboardScore(id, score, keepBest = true, undefined, { mistakes, hints })`.
+  Fire-and-forget: failures only `console.warn`, the local stats are already saved.
+- **Showing.** `LeaderboardPanel.vue` at the top of Stats, only when `hasWavedash()`: a board
+  picker (today's Daily, the default, then best time per difficulty), Global / Friends toggle
+  (`listLeaderboardEntries(id, 0, 10, friendsOnly)`), the player's row highlighted, and "Your
+  rank" from `getMyLeaderboardEntries`. Loading, error and empty states; strings in `en` and `rs`.
+  Stale responses from a previous selection are ignored.
+- **Tests.** `scoresFor` in `app/tests/wavedash.test.ts`; `e2e/wavedash.spec.ts` covers a medium
+  win posting its time, a custom win posting none, the panel's tabs and board switch, and no
+  panel off Wavedash; `e2e/a11y.spec.ts` scans Stats with the panel in both schemes. The fake SDK
+  lives in `e2e/fakeWavedash.ts`.
+- **Known gaps.** Boards created from game code may count as player-created and start hidden on
+  the game page: check the portal's Leaderboards tab after the first scores and make them visible.
+  There is no documented anti-cheat: scores are as honest as the client.
 
 ## Phase 3: cloud saves (not yet implemented)
 

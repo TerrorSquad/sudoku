@@ -1,41 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { fakeWavedash, sdkLog } from "./fakeWavedash";
+
 const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
 const ALMOST_SOLVED =
   "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
 
-// A fake of the SDK Wavedash injects. Like the real one, it rejects the first write to each id,
-// standing in for the second half of the stats load not having arrived yet.
-async function fakeWavedash(page: Page) {
-  await page.addInitScript(() => {
-    const unlocked = new Set<string>();
-    const tried = new Set<string>();
-    const log = { inits: 0, stores: 0, unlocked };
-    Object.assign(window, {
-      wdLog: log,
-      Wavedash: {
-        init: () => (log.inits++, true),
-        requestStats: async () => ({ success: true, data: true }),
-        getAchievement: (id: string) => unlocked.has(id),
-        setAchievement: (id: string) => {
-          if (!tried.has(id)) return (tried.add(id), false);
-          unlocked.add(id);
-          return true;
-        },
-        storeStats: () => (log.stores++, true),
-      },
-    });
-  });
-}
-
-/** What the fake saw: init and storeStats calls, and the achievements it accepted. */
-const sdkLog = (page: Page) =>
-  page.evaluate(() => {
-    const log = (
-      window as unknown as { wdLog: { inits: number; stores: number; unlocked: Set<string> } }
-    ).wdLog;
-    return { inits: log.inits, stores: log.stores, unlocked: [...log.unlocked].toSorted() };
-  });
 const unlockedIds = async (page: Page) => (await sdkLog(page)).unlocked;
 
 test("boot calls init and back-fills achievements unlocked before", async ({ page }) => {
@@ -64,4 +34,85 @@ test("a win reports its new achievements and stores them", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
   await expect.poll(() => unlockedIds(page)).toEqual(["FIRST_WIN", "FLAWLESS", "SELF_RELIANT"]);
   expect((await sdkLog(page)).stores).toBeGreaterThan(0);
+});
+
+const grid = (s: string) =>
+  Array.from({ length: 9 }, (_, r) => Array.from(s.slice(r * 9, r * 9 + 9), Number));
+
+test("a win posts its time; custom puzzles post nothing", async ({ page }) => {
+  await fakeWavedash(page);
+  const solved = ALMOST_SOLVED.replace("0", "2");
+  const puzzle = solved.slice(0, 40) + "0" + solved.slice(41);
+  const save = {
+    currentBoard: grid(puzzle),
+    initialBoard: grid(puzzle),
+    solvedBoard: grid(solved),
+    notesBoard: Array.from({ length: 9 }, () =>
+      Array.from({ length: 9 }, () => Array<boolean>(10).fill(false)),
+    ),
+    difficulty: "medium",
+    timerSeconds: 42,
+    mistakes: 0,
+    hintsUsed: 0,
+    savedAt: 1_700_000_000_000,
+  };
+  await page.addInitScript((s) => {
+    if (!sessionStorage.getItem("seeded")) {
+      sessionStorage.setItem("seeded", "1");
+      localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(s));
+    }
+  }, save);
+  await page.goto("/");
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Medium/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.locator(`${BOARD} [data-cell]`).nth(40).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+
+  await expect.poll(async () => (await sdkLog(page)).uploads.length).toBe(1);
+  const [time] = (await sdkLog(page)).uploads;
+  expect(time).toEqual(["best-time-medium", expect.any(Number), true, { mistakes: 0, hints: 0 }]);
+  expect(time![1]).toBeGreaterThanOrEqual(42);
+
+  // A custom puzzle's win reaches the same code but posts nothing more.
+  await page.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.locator("textarea").fill(ALMOST_SOLVED);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await page.waitForTimeout(300);
+  expect((await sdkLog(page)).uploads).toHaveLength(1);
+});
+
+test("Stats shows the leaderboards, with Global and Friends tabs and your rank", async ({
+  page,
+}) => {
+  await fakeWavedash(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Statistics" }).click();
+  const panel = page.getByRole("region", { name: "Leaderboards" });
+  await expect(panel.getByRole("listitem")).toHaveText([
+    /Ada\s*30:00/,
+    /You\s*25:00/,
+    /Bo\s*20:00/,
+  ]);
+  await expect(panel).toContainText("Your rank: #2 (25:00)");
+
+  await panel.getByRole("button", { name: "Friends" }).click();
+  await expect(panel.getByRole("listitem")).toHaveText([/Friendly Fox/, /You/]);
+
+  await panel
+    .getByRole("combobox", { name: "Leaderboard" })
+    .selectOption({ label: "Best time: Hard" });
+  await expect(panel.getByRole("listitem").first()).toContainText("30:00");
+});
+
+test("without Wavedash, Stats has no leaderboards", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Statistics" }).click();
+  await expect(page.getByRole("heading", { name: "Your Statistics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Leaderboards" })).toHaveCount(0);
 });

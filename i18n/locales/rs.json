@@ -358,5 +358,16 @@
   "settings.importError.invalid": "Taj fajl nije rezervna kopija Sudoku Pro.",
   "settings.importError.empty": "Ta rezervna kopija je prazna.",
   "settings.importError.tooLarge": "Taj fajl je prevelik da bi bio rezervna kopija.",
-  "settings.importError.storage": "Nije moguće sačuvati tu kopiju (memorija je puna ili blokirana). Tvoj trenutni napredak je sačuvan."
+  "settings.importError.storage": "Nije moguće sačuvati tu kopiju (memorija je puna ili blokirana). Tvoj trenutni napredak je sačuvan.",
+  "leaderboard.title": "Rang-liste",
+  "leaderboard.board": "Rang-lista",
+  "leaderboard.dailyToday": "Današnji izazov",
+  "leaderboard.bestTime": "Najbolje vreme: {difficulty}",
+  "leaderboard.global": "Svi",
+  "leaderboard.friends": "Prijatelji",
+  "leaderboard.loading": "Učitavanje…",
+  "leaderboard.error": "Rang-lista trenutno nije dostupna. Pokušaj kasnije.",
+  "leaderboard.empty": "Još nema rezultata. Budi prvi!",
+  "leaderboard.yourRank": "Tvoje mesto: {rank}. ({score})",
+  "leaderboard.notRanked": "Još nisi na ovoj listi."
 }

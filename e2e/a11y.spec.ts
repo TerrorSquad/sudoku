@@ -2,6 +2,8 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 
+import { fakeWavedash } from "./fakeWavedash";
+
 // Automated WCAG 2.x A/AA scan of every screen in both colour schemes. Axe catches roughly a
 // third of real issues (contrast, names, roles, ARIA misuse) — it complements, not replaces,
 // the keyboard tests below.
@@ -48,6 +50,16 @@ for (const scheme of ["light", "dark"] as const) {
         await scan(page, screen);
         await page.reload();
       }
+    });
+
+    test("stats with Wavedash leaderboards", async ({ page }) => {
+      await fakeWavedash(page);
+      await page.goto("/");
+      await page.getByRole("button", { name: "Statistics" }).click();
+      await expect(
+        page.getByRole("region", { name: "Leaderboards" }).getByRole("listitem"),
+      ).toHaveCount(3);
+      await scan(page, "stats (leaderboards)");
     });
 
     test("game screen in colour mode", async ({ page }) => {
