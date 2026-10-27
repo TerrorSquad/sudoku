@@ -2,6 +2,20 @@
 // platform injects `Wavedash` before the app starts; everywhere else (Vercel, the PWA, dev) it is
 // absent and every export here is a no-op. Design: docs/specs/2026-10-27-wavedash-platform-design.md.
 
+import {
+  CLOUD_FILE,
+  META_KEY,
+  SYNC_BACKUP_KEY,
+  decide,
+  hashData,
+  readCloud,
+  type CloudFile,
+  type CloudRead,
+  type SyncMeta,
+} from "./cloudSync";
+import { applyBackup, createBackup } from "./progressBackup";
+import { readJSON, writeJSON } from "./safeJson";
+
 type Response<T> = { success: true; data: T } | { success: false; data: null; message: string };
 
 export interface LeaderboardEntry {
@@ -36,6 +50,11 @@ interface WavedashSDK {
     friendsOnly?: boolean,
   ): Promise<Response<LeaderboardEntry[]>>;
   getMyLeaderboardEntries(id: string): Promise<Response<LeaderboardEntry[]>>;
+  writeLocalFile(path: string, data: Uint8Array): Promise<boolean>;
+  readLocalFile(path: string): Promise<Uint8Array | null>;
+  uploadRemoteFile(path: string): Promise<Response<string>>;
+  downloadRemoteFile(path: string): Promise<Response<string>>;
+  remoteFileExists(path: string): Promise<Response<boolean>>;
 }
 
 const sdk = () => (globalThis as { Wavedash?: WavedashSDK }).Wavedash;
@@ -186,4 +205,105 @@ export async function loadBoard(board: Board, friendsOnly: boolean): Promise<Boa
   ]);
   if (!top.success) throw new Error(top.message);
   return { top: top.data, me: mine.success ? (mine.data[0] ?? null) : null };
+}
+
+// Cloud saves: one file holding every sudoku_v1_* key (the Settings export). Pure decisions in
+// utils/cloudSync.ts.
+
+/** The cloud copy, or null when we can't tell (offline, SDK error, timeout). */
+async function readCloudFile(wd: WavedashSDK): Promise<CloudRead | null> {
+  const exists = await wd.remoteFileExists(CLOUD_FILE);
+  if (!exists.success) return null;
+  if (!exists.data) return { kind: "missing" };
+  if (!(await wd.downloadRemoteFile(CLOUD_FILE)).success) return null;
+  // Downloads land in the SDK's local store; its listings use absolute keys, so try both.
+  const bytes = (await wd.readLocalFile(CLOUD_FILE)) ?? (await wd.readLocalFile(`/${CLOUD_FILE}`));
+  return bytes ? readCloud(new TextDecoder().decode(bytes)) : null;
+}
+
+/** Uploads only start once the boot sync has seen the cloud copy, so they can't overwrite it blind. */
+let canUpload = false;
+let lastUpload = 0;
+let uploadTimer: ReturnType<typeof setTimeout> | undefined;
+
+const keep = (reason: string, backup: unknown) =>
+  writeJSON(SYNC_BACKUP_KEY, { reason, savedAt: Date.now(), backup });
+
+/**
+ * Runs before the app mounts (every composable reads localStorage on setup): restores a newer
+ * cloud copy, or uploads newer local data. Whatever a sync replaces is kept under
+ * SYNC_BACKUP_KEY first; if that can't be written, the sync stops.
+ */
+export async function syncFromCloud(timeoutMs = 5000) {
+  const wd = sdk();
+  if (!wd) return;
+  try {
+    const cloud = await Promise.race([
+      readCloudFile(wd),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+    if (!cloud) return;
+    const local = createBackup(localStorage);
+    const decision = decide(local.data, cloud, readJSON<SyncMeta | null>(META_KEY, null));
+    switch (decision.action) {
+      case "hold":
+        return;
+      case "in-sync":
+        markSynced(decision.file);
+        break;
+      case "restore":
+        if (Object.keys(local.data).length && !keep("restore", local)) return;
+        applyBackup(localStorage, decision.file);
+        markSynced(decision.file);
+        break;
+      case "upload":
+        if (decision.replaced && !keep("conflict", decision.replaced)) return;
+        canUpload = true;
+        // A missing or corrupt cloud file needs the upload even if local matches the last sync.
+        await upload(wd, cloud.kind !== "ok");
+        return;
+    }
+    canUpload = true;
+  } catch (e) {
+    console.warn("Wavedash cloud sync:", e);
+  }
+}
+
+const markSynced = (file: CloudFile) =>
+  writeJSON(META_KEY, { syncedAt: file.updatedAt, syncedHash: hashData(file.data) });
+
+async function upload(wd: WavedashSDK, force = false) {
+  const backup = createBackup(localStorage);
+  if (!Object.keys(backup.data).length) return;
+  const unchanged = hashData(backup.data) === readJSON<SyncMeta | null>(META_KEY, null)?.syncedHash;
+  if (unchanged && !force) return;
+  const file: CloudFile = { ...backup, updatedAt: Date.now() };
+  lastUpload = Date.now();
+  const bytes = new TextEncoder().encode(JSON.stringify(file));
+  const ok =
+    (await wd.writeLocalFile(CLOUD_FILE, bytes)) && (await wd.uploadRemoteFile(CLOUD_FILE)).success;
+  // Over the rate limit the SDK fails fast until its wait passes: no retry, the next checkpoint
+  // (at least FAIL_GAP_MS later) tries again.
+  if (ok) markSynced(file);
+  else lastUpload += FAIL_GAP_MS;
+}
+
+// The limit is 30 uploads a minute; checkpoints stay far below it.
+const MIN_GAP_MS = 30_000;
+const HIDDEN_GAP_MS = 5_000;
+const FAIL_GAP_MS = 60_000;
+
+/**
+ * A checkpoint (a win, the tab hiding): uploads if the data changed since the last sync, at most
+ * once per MIN_GAP_MS, with a trailing upload for changes inside the gap. `hidden` uses a shorter
+ * gap, since a hidden tab may never run the trailing timer.
+ */
+export function saveToCloud(hidden = false) {
+  const wd = sdk();
+  if (!wd || !canUpload) return;
+  clearTimeout(uploadTimer);
+  const run = () => void upload(wd).catch((e) => console.warn("Wavedash cloud save:", e));
+  const wait = lastUpload + (hidden ? HIDDEN_GAP_MS : MIN_GAP_MS) - Date.now();
+  if (wait > 0) uploadTimer = setTimeout(run, wait);
+  else run();
 }

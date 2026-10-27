@@ -116,3 +116,76 @@ test("without Wavedash, Stats has no leaderboards", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Your Statistics" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Leaderboards" })).toHaveCount(0);
 });
+
+// Cloud saves: progress.json is a Settings export plus updatedAt.
+const cloudFile = (data: Record<string, string>, updatedAt: number) =>
+  JSON.stringify({
+    app: "sudoku-pro",
+    version: 1,
+    exportedAt: "2026-10-27T00:00:00Z",
+    data,
+    updatedAt,
+  });
+const scoreJson = (total: number) =>
+  JSON.stringify({ total, gamesWon: 3, perDifficulty: {}, bestTimes: {} });
+const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key);
+const seedLocal = (page: Page, items: Record<string, string>) =>
+  page.addInitScript((entries) => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v);
+  }, items);
+
+test("a fresh device restores its progress from the cloud", async ({ page }) => {
+  await fakeWavedash(page, {
+    remote: { "progress.json": cloudFile({ sudoku_v1_score: scoreJson(4321) }, 1000) },
+  });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(4321);
+  expect(JSON.parse((await stored(page, "sudoku_cloud_meta"))!).syncedAt).toBe(1000);
+  expect((await sdkLog(page)).fileUploads).toBe(0);
+  // Restored before the app mounted, so the screens read it without a reload.
+  await page.getByRole("button", { name: "Statistics" }).click();
+  await expect(page.getByText("4,321").first()).toBeVisible();
+});
+
+test("local progress newer than the last sync is uploaded", async ({ page }) => {
+  const old = cloudFile({ sudoku_v1_score: scoreJson(100) }, 1000);
+  await fakeWavedash(page, { remote: { "progress.json": old } });
+  await seedLocal(page, {
+    sudoku_v1_score: scoreJson(900),
+    sudoku_cloud_meta: JSON.stringify({ syncedAt: 1000, syncedHash: "older" }),
+  });
+  await page.goto("/");
+  await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
+  const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
+  expect(JSON.parse(remote.data.sudoku_v1_score).total).toBe(900);
+  expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(900);
+});
+
+test("a corrupt cloud file never touches local progress", async ({ page }) => {
+  await fakeWavedash(page, { remote: { "progress.json": "{not json" } });
+  await seedLocal(page, { sudoku_v1_score: scoreJson(700) });
+  await page.goto("/");
+  await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
+  expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(700);
+  // The upload replaced the corrupt file with local progress.
+  const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
+  expect(JSON.parse(remote.data.sudoku_v1_score).total).toBe(700);
+});
+
+test("a win uploads progress to the cloud", async ({ page }) => {
+  await fakeWavedash(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.locator("textarea").fill(ALMOST_SOLVED);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
+  const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
+  expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);
+  expect(typeof remote.updatedAt).toBe("number");
+});
