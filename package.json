@@ -1,9 +1,11 @@
 {
-  "name": "nuxt-app",
+  "name": "sudoku-pro",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "nuxt build",
+    "check": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test",
     "dev": "TMPDIR=/tmp nuxt dev",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
@@ -13,27 +15,34 @@
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
     "test": "vitest run",
+    "test:all": "pnpm check && pnpm test:e2e && pnpm visual",
     "test:e2e": "playwright test",
+    "typecheck": "nuxt typecheck",
     "visual": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile",
     "visual:report": "playwright show-report",
-    "visual:update": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile --update-snapshots=changed"
+    "visual:update": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile --update-snapshots=changed",
+    "wavedash": "WAVEDASH=1 NUXT_APP_BASE_URL=./ nuxt generate && wavedash build push",
+    "wavedash:release": "pnpm wavedash | tee /dev/stderr | sed -n 's/^Build ID: //p' | xargs -r -I{} wavedash publish {} --title v$npm_package_version -y"
   },
   "dependencies": {
-    "@nuxt/ui": "^4.8.2",
-    "@nuxtjs/i18n": "^10.4.0",
+    "@nuxt/ui": "^4.12.0",
+    "@nuxtjs/i18n": "^10.6.0",
     "canvas-confetti": "^1.9.4",
-    "nuxt": "^4.4.6",
-    "tailwindcss": "^4.0.0",
-    "vue": "^3.5.34",
-    "vue-router": "^5.0.7"
+    "nuxt": "^4.6.2",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.61.0",
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^26.6.5",
     "@vite-pwa/nuxt": "^1.1.1",
-    "oxfmt": "^0.54.0",
-    "oxlint": "^1.69.0",
-    "vitest": "^4.1.8"
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5",
+    "vue-tsc": "^3.3.13"
   }
 }

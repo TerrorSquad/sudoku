@@ -77,7 +77,7 @@ test("the numpad's remaining counts don't reveal wrong entries when highlighting
   page,
 }) => {
   const pad = (digit: string) =>
-    page.getByTestId("numpad").getByRole("button", { name: digit, exact: true });
+    page.getByTestId("numpad").getByRole("button", { name: new RegExp(`^${digit}(,|$)`) });
 
   // Highlighting on: a wrong 3 leaves the 3 button available (its count only follows correct digits).
   await page.goto("/");

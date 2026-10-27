@@ -41,8 +41,8 @@ function flashFor(r: number, c: number): FlashCell | undefined {
 function isSameValue(r: number, c: number): boolean {
   if (props.activeDigit) return props.currentBoard[r]![c] === props.activeDigit;
   if (!props.selectedCell) return false;
-  const selVal = props.currentBoard[props.selectedCell.r][props.selectedCell.c];
-  return selVal !== 0 && props.currentBoard[r][c] === selVal;
+  const selVal = props.currentBoard[props.selectedCell.r]![props.selectedCell.c]!;
+  return selVal !== 0 && props.currentBoard[r]![c] === selVal;
 }
 
 // An empty cell where the armed digit doesn't already appear in its row, column or box.
@@ -83,9 +83,9 @@ function hasConflict(r: number, c: number): boolean {
         :key="`${r}-${c}`"
         :row="r"
         :col="c"
-        :value="currentBoard[r][c]"
-        :is-initial="initialBoard[r][c] !== 0"
-        :is-correct="currentBoard[r][c] === solvedBoard[r][c]"
+        :value="currentBoard[r]![c]!"
+        :is-initial="initialBoard[r]![c]! !== 0"
+        :is-correct="currentBoard[r]![c]! === solvedBoard[r]![c]!"
         :has-conflict="hasConflict(r, c)"
         :is-selected="
           (selectedCell?.r === r && selectedCell?.c === c) ||
@@ -93,7 +93,7 @@ function hasConflict(r: number, c: number): boolean {
         "
         :is-highlighted="isCellHighlighted(r, c)"
         :is-same-value="isSameValue(r, c)"
-        :notes="notesBoard[r][c]"
+        :notes="notesBoard[r]![c]!"
         :color-mode="colorMode"
         :is-flashing="!!flashFor(r, c)"
         :flash-delay="flashFor(r, c)?.delay ?? 0"

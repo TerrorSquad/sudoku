@@ -7,7 +7,7 @@ const FIVE_BLANKS =
 
 const cell = (page: Page, n: number) => page.locator(`${BOARD} [data-cell]`).nth(n);
 const pad = (page: Page, digit: string) =>
-  page.getByTestId("numpad").getByRole("button", { name: digit, exact: true });
+  page.getByTestId("numpad").getByRole("button", { name: new RegExp(`^${digit}(,|$)`) });
 
 async function startDigitFirstGame(page: Page) {
   await page.goto("/");

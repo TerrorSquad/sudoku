@@ -13,6 +13,9 @@ export default defineNuxtConfig({
     ],
   },
   pwa: {
+    // Off on Wavedash: it runs the game in a cross-origin frame, where a worker would at best do nothing
+    // and at worst keep serving an old build after a new publish.
+    disable: !!process.env.WAVEDASH,
     registerType: "autoUpdate",
     manifest: {
       name: "Sudoku Pro",

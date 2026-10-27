@@ -1,0 +1,4 @@
+# Wavedash (https://docs.wavedash.com): `pnpm wavedash` builds and uploads; `pnpm wavedash:release` also publishes.
+game_id = "j9746e6yx6t1ynwpbtrcevasx58h3j5h"
+upload_dir = ".output/public"
+entrypoint = "index.html"

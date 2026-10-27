@@ -6,7 +6,10 @@
     "suspicious": "error",
     "perf": "error"
   },
-  "rules": {},
+  "rules": {
+    // Composables define their functions inside and return them, which is the Vue pattern this rule flags.
+    "unicorn/consistent-function-scoping": "off"
+  },
   "overrides": [
     {
       // Solver tests branch on which logical state a randomized seed landed
