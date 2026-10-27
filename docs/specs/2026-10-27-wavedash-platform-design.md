@@ -50,27 +50,26 @@ Wavedash SDK now provides one for players on Wavedash. SDK reference: https://do
   - `best-time-<difficulty>` for beginner … master: ascending (0), time in seconds (1).
   - `daily-<YYYY-MM-DD>` (`useDailyPuzzle().todayKey()`, the key `markComplete` uses): ascending,
     time in seconds. A Daily posts here instead of its difficulty's board.
-  - `lifetime-score`: descending (1), numeric (0), the `useScore` total after the win.
+  - No lifetime-score board: custom puzzles count towards that total, so an imported near-solved
+    grid would farm it.
   - Custom puzzles (and anything outside the six difficulties) post nothing; Academy practice never
-    reaches the scoring branch. A zero time skips the timed board.
+    reaches the scoring branch. A zero time posts nothing.
 - **Submitting.** `triggerLocalModal` calls `submitWin` right after `score.record`. The pure
   `scoresFor(win)` picks the boards (unit-tested); each upload is
   `uploadLeaderboardScore(id, score, keepBest = true, undefined, { mistakes, hints })`.
   Fire-and-forget: failures only `console.warn`, the local stats are already saved.
 - **Showing.** `LeaderboardPanel.vue` at the top of Stats, only when `hasWavedash()`: a board
-  picker (lifetime, today's Daily, best time per difficulty), Global / Friends toggle
+  picker (today's Daily, the default, then best time per difficulty), Global / Friends toggle
   (`listLeaderboardEntries(id, 0, 10, friendsOnly)`), the player's row highlighted, and "Your
   rank" from `getMyLeaderboardEntries`. Loading, error and empty states; strings in `en` and `rs`.
   Stale responses from a previous selection are ignored.
 - **Tests.** `scoresFor` in `app/tests/wavedash.test.ts`; `e2e/wavedash.spec.ts` covers a medium
-  win posting two scores, a custom win posting none, the panel's tabs and board switch, and no
+  win posting its time, a custom win posting none, the panel's tabs and board switch, and no
   panel off Wavedash; `e2e/a11y.spec.ts` scans Stats with the panel in both schemes. The fake SDK
   lives in `e2e/fakeWavedash.ts`.
 - **Known gaps.** Boards created from game code may count as player-created and start hidden on
   the game page: check the portal's Leaderboards tab after the first scores and make them visible.
-  There is no documented anti-cheat, and the lifetime total includes custom-puzzle wins (it is the
-  same total the game shows), so that board is the easiest to inflate; drop it or post a total
-  without custom wins if that matters.
+  There is no documented anti-cheat: scores are as honest as the client.
 
 ## Phase 3: cloud saves (not yet implemented)
 

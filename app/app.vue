@@ -246,7 +246,6 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         mistakes: mistakes.value,
         hints: hintsUsed.value,
         daily: isDailyMode.value ? dailyPuzzle.todayKey() : null,
-        lifetimeTotal: result.stats.total,
       });
       lastScore.value = breakdown;
       isNewBest.value = result.isNewBest;

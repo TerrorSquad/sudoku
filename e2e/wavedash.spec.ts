@@ -39,9 +39,7 @@ test("a win reports its new achievements and stores them", async ({ page }) => {
 const grid = (s: string) =>
   Array.from({ length: 9 }, (_, r) => Array.from(s.slice(r * 9, r * 9 + 9), Number));
 
-test("a win posts its time and the lifetime total; custom puzzles post nothing", async ({
-  page,
-}) => {
+test("a win posts its time; custom puzzles post nothing", async ({ page }) => {
   await fakeWavedash(page);
   const solved = ALMOST_SOLVED.replace("0", "2");
   const puzzle = solved.slice(0, 40) + "0" + solved.slice(41);
@@ -72,11 +70,10 @@ test("a win posts its time and the lifetime total; custom puzzles post nothing",
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
 
-  await expect.poll(async () => (await sdkLog(page)).uploads.length).toBe(2);
-  const [time, lifetime] = (await sdkLog(page)).uploads.toSorted();
+  await expect.poll(async () => (await sdkLog(page)).uploads.length).toBe(1);
+  const [time] = (await sdkLog(page)).uploads;
   expect(time).toEqual(["best-time-medium", expect.any(Number), true, { mistakes: 0, hints: 0 }]);
   expect(time![1]).toBeGreaterThanOrEqual(42);
-  expect(lifetime).toEqual(["lifetime-score", expect.any(Number), true, { mistakes: 0, hints: 0 }]);
 
   // A custom puzzle's win reaches the same code but posts nothing more.
   await page.getByRole("button", { name: "Close" }).click();
@@ -87,7 +84,7 @@ test("a win posts its time and the lifetime total; custom puzzles post nothing",
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
   await page.waitForTimeout(300);
-  expect((await sdkLog(page)).uploads).toHaveLength(2);
+  expect((await sdkLog(page)).uploads).toHaveLength(1);
 });
 
 test("Stats shows the leaderboards, with Global and Friends tabs and your rank", async ({
@@ -98,11 +95,11 @@ test("Stats shows the leaderboards, with Global and Friends tabs and your rank",
   await page.getByRole("button", { name: "Statistics" }).click();
   const panel = page.getByRole("region", { name: "Leaderboards" });
   await expect(panel.getByRole("listitem")).toHaveText([
-    /Ada\s*1,800/,
-    /You\s*1,500/,
-    /Bo\s*1,200/,
+    /Ada\s*30:00/,
+    /You\s*25:00/,
+    /Bo\s*20:00/,
   ]);
-  await expect(panel).toContainText("Your rank: #2 (1,500)");
+  await expect(panel).toContainText("Your rank: #2 (25:00)");
 
   await panel.getByRole("button", { name: "Friends" }).click();
   await expect(panel.getByRole("listitem")).toHaveText([/Friendly Fox/, /You/]);

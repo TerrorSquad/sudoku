@@ -4,7 +4,6 @@ import { computed, ref, watch } from "vue";
 import { localDateKey } from "../composables/useDailyPuzzle";
 import {
   DIFFICULTIES,
-  LIFETIME_BOARD,
   dailyBoard,
   loadBoard,
   timeBoard,
@@ -16,7 +15,6 @@ const { t } = useI18n();
 
 // Shown only on Wavedash (StatsScreen checks hasWavedash()).
 const boards = computed<{ board: Board; label: string }[]>(() => [
-  { board: LIFETIME_BOARD, label: t("leaderboard.lifetime") },
   { board: dailyBoard(localDateKey()), label: t("leaderboard.dailyToday") },
   ...DIFFICULTIES.map((d) => ({
     board: timeBoard(d),
@@ -24,9 +22,9 @@ const boards = computed<{ board: Board; label: string }[]>(() => [
   })),
 ]);
 
-const selected = ref(LIFETIME_BOARD.name);
+const selected = ref(dailyBoard(localDateKey()).name);
 const friendsOnly = ref(false);
-const view = ref<(BoardView & { kind: Board["kind"] }) | null>(null);
+const view = ref<BoardView | null>(null);
 const error = ref(false);
 const loading = ref(false);
 
@@ -41,7 +39,7 @@ watch(
     error.value = false;
     try {
       const result = await loadBoard(board, friends);
-      if (mine === request) view.value = { ...result, kind: board.kind };
+      if (mine === request) view.value = result;
     } catch {
       if (mine === request) error.value = true;
     } finally {
@@ -52,7 +50,6 @@ watch(
 );
 
 function formatScore(score: number): string {
-  if (view.value?.kind === "score") return score.toLocaleString();
   const m = Math.floor(score / 60);
   return `${m}:${String(score % 60).padStart(2, "0")}`;
 }

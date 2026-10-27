@@ -107,19 +107,14 @@ export function reportAchievements(ids: string[]) {
 /** True on Wavedash, where the SDK is injected; the leaderboard UI shows only then. */
 export const hasWavedash = () => !!sdk();
 
-// Leaderboards. Times sort ascending and show as m:ss; the lifetime score sorts descending.
-export type BoardKind = "time" | "score";
+// Leaderboards: every board is a time, sorted ascending and shown as m:ss. There is no lifetime
+// score board, since custom puzzles count towards that total and would make it trivial to farm.
 export interface Board {
   name: string;
-  kind: BoardKind;
 }
 export const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert", "master"] as const;
-export const LIFETIME_BOARD: Board = { name: "lifetime-score", kind: "score" };
-export const dailyBoard = (dateKey: string): Board => ({ name: `daily-${dateKey}`, kind: "time" });
-export const timeBoard = (difficulty: string): Board => ({
-  name: `best-time-${difficulty}`,
-  kind: "time",
-});
+export const dailyBoard = (dateKey: string): Board => ({ name: `daily-${dateKey}` });
+export const timeBoard = (difficulty: string): Board => ({ name: `best-time-${difficulty}` });
 
 export interface Win {
   difficulty: string;
@@ -128,20 +123,16 @@ export interface Win {
   hints: number;
   /** The Daily's date key (`localDateKey`), or null for a regular game. */
   daily: string | null;
-  lifetimeTotal: number;
 }
 
 /**
- * The scores a win posts: its time on the Daily's board or its difficulty's, plus the lifetime
- * total. Custom puzzles (and anything outside the six difficulties) post nothing.
+ * The scores a win posts: its time on the Daily's board, or else on its difficulty's. Custom
+ * puzzles (and anything outside the six difficulties) post nothing.
  */
 export function scoresFor(win: Win): { board: Board; score: number }[] {
   if (!(DIFFICULTIES as readonly string[]).includes(win.difficulty)) return [];
   const timed = win.daily ? dailyBoard(win.daily) : timeBoard(win.difficulty);
-  return [
-    ...(win.seconds > 0 ? [{ board: timed, score: win.seconds }] : []),
-    { board: LIFETIME_BOARD, score: win.lifetimeTotal },
-  ];
+  return win.seconds > 0 ? [{ board: timed, score: win.seconds }] : [];
 }
 
 const boardIds = new Map<string, Promise<string | null>>();
@@ -150,9 +141,8 @@ const boardIds = new Map<string, Promise<string | null>>();
 function boardId(wd: WavedashSDK, board: Board): Promise<string | null> {
   let id = boardIds.get(board.name);
   if (!id) {
-    // 0 = ascending + 1 = time in seconds; 1 = descending + 0 = numeric.
-    const order = board.kind === "time" ? [0, 1] : [1, 0];
-    id = wd.getOrCreateLeaderboard(board.name, order[0] as 0 | 1, order[1] as 0 | 1).then(
+    // 0 = ascending, 1 = time in seconds.
+    id = wd.getOrCreateLeaderboard(board.name, 0, 1).then(
       (r) => (r.success ? r.data.id : null),
       () => null,
     );

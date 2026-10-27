@@ -361,7 +361,6 @@
   "settings.importError.storage": "Nije moguće sačuvati tu kopiju (memorija je puna ili blokirana). Tvoj trenutni napredak je sačuvan.",
   "leaderboard.title": "Rang-liste",
   "leaderboard.board": "Rang-lista",
-  "leaderboard.lifetime": "Ukupan skor",
   "leaderboard.dailyToday": "Današnji izazov",
   "leaderboard.bestTime": "Najbolje vreme: {difficulty}",
   "leaderboard.global": "Svi",

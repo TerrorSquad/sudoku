@@ -361,7 +361,6 @@
   "settings.importError.storage": "Couldn't save that backup (storage is full or blocked). Your current progress was kept.",
   "leaderboard.title": "Leaderboards",
   "leaderboard.board": "Leaderboard",
-  "leaderboard.lifetime": "Lifetime score",
   "leaderboard.dailyToday": "Today's Daily",
   "leaderboard.bestTime": "Best time: {difficulty}",
   "leaderboard.global": "Global",

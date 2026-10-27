@@ -53,22 +53,18 @@ describe("wavedash", () => {
     mistakes: 1,
     hints: 0,
     daily: null,
-    lifetimeTotal: 900,
   };
 
-  it("a regular win posts its time to its difficulty and the lifetime total", () => {
-    expect(scoresFor(win)).toEqual([
-      { board: { name: "best-time-hard", kind: "time" }, score: 300 },
-      { board: { name: "lifetime-score", kind: "score" }, score: 900 },
-    ]);
+  it("a regular win posts its time to its difficulty's board", () => {
+    expect(scoresFor(win)).toEqual([{ board: { name: "best-time-hard" }, score: 300 }]);
   });
 
   it("a Daily posts its time to that day's board instead", () => {
     expect(scoresFor({ ...win, daily: "2026-10-27" })[0]!.board.name).toBe("daily-2026-10-27");
   });
 
-  it("custom puzzles post nothing, and a zero time skips the timed board", () => {
+  it("custom puzzles and a zero time post nothing", () => {
     expect(scoresFor({ ...win, difficulty: "custom" })).toEqual([]);
-    expect(scoresFor({ ...win, seconds: 0 }).map((s) => s.board.name)).toEqual(["lifetime-score"]);
+    expect(scoresFor({ ...win, seconds: 0 })).toEqual([]);
   });
 });
