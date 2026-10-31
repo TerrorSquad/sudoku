@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "budget": "node scripts/budget.mjs",
     "build": "nuxt build",
     "check": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm test",
     "dev": "TMPDIR=/tmp nuxt dev",
@@ -21,7 +22,7 @@
     "visual": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile",
     "visual:report": "playwright show-report",
     "visual:update": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile --update-snapshots=changed",
-    "wavedash": "WAVEDASH=1 NUXT_APP_BASE_URL=./ nuxt generate && wavedash build push",
+    "wavedash": "WAVEDASH=1 NUXT_APP_BASE_URL=./ nuxt generate && node scripts/budget.mjs && wavedash build push",
     "wavedash:release": "pnpm wavedash | tee /dev/stderr | sed -n 's/^Build ID: //p' | xargs -r -I{} wavedash publish {} --title v$npm_package_version -y"
   },
   "dependencies": {
