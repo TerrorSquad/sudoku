@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import * as uiLocales from "@nuxt/ui/locale";
+// Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
+import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
@@ -36,7 +37,6 @@ import { digitLabel } from "./utils/sudokuColors";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
-const localeMap = uiLocales as Record<string, typeof uiLocales.en>;
 
 useHead(() => ({
   title: t("menu.title"),
@@ -766,7 +766,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <UApp :locale="localeMap[locale] ?? uiLocales.en">
+  <UApp :locale="uiLocale">
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-zinc-50 text-zinc-900 antialiased dark:bg-[#0d141b] dark:text-zinc-100"
     >

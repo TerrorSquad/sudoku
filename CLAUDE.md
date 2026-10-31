@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package manager
 
-This repo uses **pnpm** (`pnpm-lock.yaml`), not npm or yarn. Running `npm install` against it will produce peer-dependency resolution errors — always use `pnpm`.
+This repo uses **pnpm** (`pnpm-lock.yaml`), not npm or yarn. Running `npm install` against it will produce peer-dependency resolution errors — always use `pnpm`. A hook in `.claude/settings.json` blocks `npm` and `npx` commands.
 
 ## Commands
 
@@ -90,6 +90,14 @@ pnpm visual:report   # open the expected/actual/diff report
 ```
 
 Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers. Baselines are rendered on macOS and are not run in CI (font rasterization differs on Linux), so regenerate them locally.
+
+### Performance
+
+Laptops with integrated graphics (an i7 + Iris Xe) are the low end. Measure before changing anything, against a production build (`WAVEDASH=1 NUXT_APP_BASE_URL=./ pnpm generate`, served statically), never the dev server, with Playwright's Chromium at 1536×864 @1.25 and CDP `Emulation.setCPUThrottlingRate` 4 (a slow laptop). Play a real game: select cells, place digits, notes, undo, a hint, a win. CDP `Performance.getMetrics` splits main-thread time into script, style and layout.
+
+- Moves cost style and paint, not script (3% of a move's CPU). A transition on the 81 cells restyled and repainted the board for every frame of a highlight change (45% of a move); `e2e/perf.spec.ts` checks that a move starts none. Animate one element, not every cell.
+- Generation runs on the main thread when a game starts. `countFlat` in `sudokuCore.ts` is the hot loop (typed arrays, most-constrained cell first); digging a cell asks for a second solution with that cell's digit banned instead of counting to two. A generator change must keep every seeded board: the daily pin in `dailyPuzzle.test.ts` fails otherwise.
+- `pnpm wavedash` runs `scripts/budget.mjs`, which fails when the shipped JS or CSS outgrows its budget. Nuxt UI is the usual culprit: `import * as` from `@nuxt/ui/locale` bundled 67 locales (228 KB), and without `ui.experimental.componentDetection` it themes every component (120 KB of CSS). Find what grew with source maps (`sourcemap: { client: true }`) and `pnpm dlx source-map-explorer`.
 
 ### Testing split
 
