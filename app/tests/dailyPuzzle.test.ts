@@ -19,6 +19,13 @@ describe("daily puzzle", () => {
     expect(a1).not.toEqual(b);
   });
 
+  it("a day's board never changes, so everyone keeps the same daily across releases", () => {
+    // A generator change that alters the board reshuffles today's daily for players mid-day.
+    expect(generateDailyBoard("2026-06-11").flat().join("")).toMatchInlineSnapshot(
+      `"109500000260310974080026053076002000851073269023000500090001000300200690000000030"`,
+    );
+  });
+
   it("daily board has a unique solution", () => {
     expect(hasUniqueSolution(generateDailyBoard("2026-06-11"))).toBe(true);
   });

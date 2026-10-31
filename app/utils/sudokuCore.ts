@@ -126,62 +126,83 @@ function buildMasks(board: Grid): Masks | null {
  * Uses MRV (fewest-candidates-first) backtracking with bitmasks.
  */
 export function countSolutions(board: Grid, limit = 2): number {
-  const b = cloneGrid(board);
-  const masks = buildMasks(b);
-  if (!masks) return 0;
-  const { rows, cols, boxes } = masks;
+  return countFlat(Uint8Array.from(board.flat()), limit);
+}
+
+// Unit of each of the 81 cells, and the bit count of every 9-bit mask: the solver's hot loop
+// only indexes typed arrays.
+const ROW = Uint8Array.from({ length: 81 }, (_, i) => Math.floor(i / 9));
+const COL = Uint8Array.from({ length: 81 }, (_, i) => i % 9);
+const BOX = Uint8Array.from({ length: 81 }, (_, i) => boxIndex(ROW[i]!, COL[i]!));
+const BITS = new Uint8Array(512);
+for (let m = 1; m < 512; m++) BITS[m] = BITS[m >> 1]! + (m & 1);
+
+/**
+ * `countSolutions` on a flat board (81 digits, 0 = empty). `banCell`/`banBit` keep one cell
+ * off one digit, which is how `generatePuzzle` asks "is there another solution?" in one search.
+ */
+function countFlat(cells: Uint8Array, limit: number, banCell = -1, banBit = 0): number {
+  const rows = new Uint16Array(9);
+  const cols = new Uint16Array(9);
+  const boxes = new Uint16Array(9);
+  const empty: number[] = [];
+  for (let i = 0; i < 81; i++) {
+    const v = cells[i]!;
+    if (v === 0) {
+      empty.push(i);
+      continue;
+    }
+    const bit = 1 << (v - 1);
+    if ((rows[ROW[i]!]! | cols[COL[i]!]! | boxes[BOX[i]!]!) & bit) return 0;
+    rows[ROW[i]!]! |= bit;
+    cols[COL[i]!]! |= bit;
+    boxes[BOX[i]!]! |= bit;
+  }
   let count = 0;
 
-  function search(): void {
-    if (count >= limit) return;
-
-    let bestR = -1;
-    let bestC = -1;
-    let bestMask = 0;
-    let bestCount = 10;
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        if (b[r]![c] !== 0) continue;
-        const mask = ~(rows[r]! | cols[c]! | boxes[boxIndex(r, c)]!) & 0x1ff;
-        const n = popcount(mask);
-        if (n === 0) return; // dead end
-        if (n < bestCount) {
-          bestCount = n;
-          bestR = r;
-          bestC = c;
-          bestMask = mask;
-          if (n === 1) {
-            r = 9;
-            break;
-          }
-        }
-      }
-    }
-
-    if (bestR === -1) {
+  // Fill empty[depth..] most-constrained cell first; the cell chosen is swapped to `depth`.
+  function search(depth: number): void {
+    if (depth === empty.length) {
       count++;
       return;
     }
-
-    const bIdx = boxIndex(bestR, bestC);
-    for (let v = 0; v < 9; v++) {
-      const bit = 1 << v;
-      if (!(bestMask & bit)) continue;
-      b[bestR]![bestC] = v + 1;
-      rows[bestR]! |= bit;
-      cols[bestC]! |= bit;
-      boxes[bIdx]! |= bit;
-      search();
-      b[bestR]![bestC] = 0;
-      rows[bestR]! &= ~bit;
-      cols[bestC]! &= ~bit;
-      boxes[bIdx]! &= ~bit;
+    let best = -1;
+    let bestMask = 0;
+    let bestCount = 10;
+    for (let k = depth; k < empty.length; k++) {
+      const i = empty[k]!;
+      let mask = ~(rows[ROW[i]!]! | cols[COL[i]!]! | boxes[BOX[i]!]!) & 0x1ff;
+      if (i === banCell) mask &= ~banBit;
+      const n = BITS[mask]!;
+      if (n === 0) return; // dead end
+      if (n < bestCount) {
+        bestCount = n;
+        best = k;
+        bestMask = mask;
+        if (n === 1) break;
+      }
+    }
+    const i = empty[best]!;
+    empty[best] = empty[depth]!;
+    empty[depth] = i;
+    const r = ROW[i]!;
+    const c = COL[i]!;
+    const b = BOX[i]!;
+    for (let m = bestMask; m; m &= m - 1) {
+      const bit = m & -m;
+      rows[r]! |= bit;
+      cols[c]! |= bit;
+      boxes[b]! |= bit;
+      search(depth + 1);
+      rows[r]! ^= bit;
+      cols[c]! ^= bit;
+      boxes[b]! ^= bit;
       if (count >= limit) return;
     }
   }
 
-  search();
-  return count;
+  search(0);
+  return Math.min(count, limit);
 }
 
 export function hasUniqueSolution(board: Grid): boolean {
@@ -288,6 +309,7 @@ export interface GeneratedPuzzle {
 export function generatePuzzle(removeTarget: number, rng: Rng = Math.random): GeneratedPuzzle {
   const solution = generateSolvedGrid(rng);
   const puzzle = cloneGrid(solution);
+  const cells = Uint8Array.from(solution.flat());
   const order = shuffled(
     Array.from({ length: 81 }, (_, i) => i),
     rng,
@@ -298,12 +320,15 @@ export function generatePuzzle(removeTarget: number, rng: Rng = Math.random): Ge
     if (removed >= removeTarget) break;
     const r = Math.floor(idx / 9);
     const c = idx % 9;
-    const saved = puzzle[r]![c]!;
-    puzzle[r]![c] = 0;
-    if (hasUniqueSolution(puzzle)) {
+    // The board is unique so far, so any second solution after the dig must put another digit
+    // here: one search with this cell's digit banned answers it.
+    const saved = cells[idx]!;
+    cells[idx] = 0;
+    if (countFlat(cells, 1, idx, 1 << (saved - 1)) === 0) {
+      puzzle[r]![c] = 0;
       removed++;
     } else {
-      puzzle[r]![c] = saved;
+      cells[idx] = saved;
     }
   }
 
