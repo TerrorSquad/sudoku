@@ -5,6 +5,8 @@ export default defineNuxtConfig({
   devtools: { enabled: !process.env.VISUAL_REGRESSION },
   modules: ["@nuxt/ui", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
   css: ["~/assets/css/main.css"],
+  // Generate theme CSS only for the Nuxt UI components the app uses: 260 KB of CSS otherwise.
+  ui: { experimental: { componentDetection: true } },
   // Self-hosted by @nuxt/fonts at build time, so the PWA keeps them offline.
   fonts: {
     families: [
