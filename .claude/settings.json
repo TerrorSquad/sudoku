@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r .tool_input.command | grep -qE '(^|[;&|(] *)(npm|npx) ' && { echo 'Use pnpm (pnpm exec, pnpm dlx), never npm or npx: see CLAUDE.md.' >&2; exit 2; } || exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

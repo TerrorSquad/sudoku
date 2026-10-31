@@ -25,7 +25,8 @@ logs
 
 # Claude Code — local permissions and skill symlinks
 # skills-lock.json is committed as the source of truth; run `caveman install` to restore
-.claude/
+.claude/*
+!.claude/settings.json
 .agents/
 .playwright-mcp/
 
