@@ -129,7 +129,7 @@ const cellClasses = computed(() => {
     @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold transition-all duration-100 select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
+    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
   >
     <div
       v-if="value !== 0 && colorMode"
