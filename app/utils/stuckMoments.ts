@@ -7,6 +7,8 @@ import { nextHint, type DigitAt, type SolveMove, type TechniqueId } from "./sudo
 /** A correct digit going in (by the player, a hint or Finish), stamped with the game clock (s). */
 export interface Placement extends DigitAt {
   t: number;
+  /** Already on the board when the log began (an older save): when it went in is unknown. */
+  restored?: true;
 }
 
 export interface StuckMoment {
@@ -33,7 +35,7 @@ export function stuckMoments(
 ): StuckMoment[] {
   return log
     .map((p, i) => ({ i, at: i ? log[i - 1]!.t : 0, gap: p.t - (i ? log[i - 1]!.t : 0) }))
-    .filter((w) => w.gap >= minGap)
+    .filter((w) => w.gap >= minGap && !log[w.i]!.restored)
     .toSorted((a, b) => b.gap - a.gap)
     .slice(0, max)
     .toSorted((a, b) => a.i - b.i)
@@ -42,6 +44,53 @@ export function stuckMoments(
       for (const p of log.slice(0, i)) board[p.r]![p.c] = p.num;
       return { at, gap, technique: techniqueAt(board) };
     });
+}
+
+/** The entries whose digit is still on the board: an undone or erased placement drops out. */
+export function onBoard(log: Placement[], board: Grid): Placement[] {
+  return log.filter((p) => board[p.r]?.[p.c] === p.num);
+}
+
+const isCell = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 8;
+function isPlacement(x: unknown): x is Placement {
+  const p = x as Partial<Placement> | null;
+  return (
+    typeof p === "object" &&
+    p !== null &&
+    isCell(p.r) &&
+    isCell(p.c) &&
+    Number.isInteger(p.num) &&
+    p.num! >= 1 &&
+    p.num! <= 9 &&
+    Number.isFinite(p.t) &&
+    (p.restored === undefined || p.restored === true)
+  );
+}
+
+/**
+ * The log a saved game resumes with: its own when well-formed, else (a save from before the log,
+ * or one damaged in an import) every correct digit already played, marked `restored` at the
+ * save's clock so the time before them is never read as a wait.
+ */
+export function restorePlacements(save: {
+  placements?: unknown;
+  initialBoard: Grid;
+  currentBoard: Grid;
+  solvedBoard: Grid;
+  timerSeconds: number;
+}): Placement[] {
+  const { placements, initialBoard, currentBoard, solvedBoard, timerSeconds } = save;
+  if (Array.isArray(placements) && placements.every(isPlacement))
+    return onBoard(placements, currentBoard);
+  const t = Number.isFinite(timerSeconds) ? timerSeconds : 0;
+  const log: Placement[] = [];
+  currentBoard.forEach((row, r) =>
+    row.forEach((num, c) => {
+      if (num && !initialBoard[r]![c] && num === solvedBoard[r]![c])
+        log.push({ r, c, num, t, restored: true });
+    }),
+  );
+  return log;
 }
 
 // The hardest step on the solver's way to its next placement: past an elimination the easiest

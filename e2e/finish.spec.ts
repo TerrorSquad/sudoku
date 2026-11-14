@@ -3,13 +3,18 @@ import { test, expect, type Page } from "@playwright/test";
 const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
 const SOLUTION =
   "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
-const solved = [...Array(9)].map((_, r) => [...SOLUTION.slice(r * 9, r * 9 + 9)].map(Number));
+const solved = [...Array(9)].map((_, r) =>
+  SOLUTION.slice(r * 9, r * 9 + 9)
+    .split("")
+    .map(Number),
+);
 // The givens: the first four columns blank (a singles-only board).
 const initialBoard = solved.map((row) => row.map((v, c) => (c < 4 ? 0 : v)));
 
 // A medium save with the first `left` cells of the first columns (top to bottom) still empty, the
-// rest played one every 5 s except for a 90 s wait before the eleventh digit (at 0:50).
-async function seed(page: Page, { left = 5, zen = false } = {}) {
+// rest played one every 5 s except for a 90 s wait before the eleventh digit (at 0:50). A `legacy`
+// save predates the placement log.
+async function seed(page: Page, { left = 5, zen = false, legacy = false, highlight = true } = {}) {
   const open = (r: number, c: number) => c * 9 + r < left;
   const currentBoard = solved.map((row, r) => row.map((v, c) => (c < 4 && open(r, c) ? 0 : v)));
   const placements: { r: number; c: number; num: number; t: number }[] = [];
@@ -21,18 +26,27 @@ async function seed(page: Page, { left = 5, zen = false } = {}) {
       placements.push({ r, c, num: solved[r]![c]!, t });
     }
   }
-  await page.addInitScript((save) => localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(save)), {
-    currentBoard,
-    initialBoard,
-    solvedBoard: solved,
-    notesBoard: [...Array(9)].map(() => [...Array(9)].map(() => Array(10).fill(false))),
-    difficulty: "medium",
-    timerSeconds: t + 20,
-    mistakes: 0,
-    zen,
-    placements,
-    savedAt: 1_700_000_000_000,
-  });
+  await page.addInitScript(
+    ({ save, errors }) => {
+      localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(save));
+      localStorage.setItem("sudoku_v1_pref_highlight_errors", JSON.stringify(errors));
+    },
+    {
+      errors: highlight,
+      save: {
+        currentBoard,
+        initialBoard,
+        solvedBoard: solved,
+        notesBoard: [...Array(9)].map(() => [...Array(9)].map(() => Array(10).fill(false))),
+        difficulty: "medium",
+        timerSeconds: t + 20,
+        mistakes: 0,
+        zen,
+        placements: legacy ? undefined : placements,
+        savedAt: 1_700_000_000_000,
+      },
+    },
+  );
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Medium/ }).click();
@@ -128,4 +142,41 @@ test("with reduced motion every cell fills at once", async ({ page }) => {
   const times = await fills();
   expect(times).toHaveLength(5);
   expect(times.at(-1)! - times[0]!).toBeLessThan(50);
+});
+
+test("an older save without a placement log invents no stuck moment", async ({ page }) => {
+  await seed(page, { legacy: true });
+  await finish(page).click();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await expect(page.getByTestId("stuck-moments")).toBeHidden();
+});
+
+test("with mistakes hidden Finish isn't offered: it would tell which entries are right", async ({
+  page,
+}) => {
+  await seed(page, { highlight: false });
+  await expect(empties(page)).toHaveCount(5);
+  await expect(finish(page)).toBeHidden();
+});
+
+test("nothing touches the board mid-cascade, and the win is recorded once", async ({ page }) => {
+  await seed(page, { left: 9 });
+  await page.locator(`${BOARD} [data-cell="0-0"]`).click();
+  await page.keyboard.press("5"); // correct, and it gives Undo something to undo
+  const undo = page.getByRole("button", { name: "Undo" });
+  await expect(undo).toBeEnabled();
+
+  await finish(page).click();
+  await undo.focus();
+  expect(await undo.evaluate((b) => b === document.activeElement)).toBe(false); // inert
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("h");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await expect(empties(page)).toHaveCount(0);
+  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem("sudoku_v1_score")!));
+  expect(stats.gamesWon).toBe(1);
 });

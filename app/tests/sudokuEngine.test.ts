@@ -5,10 +5,11 @@ vi.mock("vue-i18n", () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
+import type { Grid } from "../types/sudoku";
+
 import { useSudokuEngine } from "../composables/useSudokuEngine";
 import { solveBoard } from "../utils/sudokuCore";
 import { nextHint } from "../utils/sudokuGrader";
-import type { Grid } from "../types/sudoku";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
   let engine: ReturnType<typeof useSudokuEngine>;
@@ -201,11 +202,19 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     it("never trusts a note that crossed out the answer", () => {
       const { r, c } = { r: 4, c: 1 };
       const answer = engine.solvedBoard.value[r]![c]!;
-      note(r, c, [1, 2, 5].filter((n) => n !== answer));
+      note(
+        r,
+        c,
+        [1, 2, 5].filter((n) => n !== answer),
+      );
       engine.triggerComplexHint(status, body);
       const move = engine.activeMove.value!;
-      if (move.placement) expect(move.placement.num).toBe(engine.solvedBoard.value[move.placement.r]![move.placement.c]);
-      for (const e of move.eliminations) expect(e.num).not.toBe(engine.solvedBoard.value[e.r]![e.c]);
+      if (move.placement)
+        expect(move.placement.num).toBe(
+          engine.solvedBoard.value[move.placement.r]![move.placement.c],
+        );
+      for (const e of move.eliminations)
+        expect(e.num).not.toBe(engine.solvedBoard.value[e.r]![e.c]);
     });
 
     it("points at a wrong entry before any technique, and applying it clears the cell", () => {

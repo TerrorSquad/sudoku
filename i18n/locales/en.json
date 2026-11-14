@@ -346,7 +346,7 @@
   "settings.highlightErrors": "Highlight mistakes",
   "settings.highlightErrorsHint": "When off, wrong entries aren't marked and can't end the game. They still count toward your score.",
   "settings.hintStyle": "Hint style",
-  "settings.hintStyleHint": "A nudge names the technique and where to look before explaining.",
+  "settings.hintStyleHint": "A nudge names the technique and where to look before explaining. It counts as a hint.",
   "settings.hintFull": "Full explanation",
   "settings.hintNudge": "Nudge first",
   "settings.haptics": "Vibration",

@@ -405,6 +405,7 @@ export interface SolveMove {
   eliminations: DigitAt[]; // candidates removed (elimination techniques)
   triggers: CellRC[]; // the pattern cells that justify the move
   digits: number[]; // the digit(s) the technique is about
+  unit?: BoardUnit["kind"]; // a hidden single: the kind of unit it is the only spot in
 }
 
 const rc = (i: number): CellRC => ({ r: Math.floor(i / 9), c: i % 9 });
@@ -429,7 +430,7 @@ function findNakedSingleMove(s: SolveState): SolveMove | null {
 }
 
 function findHiddenSingleMove(s: SolveState): SolveMove | null {
-  for (const unit of ALL_UNITS) {
+  for (const [u, unit] of ALL_UNITS.entries()) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
       let only = -1;
@@ -449,6 +450,7 @@ function findHiddenSingleMove(s: SolveState): SolveMove | null {
           eliminations: [],
           triggers,
           digits: [v],
+          unit: u < 9 ? "row" : u < 18 ? "col" : "box",
         };
       }
     }
@@ -722,7 +724,10 @@ const sees = (a: number, b: number) => a !== b && PEERS[a]!.includes(b);
 const boxOf = (i: number) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
 
 /** Every unit where digit v has exactly two candidates: its strong links, as cell pairs. */
-function strongLinks(s: SolveState, v: number): { kind: "row" | "col" | "box"; a: number; b: number }[] {
+function strongLinks(
+  s: SolveState,
+  v: number,
+): { kind: "row" | "col" | "box"; a: number; b: number }[] {
   const b = bit(v);
   const links: { kind: "row" | "col" | "box"; a: number; b: number }[] = [];
   for (const [kind, units] of [
@@ -775,7 +780,8 @@ function findTurbotMove(s: SolveState, kite: boolean): SolveMove | null {
                 continue;
             } else {
               // Near ends on one line across the links, far ends off it (else it's an X-Wing).
-              const line = l1.kind === "row" ? (i: number) => i % 9 : (i: number) => Math.floor(i / 9);
+              const line =
+                l1.kind === "row" ? (i: number) => i % 9 : (i: number) => Math.floor(i / 9);
               if (line(n1) !== line(n2) || line(f1) === line(f2)) continue;
             }
             const elims = seeingAll(s, v, [f1, f2]).filter((i) => i !== n1 && i !== n2);
@@ -858,7 +864,10 @@ function findSimpleColoringMove(s: SolveState): SolveMove | null {
         }
       }
       if (chain.length < 4) continue; // shorter chains are pointing/claiming in disguise
-      const side = [chain.filter((i) => color.get(i) === 0), chain.filter((i) => color.get(i) === 1)];
+      const side = [
+        chain.filter((i) => color.get(i) === 0),
+        chain.filter((i) => color.get(i) === 1),
+      ];
       let elims: number[] = [];
       for (const cells of side) {
         if (cells.some((a) => cells.some((b) => sees(a, b)))) elims = cells;
@@ -893,7 +902,9 @@ function findFinnedXWingMove(s: SolveState): SolveMove | null {
     const cell = (u: number, p: number) => (baseIsRow ? idx(u, p) : idx(p, u));
     for (let v = 1; v <= 9; v++) {
       const pos = Array.from({ length: 9 }, (_, u) =>
-        [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => s.board[cell(u, p)] === 0 && s.cands[cell(u, p)]! & bit(v)),
+        [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(
+          (p) => s.board[cell(u, p)] === 0 && s.cands[cell(u, p)]! & bit(v),
+        ),
       );
       for (let u1 = 0; u1 < 9; u1++) {
         for (let u2 = u1 + 1; u2 < 9; u2++) {
@@ -904,7 +915,9 @@ function findFinnedXWingMove(s: SolveState): SolveMove | null {
           for (const [p1, p2] of combos(union, 2) as Iterable<[number, number]>) {
             const isCover = (p: number) => p === p1 || p === p2;
             if (!pos[u1]!.some(isCover) || !pos[u2]!.some(isCover)) continue;
-            const fins = [u1, u2].flatMap((u) => pos[u]!.filter((p) => !isCover(p)).map((p) => cell(u, p)));
+            const fins = [u1, u2].flatMap((u) =>
+              pos[u]!.filter((p) => !isCover(p)).map((p) => cell(u, p)),
+            );
             const finBox = boxOf(fins[0]!);
             if (fins.some((i) => boxOf(i) !== finBox)) continue;
             const elims: DigitAt[] = [];
@@ -1082,6 +1095,7 @@ export interface BoardUnit extends CellRC {
  */
 export function patternUnit(move: SolveMove): BoardUnit {
   const act = move.placement ?? move.eliminations[0] ?? move.triggers[0] ?? { r: 0, c: 0 };
+  if (move.unit) return { kind: move.unit, r: act.r, c: act.c };
   const cells: CellRC[] = [...move.triggers, ...move.eliminations, act];
   const kind = cells.every((p) => p.r === act.r)
     ? "row"

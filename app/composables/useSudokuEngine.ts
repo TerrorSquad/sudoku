@@ -109,7 +109,8 @@ export function useSudokuEngine(
       for (let c = 0; c < 9; c++) {
         const val = currentBoard.value[r]![c]!;
         const sol = solvedBoard.value[r]![c]!;
-        if (initialBoard.value[r]![c] === 0 && val !== 0 && sol !== 0 && val !== sol) return { r, c };
+        if (initialBoard.value[r]![c] === 0 && val !== 0 && sol !== 0 && val !== sol)
+          return { r, c };
       }
     }
     return null;
@@ -126,8 +127,16 @@ export function useSudokuEngine(
       targetCell: { r, c },
       wrongEntry: true,
       steps: [
-        { label: t("hint.wrong.findLabel"), description: t("hint.wrong.desc", params), highlightCoords: [] },
-        { label: t("hint.wrong.clearLabel"), description: t("hint.wrong.clearStep", params), highlightCoords: [] },
+        {
+          label: t("hint.wrong.findLabel"),
+          description: t("hint.wrong.desc", params),
+          highlightCoords: [],
+        },
+        {
+          label: t("hint.wrong.clearLabel"),
+          description: t("hint.wrong.clearStep", params),
+          highlightCoords: [],
+        },
       ],
     };
   }
@@ -415,7 +424,9 @@ export function useSudokuEngine(
         const notes = notesBoard.value[r]![c]!;
         if (!notes.some(Boolean)) {
           for (const n of baseCands[r]![c]!) {
-            notes[n] = !appliedEliminations.value.some((p) => p.r === r && p.c === c && p.num === n);
+            notes[n] = !appliedEliminations.value.some(
+              (p) => p.r === r && p.c === c && p.num === n,
+            );
           }
         }
         notes[num] = false;

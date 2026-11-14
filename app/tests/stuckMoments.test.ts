@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
+import { onBoard, restorePlacements, stuckMoments, type Placement } from "../utils/stuckMoments";
 import { techniquesRequired } from "../utils/sudokuGrader";
-import { stuckMoments, type Placement } from "../utils/stuckMoments";
 
 const toGrid = (rows: string[]) => rows.map((r) => [...r].map((c) => (c === "." ? 0 : Number(c))));
 
@@ -71,5 +71,51 @@ describe("stuckMoments", () => {
     expect(stuckMoments(PUZZLE, log)).toEqual([
       { at: log.at(-2)!.t, gap: 301, technique: "naked-single" },
     ]);
+  });
+});
+
+describe("restorePlacements", () => {
+  // Halfway through: the first 20 empty cells played, one wrong digit sitting in the 21st.
+  const empties: [number, number][] = [];
+  PUZZLE.forEach((row, r) => row.forEach((v, c) => v === 0 && empties.push([r, c])));
+  const currentBoard = PUZZLE.map((row) => [...row]);
+  for (const [r, c] of empties.slice(0, 20)) currentBoard[r]![c] = SOLUTION[r]![c]!;
+  const [wr, wc] = empties[20]!;
+  currentBoard[wr]![wc] = (SOLUTION[wr]![wc]! % 9) + 1;
+  const save = { initialBoard: PUZZLE, currentBoard, solvedBoard: SOLUTION, timerSeconds: 600 };
+
+  it("rebuilds an older save's log from the board, with no invented wait", () => {
+    const log = restorePlacements(save);
+    expect(log).toHaveLength(20); // the wrong digit is left out
+    expect(log.every((p) => p.t === 600 && p.restored)).toBe(true);
+    expect(stuckMoments(PUZZLE, log)).toEqual([]);
+    // A wait after resuming still counts, from the save's clock.
+    const [r, c] = empties[21]!;
+    expect(stuckMoments(PUZZLE, [...log, { r, c, num: SOLUTION[r]![c]!, t: 700 }])).toMatchObject([
+      { at: 600, gap: 100 },
+    ]);
+  });
+
+  it("rebuilds a malformed log instead of trusting it", () => {
+    for (const placements of [
+      "nope",
+      [{ r: 9, c: 0, num: 1, t: 1 }],
+      [{ r: 0, c: 0, num: 0, t: 1 }],
+      [{ r: 0, c: 0, num: 5, t: Number.NaN }],
+      [{ r: 0.5, c: 0, num: 5, t: 1 }],
+      [null],
+    ])
+      expect(restorePlacements({ ...save, placements })).toHaveLength(20);
+  });
+
+  it("keeps a well-formed log, minus digits no longer on the board", () => {
+    const [r, c] = empties[0]!;
+    const [r2, c2] = empties[30]!;
+    const placements = [
+      { r, c, num: SOLUTION[r]![c]!, t: 5 },
+      { r: r2, c: c2, num: SOLUTION[r2]![c2]!, t: 9 }, // since undone
+    ];
+    expect(restorePlacements({ ...save, placements })).toEqual([placements[0]]);
+    expect(onBoard(placements, currentBoard)).toEqual([placements[0]]);
   });
 });

@@ -34,9 +34,15 @@ import { takePuzzle } from "./utils/puzzlePool";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
+import {
+  onBoard,
+  restorePlacements,
+  stuckMoments,
+  type Placement,
+  type StuckMoment,
+} from "./utils/stuckMoments";
 import { digitLabel } from "./utils/sudokuColors";
 import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
-import { stuckMoments, type Placement, type StuckMoment } from "./utils/stuckMoments";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
@@ -174,6 +180,15 @@ const stuck = ref<StuckMoment[]>([]);
 function logPlacement({ r, c, num }: DigitAt) {
   placements.value.push({ r, c, num, t: timer.timerSeconds.value });
 }
+// Undo, erase or an overwrite takes a digit back out: it leaves the log too.
+watch(
+  currentBoard,
+  (board) => {
+    if (placements.value.some((p) => board[p.r]![p.c] !== p.num))
+      placements.value = onBoard(placements.value, board);
+  },
+  { deep: true },
+);
 
 const flashCells = ref<FlashCell[]>([]);
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -257,6 +272,7 @@ watch(
 );
 
 function triggerLocalModal(title: string, message: string, win: boolean = false) {
+  if (showModal.value) return; // a game ends once: never record a win twice
   modalTitle.value = title;
   modalMessage.value = message;
   isWinState.value = win;
@@ -266,7 +282,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   const practised = practiceTechnique.value;
   neededTechs.value =
     win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
-  stuck.value = win && !gameZen.value ? stuckMoments(initialBoard.value, placements.value) : [];
+  stuck.value = [];
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -323,6 +339,12 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       animateScoreCountUp(breakdown.total);
       saveToCloud();
     }
+    // After the score is safe: a damaged log must cost the stuck moments, not the win.
+    try {
+      if (!gameZen.value) stuck.value = stuckMoments(initialBoard.value, placements.value);
+    } catch {
+      stuck.value = [];
+    }
     confetti({
       disableForReducedMotion: true,
       particleCount: 160,
@@ -378,7 +400,7 @@ function resumeSavedGame(s: GameSave) {
   hintsUsed.value = s.hintsUsed ?? 0;
   gameZen.value = s.zen ?? false;
   techniqueLog.value = [];
-  placements.value = s.placements ?? [];
+  placements.value = restorePlacements(s);
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;
   timer.startTimer();
@@ -586,7 +608,10 @@ function handleInputNumber(num: number) {
             });
           }
           if (!gameZen.value && mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
-            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg", { n: mistakeLimit.value }));
+            triggerLocalModal(
+              t("modal.gameOver"),
+              t("modal.gameOverMsg", { n: mistakeLimit.value }),
+            );
           }
         }
       } else {
@@ -614,7 +639,7 @@ function handleNextStep() {
       if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
       techStats.record(tech);
     }
-    hintsUsed.value++;
+    chargeHint();
     if (placed) cue("place", placed);
     if (checkWinCondition()) {
       triggerLocalModal(
@@ -644,11 +669,26 @@ const nudgeUnit = computed(() => {
   return t(`hint.nudge.unit.${u.kind}`, { n });
 });
 const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
-watch(currentBoard, () => (nudge.value = null), { deep: true });
+// Set once a nudge has counted as a hint: explaining and applying that same step is free.
+let nudgePaid = false;
+watch(
+  currentBoard,
+  () => {
+    nudge.value = null;
+    nudgePaid = false;
+  },
+  { deep: true },
+);
 watch(currentScreen, () => {
   nudge.value = null;
+  nudgePaid = false;
   finishing.value = false;
 });
+// Counts one hint per step, whether it ended at the nudge or went on to the explanation.
+function chargeHint() {
+  if (nudgePaid) nudgePaid = false;
+  else hintsUsed.value++;
+}
 
 // The nudge's technique opens its lesson; the game waits, paused, until the Academy's Back.
 function openNudgeLesson() {
@@ -671,6 +711,8 @@ function handleTriggerHint() {
       nudge.value = peek.move
         ? { unit: patternUnit(peek.move), technique: peek.move.technique }
         : { unit: { kind: "box", ...peek.at }, technique: null };
+      hintsUsed.value++;
+      nudgePaid = true;
       cue("hint");
       return;
     }
@@ -685,7 +727,7 @@ function handleInstantApplyHint() {
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placement = engine.activeMove.value?.placement;
   const placed = placement?.num;
-  hintsUsed.value++;
+  chargeHint();
   if (placement) logPlacement(placement);
   if (tech) {
     if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
@@ -705,12 +747,13 @@ function handleInstantApplyHint() {
 
 // Finish: with only a few cells left, all of them plain singles from here (by the solver, not the
 // answer key) and no wrong digit on the board, offer to fill them in. A normal win, not a hint.
+// Not with "Highlight mistakes" off: whether it shows would tell which entries are right.
 const FINISH_MAX_EMPTY = 9;
 const FINISH_STEP_MS = 80;
 // True from the press until the player leaves the game screen: input is blocked meanwhile.
 const finishing = ref(false);
 const finishPath = computed(() => {
-  if (currentScreen.value !== "game" || showModal.value) return null;
+  if (currentScreen.value !== "game" || showModal.value || !highlightErrors.value) return null;
   const empty = currentBoard.value.flat().filter((v) => v === 0).length;
   if (!empty || empty > FINISH_MAX_EMPTY || engine.findWrongEntry()) return null;
   return singlesPath(currentBoard.value);
@@ -731,6 +774,8 @@ async function handleFinish() {
   const token = startToken; // bumped if the player exits mid-cascade
   const instant = matchMedia("(prefers-reduced-motion: reduce)").matches;
   for (const [i, p] of path.entries()) {
+    // A cascade: each cell waits for the one before it.
+    // oxlint-disable-next-line eslint/no-await-in-loop
     if (i && !instant) await new Promise((done) => setTimeout(done, FINISH_STEP_MS));
     if (token !== startToken) return;
     currentBoard.value[p.r]![p.c] = p.num;
@@ -739,7 +784,13 @@ async function handleFinish() {
     if (!instant || !i) cue("place", p.num);
     runFlash([...flashCells.value, { r: p.r, c: p.c, delay: 0 }]);
   }
-  if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
+  if (checkWinCondition()) {
+    triggerLocalModal(t("modal.win"), winMessage(), true);
+  } else {
+    // Shouldn't happen (the board is inert meanwhile), but never leave the game locked.
+    finishing.value = false;
+    timer.startTimer();
+  }
 }
 
 function handleAutoFillNotes() {
@@ -762,7 +813,8 @@ function handleAutoFillNotes() {
 // Only today's Daily can be resumed; one saved on an earlier day is dropped.
 function handleStartDaily() {
   const saved = gameSave.loadDifficulty("daily");
-  if (saved?.daily === dailyPuzzle.todayKey()) pendingResume.value = { save: saved, level: "daily" };
+  if (saved?.daily === dailyPuzzle.todayKey())
+    pendingResume.value = { save: saved, level: "daily" };
   else startDaily();
 }
 
@@ -919,7 +971,12 @@ function handleKeyDown(e: KeyboardEvent) {
 
 // Switching tabs/apps shouldn't quietly burn time against the player's score.
 function handlePageHidden() {
-  if (document.hidden && currentScreen.value === "game" && !timer.isPaused.value && !finishing.value) {
+  if (
+    document.hidden &&
+    currentScreen.value === "game" &&
+    !timer.isPaused.value &&
+    !finishing.value
+  ) {
     timer.togglePause();
   }
 }
@@ -955,7 +1012,10 @@ onUnmounted(() => {
             :title="$t('menu.settings')"
             class="tile absolute top-4 right-4 grid h-11 w-11 place-items-center text-zinc-600 dark:text-zinc-300"
           >
-            <AppIcon class="h-5 w-5" path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <AppIcon
+              class="h-5 w-5"
+              path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </button>
 
           <div class="text-center">
@@ -975,7 +1035,9 @@ onUnmounted(() => {
                   >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
                 >
               </p>
-              <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <div
+                class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+              >
                 <div
                   class="h-full rounded-full bg-violet-600"
                   :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
@@ -1002,10 +1064,20 @@ onUnmounted(() => {
               >
                 <rect x="1" y="1" width="88" height="88" rx="6" stroke-width="2.5" />
                 <path d="M31 1v88M59 1v88M1 31h88M1 59h88" stroke-width="1.2" />
-                <g fill="currentColor" stroke="none" font-family="var(--font-game)" font-weight="800" font-size="19" text-anchor="middle">
-                  <text x="16" y="23">5</text><text x="44" y="23">3</text>
-                  <text x="16" y="51">6</text><text x="74" y="51">9</text>
-                  <text x="44" y="79">8</text><text x="74" y="79">1</text>
+                <g
+                  fill="currentColor"
+                  stroke="none"
+                  font-family="var(--font-game)"
+                  font-weight="800"
+                  font-size="19"
+                  text-anchor="middle"
+                >
+                  <text x="16" y="23">5</text>
+                  <text x="44" y="23">3</text>
+                  <text x="16" y="51">6</text>
+                  <text x="74" y="51">9</text>
+                  <text x="44" y="79">8</text>
+                  <text x="74" y="79">1</text>
                 </g>
               </svg>
               <AppIcon
@@ -1013,9 +1085,10 @@ onUnmounted(() => {
                 path="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
               <span>
-                <span class="block font-display text-2xl leading-tight font-extrabold sm:text-3xl">{{
-                  $t("menu.start")
-                }}</span>
+                <span
+                  class="block font-display text-2xl leading-tight font-extrabold sm:text-3xl"
+                  >{{ $t("menu.start") }}</span
+                >
                 <span class="mt-1 block text-xs font-medium opacity-80">{{
                   $t("menu.startHint")
                 }}</span>
@@ -1028,7 +1101,10 @@ onUnmounted(() => {
               :class="dailyRecord ? '' : 'tile-amber'"
               class="tile menu-cell"
             >
-              <AppIcon class="h-5 w-5" path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <AppIcon
+                class="h-5 w-5"
+                path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
               <span>
                 <span class="block">{{
                   dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
@@ -1047,22 +1123,34 @@ onUnmounted(() => {
               "
               class="tile menu-cell"
             >
-              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              <AppIcon
+                class="h-5 w-5 text-violet-600 dark:text-violet-300"
+                path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
               <span>{{ $t("menu.academy") }}</span>
             </button>
 
             <button @click="currentScreen = 'stats'" class="tile menu-cell">
-              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <AppIcon
+                class="h-5 w-5 text-violet-600 dark:text-violet-300"
+                path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
               <span>{{ $t("menu.stats") }}</span>
             </button>
 
             <button @click="currentScreen = 'achievements'" class="tile menu-cell">
-              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+              <AppIcon
+                class="h-5 w-5 text-violet-600 dark:text-violet-300"
+                path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
+              />
               <span>{{ $t("menu.achievements") }}</span>
             </button>
 
             <button @click="currentScreen = 'custom-import'" class="tile menu-cell">
-              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <AppIcon
+                class="h-5 w-5 text-violet-600 dark:text-violet-300"
+                path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
               <span>{{ $t("menu.customPuzzle") }}</span>
             </button>
           </nav>
@@ -1080,6 +1168,7 @@ onUnmounted(() => {
         <SudokuAcademy
           v-else-if="currentScreen === 'academy'"
           :focus="academyFocus"
+          :in-game="academyFromGame"
           @back-to-menu="currentScreen = academyFromGame ? 'game' : 'menu'"
           @practice="handlePractice"
         />
@@ -1195,7 +1284,7 @@ onUnmounted(() => {
               :best-time="bestTime ? timer.formatTime(bestTime) : ''"
               :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
-:difficulty="difficultyLabel"
+              :difficulty="difficultyLabel"
               @toggle-pause="!finishing && timer.togglePause()"
               @exit-game="exitToMenu"
             />
@@ -1227,20 +1316,8 @@ onUnmounted(() => {
               </button>
             </div>
 
-            <!-- Finish: the cells left are all singles, so offer to fill them in -->
-            <div
-              v-if="(finishPath || finishing) && !timer.isPaused.value"
-              class="modal-pop flex items-center justify-between gap-3 border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200"
-            >
-              <p>{{ $t("game.finishBody") }}</p>
-              <button
-                @click="handleFinish"
-                :disabled="finishing"
-                class="tile tile-apply shrink-0 px-4 py-1.5 text-xs font-bold disabled:opacity-60"
-              >
-                {{ $t("game.finish") }}
-              </button>
-            </div>
+            <!-- Announces the Finish tile (in the controls) when it appears -->
+            <p role="status" class="sr-only">{{ finishPath ? $t("game.finishBody") : "" }}</p>
 
             <!-- Why-wrong explainer -->
             <div
@@ -1257,7 +1334,8 @@ onUnmounted(() => {
               </button>
             </div>
 
-            <div class="relative flex flex-col gap-3">
+            <!-- Finish fills the board by itself: inert holds every tap and key until the win. -->
+            <div class="relative flex flex-col gap-3" :inert="finishing">
               <SudokuGrid
                 :current-board="currentBoard"
                 :initial-board="initialBoard"
@@ -1288,6 +1366,8 @@ onUnmounted(() => {
                   @toggle-notes="notesMode = !notesMode"
                   @trigger-hint="handleTriggerHint"
                   @auto-notes="handleAutoFillNotes"
+                  :can-finish="(!!finishPath || finishing) && !timer.isPaused.value"
+                  @finish="handleFinish"
                 />
 
                 <Numpad
@@ -1299,13 +1379,10 @@ onUnmounted(() => {
                 />
               </div>
 
-              <!-- Finish fills the board by itself: hold every tap until the win. -->
-              <div v-if="finishing" class="absolute inset-0 z-20" />
-
               <!-- PAUSE OVERLAY -->
               <div
                 v-if="timer.isPaused.value"
-                class="pause-overlay absolute top-0 left-0 -right-1 -bottom-1 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
+                class="pause-overlay absolute top-0 -right-1 -bottom-1 left-0 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
               >
                 <AppIcon
                   class="h-12 w-12 text-zinc-500"
@@ -1327,7 +1404,10 @@ onUnmounted(() => {
                   "
                   class="flex items-center gap-2 text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
                 >
-                  <AppIcon class="h-4 w-4" path="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <AppIcon
+                    class="h-4 w-4"
+                    path="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                   {{ $t("menu.settings") }}
                 </button>
               </div>
@@ -1374,7 +1454,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto border-t-[6px] !rounded-2xl p-6 text-center shadow-2xl"
+          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[6px] p-6 text-center shadow-2xl"
           :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1465,7 +1545,9 @@ onUnmounted(() => {
                 >
               </div>
               <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
-                <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{ $t("modal.scoreLifetime") }}</span>
+                <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{
+                  $t("modal.scoreLifetime")
+                }}</span>
                 <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
                   lifetimeTotal
                 }}</span>
@@ -1568,10 +1650,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <button
-            @click="handleModalClose"
-            class="tile tile-primary w-full py-3 text-sm font-bold"
-          >
+          <button @click="handleModalClose" class="tile tile-primary w-full py-3 text-sm font-bold">
             {{ $t("modal.close") }}
           </button>
         </div>
@@ -1583,7 +1662,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl !border-t-violet-500 p-6 text-center shadow-2xl"
+          class="modal-pop panel w-full max-w-sm !rounded-2xl border-t-[6px] !border-t-violet-500 p-6 text-center shadow-2xl"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ $t("resume.title") }}
@@ -1603,10 +1682,7 @@ onUnmounted(() => {
             >
               {{ $t("resume.continue") }}
             </button>
-            <button
-              @click="handleResumeDecline"
-              class="tile w-full py-3 text-sm font-bold"
-            >
+            <button @click="handleResumeDecline" class="tile w-full py-3 text-sm font-bold">
               {{ $t("resume.newGame") }}
             </button>
             <button
