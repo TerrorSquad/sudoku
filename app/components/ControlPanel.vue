@@ -1,5 +1,11 @@
 <script setup lang="ts">
-defineProps<{ notesMode: boolean; canUndo: boolean; canRedo: boolean }>();
+defineProps<{
+  notesMode: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Only singles are left: Finish takes Fill notes' place (no use for notes by then). */
+  canFinish?: boolean;
+}>();
 
 defineEmits<{
   (e: "undo"): void;
@@ -8,6 +14,7 @@ defineEmits<{
   (e: "toggle-notes"): void;
   (e: "trigger-hint"): void;
   (e: "auto-notes"): void;
+  (e: "finish"): void;
 }>();
 </script>
 
@@ -82,7 +89,9 @@ defineEmits<{
       />
       <span
         class="text-[10px] font-semibold whitespace-nowrap 3xl:text-xs"
-        :class="notesMode ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-600 dark:text-zinc-400'"
+        :class="
+          notesMode ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-600 dark:text-zinc-400'
+        "
         >{{ $t("controls.notes") }}</span
       >
     </button>
@@ -103,8 +112,22 @@ defineEmits<{
       >
     </button>
 
+    <!-- Finish, in Fill notes' place so nothing moves when it appears -->
+    <button
+      v-if="canFinish"
+      @click="$emit('finish')"
+      :title="$t('game.finishBody')"
+      class="modal-pop tile tile-apply flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
+    >
+      <AppIcon class="h-5 w-5 3xl:h-7 3xl:w-7" path="M5 13l4 4L19 7" />
+      <span class="text-[10px] font-bold whitespace-nowrap 3xl:text-xs">{{
+        $t("game.finish")
+      }}</span>
+    </button>
+
     <!-- Auto-fill notes -->
     <button
+      v-else
       @click="$emit('auto-notes')"
       :title="`${$t('controls.auto')} (F)`"
       class="tile flex flex-col items-center justify-center gap-1 py-4 text-violet-600 3xl:gap-2 3xl:py-4 lg:py-3 dark:text-violet-300"

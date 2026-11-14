@@ -8,8 +8,12 @@ import {
   gradePuzzle,
   generateGradedPuzzle,
   neededTechniques,
+  nextHint,
+  patternUnit,
+  singlesPath,
   techniquesRequired,
   STUCK,
+  type SolveMove,
 } from "../utils/sudokuGrader";
 
 const grade = (d: string, seed: number) => generateGradedPuzzle(d, makeRng(seed)).grade;
@@ -101,5 +105,112 @@ describe("sudokuGrader — neededTechniques", () => {
   it("is empty when logic alone can't finish the board", () => {
     const empty: Grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(neededTechniques(empty)).toEqual([]);
+  });
+});
+
+describe("sudokuGrader — singlesPath", () => {
+  it("fills a board that singles finish, in an order the solver can follow", () => {
+    const { puzzle, solution } = generatePuzzle(20, makeRng(5));
+    const path = singlesPath(puzzle)!;
+    expect(path).toHaveLength(puzzle.flat().filter((v) => v === 0).length);
+    for (const { r, c, num } of path) expect(num).toBe(solution[r]![c]);
+  });
+
+  it("is empty for a full board and null when singles run dry", () => {
+    const { solution } = generatePuzzle(20, makeRng(5));
+    expect(singlesPath(solution)).toEqual([]);
+    expect(singlesPath(generateGradedPuzzle("expert", makeRng(7)).puzzle)).toBeNull();
+  });
+});
+
+describe("sudokuGrader — patternUnit", () => {
+  const move = (m: Partial<SolveMove>): SolveMove => ({
+    technique: "naked-pair",
+    tier: 2,
+    eliminations: [],
+    triggers: [],
+    digits: [1],
+    ...m,
+  });
+
+  it("names the one row, column or box that holds the whole pattern", () => {
+    const pairInRow = move({
+      triggers: [
+        { r: 3, c: 0 },
+        { r: 3, c: 7 },
+      ],
+      eliminations: [{ r: 3, c: 4, num: 1 }],
+    });
+    expect(patternUnit(pairInRow)).toEqual({ kind: "row", r: 3, c: 4 });
+    const pairInCol = move({
+      triggers: [
+        { r: 0, c: 5 },
+        { r: 8, c: 5 },
+      ],
+      eliminations: [{ r: 4, c: 5, num: 1 }],
+    });
+    expect(patternUnit(pairInCol).kind).toBe("col");
+    const claiming = move({
+      technique: "box-line",
+      triggers: [
+        { r: 0, c: 0 },
+        { r: 0, c: 1 },
+      ],
+      eliminations: [{ r: 2, c: 2, num: 1 }],
+    });
+    expect(patternUnit(claiming)).toEqual({ kind: "box", r: 2, c: 2 });
+  });
+
+  it("uses the unit a hidden single was found in", () => {
+    const lone = move({
+      technique: "hidden-single",
+      placement: { r: 2, c: 5, num: 4 },
+      unit: "col",
+    });
+    expect(patternUnit(lone)).toEqual({ kind: "col", r: 2, c: 5 });
+
+    // Real hidden singles: the named unit has no other spot for the digit.
+    let seen = 0;
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const board = generatePuzzle(50, makeRng(seed)).puzzle;
+      const m = nextHint(board);
+      if (m?.technique !== "hidden-single") continue;
+      seen++;
+      const u = patternUnit(m);
+      expect(u.kind).toBe(m.unit);
+      const { r, c, num } = m.placement!;
+      const cells = [...Array(81).keys()]
+        .map((i) => ({ r: Math.floor(i / 9), c: i % 9 }))
+        .filter((p) =>
+          u.kind === "row"
+            ? p.r === r
+            : u.kind === "col"
+              ? p.c === c
+              : Math.floor(p.r / 3) === Math.floor(r / 3) &&
+                Math.floor(p.c / 3) === Math.floor(c / 3),
+        );
+      const fits = (p: { r: number; c: number }) =>
+        board[p.r]![p.c] === 0 &&
+        [...Array(9).keys()].every((k) => board[p.r]![k] !== num && board[k]![p.c] !== num) &&
+        [...Array(9).keys()].every(
+          (k) => board[p.r - (p.r % 3) + Math.floor(k / 3)]![p.c - (p.c % 3) + (k % 3)] !== num,
+        );
+      expect(cells.filter(fits)).toEqual([{ r, c }]);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it("falls back to the box the move acts in when the pattern spans units", () => {
+    const xWing = move({
+      technique: "x-wing",
+      triggers: [
+        { r: 1, c: 1 },
+        { r: 1, c: 7 },
+        { r: 6, c: 1 },
+        { r: 6, c: 7 },
+      ],
+      eliminations: [{ r: 4, c: 7, num: 1 }],
+    });
+    expect(patternUnit(xWing)).toEqual({ kind: "box", r: 4, c: 7 });
   });
 });

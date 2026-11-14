@@ -109,7 +109,8 @@ export function useSudokuEngine(
       for (let c = 0; c < 9; c++) {
         const val = currentBoard.value[r]![c]!;
         const sol = solvedBoard.value[r]![c]!;
-        if (initialBoard.value[r]![c] === 0 && val !== 0 && sol !== 0 && val !== sol) return { r, c };
+        if (initialBoard.value[r]![c] === 0 && val !== 0 && sol !== 0 && val !== sol)
+          return { r, c };
       }
     }
     return null;
@@ -126,8 +127,16 @@ export function useSudokuEngine(
       targetCell: { r, c },
       wrongEntry: true,
       steps: [
-        { label: t("hint.wrong.findLabel"), description: t("hint.wrong.desc", params), highlightCoords: [] },
-        { label: t("hint.wrong.clearLabel"), description: t("hint.wrong.clearStep", params), highlightCoords: [] },
+        {
+          label: t("hint.wrong.findLabel"),
+          description: t("hint.wrong.desc", params),
+          highlightCoords: [],
+        },
+        {
+          label: t("hint.wrong.clearLabel"),
+          description: t("hint.wrong.clearStep", params),
+          highlightCoords: [],
+        },
       ],
     };
   }
@@ -342,13 +351,16 @@ export function useSudokuEngine(
     };
   }
 
-  /** Where the next hint would act (a placement, else the first removal), without starting it. */
-  function peekHintCell(): CellCoord | null {
+  /**
+   * The next hint without starting it: where it acts (a placement, else the first removal) and
+   * its move, which is null when the hint is about a wrong entry.
+   */
+  function peekHint(): { at: CellCoord; move: SolveMove | null } | null {
     const wrong = findWrongEntry();
-    if (wrong) return wrong;
+    if (wrong) return { at: wrong, move: null };
     const move = nextUsefulHint();
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
-    return at ? { r: at.r, c: at.c } : null;
+    return at && move ? { at: { r: at.r, c: at.c }, move } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
@@ -412,7 +424,9 @@ export function useSudokuEngine(
         const notes = notesBoard.value[r]![c]!;
         if (!notes.some(Boolean)) {
           for (const n of baseCands[r]![c]!) {
-            notes[n] = !appliedEliminations.value.some((p) => p.r === r && p.c === c && p.num === n);
+            notes[n] = !appliedEliminations.value.some(
+              (p) => p.r === r && p.c === c && p.num === n,
+            );
           }
         }
         notes[num] = false;
@@ -495,7 +509,8 @@ export function useSudokuEngine(
     boardHistory,
     checkWinCondition,
     triggerComplexHint,
-    peekHintCell,
+    peekHint,
+    findWrongEntry,
     nextHintStep,
     prevHintStep,
     applyComplexHint,

@@ -17,7 +17,7 @@ import {
 import ExampleGrid from "./ExampleGrid.vue";
 
 // Opens on this technique's lesson, expanded and scrolled to (the win screen links here).
-const props = defineProps<{ focus?: TechniqueId | null }>();
+const props = defineProps<{ focus?: TechniqueId | null; inGame?: boolean }>();
 
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
@@ -182,7 +182,7 @@ const total = computed(() => techniques.length);
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
-        :aria-label="$t('menu.back')"
+        :aria-label="$t(inGame ? 'settings.backToGame' : 'menu.back')"
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
@@ -190,7 +190,7 @@ const total = computed(() => techniques.length);
           class="h-4 w-4"
           path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
         />
-        <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
+        <span class="hidden sm:inline">{{ $t(inGame ? "settings.backToGame" : "menu.back") }}</span>
       </button>
       <div class="min-w-0 flex-1">
         <h1
@@ -428,7 +428,7 @@ const total = computed(() => techniques.length);
           @click="emit('back-to-menu')"
           class="tile mt-6 px-8 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-300"
         >
-          {{ $t("academy.back") }}
+          {{ $t(inGame ? "settings.backToGame" : "academy.back") }}
         </button>
       </div>
     </div>
