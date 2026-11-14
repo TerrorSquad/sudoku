@@ -249,7 +249,11 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalMessage.value = message;
   isWinState.value = win;
   // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
-  neededTechs.value = win ? neededTechniques(initialBoard.value) : [];
+  const needed = win ? neededTechniques(initialBoard.value) : [];
+  // A drill's pre-filled notes are invisible to the grader, so lead with what was practised.
+  const practised = practiceTechnique.value;
+  neededTechs.value =
+    win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -1365,7 +1369,7 @@ onUnmounted(() => {
                   :key="id"
                   @click="openLesson(id)"
                   :title="$t('modal.openLesson')"
-                  class="border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
                 >
                   {{ $t(`hint.move.${id}.name`) }}
                 </button>

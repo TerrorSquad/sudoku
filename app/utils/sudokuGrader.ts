@@ -1083,27 +1083,28 @@ export function techniquesRequired(puzzle: Grid): Set<TechniqueId> | null {
 }
 
 // findNextMove's dispatch order, easiest first (pointing and box-line share one finder).
-const SOLVER_ORDER: TechniqueId[] = [
-  "naked-single",
-  "hidden-single",
-  "pointing",
-  "box-line",
-  "naked-pair",
-  "hidden-pair",
-  "naked-triple",
-  "hidden-triple",
-  "x-wing",
-  "naked-quad",
-  "hidden-quad",
-  "swordfish",
-  "skyscraper",
-  "two-string-kite",
-  "unique-rectangle",
-  "xy-wing",
-  "jellyfish",
-  "xyz-wing",
-  "simple-coloring",
-];
+// `satisfies` makes tsc fail when a TechniqueId is added without a rank here.
+const SOLVER_RANK = {
+  "naked-single": 0,
+  "hidden-single": 1,
+  pointing: 2,
+  "box-line": 3,
+  "naked-pair": 4,
+  "hidden-pair": 5,
+  "naked-triple": 6,
+  "hidden-triple": 7,
+  "x-wing": 8,
+  "naked-quad": 9,
+  "hidden-quad": 10,
+  swordfish: 11,
+  skyscraper: 12,
+  "two-string-kite": 13,
+  "unique-rectangle": 14,
+  "xy-wing": 15,
+  jellyfish: 16,
+  "xyz-wing": 17,
+  "simple-coloring": 18,
+} satisfies Record<TechniqueId, number>;
 
 /**
  * The distinct techniques `puzzle`'s givens need, hardest first, for the win screen. Singles are
@@ -1112,7 +1113,7 @@ const SOLVER_ORDER: TechniqueId[] = [
 export function neededTechniques(puzzle: Grid): TechniqueId[] {
   const used = techniquesRequired(puzzle);
   if (!used) return [];
-  const all = SOLVER_ORDER.filter((id) => used.has(id)).toReversed();
+  const all = [...used].toSorted((a, b) => SOLVER_RANK[b] - SOLVER_RANK[a]);
   const hard = all.filter((id) => id !== "naked-single" && id !== "hidden-single");
   return hard.length ? hard : all;
 }

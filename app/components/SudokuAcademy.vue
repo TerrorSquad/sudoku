@@ -161,7 +161,10 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
 
 const expanded = ref<Set<string>>(new Set(props.focus ? [props.focus] : []));
 onMounted(() => {
-  if (props.focus) document.getElementById(`lesson-${props.focus}`)?.scrollIntoView();
+  const card = props.focus && document.getElementById(`lesson-${props.focus}`);
+  if (!card) return;
+  card.scrollIntoView();
+  card.focus({ preventScroll: true }); // keyboard and screen-reader users land on the lesson
 });
 function toggleExample(id: string) {
   const next = new Set(expanded.value);
@@ -248,6 +251,7 @@ const total = computed(() => techniques.length);
             v-for="tech in byTier(tier)"
             :key="tech.id"
             :id="`lesson-${tech.id}`"
+            tabindex="-1"
             :class="tierStyles[tier].border"
             class="panel cursor-pointer scroll-mt-24 p-4 sm:p-5"
             @click="toggleExample(tech.id)"
