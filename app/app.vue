@@ -208,6 +208,14 @@ const playerLevel = computed(() => {
   void currentScreen.value;
   return levelFor(score.getStats().total);
 });
+// The time to beat, read when a game opens (0 hides it): the fastest Daily in the Daily, else
+// this difficulty's best. Custom and practice boards vary too much for a best to mean anything.
+const bestTime = computed(() => {
+  void currentScreen.value;
+  if (practiceTechnique.value || activeDifficulty.value === "custom") return 0;
+  if (isDailyMode.value) return dailyPuzzle.getBestTime();
+  return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
+});
 const dailyStreak = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getStreak();
@@ -1071,6 +1079,8 @@ onUnmounted(() => {
               :mistakes="mistakes"
               :max-mistakes="mistakeLimit"
               :show-timer="showTimer && !gameZen"
+              :best-time="bestTime ? timer.formatTime(bestTime) : ''"
+              :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
 :difficulty="difficultyLabel"
               @toggle-pause="timer.togglePause()"

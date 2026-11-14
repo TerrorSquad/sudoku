@@ -405,5 +405,7 @@
   "settings.boardContrast": "High contrast",
   "resume.messageZen": "You have a saved {difficulty} Zen game. Continue it or start a new one?",
   "modal.needed": "This puzzle needed",
-  "modal.openLesson": "Open the lesson in the Academy"
+  "modal.openLesson": "Open the lesson in the Academy",
+  "game.best": "Best {time}",
+  "game.bestPassed": "(slower than your best)"
 }

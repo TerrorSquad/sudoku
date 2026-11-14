@@ -6,6 +6,10 @@ defineProps<{
   /** 0 = unlimited. */
   maxMistakes: number;
   showTimer: boolean;
+  /** Personal best to pace against, formatted; empty hides it. */
+  bestTime: string;
+  /** The clock has run past `bestTime`. */
+  pastBest: boolean;
   showMistakes: boolean;
   difficulty: string;
 }>();
@@ -17,9 +21,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div
-    class="panel flex items-center justify-between gap-3 px-3.5 py-2.5"
-  >
+  <div class="panel flex items-center justify-between gap-3 px-3.5 py-2.5">
     <div class="flex items-center gap-3">
       <!-- Exit button-->
       <button
@@ -43,11 +45,23 @@ defineEmits<{
 
     <!-- Timer -->
     <div class="flex shrink-0 items-center gap-2">
-      <span
-        v-if="showTimer"
-        class="font-mono text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
-        >{{ formattedTime }}</span
-      >
+      <!-- The best sits under the clock on phones (no room beside it), to its left from sm up. -->
+      <div v-if="showTimer" class="flex flex-col items-center sm:flex-row-reverse sm:gap-2">
+        <span
+          class="font-mono text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
+          >{{ formattedTime }}</span
+        >
+        <!-- Struck through once the clock passes it, so it doesn't rely on colour alone. -->
+        <span
+          v-if="bestTime"
+          data-testid="best-time"
+          :data-past="pastBest"
+          class="text-[10px] leading-none font-semibold text-zinc-500 tabular-nums sm:text-[11px]"
+          :class="{ 'line-through decoration-rose-500/70': pastBest }"
+          >{{ $t("game.best", { time: bestTime })
+          }}<span v-if="pastBest" class="sr-only"> {{ $t("game.bestPassed") }}</span></span
+        >
+      </div>
       <button
         @click="$emit('toggle-pause')"
         :aria-label="isPaused ? $t('game.resume') : $t('game.pause')"
