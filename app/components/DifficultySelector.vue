@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
+import { prefetchPuzzle } from "../utils/puzzlePool";
+
 defineProps<{ activeDifficulty: Difficulty }>();
 
 const { zen } = usePreferences();
@@ -9,6 +11,8 @@ const { zen } = usePreferences();
 const { loadDifficulty } = useGameSave();
 const inProgress = ref<Set<Difficulty>>(new Set());
 onMounted(() => {
+  // Have a board ready for every level by the time one is picked.
+  for (const d of DIFFICULTIES) prefetchPuzzle(d.key);
   inProgress.value = new Set(
     DIFFICULTIES.map((d) => d.key).filter((k) => loadDifficulty(k) !== null),
   );

@@ -30,6 +30,7 @@ import { useTimer } from "./composables/useTimer";
 import { haptic } from "./utils/haptics";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
+import { takePuzzle } from "./utils/puzzlePool";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
@@ -336,7 +337,11 @@ function resumeSavedGame(s: GameSave) {
   currentScreen.value = "game";
 }
 
-function handleStartGame(level: Difficulty) {
+let startToken = 0;
+async function handleStartGame(level: Difficulty) {
+  const token = ++startToken;
+  const generated = await takePuzzle(level);
+  if (token !== startToken) return; // a second pick while this one was generating wins
   practiceTechnique.value = null;
   gameZen.value = zen.value;
   gameSave.clearDifficulty(level);
@@ -349,7 +354,7 @@ function handleStartGame(level: Difficulty) {
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
-  startNewGame(level);
+  startNewGame(level, generated);
   timer.resetTimer();
   timer.startTimer();
   currentScreen.value = "game";

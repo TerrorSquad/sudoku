@@ -138,8 +138,12 @@ export function useSudokuEngine(
   }
 
   // --- GAME MANAGEMENT ---
-  function startNewGame(difficulty: string) {
-    const { puzzle, solution } = generateGradedPuzzle(difficulty);
+  /** `generated` comes from utils/puzzlePool in the app; tests let it generate in place. */
+  function startNewGame(
+    difficulty: string,
+    generated: { puzzle: Grid; solution: Grid } = generateGradedPuzzle(difficulty),
+  ) {
+    const { puzzle, solution } = generated;
 
     initialBoard.value = puzzle.map((row) => row.concat());
     currentBoard.value = puzzle.map((row) => row.concat());
