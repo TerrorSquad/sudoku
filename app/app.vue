@@ -556,10 +556,11 @@ function handleInputNumber(num: number) {
 
 function handleNextStep() {
   const title = activeComplexHint.value?.title;
+  const wrongEntry = activeComplexHint.value?.wrongEntry;
   const placed = engine.activeMove.value?.placement?.num;
   const wasPlacement = !!placed;
   nextHintStep(() => {
-    if (title) {
+    if (title && !wrongEntry) {
       if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
       techStats.record(title);
     }
@@ -609,11 +610,14 @@ function handleTriggerHint() {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const name = activeComplexHint.value.title;
+  const wrongEntry = activeComplexHint.value.wrongEntry;
   const placed = engine.activeMove.value?.placement?.num;
   const wasPlacement = !!placed;
   hintsUsed.value++;
-  if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
-  techStats.record(name);
+  if (!wrongEntry) {
+    if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
+    techStats.record(name);
+  }
   engine.applyComplexHint();
   if (placed) cue("place", placed);
   if (checkWinCondition()) {
