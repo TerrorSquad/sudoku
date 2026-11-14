@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// E2E_PORT lets several checkouts (e.g. agent worktrees) run the suite at once.
+const port = Number(process.env.E2E_PORT ?? 3110);
+
 // Deterministic rasterization across machines.
 const launchOptions = {
   args: [
@@ -34,7 +37,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3110",
+    baseURL: `http://localhost:${port}`,
     trace: "retain-on-failure",
   },
   projects: [
@@ -67,8 +70,8 @@ export default defineConfig({
       : []),
   ],
   webServer: {
-    command: "pnpm dev --port 3110",
-    url: "http://localhost:3110",
+    command: `pnpm dev --port ${port}`,
+    url: `http://localhost:${port}`,
     // A reused server ignores the env block below, so never reuse for visual runs.
     reuseExistingServer: !process.env.CI && !process.env.VISUAL_REGRESSION,
     timeout: 60_000,
