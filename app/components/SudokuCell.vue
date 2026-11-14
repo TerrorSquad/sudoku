@@ -17,6 +17,8 @@ const props = defineProps<{
   isSameValue: boolean;
   notes: boolean[];
   isHintTrigger: boolean;
+  /** The cell the active hint fills. */
+  isHintTarget?: boolean;
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
@@ -102,6 +104,7 @@ const cellClasses = computed(() => {
     "dark:!bg-rose-800/60 !bg-rose-200 ring-[3px] dark:ring-rose-400 ring-rose-600 z-10":
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
+    "!bg-emerald-500/30 ring-2 ring-inset ring-emerald-500 z-10": props.isHintTarget,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
     "ring-1 ring-inset ring-violet-400/50 !bg-violet-500/10":
       props.isCandidate && !props.isSelected,

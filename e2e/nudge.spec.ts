@@ -39,9 +39,9 @@ test("any board change dismisses the nudge", async ({ page }) => {
   await page.getByRole("button", { name: /Beginner/ }).click();
   await page.getByRole("button", { name: "Hint", exact: true }).click();
   await expect(page.getByText("Look closely at box")).toBeVisible();
-  await page.getByRole("button", { name: "Notes" }).click(); // notes mode alone: still shown
+  await page.getByRole("button", { name: "Notes", exact: true }).click(); // notes mode alone: still shown
   await expect(page.getByText("Look closely at box")).toBeVisible();
-  await page.getByRole("button", { name: "Notes" }).click();
+  await page.getByRole("button", { name: "Notes", exact: true }).click();
   // Placing a digit changes the board, which dismisses the nudge.
   await page.locator('[data-cell][aria-label$="empty"]').first().click();
   await page.keyboard.press("1");

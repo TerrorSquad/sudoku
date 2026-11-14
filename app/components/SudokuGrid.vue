@@ -11,9 +11,10 @@ const props = defineProps<{
   solvedBoard: Grid;
   notesBoard: NotesGrid;
   selectedCell: CellCoord | null;
-  activeHintCell: CellCoord | null; // Novo
-  hintTriggers: CellCoord[]; // Novo
-  hintEliminations: CellCoord[]; // Novo
+  /** The cell the active hint fills (green); null for a removal-only hint. */
+  activeHintCell: CellCoord | null;
+  hintTriggers: CellCoord[];
+  hintEliminations: CellCoord[];
   conflictCells: CellCoord[];
   colorMode: boolean;
   flashCells: FlashCell[];
@@ -98,10 +99,8 @@ function hasConflict(r: number, c: number): boolean {
         :is-initial="initialBoard[r]![c]! !== 0"
         :is-correct="currentBoard[r]![c]! === solvedBoard[r]![c]!"
         :has-conflict="hasConflict(r, c)"
-        :is-selected="
-          (selectedCell?.r === r && selectedCell?.c === c) ||
-          (activeHintCell?.r === r && activeHintCell?.c === c)
-        "
+        :is-selected="selectedCell?.r === r && selectedCell?.c === c"
+        :is-hint-target="activeHintCell?.r === r && activeHintCell?.c === c"
         :is-highlighted="isCellHighlighted(r, c)"
         :is-same-value="isSameValue(r, c)"
         :notes="notesBoard[r]![c]!"

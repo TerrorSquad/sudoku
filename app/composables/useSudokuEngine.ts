@@ -26,7 +26,8 @@ export interface ExplanationStep {
 
 export interface ComplexHint {
   title: string;
-  targetCell: CellCoord;
+  /** The cell a placement fills; null for a hint that only removes candidates. */
+  targetCell: CellCoord | null;
   steps: ExplanationStep[];
 }
 
@@ -268,7 +269,7 @@ export function useSudokuEngine(
       type: "trigger",
     }));
 
-    let targetCell: CellCoord;
+    let targetCell: CellCoord | null = null;
     let actionStep: ExplanationStep;
     if (move.placement) {
       targetCell = { r: move.placement.r, c: move.placement.c };
@@ -279,11 +280,9 @@ export function useSudokuEngine(
           row: move.placement.r + 1,
           col: move.placement.c + 1,
         }),
-        highlightCoords: [{ r: targetCell.r, c: targetCell.c, type: "trigger" }],
+        highlightCoords: [], // the target is drawn on its own, in the legend's green
       };
     } else {
-      const focus = move.triggers[0] ?? move.eliminations[0]!;
-      targetCell = { r: focus.r, c: focus.c };
       actionStep = {
         label: t("hint.move.eliminateLabel"),
         description: t("hint.move.eliminateStep", {
@@ -326,7 +325,8 @@ export function useSudokuEngine(
     const hint = buildHintFromMove(move);
     activeComplexHint.value = hint;
     currentStepIndex.value = 0;
-    selectedCell.value = hint.targetCell;
+    // The selection's yellow would cover a hint cell's colour, so clear it while the hint shows.
+    selectedCell.value = null;
     updateStepHighlights();
 
     hintStatus.value = hint.title;

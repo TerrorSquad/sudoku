@@ -163,6 +163,14 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       expect(engine.activeMove.value?.eliminations).toContainEqual({ r: 4, c: 1, num: 2 });
     });
 
+    it("a removal-only hint has no target cell and doesn't paint a selection over the pattern", () => {
+      engine.selectedCell.value = { r: 4, c: 6 };
+      engine.triggerComplexHint(status, body);
+      expect(engine.activeComplexHint.value?.targetCell).toBeNull();
+      expect(engine.activeHintCell.value).toBeNull();
+      expect(engine.selectedCell.value).toBeNull();
+    });
+
     it("skips a removal the player already made", () => {
       note(4, 1, [1, 5]);
       note(4, 3, [1, 5]);
