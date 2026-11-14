@@ -3,9 +3,17 @@ import { ref, computed, onMounted } from "vue";
 
 import type { TechniqueId } from "../utils/sudokuGrader";
 
+import { useTechniquePath } from "../composables/useTechniquePath";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
 import { masteryFor } from "../utils/mastery";
+import {
+  ACADEMY_TECHNIQUES,
+  nextChallenge,
+  weekOf,
+  type Tier,
+  type Week,
+} from "../utils/progression";
 import ExampleGrid from "./ExampleGrid.vue";
 
 // Opens on this technique's lesson, expanded and scrolled to (the win screen links here).
@@ -14,45 +22,27 @@ const props = defineProps<{ focus?: TechniqueId | null }>();
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
   (e: "practice", id: TechniqueId): void;
+  (e: "weekly", week: Week): void;
 }>();
 
 const { t } = useI18n();
 const techStats = useTechniqueStats();
 
-type Tier = "Basic" | "Intermediate" | "Advanced" | "Expert";
+// Exactly the techniques the in-game analyzer uses (and can hint), in the order of the
+// technique path. Names/descriptions/captions come from i18n; the name reuses the hint title.
+const techniques = ACADEMY_TECHNIQUES;
 
-interface Technique {
-  id: TechniqueId;
-  tier: Tier;
-}
-
-// Exactly the techniques the in-game analyzer uses (and can hint), in the order
-// the solver tries them. Names/descriptions/captions come from i18n; the name
-// reuses the in-game hint title.
-const techniques: Technique[] = [
-  { id: "naked-single", tier: "Basic" },
-  { id: "hidden-single", tier: "Basic" },
-  { id: "pointing", tier: "Intermediate" },
-  { id: "box-line", tier: "Intermediate" },
-  { id: "naked-pair", tier: "Intermediate" },
-  { id: "hidden-pair", tier: "Intermediate" },
-  { id: "naked-triple", tier: "Intermediate" },
-  { id: "hidden-triple", tier: "Intermediate" },
-  { id: "naked-quad", tier: "Advanced" },
-  { id: "hidden-quad", tier: "Advanced" },
-  { id: "x-wing", tier: "Advanced" },
-  { id: "swordfish", tier: "Advanced" },
-  { id: "skyscraper", tier: "Advanced" },
-  { id: "two-string-kite", tier: "Advanced" },
-  { id: "finned-x-wing", tier: "Advanced" },
-  { id: "jellyfish", tier: "Advanced" },
-  { id: "unique-rectangle", tier: "Expert" },
-  { id: "xy-wing", tier: "Expert" },
-  { id: "w-wing", tier: "Expert" },
-  { id: "xyz-wing", tier: "Expert" },
-  { id: "simple-coloring", tier: "Expert" },
-  { id: "bug-plus-one", tier: "Expert" },
-];
+// The technique path: completed challenges, and the one the player is on.
+const path = useTechniquePath();
+const done = path.getDone();
+const nextId = nextChallenge(done);
+const doneCount = techniques.filter((tech) => done.includes(tech.id)).length;
+const pathState = (id: TechniqueId) =>
+  done.includes(id) ? "done" : id === nextId ? "next" : "locked";
+// Key, technique and seed all from one date, so a click after midnight Sunday can't mix weeks.
+const week = weekOf();
+const weeklyDone = path.getWeeksDone().includes(week.key);
+const stepOf = (id: TechniqueId) => techniques.findIndex((tech) => tech.id === id) + 1;
 
 const MASTERY_STYLE = [
   "",
@@ -68,7 +58,7 @@ const masteryTitle = (id: TechniqueId) =>
     ? undefined
     : `${t(`academy.mastery.${masteryOf(id)}`)} · ${t("modal.usedTotal", { n: countOf(id) })}`;
 
-const tiers: Tier[] = ["Basic", "Intermediate", "Advanced", "Expert"];
+const tiers = [...new Set(techniques.map((tech) => tech.tier))];
 
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
@@ -220,6 +210,64 @@ const total = computed(() => techniques.length);
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
+      <!-- The technique path and the technique of the week. -->
+      <div class="mb-6 grid gap-3 sm:mb-8 sm:grid-cols-2">
+        <section class="panel p-4" data-testid="technique-path">
+          <div class="flex items-baseline justify-between gap-2">
+            <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
+              {{ $t("path.title") }}
+            </h2>
+            <span class="text-xs font-bold text-violet-700 tabular-nums dark:text-violet-300">{{
+              $t("path.progress", { done: doneCount, total })
+            }}</span>
+          </div>
+          <div
+            class="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+            aria-hidden="true"
+          >
+            <div
+              class="h-full rounded-full bg-violet-600"
+              :style="{ width: `${(doneCount / total) * 100}%` }"
+            />
+          </div>
+          <template v-if="nextId">
+            <p class="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
+              {{ $t("path.nextHint", { name: techName(nextId) }) }}
+            </p>
+            <button
+              class="tile tile-primary mt-3 w-full px-3 py-2.5 text-sm font-bold"
+              @click="emit('practice', nextId)"
+            >
+              {{ $t("path.next") }}: {{ techName(nextId) }}
+            </button>
+          </template>
+          <p v-else class="mt-3 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+            {{ $t("path.allDone", { n: total }) }}
+          </p>
+        </section>
+
+        <section class="panel p-4" data-testid="technique-of-week">
+          <div class="flex items-baseline justify-between gap-2">
+            <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
+              {{ $t("weekly.title") }}
+            </h2>
+            <span v-if="weeklyDone" class="text-xs font-bold text-emerald-700 dark:text-emerald-400"
+              >✓ {{ $t("weekly.done") }}</span
+            >
+          </div>
+          <p class="mt-2 text-base font-black text-zinc-900 dark:text-zinc-100">
+            {{ techName(week.technique) }}
+          </p>
+          <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{{ $t("weekly.desc") }}</p>
+          <button
+            class="tile tile-amber mt-3 w-full px-3 py-2.5 text-sm font-bold"
+            @click="emit('weekly', week)"
+          >
+            {{ $t("weekly.play") }}
+          </button>
+        </section>
+      </div>
+
       <!-- Example legend -->
       <div
         class="panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:text-zinc-400"
@@ -262,7 +310,11 @@ const total = computed(() => techniques.length);
             :key="tech.id"
             :id="`lesson-${tech.id}`"
             tabindex="-1"
-            :class="tierStyles[tier].border"
+            :class="[
+              tierStyles[tier].border,
+              pathState(tech.id) === 'next' && 'ring-2 ring-violet-500/60',
+            ]"
+            :data-path="pathState(tech.id)"
             class="panel cursor-pointer scroll-mt-24 p-4 sm:p-5"
             @click="toggleExample(tech.id)"
           >
@@ -271,6 +323,21 @@ const total = computed(() => techniques.length);
                 {{ techName(tech.id) }}
               </h3>
               <div class="flex shrink-0 items-center gap-1.5">
+                <!-- Path state; the free Practice button below stays open either way. -->
+                <span
+                  v-if="pathState(tech.id) === 'done'"
+                  class="border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:text-emerald-300"
+                  >✓ {{ $t("path.cardDone") }}</span
+                >
+                <span
+                  v-else-if="pathState(tech.id) === 'next'"
+                  class="border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-700 dark:text-violet-300"
+                  >{{ $t("path.next") }}</span
+                >
+                <!-- A later step: just its place on the path, not a lock (the lesson is free). -->
+                <span v-else class="text-[10px] font-bold text-zinc-500 tabular-nums">{{
+                  $t("path.step", { n: stepOf(tech.id) })
+                }}</span>
                 <span
                   v-if="countOf(tech.id) > 0"
                   :class="MASTERY_STYLE[masteryOf(tech.id)]"

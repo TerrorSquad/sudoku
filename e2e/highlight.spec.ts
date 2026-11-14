@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+import { unlockAllLevels } from "./seed";
+
+// These start Hard, which a fresh profile has locked.
+test.beforeEach(({ page }) => unlockAllLevels(page));
+
 for (const scheme of ["light", "dark"] as const) {
   test(`selecting a digit highlights peers and same digits (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
