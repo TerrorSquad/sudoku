@@ -71,6 +71,31 @@ for (const scheme of ["light", "dark"] as const) {
       await scan(page, "game (colour mode)");
     });
 
+    test("win modal with a stamp and a record, then the stats records", async ({ page }) => {
+      await page.addInitScript(() => {
+        if (localStorage.getItem("sudoku_v1_records")) return;
+        localStorage.setItem(
+          "sudoku_v1_records",
+          JSON.stringify({ cleanRun: 1, bestCleanRun: 1, mostInDay: 1 }),
+        );
+      });
+      await page.goto("/");
+      await page.getByRole("button", { name: "Your puzzle" }).click();
+      await page
+        .locator("textarea")
+        .fill("534678912672195348198342567859761423426853791713904856961537284287419635345286179");
+      await page.getByRole("button", { name: "Play Puzzle" }).click();
+      await page.locator(".grid.aspect-square.w-full.grid-cols-9 [data-cell]").nth(49).click();
+      await page.keyboard.press("2");
+      await expect(page.getByTestId("perfect-stamp")).toHaveClass(/stamp-in/);
+      await expect(page.getByTestId("new-record")).toHaveCount(1);
+      await scan(page, "win modal");
+      await page.getByRole("button", { name: "Close" }).click();
+      await page.getByRole("button", { name: "Statistics" }).click();
+      await expect(page.getByTestId("records")).toBeVisible();
+      await scan(page, "stats (records)");
+    });
+
     test("game screen", async ({ page }) => {
       await page.goto("/");
       await page.getByRole("button", { name: "New Game" }).click();

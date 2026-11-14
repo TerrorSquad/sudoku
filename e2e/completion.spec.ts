@@ -20,10 +20,11 @@ test("completing a row ripples outward from the placed digit", async ({ page }) 
 
   await place(page, 0, "5");
   await expect(page.locator("[data-cell].cell-flash")).toHaveCount(0);
-  await place(page, 1, "3"); // completes row 1, column 2 and box 1 at once
+  await place(page, 1, "3"); // completes row 1, column 2 and box 1 at once, and the last 3
 
   const flashing = page.locator("[data-cell].cell-flash");
-  await expect(flashing).toHaveCount(21, { timeout: 2000 });
+  // 21 cells of the three units, plus the eight 3s outside them.
+  await expect(flashing).toHaveCount(29, { timeout: 2000 });
   const delay = (n: number) =>
     cell(page, n).evaluate((e) => (e as HTMLElement).style.animationDelay);
   // The ripple starts at the placed cell (row 1, col 2) and travels outward, 45 ms a step.

@@ -6,6 +6,8 @@ const PATTERNS = {
   mistake: [40, 40, 40],
   complete: [12, 30, 12, 30, 24],
   win: [20, 40, 20, 40, 60],
+  digit: [8, 25, 8, 25, 8],
+  stamp: 35,
 } as const;
 
 export function canVibrate(): boolean {

@@ -457,5 +457,18 @@
   "weekly.desc": "Svi igraju istu slagalicu do kraja nedelje.",
   "weekly.play": "Igraj slagalicu nedelje",
   "weekly.done": "Rešeno",
-  "weekly.won": "★ Tehnika nedelje savladana: {name}"
+  "weekly.won": "★ Tehnika nedelje savladana: {name}",
+  "modal.perfect": "Savršeno!",
+  "records.new.fastest": "Novi rekord za nivo {difficulty}: {value} (bilo je {was})",
+  "records.new.noHint": "Novi rekord: najteži nivo bez nagoveštaja je {value} (bilo je {was})",
+  "records.new.streak": "Novi rekord u dnevnom nizu: {value} (bilo je {was})",
+  "records.new.cleanRun": "Novi rekord u pobedama zaredom bez greške: {value} (bilo je {was})",
+  "records.new.mostInDay": "Novi rekord u pobedama za jedan dan: {value} (bilo je {was})",
+  "records.title": "Rekordi",
+  "records.streak": "Najduži dnevni niz",
+  "records.mostInDay": "Najviše pobeda u jednom danu",
+  "records.cleanRun": "Najviše pobeda zaredom bez greške",
+  "records.noHint": "Najteži nivo bez nagoveštaja",
+  "records.fastest": "Najbolja vremena su u tabeli iznad.",
+  "records.since": "Ovi rekordi se broje od tvoje sledeće pobede."
 }
