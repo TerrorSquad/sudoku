@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 import type { BoardTheme } from "../composables/usePreferences";
 import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
+import type { BoardUnit } from "../utils/sudokuGrader";
 
 import SudokuCell from "./SudokuCell.vue";
 
@@ -24,8 +25,8 @@ const props = defineProps<{
   activeDigit?: number | null;
   /** Outline the empty cells where the focused digit can still go. */
   showCandidates?: boolean;
-  /** "Nudge first" hints: any cell of the 3x3 box to point at. */
-  nudgeBox?: CellCoord | null;
+  /** "Nudge first" hints: the row, column or box to point at. */
+  nudge?: BoardUnit | null;
   /** Board style from Settings: colours and digit face, see the styles below. */
   theme?: BoardTheme;
 }>();
@@ -74,10 +75,11 @@ function isCandidate(r: number, c: number): boolean {
 }
 
 function isNudged(r: number, c: number): boolean {
-  const n = props.nudgeBox;
-  return (
-    !!n && Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3)
-  );
+  const n = props.nudge;
+  if (!n) return false;
+  if (n.kind === "row") return n.r === r;
+  if (n.kind === "col") return n.c === c;
+  return Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3);
 }
 
 function hasConflict(r: number, c: number): boolean {
