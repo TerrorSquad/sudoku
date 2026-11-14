@@ -17,7 +17,7 @@ const stats = score.getStats();
 const onWavedash = hasWavedash();
 const streak = daily.getStreak();
 
-const DIFFICULTY_ORDER = ["beginner", "easy", "medium", "hard", "expert", "master", "custom"];
+const DIFFICULTY_ORDER = ["beginner", "easy", "medium", "hard", "expert", "master", "daily", "custom"];
 
 const difficultyRows = computed(() => {
   const keys = Object.keys(stats.perDifficulty);
@@ -169,8 +169,8 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
                   :key="row.difficulty"
                   class="text-zinc-700 dark:text-zinc-300"
                 >
-                  <td class="px-3 py-2 font-bold text-zinc-900 capitalize dark:text-zinc-100">
-                    {{ row.difficulty }}
+                  <td class="px-3 py-2 font-bold text-zinc-900 dark:text-zinc-100">
+                    {{ $t(`difficulty.${row.difficulty}`) }}
                   </td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.wins }}</td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.best.toLocaleString() }}</td>

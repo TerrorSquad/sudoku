@@ -23,6 +23,14 @@ export interface RecordResult {
   previousTotal: number;
 }
 
+/**
+ * The stats row a win is recorded under. The Daily is a Medium board, but its best time and score
+ * are its own: a quick Daily mustn't become the time to beat in an ordinary Medium game.
+ */
+export function statsKey(difficulty: string, daily: boolean): string {
+  return daily ? "daily" : difficulty;
+}
+
 export function useScore() {
   function getStats(): ScoreStats {
     const parsed = readJSON<Partial<ScoreStats>>(KEY, {});

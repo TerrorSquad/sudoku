@@ -23,7 +23,7 @@ import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
-import { useScore } from "./composables/useScore";
+import { statsKey, useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
@@ -278,11 +278,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         mistakes: mistakes.value,
         hintsUsed: hintsUsed.value,
       });
-      const result = score.record(
-        activeDifficulty.value,
-        breakdown.total,
-        timer.timerSeconds.value,
-      );
+      const key = statsKey(activeDifficulty.value, isDailyMode.value);
+      const result = score.record(key, breakdown.total, timer.timerSeconds.value);
       submitWin({
         difficulty: activeDifficulty.value,
         seconds: timer.timerSeconds.value,
@@ -305,7 +302,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         colorMode: colorMode.value,
         hour: new Date().getHours(),
         gamesWon: result.stats.gamesWon,
-        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+        winsAtDifficulty: result.stats.perDifficulty[key]?.wins ?? 0,
         dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
         distinctTechniques: Object.keys(techStats.getAll()).length,
       });
