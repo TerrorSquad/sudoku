@@ -24,3 +24,14 @@ test("filling the last correct digit wins the puzzle", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 });
+
+test("leaving the Daily doesn't carry it into the next game", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await expect(page.getByText("Daily", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Exit" }).click();
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await expect(page.getByText("Beginner", { exact: true })).toBeVisible();
+  await expect(page.getByText("Daily", { exact: true })).toBeHidden();
+});

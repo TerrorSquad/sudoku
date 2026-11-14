@@ -82,23 +82,22 @@ export function useSudokuEngine(
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
 
-  // Candidates the player already crossed out in their own notes count as done,
-  // so a hint never asks them to remove what's gone. Cells without notes say
-  // nothing, and the solution digit is never trusted as removed (a mistaken
-  // note must not steer the solver into a wrong deduction).
-  function knownEliminations(): DigitAt[] {
-    const out = [...appliedEliminations.value];
-    const cands = getGridCandidates(currentBoard.value);
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
+  // The next hint worth showing. A gap in the player's notes is never fed to the solver as a
+  // deduction (it may be a guess, or just unfinished notes, and reading it could smuggle in the
+  // answer). Instead, a removal the notes already show counts as done: such a move joins the
+  // chain silently and the solver looks again, so a hint never asks to remove what's gone.
+  function nextUsefulHint(): SolveMove | null {
+    for (let i = 0; i < 300; i++) {
+      const move = nextHint(currentBoard.value, appliedEliminations.value);
+      if (!move || move.placement) return move;
+      const todo = move.eliminations.filter(({ r, c, num }) => {
         const notes = notesBoard.value[r]![c]!;
-        if (currentBoard.value[r]![c] !== 0 || !notes.some(Boolean)) continue;
-        for (const num of cands[r]![c]!) {
-          if (!notes[num] && num !== solvedBoard.value[r]![c]) out.push({ r, c, num });
-        }
-      }
+        return !notes.some(Boolean) || notes[num];
+      });
+      if (todo.length) return { ...move, eliminations: todo };
+      appliedEliminations.value.push(...move.eliminations);
     }
-    return out;
+    return null;
   }
 
   function resetHintChain() {
@@ -313,13 +312,13 @@ export function useSudokuEngine(
 
   /** Where the next hint would act (a placement, else the first removal), without starting it. */
   function peekHintCell(): CellCoord | null {
-    const move = nextHint(currentBoard.value, knownEliminations());
+    const move = nextUsefulHint();
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
     return at ? { r: at.r, c: at.c } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
-    const move = nextHint(currentBoard.value, knownEliminations());
+    const move = nextUsefulHint();
     if (!move) {
       activeMove.value = null;
       hintStatus.value = t("hint.move.none");
@@ -365,28 +364,18 @@ export function useSudokuEngine(
       currentBoard.value[r]![c] = num;
       clearRelationalNotes(r, c, num);
     } else {
-      // Elimination: reveal the affected cells' candidates with the eliminated
-      // digit removed, so the deduction is visible. Detection persists the
-      // removal via appliedEliminations (replayed by the next hint).
+      // Elimination: cross the digit out of the player's notes. A cell without notes first
+      // gets its candidates (minus earlier removals) so the deduction is visible. The removal
+      // persists via appliedEliminations (replayed by the next hint).
       const baseCands = getGridCandidates(currentBoard.value);
-      const known = knownEliminations();
-      const byCell = new Map<string, Set<number>>();
-      for (const e of move.eliminations) {
-        const key = `${e.r},${e.c}`;
-        if (!byCell.has(key)) {
-          const set = new Set<number>(baseCands[e.r]![e.c]!);
-          for (const prev of known) {
-            if (prev.r === e.r && prev.c === e.c) set.delete(prev.num);
+      for (const { r, c, num } of move.eliminations) {
+        const notes = notesBoard.value[r]![c]!;
+        if (!notes.some(Boolean)) {
+          for (const n of baseCands[r]![c]!) {
+            notes[n] = !appliedEliminations.value.some((p) => p.r === r && p.c === c && p.num === n);
           }
-          byCell.set(key, set);
         }
-        byCell.get(key)!.delete(e.num);
-      }
-      for (const [key, set] of byCell) {
-        const [r, c] = key.split(",").map(Number) as [number, number];
-        const notes = Array(10).fill(false);
-        for (const n of set) notes[n] = true;
-        notesBoard.value[r]![c] = notes;
+        notes[num] = false;
       }
       appliedEliminations.value.push(...move.eliminations);
     }

@@ -1,6 +1,6 @@
 // New-game puzzles are generated in a Web Worker, and one per difficulty is kept ready, so
 // starting a game never blocks the main thread on the generator (Master can dig 150 boards).
-// Without workers (tests, or a host that blocks them) it generates in place, as before.
+// Without workers (tests, or a host that blocks them) it generates in place, on demand, as before.
 import type { Grid } from "../types/sudoku";
 
 import { generateGradedPuzzle } from "./sudokuGrader";
@@ -51,8 +51,12 @@ function generate(difficulty: string): Promise<NewPuzzle> {
   });
 }
 
-/** Start generating a puzzle for `difficulty` now, if one isn't already on its way. */
+/**
+ * Start generating a puzzle for `difficulty` now, if one isn't already on its way. Only with a
+ * worker: generating in place would freeze the page for boards that may never be played.
+ */
 export function prefetchPuzzle(difficulty: string): void {
+  if (typeof Worker === "undefined" || !getWorker()) return;
   if (!ready.has(difficulty)) ready.set(difficulty, generate(difficulty));
 }
 

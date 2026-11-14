@@ -7,6 +7,7 @@ vi.mock("vue-i18n", () => ({
 
 import { useSudokuEngine } from "../composables/useSudokuEngine";
 import { solveBoard } from "../utils/sudokuCore";
+import { nextHint } from "../utils/sudokuGrader";
 import type { Grid } from "../types/sudoku";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
@@ -178,6 +179,23 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       const elims = engine.activeMove.value?.eliminations ?? [];
       expect(elims).not.toContainEqual({ r: 4, c: 1, num: 2 });
       expect(elims).not.toContainEqual({ r: 4, c: 3, num: 2 });
+    });
+
+    it("never reads a gap in the notes as a deduction (that would leak the answer)", () => {
+      // Notes holding only each cell's answer: reading their gaps would hand out naked singles.
+      for (let r = 0; r < 9; r++)
+        for (let c = 0; c < 9; c++)
+          if (board[r]![c] === 0) note(r, c, [engine.solvedBoard.value[r]![c]!]);
+      // What logic alone reaches: every removal it finds is already in the notes, so it's skipped.
+      const elims: { r: number; c: number; num: number }[] = [];
+      let expected = nextHint(board, elims);
+      while (expected && !expected.placement) {
+        elims.push(...expected.eliminations);
+        expected = nextHint(board, elims);
+      }
+      engine.triggerComplexHint(status, body);
+      expect(engine.activeMove.value?.technique).toBe(expected?.technique);
+      expect(engine.activeMove.value?.placement).toEqual(expected?.placement);
     });
 
     it("never trusts a note that crossed out the answer", () => {

@@ -402,5 +402,6 @@
   "settings.boardTheme": "Board style",
   "settings.boardTiles": "Tiles",
   "settings.boardNewsprint": "Newsprint",
-  "settings.boardContrast": "High contrast"
+  "settings.boardContrast": "High contrast",
+  "resume.messageZen": "You have a saved {difficulty} Zen game. Continue it or start a new one?"
 }

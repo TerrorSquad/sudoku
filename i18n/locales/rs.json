@@ -402,5 +402,6 @@
   "settings.boardTheme": "Izgled table",
   "settings.boardTiles": "Pločice",
   "settings.boardNewsprint": "Novine",
-  "settings.boardContrast": "Visok kontrast"
+  "settings.boardContrast": "Visok kontrast",
+  "resume.messageZen": "Imaš sačuvanu Zen igru ({difficulty}). Nastavi je ili počni novu?"
 }

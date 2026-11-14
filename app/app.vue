@@ -321,6 +321,7 @@ function handleModalClose() {
 
 function resumeSavedGame(s: GameSave) {
   practiceTechnique.value = null;
+  isDailyMode.value = false;
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -338,12 +339,15 @@ function resumeSavedGame(s: GameSave) {
   currentScreen.value = "game";
 }
 
+// A board still generating when the player picks again, or leaves the screen, is dropped.
 let startToken = 0;
+watch(currentScreen, () => startToken++);
 async function handleStartGame(level: Difficulty) {
   const token = ++startToken;
   const generated = await takePuzzle(level);
-  if (token !== startToken) return; // a second pick while this one was generating wins
+  if (token !== startToken) return;
   practiceTechnique.value = null;
+  isDailyMode.value = false;
   gameZen.value = zen.value;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
@@ -564,7 +568,9 @@ function handleNextStep() {
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
-        t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
+        gameZen.value
+          ? winMessage()
+          : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
         true,
       );
     } else {
@@ -659,6 +665,7 @@ function handleLoadCustomPuzzle(
   practice: TechniqueId | null = null,
 ) {
   practiceTechnique.value = practice;
+  isDailyMode.value = false;
   gameZen.value = false;
   activeDifficulty.value = "custom";
   mistakes.value = 0;
@@ -701,6 +708,7 @@ async function handlePractice(technique: TechniqueId) {
 
 function exitToMenu() {
   practiceTechnique.value = null;
+  isDailyMode.value = false;
   timer.stopTimer();
   cancelComplexHint();
   currentScreen.value = "menu";
@@ -1094,7 +1102,7 @@ onUnmounted(() => {
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
                 :active-digit="activeDigit"
-                :show-candidates="showCandidates"
+                :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :theme="boardTheme"
                 :nudge-box="nudge"
                 @select-cell="handleSelectCell"
@@ -1356,7 +1364,7 @@ onUnmounted(() => {
           </h3>
           <p class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             {{
-              $t("resume.message", {
+              $t(pendingResume.save.zen ? "resume.messageZen" : "resume.message", {
                 difficulty: $t(`difficulty.${pendingResume.level}`),
                 time: timer.formatTime(pendingResume.save.timerSeconds),
               })
