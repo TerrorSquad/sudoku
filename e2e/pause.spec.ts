@@ -56,7 +56,7 @@ test("the Settings detour keeps an armed digit and a shown nudge", async ({ page
   const three = page.getByTestId("numpad").getByRole("button", { name: /^3(,|$)/ });
   await three.click();
   await page.getByRole("button", { name: "Hint", exact: true }).click();
-  const nudge = page.getByRole("status").filter({ hasText: "Look closely at box" });
+  const nudge = page.getByRole("status").filter({ hasText: "Next step:" });
   await expect(nudge).toBeVisible();
 
   await page.getByLabel("Pause").click();
