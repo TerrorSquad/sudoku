@@ -25,5 +25,7 @@ describe("useScore: the Daily keeps its own row", () => {
     // Both still count toward the lifetime totals.
     expect(total).toBe(1400);
     expect(gamesWon).toBe(2);
+    // ...and a Daily still counts as a Medium win toward opening Hard.
+    expect(score.unlockWins().medium?.wins).toBe(2);
   });
 });

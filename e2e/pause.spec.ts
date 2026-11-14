@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+import { unlockAllLevels } from "./seed";
+
+// These start Hard, which a fresh profile has locked.
+test.beforeEach(({ page }) => unlockAllLevels(page));
+
 test("pausing shows the overlay and freezes the timer; resume hides it", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();

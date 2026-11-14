@@ -1,6 +1,9 @@
+import { withZenWins, type WinsByDifficulty } from "../utils/progression";
 import { readJSON, writeJSON } from "../utils/safeJson";
 
 const KEY = "sudoku_v1_score";
+/** Zen wins per difficulty: no score, but they open harder levels like any win. */
+const ZEN_KEY = "sudoku_v1_zen_wins";
 
 export interface DifficultyStat {
   best: number; // best single-game score
@@ -69,5 +72,24 @@ export function useScore() {
     return { stats, isNewBest, previousBest, previousTotal };
   }
 
-  return { getStats, record };
+  function recordZenWin(difficulty: string): void {
+    const raw = readJSON<unknown>(ZEN_KEY, {});
+    const zen = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+      string,
+      number
+    >;
+    zen[difficulty] = (typeof zen[difficulty] === "number" ? zen[difficulty] : 0) + 1;
+    writeJSON(ZEN_KEY, zen);
+  }
+
+  /** Every win that counts toward opening difficulties: scored ones plus Zen ones. */
+  function unlockWins(): WinsByDifficulty {
+    const wins: WinsByDifficulty = { ...getStats().perDifficulty };
+    // A Daily is a Medium board with its own stats row (statsKey); it still opens Hard.
+    const daily = wins.daily?.wins ?? 0;
+    if (daily) wins.medium = { ...wins.medium, wins: (wins.medium?.wins ?? 0) + daily };
+    return withZenWins(wins, readJSON<unknown>(ZEN_KEY, {}));
+  }
+
+  return { getStats, record, recordZenWin, unlockWins };
 }
