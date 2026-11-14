@@ -25,7 +25,7 @@ interface Technique {
 
 // Exactly the techniques the in-game analyzer uses (and can hint), in the order
 // the solver tries them. Names/descriptions/captions come from i18n; the name
-// reuses the in-game hint title so the per-technique ×N badge matches.
+// reuses the in-game hint title.
 const techniques: Technique[] = [
   { id: "naked-single", tier: "Basic" },
   { id: "hidden-single", tier: "Basic" },
@@ -58,7 +58,7 @@ const MASTERY_STYLE = [
   "border-amber-400/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
 ] as const;
 
-const countOf = (id: TechniqueId) => techStats.getCount(techName(id));
+const countOf = (id: TechniqueId) => techStats.getCount(id);
 const masteryOf = (id: TechniqueId) => masteryFor(countOf(id));
 const masteryTitle = (id: TechniqueId) =>
   countOf(id) === 0

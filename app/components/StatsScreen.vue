@@ -27,12 +27,19 @@ const difficultyRows = computed(() => {
     .filter((r) => r.wins > 0 || r.best > 0);
 });
 
+// Counts are keyed by TechniqueId; a key the migration couldn't map is shown as stored.
+function techniqueTitle(id: string): string {
+  const key = `hint.move.${id}.name`;
+  const title = t(key);
+  return title === key ? id : title;
+}
+
 const topTechniques = computed(() => {
   const all = techStats.getAll();
   return Object.entries(all)
     .toSorted((a, b) => b[1] - a[1])
     .slice(0, 10)
-    .map(([name, count]) => ({ name, count }));
+    .map(([id, count]) => ({ id, name: techniqueTitle(id), count }));
 });
 
 const hasStats = computed(() => stats.gamesWon > 0 || topTechniques.value.length > 0);
@@ -184,7 +191,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             {{ $t("stats.noTechniquesYet") }}
           </p>
           <div v-else class="space-y-2">
-            <div v-for="tech in topTechniques" :key="tech.name" class="flex items-center gap-3">
+            <div v-for="tech in topTechniques" :key="tech.id" class="flex items-center gap-3">
               <span
                 class="w-32 shrink-0 truncate text-sm font-semibold text-zinc-700 sm:w-40 dark:text-zinc-300"
                 >{{ tech.name }}</span

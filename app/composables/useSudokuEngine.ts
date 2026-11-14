@@ -29,6 +29,8 @@ export interface ComplexHint {
   /** The cell a placement fills; null for a hint that only removes candidates. */
   targetCell: CellCoord | null;
   steps: ExplanationStep[];
+  /** Points at a wrong entry instead of a technique; applying it clears targetCell. */
+  wrongEntry?: boolean;
 }
 
 export function useSudokuEngine(
@@ -98,6 +100,36 @@ export function useSudokuEngine(
       appliedEliminations.value.push(...move.eliminations);
     }
     return null;
+  }
+
+  // A wrong entry the player made (kept on the board when "Highlight mistakes" is off). The
+  // solver takes every digit on the board as true, so it must come out before any hint is sound.
+  function findWrongEntry(): CellCoord | null {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const val = currentBoard.value[r]![c]!;
+        const sol = solvedBoard.value[r]![c]!;
+        if (initialBoard.value[r]![c] === 0 && val !== 0 && sol !== 0 && val !== sol) return { r, c };
+      }
+    }
+    return null;
+  }
+
+  function buildWrongEntryHint({ r, c }: CellCoord): ComplexHint {
+    const params = {
+      num: digitLabel(currentBoard.value[r]![c]!, colorMode.value, t),
+      row: r + 1,
+      col: c + 1,
+    };
+    return {
+      title: t("hint.wrong.name"),
+      targetCell: { r, c },
+      wrongEntry: true,
+      steps: [
+        { label: t("hint.wrong.findLabel"), description: t("hint.wrong.desc", params), highlightCoords: [] },
+        { label: t("hint.wrong.clearLabel"), description: t("hint.wrong.clearStep", params), highlightCoords: [] },
+      ],
+    };
   }
 
   function resetHintChain() {
@@ -312,20 +344,23 @@ export function useSudokuEngine(
 
   /** Where the next hint would act (a placement, else the first removal), without starting it. */
   function peekHintCell(): CellCoord | null {
+    const wrong = findWrongEntry();
+    if (wrong) return wrong;
     const move = nextUsefulHint();
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
     return at ? { r: at.r, c: at.c } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
-    const move = nextUsefulHint();
-    if (!move) {
+    const wrong = findWrongEntry();
+    const move = wrong ? null : nextUsefulHint();
+    if (!wrong && !move) {
       activeMove.value = null;
       hintStatus.value = t("hint.move.none");
       return;
     }
     activeMove.value = move;
-    const hint = buildHintFromMove(move);
+    const hint = wrong ? buildWrongEntryHint(wrong) : buildHintFromMove(move!);
     activeComplexHint.value = hint;
     currentStepIndex.value = 0;
     // The selection's yellow would cover a hint cell's colour, so clear it while the hint shows.
@@ -355,6 +390,11 @@ export function useSudokuEngine(
   }
 
   function applyComplexHint() {
+    const hint = activeComplexHint.value;
+    if (hint?.wrongEntry && hint.targetCell) {
+      eraseCell(hint.targetCell); // also cancels the hint and resets the chain
+      return;
+    }
     const move = activeMove.value;
     if (!move) return;
 

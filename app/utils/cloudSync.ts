@@ -12,6 +12,21 @@ export const META_KEY = "sudoku_cloud_meta";
 /** Whichever copy a sync replaced, kept so a bad restore or conflict can be undone by hand. */
 export const SYNC_BACKUP_KEY = "sudoku_sync_backup";
 
+// The Daily's save stays on this device: v1.2.0 rejects a whole cloud file that holds it (it
+// expects every save slot to be named after a difficulty), and it only resumes the same day anyway.
+const LOCAL_ONLY = ["sudoku_v1_save_daily"];
+
+/** The local data as it is synced: everything but the LOCAL_ONLY keys. */
+export function cloudData(local: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.includes(k)));
+}
+
+/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries. */
+export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
+  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.includes(k));
+  return { ...file, data: { ...file.data, ...Object.fromEntries(kept) } };
+}
+
 export interface CloudFile extends Backup {
   updatedAt: number;
 }
