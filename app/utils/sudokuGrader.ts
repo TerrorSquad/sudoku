@@ -1055,6 +1055,42 @@ export function nextHint(board: Grid, appliedEliminations: DigitAt[] = []): Solv
   return findNextMove(s);
 }
 
+/**
+ * Every empty cell in an order where each is a naked or hidden single at its turn, or null when
+ * singles run dry first. Behind the Finish button: it only finishes what logic plainly forces.
+ */
+export function singlesPath(board: Grid): DigitAt[] | null {
+  const b = cloneGrid(board);
+  const path: DigitAt[] = [];
+  while (b.some((row) => row.includes(0))) {
+    const move = nextHint(b); // tries singles first, so anything else means they ran dry
+    if (!move?.placement || move.tier !== 1) return null;
+    path.push(move.placement);
+    b[move.placement.r]![move.placement.c] = move.placement.num;
+  }
+  return path;
+}
+
+/** A row, column or box, named by any of its cells. */
+export interface BoardUnit extends CellRC {
+  kind: "row" | "col" | "box";
+}
+
+/**
+ * Where a move's pattern lives, for a nudge: the one row, column or box holding all its cells,
+ * else (a single, a fish, a wing) the box the move acts in.
+ */
+export function patternUnit(move: SolveMove): BoardUnit {
+  const act = move.placement ?? move.eliminations[0] ?? move.triggers[0] ?? { r: 0, c: 0 };
+  const cells: CellRC[] = [...move.triggers, ...move.eliminations, act];
+  const kind = cells.every((p) => p.r === act.r)
+    ? "row"
+    : cells.every((p) => p.c === act.c)
+      ? "col"
+      : "box";
+  return { kind, r: act.r, c: act.c };
+}
+
 export interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;

@@ -342,13 +342,16 @@ export function useSudokuEngine(
     };
   }
 
-  /** Where the next hint would act (a placement, else the first removal), without starting it. */
-  function peekHintCell(): CellCoord | null {
+  /**
+   * The next hint without starting it: where it acts (a placement, else the first removal) and
+   * its move, which is null when the hint is about a wrong entry.
+   */
+  function peekHint(): { at: CellCoord; move: SolveMove | null } | null {
     const wrong = findWrongEntry();
-    if (wrong) return wrong;
+    if (wrong) return { at: wrong, move: null };
     const move = nextUsefulHint();
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
-    return at ? { r: at.r, c: at.c } : null;
+    return at && move ? { at: { r: at.r, c: at.c }, move } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
@@ -495,7 +498,8 @@ export function useSudokuEngine(
     boardHistory,
     checkWinCondition,
     triggerComplexHint,
-    peekHintCell,
+    peekHint,
+    findWrongEntry,
     nextHintStep,
     prevHintStep,
     applyComplexHint,

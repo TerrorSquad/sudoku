@@ -1,4 +1,5 @@
 import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
+import type { Placement } from "../utils/stuckMoments";
 
 import { readJSON, writeJSON } from "../utils/safeJson";
 
@@ -20,6 +21,8 @@ export interface GameSave {
   zen?: boolean;
   /** Set on a Daily: the local date (YYYY-MM-DD) of its puzzle. */
   daily?: string;
+  /** Correct digits with the clock, for "Where you got stuck". Older saves restore as none. */
+  placements?: Placement[];
   savedAt: number;
 }
 

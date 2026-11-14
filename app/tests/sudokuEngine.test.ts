@@ -213,7 +213,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       const answer = engine.solvedBoard.value[4]![1]!;
       const wrong = [1, 2, 5].find((n) => n !== answer)!; // a candidate, so no visible clash
       engine.currentBoard.value[4]![1] = wrong;
-      expect(engine.peekHintCell()).toEqual({ r: 4, c: 1 });
+      expect(engine.peekHint()).toEqual({ at: { r: 4, c: 1 }, move: null });
 
       engine.triggerComplexHint(status, body);
       const hint = engine.activeComplexHint.value!;

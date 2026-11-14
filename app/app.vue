@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
-import type { TechniqueId } from "./utils/sudokuGrader";
+import type { BoardUnit, DigitAt, TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
 import AchievementToast from "./components/AchievementToast.vue";
@@ -35,7 +35,8 @@ import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
-import { neededTechniques } from "./utils/sudokuGrader";
+import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
+import { stuckMoments, type Placement, type StuckMoment } from "./utils/stuckMoments";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
@@ -167,6 +168,12 @@ const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
 const academyFocus = ref<TechniqueId | null>(null);
 const mistakeExplainer = ref<string>("");
+// Every correct digit that went in, on the clock, for "Where you got stuck" on the win modal.
+const placements = ref<Placement[]>([]);
+const stuck = ref<StuckMoment[]>([]);
+function logPlacement({ r, c, num }: DigitAt) {
+  placements.value.push({ r, c, num, t: timer.timerSeconds.value });
+}
 
 const flashCells = ref<FlashCell[]>([]);
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -243,6 +250,7 @@ watch(
       hintsUsed: hintsUsed.value,
       zen: gameZen.value,
       daily: isDailyMode.value ? dailyDate : undefined,
+      placements: placements.value,
     });
   },
   { deep: true },
@@ -258,6 +266,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   const practised = practiceTechnique.value;
   neededTechs.value =
     win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
+  stuck.value = win && !gameZen.value ? stuckMoments(initialBoard.value, placements.value) : [];
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -344,8 +353,12 @@ function handleModalClose() {
   timer.resetTimer();
 }
 
+// Set when a nudge's technique opened the Academy: Back returns to the paused game.
+const academyFromGame = ref(false);
+
 function openLesson(id: TechniqueId) {
   handleModalClose();
+  academyFromGame.value = false;
   academyFocus.value = id;
   currentScreen.value = "academy";
 }
@@ -365,6 +378,7 @@ function resumeSavedGame(s: GameSave) {
   hintsUsed.value = s.hintsUsed ?? 0;
   gameZen.value = s.zen ?? false;
   techniqueLog.value = [];
+  placements.value = s.placements ?? [];
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;
   timer.startTimer();
@@ -391,6 +405,7 @@ async function handleStartGame(level: Difficulty) {
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
+  placements.value = [];
   startNewGame(level, generated);
   timer.resetTimer();
   timer.startTimer();
@@ -515,7 +530,7 @@ function flashWin() {
 }
 
 function handleInputNumber(num: number) {
-  if (timer.isPaused.value || showModal.value || !selectedCell.value) return;
+  if (timer.isPaused.value || showModal.value || finishing.value || !selectedCell.value) return;
   const { r, c } = selectedCell.value;
 
   if (initialBoard.value[r]![c] !== 0) return;
@@ -578,6 +593,7 @@ function handleInputNumber(num: number) {
         cue("place", num);
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
+        logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
         if (highlightErrors.value) flashCompletedUnits(r, c);
         if (checkWinCondition()) {
@@ -590,8 +606,10 @@ function handleInputNumber(num: number) {
 
 function handleNextStep() {
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placed = engine.activeMove.value?.placement?.num;
+  const placement = engine.activeMove.value?.placement;
+  const placed = placement?.num;
   nextHintStep(() => {
+    if (placement) logPlacement(placement);
     if (tech) {
       if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
       techStats.record(tech);
@@ -615,13 +633,32 @@ function handleNextStep() {
   });
 }
 
-// "Nudge first" hint style: the first press only points at a 3x3 box; pressing again (or the
-// banner's Explain button) gives the full step-by-step explanation.
-const nudge = ref<CellCoord | null>(null);
-const nudgeBox = computed(() => (nudge.value ? boxNumber(nudge.value) : 0));
+// "Nudge first" hint style: the first press names the technique and the row, column or box its
+// pattern sits in (or the box holding a wrong entry); pressing again (or the banner's Explain
+// button) gives the full step-by-step explanation.
+const nudge = ref<{ unit: BoardUnit; technique: TechniqueId | null } | null>(null);
+const nudgeUnit = computed(() => {
+  const u = nudge.value?.unit;
+  if (!u) return "";
+  const n = u.kind === "row" ? u.r + 1 : u.kind === "col" ? u.c + 1 : boxNumber(u);
+  return t(`hint.nudge.unit.${u.kind}`, { n });
+});
 const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
 watch(currentBoard, () => (nudge.value = null), { deep: true });
-watch(currentScreen, () => (nudge.value = null));
+watch(currentScreen, () => {
+  nudge.value = null;
+  finishing.value = false;
+});
+
+// The nudge's technique opens its lesson; the game waits, paused, until the Academy's Back.
+function openNudgeLesson() {
+  const id = nudge.value?.technique;
+  if (!id) return;
+  if (!timer.isPaused.value) timer.togglePause();
+  academyFromGame.value = true;
+  academyFocus.value = id;
+  currentScreen.value = "academy";
+}
 
 function handleTriggerHint() {
   if (activeComplexHint.value) {
@@ -629,9 +666,11 @@ function handleTriggerHint() {
     return;
   }
   if (hintStyle.value === "nudge" && !nudge.value) {
-    const at = engine.peekHintCell();
-    if (at) {
-      nudge.value = at;
+    const peek = engine.peekHint();
+    if (peek) {
+      nudge.value = peek.move
+        ? { unit: patternUnit(peek.move), technique: peek.move.technique }
+        : { unit: { kind: "box", ...peek.at }, technique: null };
       cue("hint");
       return;
     }
@@ -644,8 +683,10 @@ function handleTriggerHint() {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placed = engine.activeMove.value?.placement?.num;
+  const placement = engine.activeMove.value?.placement;
+  const placed = placement?.num;
   hintsUsed.value++;
+  if (placement) logPlacement(placement);
   if (tech) {
     if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
     techStats.record(tech);
@@ -660,6 +701,45 @@ function handleInstantApplyHint() {
     );
     hintBody.value = "";
   }
+}
+
+// Finish: with only a few cells left, all of them plain singles from here (by the solver, not the
+// answer key) and no wrong digit on the board, offer to fill them in. A normal win, not a hint.
+const FINISH_MAX_EMPTY = 9;
+const FINISH_STEP_MS = 80;
+// True from the press until the player leaves the game screen: input is blocked meanwhile.
+const finishing = ref(false);
+const finishPath = computed(() => {
+  if (currentScreen.value !== "game" || showModal.value) return null;
+  const empty = currentBoard.value.flat().filter((v) => v === 0).length;
+  if (!empty || empty > FINISH_MAX_EMPTY || engine.findWrongEntry()) return null;
+  return singlesPath(currentBoard.value);
+});
+
+// The clock stops at the press; the cells fill one by one in solve order, each with its own
+// flash and placement cue (all at once under reduced motion), then the usual win flow runs.
+async function handleFinish() {
+  const path = finishPath.value;
+  if (!path || finishing.value || timer.isPaused.value) return;
+  finishing.value = true;
+  timer.stopTimer();
+  cancelComplexHint();
+  engine.resetHintChain();
+  nudge.value = null;
+  activeDigit.value = null;
+  selectedCell.value = null;
+  const token = startToken; // bumped if the player exits mid-cascade
+  const instant = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  for (const [i, p] of path.entries()) {
+    if (i && !instant) await new Promise((done) => setTimeout(done, FINISH_STEP_MS));
+    if (token !== startToken) return;
+    currentBoard.value[p.r]![p.c] = p.num;
+    clearRelationalNotes(p.r, p.c, p.num);
+    logPlacement(p);
+    if (!instant || !i) cue("place", p.num);
+    runFlash([...flashCells.value, { r: p.r, c: p.c, delay: 0 }]);
+  }
+  if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
 }
 
 function handleAutoFillNotes() {
@@ -701,6 +781,7 @@ function startDaily() {
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
+  placements.value = [];
   loadCustomBoard(dailyPuzzle.getBoard());
   timer.resetTimer();
   timer.startTimer();
@@ -723,6 +804,7 @@ function handleLoadCustomPuzzle(
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
+  placements.value = [];
   loadCustomBoard(board);
   timer.resetTimer();
   timer.startTimer();
@@ -801,7 +883,7 @@ function redo() {
 
 function handleKeyDown(e: KeyboardEvent) {
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
-  if (showModal.value || practiceLoading.value) return;
+  if (showModal.value || practiceLoading.value || finishing.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
   // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
   if (e.metaKey || e.ctrlKey) {
@@ -837,7 +919,7 @@ function handleKeyDown(e: KeyboardEvent) {
 
 // Switching tabs/apps shouldn't quietly burn time against the player's score.
 function handlePageHidden() {
-  if (document.hidden && currentScreen.value === "game" && !timer.isPaused.value) {
+  if (document.hidden && currentScreen.value === "game" && !timer.isPaused.value && !finishing.value) {
     timer.togglePause();
   }
 }
@@ -960,6 +1042,7 @@ onUnmounted(() => {
             <button
               @click="
                 academyFocus = null;
+                academyFromGame = false;
                 currentScreen = 'academy';
               "
               class="tile menu-cell"
@@ -997,7 +1080,7 @@ onUnmounted(() => {
         <SudokuAcademy
           v-else-if="currentScreen === 'academy'"
           :focus="academyFocus"
-          @back-to-menu="currentScreen = 'menu'"
+          @back-to-menu="currentScreen = academyFromGame ? 'game' : 'menu'"
           @practice="handlePractice"
         />
 
@@ -1113,22 +1196,49 @@ onUnmounted(() => {
               :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
 :difficulty="difficultyLabel"
-              @toggle-pause="timer.togglePause()"
+              @toggle-pause="!finishing && timer.togglePause()"
               @exit-game="exitToMenu"
             />
 
-            <!-- Nudge: points at a box before the full explanation -->
+            <!-- Nudge: names the technique and where to look before the full explanation -->
             <div
               v-if="nudge"
               role="status"
               class="flex items-center justify-between gap-3 border border-amber-500/40 bg-amber-300/25 px-3 py-2 text-xs text-amber-950 dark:bg-amber-400/10 dark:text-amber-200"
             >
-              <p>{{ $t("hint.nudge.body", { box: nudgeBox }) }}</p>
+              <i18n-t v-if="nudge.technique" keypath="hint.nudge.body" tag="p" scope="global">
+                <template #unit>{{ nudgeUnit }}</template>
+                <template #technique>
+                  <button
+                    @click="openNudgeLesson"
+                    :title="$t('modal.openLesson')"
+                    class="font-bold underline decoration-amber-600/60 underline-offset-2 hover:decoration-2"
+                  >
+                    {{ $t(`hint.move.${nudge.technique}.name`) }}
+                  </button>
+                </template>
+              </i18n-t>
+              <p v-else>{{ $t("hint.nudge.wrong", { unit: nudgeUnit }) }}</p>
               <button
                 @click="handleTriggerHint"
                 class="shrink-0 border border-amber-600/50 px-2 py-1 font-bold transition-colors hover:bg-amber-400/30"
               >
                 {{ $t("hint.nudge.explain") }}
+              </button>
+            </div>
+
+            <!-- Finish: the cells left are all singles, so offer to fill them in -->
+            <div
+              v-if="(finishPath || finishing) && !timer.isPaused.value"
+              class="modal-pop flex items-center justify-between gap-3 border border-emerald-600/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200"
+            >
+              <p>{{ $t("game.finishBody") }}</p>
+              <button
+                @click="handleFinish"
+                :disabled="finishing"
+                class="tile tile-apply shrink-0 px-4 py-1.5 text-xs font-bold disabled:opacity-60"
+              >
+                {{ $t("game.finish") }}
               </button>
             </div>
 
@@ -1164,7 +1274,7 @@ onUnmounted(() => {
                 :active-digit="activeDigit"
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :theme="boardTheme"
-                :nudge-box="nudge"
+                :nudge="nudge?.unit"
                 @select-cell="handleSelectCell"
               />
               <div class="flex flex-col gap-2.5">
@@ -1188,6 +1298,9 @@ onUnmounted(() => {
                   :digit-first="digitFirst"
                 />
               </div>
+
+              <!-- Finish fills the board by itself: hold every tap until the win. -->
+              <div v-if="finishing" class="absolute inset-0 z-20" />
 
               <!-- PAUSE OVERLAY -->
               <div
@@ -1261,7 +1374,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl p-6 text-center shadow-2xl"
+          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto border-t-[6px] !rounded-2xl p-6 text-center shadow-2xl"
           :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1410,6 +1523,33 @@ onUnmounted(() => {
                   {{ $t(`hint.move.${id}.name`) }}
                 </button>
               </div>
+            </div>
+            <div v-if="stuck.length" class="px-3 py-2" data-testid="stuck-moments">
+              <p class="mb-2 text-xs font-semibold text-zinc-500">
+                {{ $t("modal.stuck") }}
+              </p>
+              <ul class="space-y-1.5">
+                <li
+                  v-for="m in stuck"
+                  :key="m.at"
+                  class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
+                >
+                  <span class="text-xs text-zinc-700 tabular-nums dark:text-zinc-300">{{
+                    $t("modal.stuckAt", {
+                      at: timer.formatTime(m.at),
+                      gap: timer.formatTime(m.gap),
+                    })
+                  }}</span>
+                  <button
+                    v-if="m.technique"
+                    @click="openLesson(m.technique!)"
+                    :title="$t('modal.openLesson')"
+                    class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                  >
+                    {{ $t(`hint.move.${m.technique}.name`) }}
+                  </button>
+                </li>
+              </ul>
             </div>
             <div v-if="techniqueLog.length" class="px-3 py-2">
               <p class="mb-2 text-xs font-semibold text-zinc-500">
