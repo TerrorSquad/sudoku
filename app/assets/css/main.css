@@ -57,9 +57,24 @@
      16px up to a 1920×1080-class viewport (phones and laptops are untouched), 32px at 3840×2160,
      whichever dimension runs out first. Media queries read rem as the browser default, not this, so
      a 4K TV gets the wide layout drawn at twice the size, not a phone layout. Size new things in
-     rem, not px. */
+     rem, not px.
+     The Display size setting (--ui-scale, set by app.vue) multiplies that, never below the auto size
+     and never past --fit, the most the game screen still fits (measured): 44rem wide (the game
+     dashboard in the 12-column layout) and 31rem tall. */
   html {
-    font-size: clamp(100%, min(100vw / 120, 100vh / 67.5), 200%);
+    --auto-font-size: clamp(100%, min(100vw / 120, 100vh / 67.5), 200%);
+    --fit: min(100vw / 44, 100vh / 31);
+    font-size: max(
+      var(--auto-font-size),
+      min(var(--auto-font-size) * var(--ui-scale, 1), var(--fit))
+    );
+  }
+  /* Below lg (portrait) the board spans the width and everything else stacks under it in about
+     19rem, so only the height the board leaves over can grow; a phone's row of controls needs 20.5rem. */
+  @media (orientation: portrait) and (max-width: 1023px) {
+    html {
+      --fit: min(100vw / 20.5, (100vh - 100vw) / 19);
+    }
   }
   h1,
   h2,

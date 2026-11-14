@@ -2,7 +2,7 @@
 // Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
 import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, watchEffect, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { TechniqueId } from "./utils/sudokuGrader";
@@ -70,7 +70,11 @@ const {
   showCandidates,
   zen,
   boardTheme,
+  uiScale,
 } = usePreferences();
+// Display size: main.css multiplies the root font-size by it. Set during setup, before the first
+// render, so the app never paints at the wrong size.
+watchEffect(() => document.documentElement.style.setProperty("--ui-scale", String(uiScale.value)));
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
 const CUES = {
@@ -1049,7 +1053,7 @@ onUnmounted(() => {
         <!-- GAME -->
         <div
           v-else-if="currentScreen === 'game'"
-          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[15rem_minmax(0,1fr)_26.25rem] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
+          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[min(15rem,18%)_minmax(0,1fr)_min(26.25rem,30%)] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
           <p class="sr-only" aria-live="polite">{{ hintStatus }}</p>

@@ -111,3 +111,21 @@ test("Zen hides the clock and mistakes, and never ends the game", async ({ page 
   await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
   await expect(page.getByText("Mistakes:")).toBeHidden();
 });
+
+test.describe("Display size", () => {
+  test.use({ viewport: { width: 1920, height: 1080 } });
+
+  test("Extra large scales the whole UI and persists", async ({ page }) => {
+    const rootSize = () => page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+    await page.goto("/");
+    await expect.poll(rootSize).toBe("16px");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByLabel("Display size").selectOption({ label: "Extra large (150%)" });
+    await expect.poll(rootSize).toBe("24px");
+
+    await page.reload();
+    await expect.poll(rootSize).toBe("24px");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByLabel("Display size")).toHaveValue("1.5");
+  });
+});

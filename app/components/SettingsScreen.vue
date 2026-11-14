@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { usePreferences, type HintStyle, type MistakeLimit } from "../composables/usePreferences";
+import {
+  UI_SCALES,
+  usePreferences,
+  type HintStyle,
+  type MistakeLimit,
+} from "../composables/usePreferences";
 import { canVibrate } from "../utils/haptics";
 import {
   applyBackup,
@@ -26,6 +31,7 @@ const {
   hintStyle,
   showCandidates,
   boardTheme,
+  uiScale,
 } = usePreferences();
 
 const vibrationSupported = canVibrate();
@@ -140,6 +146,18 @@ const style = computed({
             <option value="tiles">{{ $t("settings.boardTiles") }}</option>
             <option value="newsprint">{{ $t("settings.boardNewsprint") }}</option>
             <option value="contrast">{{ $t("settings.boardContrast") }}</option>
+          </select>
+        </label>
+
+        <label class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.uiScale") }}</span>
+            <span class="s-hint">{{ $t("settings.uiScaleHint") }}</span>
+          </span>
+          <select v-model.number="uiScale" class="s-select">
+            <option v-for="(s, i) in UI_SCALES" :key="s" :value="s">
+              {{ $t(`settings.uiScale${i}`) }} ({{ s * 100 }}%)
+            </option>
           </select>
         </label>
 

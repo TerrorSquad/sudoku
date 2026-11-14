@@ -2,6 +2,8 @@
 // saves, Daily history and preferences. Pure over a Storage-like object; unit-tested in
 // tests/progressBackup.test.ts.
 
+import { UI_SCALES } from "../composables/usePreferences";
+
 export const BACKUP_PREFIX = "sudoku_v1_";
 export const MAX_BACKUP_BYTES = 5_000_000;
 
@@ -58,6 +60,9 @@ function validEntry(key: string, value: string): boolean {
   }
   if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);
   if (key === "sudoku_v1_pref_hint_style") return parsed === "full" || parsed === "nudge";
+  if (key === "sudoku_v1_pref_board_theme")
+    return ["tiles", "newsprint", "contrast"].includes(parsed as string);
+  if (key === "sudoku_v1_pref_ui_scale") return (UI_SCALES as readonly unknown[]).includes(parsed);
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
   if (key === "sudoku_v1_score") {
     return (

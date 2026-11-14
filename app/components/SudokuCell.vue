@@ -158,6 +158,33 @@ const cellClasses = computed(() => {
 </template>
 
 <style scoped>
+/* Digits and notes keep the template's rem sizes, but never outgrow the cell: a big Display size
+   grows the rem while the board, sized by the viewport height, shrinks. cqw is the board's width
+   (SudokuGrid is the container); each cap sits just above the default size at every breakpoint,
+   so the normal sizes are untouched. */
+.cell {
+  font-size: min(1.875rem, 8.5cqw);
+}
+.cell-note {
+  font-size: min(0.625rem, 2.9cqw);
+}
+@media (width >= 64rem) {
+  .cell {
+    font-size: min(1.875rem, 7cqw);
+  }
+  .cell-note {
+    font-size: min(0.625rem, 2.4cqw);
+  }
+}
+@media (width >= 100rem) {
+  .cell {
+    font-size: min(2.25rem, 7cqw);
+  }
+  .cell-note {
+    font-size: min(0.8125rem, 2.4cqw);
+  }
+}
+
 /* Board "prints in" diagonally from the top-left when a game opens. */
 @keyframes cell-in {
   0% {
