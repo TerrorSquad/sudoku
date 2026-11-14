@@ -112,7 +112,9 @@ const style = computed({
           class="h-4 w-4"
           path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
         />
-        <span class="hidden sm:inline">{{ inGame ? $t("settings.backToGame") : $t("menu.back") }}</span>
+        <span class="hidden sm:inline">{{
+          inGame ? $t("settings.backToGame") : $t("menu.back")
+        }}</span>
       </button>
       <div class="min-w-0 flex-1">
         <h1
@@ -240,62 +242,62 @@ const style = computed({
         </label>
 
         <template v-if="!inGame">
-        <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
-          {{ $t("settings.groupData") }}
-        </h2>
+          <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
+            {{ $t("settings.groupData") }}
+          </h2>
 
-        <div class="s-row">
-          <span>
-            <span class="s-label">{{ $t("settings.export") }}</span>
-            <span class="s-hint">{{ $t("settings.exportHint") }}</span>
-          </span>
-          <button type="button" class="s-action" @click="exportProgress">
-            {{ $t("settings.exportButton") }}
-          </button>
-        </div>
-
-        <div class="s-row">
-          <span>
-            <span class="s-label">{{ $t("settings.import") }}</span>
-            <span class="s-hint">{{ $t("settings.importHint") }}</span>
-          </span>
-          <button type="button" class="s-action" @click="fileInput?.click()">
-            {{ $t("settings.importButton") }}
-          </button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept="application/json,.json"
-            class="sr-only"
-            tabindex="-1"
-            aria-hidden="true"
-            data-testid="import-file"
-            @change="onFile"
-          />
-        </div>
-
-        <p v-if="importError" role="alert" class="s-notice s-error">
-          {{ $t(`settings.importError.${importError}`) }}
-        </p>
-
-        <div v-if="pending" role="alertdialog" class="s-notice">
-          <p>
-            {{
-              $t("settings.importConfirm", {
-                date: new Date(pending.backup.exportedAt).toLocaleDateString(),
-                n: pending.items,
-              })
-            }}
-          </p>
-          <div class="flex gap-2">
-            <button type="button" class="s-action s-danger" @click="confirmImport">
-              {{ $t("settings.importReplace") }}
-            </button>
-            <button type="button" class="s-action" @click="pending = null">
-              {{ $t("settings.importCancel") }}
+          <div class="s-row">
+            <span>
+              <span class="s-label">{{ $t("settings.export") }}</span>
+              <span class="s-hint">{{ $t("settings.exportHint") }}</span>
+            </span>
+            <button type="button" class="s-action" @click="exportProgress">
+              {{ $t("settings.exportButton") }}
             </button>
           </div>
-        </div>
+
+          <div class="s-row">
+            <span>
+              <span class="s-label">{{ $t("settings.import") }}</span>
+              <span class="s-hint">{{ $t("settings.importHint") }}</span>
+            </span>
+            <button type="button" class="s-action" @click="fileInput?.click()">
+              {{ $t("settings.importButton") }}
+            </button>
+            <input
+              ref="fileInput"
+              type="file"
+              accept="application/json,.json"
+              class="sr-only"
+              tabindex="-1"
+              aria-hidden="true"
+              data-testid="import-file"
+              @change="onFile"
+            />
+          </div>
+
+          <p v-if="importError" role="alert" class="s-notice s-error">
+            {{ $t(`settings.importError.${importError}`) }}
+          </p>
+
+          <div v-if="pending" role="alertdialog" class="s-notice">
+            <p>
+              {{
+                $t("settings.importConfirm", {
+                  date: new Date(pending.backup.exportedAt).toLocaleDateString(),
+                  n: pending.items,
+                })
+              }}
+            </p>
+            <div class="flex gap-2">
+              <button type="button" class="s-action s-danger" @click="confirmImport">
+                {{ $t("settings.importReplace") }}
+              </button>
+              <button type="button" class="s-action" @click="pending = null">
+                {{ $t("settings.importCancel") }}
+              </button>
+            </div>
+          </div>
         </template>
       </div>
     </div>

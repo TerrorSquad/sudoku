@@ -31,9 +31,7 @@ defineEmits<{
       "
       :aria-pressed="digitFirst ? activeDigit === n : undefined"
       :class="[
-        9 - counts[n]! <= 0
-          ? 'pointer-events-none opacity-30'
-          : '',
+        9 - counts[n]! <= 0 ? 'pointer-events-none opacity-30' : '',
         digitFirst && activeDigit === n
           ? '!border-violet-500 !bg-violet-100 ring-2 ring-violet-500 dark:!bg-violet-500/20'
           : '',

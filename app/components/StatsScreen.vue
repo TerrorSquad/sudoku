@@ -17,7 +17,16 @@ const stats = score.getStats();
 const onWavedash = hasWavedash();
 const streak = daily.getStreak();
 
-const DIFFICULTY_ORDER = ["beginner", "easy", "medium", "hard", "expert", "master", "daily", "custom"];
+const DIFFICULTY_ORDER = [
+  "beginner",
+  "easy",
+  "medium",
+  "hard",
+  "expert",
+  "master",
+  "daily",
+  "custom",
+];
 
 const difficultyRows = computed(() => {
   const keys = Object.keys(stats.perDifficulty);
@@ -85,10 +94,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
     <div class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <LeaderboardPanel v-if="onWavedash" />
 
-      <div
-        v-if="!hasStats"
-        class="tray flex flex-col items-center gap-5 px-6 py-16 text-center"
-      >
+      <div v-if="!hasStats" class="tray flex flex-col items-center gap-5 px-6 py-16 text-center">
         <AppIcon
           class="h-10 w-10 text-zinc-400 dark:text-zinc-600"
           path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
@@ -96,10 +102,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         <p class="max-w-xs text-sm text-zinc-600 dark:text-zinc-400">
           {{ $t("stats.noStatsYet") }}
         </p>
-        <button
-          @click="emit('start-game')"
-          class="tile tile-primary px-8 py-3 text-sm font-bold"
-        >
+        <button @click="emit('start-game')" class="tile tile-primary px-8 py-3 text-sm font-bold">
           {{ $t("stats.startFirst") }}
         </button>
       </div>
@@ -107,9 +110,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       <template v-else>
         <!-- Headline cards -->
         <div class="mb-8 grid grid-cols-3 gap-3">
-          <div
-            class="panel p-4 text-center"
-          >
+          <div class="panel p-4 text-center">
             <p
               class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-50"
             >
@@ -119,9 +120,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               {{ $t("stats.lifetimeScore") }}
             </p>
           </div>
-          <div
-            class="panel p-4 text-center"
-          >
+          <div class="panel p-4 text-center">
             <p
               class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-100"
             >
@@ -131,9 +130,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               {{ $t("stats.gamesWon") }}
             </p>
           </div>
-          <div
-            class="panel p-4 text-center"
-          >
+          <div class="panel p-4 text-center">
             <p
               class="text-2xl leading-tight font-black text-amber-600 tabular-nums sm:text-3xl dark:text-amber-400"
             >

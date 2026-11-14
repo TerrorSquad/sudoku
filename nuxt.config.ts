@@ -12,8 +12,20 @@ export default defineNuxtConfig({
     families: [
       // Upright only, Latin + Latin Extended (Serbian Latin's č ć š ž đ): every style and
       // script Google offers added 96 @font-face rules and 23 KB of CSS.
-      { name: "Fraunces", provider: "google", weights: [500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
-      { name: "Inter Tight", provider: "google", weights: [400, 500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
+      {
+        name: "Fraunces",
+        provider: "google",
+        weights: [500, 600, 700, 800],
+        styles: ["normal"],
+        subsets: ["latin", "latin-ext"],
+      },
+      {
+        name: "Inter Tight",
+        provider: "google",
+        weights: [400, 500, 600, 700, 800],
+        styles: ["normal"],
+        subsets: ["latin", "latin-ext"],
+      },
     ],
   },
   pwa: {

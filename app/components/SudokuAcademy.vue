@@ -296,7 +296,10 @@ const total = computed(() => techniques.length);
           <h2 :class="tierStyles[tier].heading" class="text-lg font-black sm:text-xl">
             {{ $t(`academy.tier.${tier}`) }}
           </h2>
-          <span :class="tierStyles[tier].badge" class="border px-2 py-0.5 text-[0.625rem] font-bold">
+          <span
+            :class="tierStyles[tier].badge"
+            class="border px-2 py-0.5 text-[0.625rem] font-bold"
+          >
             {{ byTier(tier).length }}
           </span>
           <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
