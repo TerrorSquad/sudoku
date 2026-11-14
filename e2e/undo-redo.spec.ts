@@ -6,7 +6,7 @@ const ALMOST_SOLVED =
 
 test("undo and redo step a placement via buttons and keyboard", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   // Two blanks so the puzzle isn't won by the first placement.
   const two =
     ALMOST_SOLVED.slice(0, 1) + "0" + ALMOST_SOLVED.slice(2, 49) + "0" + ALMOST_SOLVED.slice(50);
@@ -54,24 +54,24 @@ const ONE_BLANK =
 
 test("shortcuts are inert behind the win modal (no second win, board intact)", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ONE_BLANK);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 
   const cell = page.locator(`${BOARD} [data-cell]`).nth(49);
   const solved = await cell.textContent();
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Backspace");
   await expect(cell).toHaveText(solved ?? "");
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 });
 
 test("redo restores an edit without declaring a win", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ONE_BLANK);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   const cell = page.locator(`${BOARD} [data-cell]`).nth(49);
@@ -80,7 +80,7 @@ test("redo restores an edit without declaring a win", async ({ page }) => {
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+y");
   await expect(cell).toHaveText("1");
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeHidden();
 });
 
 test("the grid has exactly one Tab stop, following the selection", async ({ page }) => {

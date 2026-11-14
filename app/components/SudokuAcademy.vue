@@ -39,9 +39,13 @@ const techniques: Technique[] = [
   { id: "hidden-quad", tier: "Advanced" },
   { id: "x-wing", tier: "Advanced" },
   { id: "swordfish", tier: "Advanced" },
+  { id: "skyscraper", tier: "Advanced" },
+  { id: "two-string-kite", tier: "Advanced" },
   { id: "jellyfish", tier: "Advanced" },
+  { id: "unique-rectangle", tier: "Expert" },
   { id: "xy-wing", tier: "Expert" },
   { id: "xyz-wing", tier: "Expert" },
+  { id: "simple-coloring", tier: "Expert" },
 ];
 
 const MASTERY_STYLE = [
@@ -139,6 +143,14 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
       return t("academy.caption.xyWing", { num, nElim, elimList });
     case "xyz-wing":
       return t("academy.caption.xyzWing", { num, nElim, elimList });
+    case "skyscraper":
+      return t("academy.caption.skyscraper", { num, nElim, elimList });
+    case "two-string-kite":
+      return t("academy.caption.kite", { num, nElim, elimList });
+    case "unique-rectangle":
+      return t("academy.caption.uniqueRectangle", { digits, nElim, elimList });
+    case "simple-coloring":
+      return t("academy.caption.coloring", { num, nElim, elimList });
     default:
       return "";
   }
@@ -159,7 +171,7 @@ const total = computed(() => techniques.length);
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
         @click="emit('back-to-menu')"
@@ -191,7 +203,7 @@ const total = computed(() => techniques.length);
     <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <!-- Example legend -->
       <div
-        class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-zinc-200 bg-zinc-50 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-400"
+        class="panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:text-zinc-400"
       >
         <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ $t("academy.colors") }}</span>
         <span class="flex items-center gap-1.5"
@@ -230,7 +242,7 @@ const total = computed(() => techniques.length);
             v-for="tech in byTier(tier)"
             :key="tech.id"
             :class="tierStyles[tier].border"
-            class="cursor-pointer border bg-zinc-50 p-4 transition-colors sm:p-5 dark:bg-zinc-900/60"
+            class="panel cursor-pointer p-4 sm:p-5"
             @click="toggleExample(tech.id)"
           >
             <div class="mb-3 flex items-start justify-between gap-3">
@@ -288,7 +300,7 @@ const total = computed(() => techniques.length);
             </div>
 
             <button
-              class="mt-4 w-full border border-violet-500/40 bg-violet-500/5 py-2 text-xs font-bold text-violet-700 transition-colors hover:bg-violet-500/10 dark:text-violet-300"
+              class="tile mt-4 w-full py-2 text-xs font-bold text-violet-700 dark:text-violet-300"
               @click.stop="emit('practice', tech.id)"
             >
               {{ $t("practice.button") }}
@@ -326,7 +338,7 @@ const total = computed(() => techniques.length);
         </p>
         <button
           @click="emit('back-to-menu')"
-          class="mt-6 border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="tile mt-6 px-8 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-300"
         >
           {{ $t("academy.back") }}
         </button>

@@ -14,7 +14,7 @@ test("starts a new game and renders a full board", async ({ page }) => {
 
 test("filling the last correct digit wins the puzzle", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
 
@@ -22,5 +22,16 @@ test("filling the last correct digit wins the puzzle", async ({ page }) => {
   const numpad = page.getByTestId("numpad");
   await numpad.locator("button:not([disabled])").first().click();
 
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+});
+
+test("leaving the Daily doesn't carry it into the next game", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await expect(page.getByText("Daily", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Exit" }).click();
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await expect(page.getByText("Beginner", { exact: true })).toBeVisible();
+  await expect(page.getByText("Daily", { exact: true })).toBeHidden();
 });

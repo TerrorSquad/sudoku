@@ -18,7 +18,7 @@ test("prompts to resume when a save exists for the chosen difficulty", async ({ 
   await createSaveAndReturnToDifficulty(page);
   await expect(page.getByRole("heading", { name: "Saved game found" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start New" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start a new game" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
 });
 
@@ -26,7 +26,7 @@ test("cancel dismisses the prompt without leaving the difficulty screen", async 
   await createSaveAndReturnToDifficulty(page);
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("heading", { name: "Saved game found" })).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Choose a Challenge" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose a difficulty" })).toBeVisible();
 });
 
 test("continue resumes into the game screen", async ({ page }) => {
@@ -37,6 +37,6 @@ test("continue resumes into the game screen", async ({ page }) => {
 
 test("start new dismisses the prompt and starts a fresh game", async ({ page }) => {
   await createSaveAndReturnToDifficulty(page);
-  await page.getByRole("button", { name: "Start New" }).click();
+  await page.getByRole("button", { name: "Start a new game" }).click();
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 });

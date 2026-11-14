@@ -20,7 +20,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
 <template>
   <div class="flex min-h-screen w-full flex-col">
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
         @click="emit('back-to-menu')"
@@ -55,7 +55,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
             TIER_STYLE[a.tier],
             a.id in unlocked ? 'bg-white dark:bg-zinc-900/60' : 'bg-transparent',
           ]"
-          class="flex items-start gap-3 border border-l-4 border-zinc-200 p-4 dark:border-zinc-800"
+          class="panel flex items-start gap-3 border-l-4 p-4"
         >
           <AppIcon
             :class="a.id in unlocked ? 'text-amber-500' : 'text-zinc-400 dark:text-zinc-600'"
@@ -102,7 +102,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
       <div class="mt-10 border-t border-zinc-200 pt-8 text-center dark:border-zinc-800">
         <button
           @click="emit('back-to-menu')"
-          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="tile px-8 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-300"
         >
           {{ $t("achievements.back") }}
         </button>

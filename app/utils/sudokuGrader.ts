@@ -9,8 +9,8 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sud
 //   1 — singles only (naked/hidden single)
 //   2 — pairs: naked/hidden pair, pointing, claiming
 //   3 — naked/hidden triple, X-Wing
-//   4 — naked/hidden quad, Swordfish, XY-Wing
-//   5 — not solvable with the above (chains/guessing territory)
+//   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Unique Rectangle, XY-Wing
+//   5 — Jellyfish, XYZ-Wing, Simple Coloring
 
 // 1..5 = hardest technique tier required to fully solve.
 // STUCK = no implemented technique makes progress (needs guessing / a technique
@@ -378,7 +378,11 @@ export type TechniqueId =
   | "swordfish"
   | "jellyfish"
   | "xy-wing"
-  | "xyz-wing";
+  | "xyz-wing"
+  | "skyscraper"
+  | "two-string-kite"
+  | "unique-rectangle"
+  | "simple-coloring";
 
 export interface CellRC {
   r: number;
@@ -710,6 +714,171 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
   return null;
 }
 
+const sees = (a: number, b: number) => a !== b && PEERS[a]!.includes(b);
+const boxOf = (i: number) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
+
+/** Every unit where digit v has exactly two candidates: its strong links, as cell pairs. */
+function strongLinks(s: SolveState, v: number): { kind: "row" | "col" | "box"; a: number; b: number }[] {
+  const b = bit(v);
+  const links: { kind: "row" | "col" | "box"; a: number; b: number }[] = [];
+  for (const [kind, units] of [
+    ["row", ROWS],
+    ["col", COLS],
+    ["box", BOXES],
+  ] as const) {
+    for (const unit of units) {
+      const cells = unit.filter((i) => s.board[i] === 0 && s.cands[i]! & b);
+      if (cells.length === 2) links.push({ kind, a: cells[0]!, b: cells[1]! });
+    }
+  }
+  return links;
+}
+
+/** Empty cells holding v that see every cell in `of` (and are none of them). */
+function seeingAll(s: SolveState, v: number, of: number[]): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < 81; i++) {
+    if (s.board[i] !== 0 || !(s.cands[i]! & bit(v)) || of.includes(i)) continue;
+    if (of.every((o) => sees(i, o))) out.push(i);
+  }
+  return out;
+}
+
+// --- Skyscraper / 2-String Kite ---
+// Two strong links on one digit whose near ends see each other: the near ends can't both be v,
+// so one of the far ends is. Any cell seeing both far ends loses v.
+//   Skyscraper: two row links (or two column links) whose near ends share a column (row).
+//   2-String Kite: a row link and a column link whose near ends share a box.
+function findTurbotMove(s: SolveState, kite: boolean): SolveMove | null {
+  for (let v = 1; v <= 9; v++) {
+    const links = strongLinks(s, v).filter((l) => l.kind !== "box");
+    for (let x = 0; x < links.length; x++) {
+      for (let y = x + 1; y < links.length; y++) {
+        const l1 = links[x]!;
+        const l2 = links[y]!;
+        if (kite ? l1.kind === l2.kind : l1.kind !== l2.kind) continue;
+        for (const [n1, f1] of [
+          [l1.a, l1.b],
+          [l1.b, l1.a],
+        ] as const) {
+          for (const [n2, f2] of [
+            [l2.a, l2.b],
+            [l2.b, l2.a],
+          ] as const) {
+            if (new Set([n1, f1, n2, f2]).size !== 4) continue;
+            if (kite) {
+              if (boxOf(n1) !== boxOf(n2) || boxOf(f1) === boxOf(n1) || boxOf(f2) === boxOf(n2))
+                continue;
+            } else {
+              // Near ends on one line across the links, far ends off it (else it's an X-Wing).
+              const line = l1.kind === "row" ? (i: number) => i % 9 : (i: number) => Math.floor(i / 9);
+              if (line(n1) !== line(n2) || line(f1) === line(f2)) continue;
+            }
+            const elims = seeingAll(s, v, [f1, f2]).filter((i) => i !== n1 && i !== n2);
+            if (elims.length) {
+              return {
+                technique: kite ? "two-string-kite" : "skyscraper",
+                tier: 4,
+                eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+                triggers: [n1, f1, n2, f2].map(rc),
+                digits: [v],
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// --- Unique Rectangle (type 1) ---
+// Four cells on two rows, two columns and two boxes. If three hold exactly {x, y}, the fourth
+// can't be x or y: that would leave a rectangle that swaps freely, i.e. two solutions.
+function findUniqueRectangleMove(s: SolveState): SolveMove | null {
+  for (let r1 = 0; r1 < 9; r1++) {
+    for (let r2 = r1 + 1; r2 < 9; r2++) {
+      for (let c1 = 0; c1 < 9; c1++) {
+        for (let c2 = c1 + 1; c2 < 9; c2++) {
+          // Exactly two boxes: the rows share a band or the columns share a stack, not both.
+          const sameBand = Math.floor(r1 / 3) === Math.floor(r2 / 3);
+          const sameStack = Math.floor(c1 / 3) === Math.floor(c2 / 3);
+          if (sameBand === sameStack) continue;
+          const corners = [idx(r1, c1), idx(r1, c2), idx(r2, c1), idx(r2, c2)];
+          if (corners.some((i) => s.board[i] !== 0)) continue;
+          const pairs = corners.filter((i) => popcount(s.cands[i]!) === 2);
+          if (pairs.length !== 3) continue;
+          const xy = s.cands[pairs[0]!]!;
+          if (pairs.some((i) => s.cands[i] !== xy)) continue;
+          const odd = corners.find((i) => !pairs.includes(i))!;
+          if ((s.cands[odd]! & xy) === 0) continue;
+          return {
+            technique: "unique-rectangle",
+            tier: 4,
+            eliminations: maskDigits(s.cands[odd]! & xy).map((num) => ({ ...rc(odd), num })),
+            triggers: pairs.map(rc),
+            digits: maskDigits(xy),
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// --- Simple Coloring ---
+// Follow one digit's strong links into a chain and colour it in two alternating colours: exactly
+// one colour is the true one. Two cells of one colour seeing each other make that colour false
+// (wrap); a cell outside the chain that sees both colours can't hold the digit (trap).
+function findSimpleColoringMove(s: SolveState): SolveMove | null {
+  for (let v = 1; v <= 9; v++) {
+    const links = strongLinks(s, v);
+    const adj = new Map<number, number[]>();
+    for (const { a, b } of links) {
+      adj.set(a, [...(adj.get(a) ?? []), b]);
+      adj.set(b, [...(adj.get(b) ?? []), a]);
+    }
+    const color = new Map<number, 0 | 1>();
+    for (const start of adj.keys()) {
+      if (color.has(start)) continue;
+      const chain: number[] = [];
+      color.set(start, 0);
+      const queue = [start];
+      while (queue.length) {
+        const cur = queue.shift()!;
+        chain.push(cur);
+        for (const next of adj.get(cur)!) {
+          if (color.has(next)) continue;
+          color.set(next, color.get(cur) === 0 ? 1 : 0);
+          queue.push(next);
+        }
+      }
+      if (chain.length < 4) continue; // shorter chains are pointing/claiming in disguise
+      const side = [chain.filter((i) => color.get(i) === 0), chain.filter((i) => color.get(i) === 1)];
+      let elims: number[] = [];
+      for (const cells of side) {
+        if (cells.some((a) => cells.some((b) => sees(a, b)))) elims = cells;
+      }
+      if (!elims.length) {
+        for (let i = 0; i < 81; i++) {
+          if (s.board[i] !== 0 || !(s.cands[i]! & bit(v)) || color.has(i)) continue;
+          if (side[0]!.some((a) => sees(i, a)) && side[1]!.some((b) => sees(i, b))) elims.push(i);
+        }
+      }
+      if (elims.length) {
+        return {
+          technique: "simple-coloring",
+          tier: 5,
+          eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+          triggers: chain.filter((i) => !elims.includes(i)).map(rc),
+          digits: [v],
+        };
+      }
+    }
+  }
+  return null;
+}
+
 // Easiest-first dispatch — mirrors the grading tier order.
 function findNextMove(s: SolveState): SolveMove | null {
   return (
@@ -724,10 +893,21 @@ function findNextMove(s: SolveState): SolveMove | null {
     findNakedSubsetMove(s, 4) ??
     findHiddenSubsetMove(s, 4) ??
     findFishMove(s, 3) ??
+    findTurbotMove(s, false) ??
+    findTurbotMove(s, true) ??
+    findUniqueRectangleMove(s) ??
     findXYWingMove(s) ??
     findFishMove(s, 4) ??
-    findXYZWingMove(s)
+    findXYZWingMove(s) ??
+    findSimpleColoringMove(s)
   );
+}
+
+/** Grading runs the structured finders too: apply a found move's eliminations. */
+function applyMove(s: SolveState, move: SolveMove | null): boolean {
+  if (!move) return false;
+  for (const e of move.eliminations) s.cands[idx(e.r, e.c)]! &= ~bit(e.num);
+  return true;
 }
 
 /**
@@ -772,9 +952,16 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         eliminateNakedSubset(s, 4) ||
         eliminateHiddenSubset(s, 4) ||
         eliminateFish(s, 3) ||
+        applyMove(s, findTurbotMove(s, false)) ||
+        applyMove(s, findTurbotMove(s, true)) ||
+        applyMove(s, findUniqueRectangleMove(s)) ||
         eliminateXYWing(s),
     },
-    { tier: 5, run: () => eliminateFish(s, 4) || eliminateXYZWing(s) },
+    {
+      tier: 5,
+      run: () =>
+        eliminateFish(s, 4) || eliminateXYZWing(s) || applyMove(s, findSimpleColoringMove(s)),
+    },
   ];
 
   outer: while (s.board.some((v) => v === 0)) {
@@ -806,6 +993,7 @@ interface DifficultyTarget {
   min: Grade; // lowest acceptable tier (inclusive)
   max: Grade; // highest acceptable tier (inclusive)
   ideal: Grade; // preferred tier; closest-to-ideal solved board is the fallback
+  attempts?: number; // digs to try before falling back (default 60)
 }
 
 // All targets are SOLVED tiers (1..5) — STUCK is never acceptable, so every
@@ -818,7 +1006,8 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
   expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  master: { removeTarget: 60, min: 4, max: 5, ideal: 5 },
+  // Only ~1.5% of digs grade 5, so Master digs longer to find one (~90% of the time).
+  master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
 };
 
 /**
@@ -831,7 +1020,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
 export function generateGradedPuzzle(
   difficulty: string,
   rng: Rng = Math.random,
-  maxAttempts = 60,
+  maxAttempts?: number,
 ): GradedPuzzle {
   const target = DIFFICULTY_TARGETS[difficulty] ?? {
     removeTarget: 42,
@@ -840,6 +1029,7 @@ export function generateGradedPuzzle(
     ideal: 3 as Grade,
   };
   const removeTarget = target.removeTarget;
+  maxAttempts ??= target.attempts ?? 60;
 
   let best: GradedPuzzle | null = null;
   let bestDist = Infinity;

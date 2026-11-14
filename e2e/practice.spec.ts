@@ -6,7 +6,7 @@ test("practising a technique starts a labelled game that doesn't touch progress"
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Sudoku Academy" }).click();
+  await page.getByRole("button", { name: "Academy" }).click();
   // Swordfish practically never occurs in random puzzles, so this also exercises the drill fallback.
   const card = page
     .locator("h3", { hasText: "Swordfish" })
@@ -30,7 +30,7 @@ test("practising a technique starts a labelled game that doesn't touch progress"
 
 test("a searchable technique yields a real puzzle", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Sudoku Academy" }).click();
+  await page.getByRole("button", { name: "Academy" }).click();
   const card = page
     .locator("h3", { hasText: "Pointing Pair" })
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");

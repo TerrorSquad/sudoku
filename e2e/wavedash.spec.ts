@@ -26,12 +26,12 @@ test("a win reports its new achievements and stores them", async ({ page }) => {
   // Night Owl keys off the real hour; pin the clock so the unlock set is deterministic.
   await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
   await expect.poll(() => unlockedIds(page)).toEqual(["FIRST_WIN", "FLAWLESS", "SELF_RELIANT"]);
   expect((await sdkLog(page)).stores).toBeGreaterThan(0);
 });
@@ -68,7 +68,7 @@ test("a win posts its time; custom puzzles post nothing", async ({ page }) => {
   await page.getByRole("button", { name: "Continue" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(40).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 
   await expect.poll(async () => (await sdkLog(page)).uploads.length).toBe(1);
   const [time] = (await sdkLog(page)).uploads;
@@ -77,12 +77,12 @@ test("a win posts its time; custom puzzles post nothing", async ({ page }) => {
 
   // A custom puzzle's win reaches the same code but posts nothing more.
   await page.getByRole("button", { name: "Close" }).click();
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
   await page.waitForTimeout(300);
   expect((await sdkLog(page)).uploads).toHaveLength(1);
 });
@@ -178,12 +178,12 @@ test("a corrupt cloud file never touches local progress", async ({ page }) => {
 test("a win uploads progress to the cloud", async ({ page }) => {
   await fakeWavedash(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
   await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
   const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
   expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);

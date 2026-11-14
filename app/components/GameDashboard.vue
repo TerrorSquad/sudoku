@@ -18,7 +18,7 @@ defineEmits<{
 
 <template>
   <div
-    class="flex items-center justify-between gap-3 border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60"
+    class="panel flex items-center justify-between gap-3 px-3.5 py-2.5"
   >
     <div class="flex items-center gap-3">
       <!-- Exit button-->
@@ -35,7 +35,7 @@ defineEmits<{
 
       <!-- Difficulty label-->
       <span
-        class="border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold text-violet-600 dark:text-violet-400"
+        class="rounded-full border border-violet-500/25 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-bold text-violet-700 dark:text-violet-300"
       >
         {{ difficulty }}
       </span>

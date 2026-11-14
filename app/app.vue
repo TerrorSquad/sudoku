@@ -30,6 +30,7 @@ import { useTimer } from "./composables/useTimer";
 import { haptic } from "./utils/haptics";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
+import { takePuzzle } from "./utils/puzzlePool";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
@@ -52,6 +53,9 @@ const {
   mistakeLimit,
   highlightErrors,
   hintStyle,
+  showCandidates,
+  zen,
+  boardTheme,
 } = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
@@ -63,9 +67,10 @@ const CUES = {
   hint: [playHint, null],
   unlock: [playUnlock, null],
 } as const;
-function cue(kind: keyof typeof CUES) {
+// `arg` tunes the sound: the digit for a placement, units completed at once for a completion.
+function cue(kind: keyof typeof CUES, ...arg: number[]) {
   const [sound, vibration] = CUES[kind];
-  if (soundEnabled.value) sound();
+  if (soundEnabled.value) (sound as (...a: number[]) => void)(...arg);
   if (vibration && hapticsEnabled.value) haptic(vibration);
 }
 const engine = useSudokuEngine(
@@ -112,6 +117,8 @@ const achievements = useAchievements();
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
+// A Zen game hides the timer and mistake count, has no mistake limit and records no score.
+const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
 const practiceTechnique = ref<TechniqueId | null>(null);
 const practiceLoading = ref(false);
@@ -131,6 +138,16 @@ const currentScreen = ref<
   | "settings"
 >("menu");
 const activeDifficulty = ref<Difficulty>("medium");
+// What the dashboard chip and the win modal call this game, in the player's language.
+const difficultyLabel = computed(() =>
+  practiceTechnique.value
+    ? `${t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
+    : isDailyMode.value
+      ? t("difficulty.daily")
+      : gameZen.value
+        ? `${t(`difficulty.${activeDifficulty.value}`)} · ${t("difficulty.zen")}`
+        : t(`difficulty.${activeDifficulty.value}`),
+);
 
 const showModal = ref<boolean>(false);
 const modalTitle = ref<string>("");
@@ -208,6 +225,7 @@ watch(
       timerSeconds: timer.timerSeconds.value,
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
+      zen: gameZen.value,
     });
   },
   { deep: true },
@@ -225,7 +243,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (win) {
     cue("win");
     flashWin();
-    if (practiceTechnique.value) {
+    if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
     } else {
       if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
@@ -283,6 +301,16 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   }
 }
 
+// Zen games never mention the clock.
+function winMessage() {
+  return gameZen.value
+    ? t("modal.winZenMsg", { difficulty: difficultyLabel.value })
+    : t("modal.winMsg", {
+        difficulty: difficultyLabel.value,
+        time: timer.formatTime(timer.timerSeconds.value),
+      });
+}
+
 function handleModalClose() {
   showModal.value = false;
   practiceTechnique.value = null;
@@ -293,6 +321,7 @@ function handleModalClose() {
 
 function resumeSavedGame(s: GameSave) {
   practiceTechnique.value = null;
+  isDailyMode.value = false;
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -302,6 +331,7 @@ function resumeSavedGame(s: GameSave) {
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = s.hintsUsed ?? 0;
+  gameZen.value = s.zen ?? false;
   techniqueLog.value = [];
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;
@@ -309,8 +339,16 @@ function resumeSavedGame(s: GameSave) {
   currentScreen.value = "game";
 }
 
-function handleStartGame(level: Difficulty) {
+// A board still generating when the player picks again, or leaves the screen, is dropped.
+let startToken = 0;
+watch(currentScreen, () => startToken++);
+async function handleStartGame(level: Difficulty) {
+  const token = ++startToken;
+  const generated = await takePuzzle(level);
+  if (token !== startToken) return;
   practiceTechnique.value = null;
+  isDailyMode.value = false;
+  gameZen.value = zen.value;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
@@ -321,7 +359,7 @@ function handleStartGame(level: Difficulty) {
   notesMode.value = false;
   hintsUsed.value = 0;
   techniqueLog.value = [];
-  startNewGame(level);
+  startNewGame(level, generated);
   timer.resetTimer();
   timer.startTimer();
   currentScreen.value = "game";
@@ -388,13 +426,16 @@ function flashCompletedUnits(r: number, c: number) {
   // Cells ripple outward from the digit just placed: 45 ms per step of distance.
   const RIPPLE_MS = 45;
   const cells: FlashCell[] = [];
+  let units = 0;
   const add = (cr: number, cc: number) =>
     cells.push({ r: cr, c: cc, delay: Math.max(Math.abs(cr - r), Math.abs(cc - c)) * RIPPLE_MS });
 
   if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
+    units++;
     for (let i = 0; i < 9; i++) add(r, i);
   }
   if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
+    units++;
     for (let i = 0; i < 9; i++) add(i, c);
   }
   const boxR = r - (r % 3);
@@ -409,13 +450,14 @@ function flashCompletedUnits(r: number, c: number) {
     }
   }
   if (boxComplete) {
+    units++;
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) add(boxR + i, boxC + j);
     }
   }
 
   if (!cells.length) return;
-  cue("complete");
+  cue("complete", units, currentBoard.value[r]![c]!);
   runFlash(cells);
 }
 
@@ -467,7 +509,7 @@ function handleInputNumber(num: number) {
         // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
         // it still counts toward the score.
         if (!highlightErrors.value) {
-          cue("place"); // sounds identical to a correct entry
+          cue("place", num); // sounds identical to a correct entry
         } else {
           cue("mistake");
           if (conflicts.length > 0) {
@@ -494,25 +536,18 @@ function handleInputNumber(num: number) {
               num: digitLabel(num, colorMode.value, t),
             });
           }
-          if (mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
-            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+          if (!gameZen.value && mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
+            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg", { n: mistakeLimit.value }));
           }
         }
       } else {
-        cue("place");
+        cue("place", num);
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
         if (highlightErrors.value) flashCompletedUnits(r, c);
         if (checkWinCondition()) {
-          triggerLocalModal(
-            t("modal.win"),
-            t("modal.winMsg", {
-              difficulty: activeDifficulty.value,
-              time: timer.formatTime(timer.timerSeconds.value),
-            }),
-            true,
-          );
+          triggerLocalModal(t("modal.win"), winMessage(), true);
         }
       }
     }
@@ -521,18 +556,21 @@ function handleInputNumber(num: number) {
 
 function handleNextStep() {
   const title = activeComplexHint.value?.title;
-  const wasPlacement = !!engine.activeMove.value?.placement;
+  const placed = engine.activeMove.value?.placement?.num;
+  const wasPlacement = !!placed;
   nextHintStep(() => {
     if (title) {
       if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
       techStats.record(title);
     }
     hintsUsed.value++;
-    if (wasPlacement) cue("place");
+    if (placed) cue("place", placed);
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
-        t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
+        gameZen.value
+          ? winMessage()
+          : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
         true,
       );
     } else {
@@ -571,12 +609,13 @@ function handleTriggerHint() {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const name = activeComplexHint.value.title;
-  const wasPlacement = !!engine.activeMove.value?.placement;
+  const placed = engine.activeMove.value?.placement?.num;
+  const wasPlacement = !!placed;
   hintsUsed.value++;
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
   engine.applyComplexHint();
-  if (wasPlacement) cue("place");
+  if (placed) cue("place", placed);
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
@@ -604,6 +643,7 @@ function handleAutoFillNotes() {
 
 function handleStartDaily() {
   practiceTechnique.value = null;
+  gameZen.value = false;
   isDailyMode.value = true;
   activeDifficulty.value = "medium";
   mistakes.value = 0;
@@ -625,6 +665,8 @@ function handleLoadCustomPuzzle(
   practice: TechniqueId | null = null,
 ) {
   practiceTechnique.value = practice;
+  isDailyMode.value = false;
+  gameZen.value = false;
   activeDifficulty.value = "custom";
   mistakes.value = 0;
   hintStatus.value = t("game.newBoard");
@@ -666,16 +708,22 @@ async function handlePractice(technique: TechniqueId) {
 
 function exitToMenu() {
   practiceTechnique.value = null;
+  isDailyMode.value = false;
   timer.stopTimer();
   cancelComplexHint();
   currentScreen.value = "menu";
 }
 
-const ARROW_STEPS: Record<string, [number, number]> = {
+// Arrows and WASD both walk the grid (so auto-fill notes lives on F, not A).
+const MOVE_STEPS: Record<string, [number, number]> = {
   ArrowUp: [-1, 0],
   ArrowDown: [1, 0],
   ArrowLeft: [0, -1],
   ArrowRight: [0, 1],
+  w: [-1, 0],
+  s: [1, 0],
+  a: [0, -1],
+  d: [0, 1],
 };
 
 const clamp = (n: number) => Math.min(8, Math.max(0, n));
@@ -700,14 +748,7 @@ function redo() {
   if (showModal.value || practiceLoading.value) return;
   redoMove();
   if (checkWinCondition()) {
-    triggerLocalModal(
-      t("modal.win"),
-      t("modal.winMsg", {
-        difficulty: activeDifficulty.value,
-        time: timer.formatTime(timer.timerSeconds.value),
-      }),
-      true,
-    );
+    triggerLocalModal(t("modal.win"), winMessage(), true);
   }
 }
 
@@ -728,10 +769,10 @@ function handleKeyDown(e: KeyboardEvent) {
     activeDigit.value = null;
     return;
   }
-  const arrow = ARROW_STEPS[e.key];
-  if (arrow) {
+  const step = MOVE_STEPS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (step) {
     e.preventDefault();
-    moveSelection(arrow[0], arrow[1]);
+    moveSelection(step[0], step[1]);
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
@@ -742,7 +783,7 @@ function handleKeyDown(e: KeyboardEvent) {
     notesMode.value = !notesMode.value;
   } else if (e.key.toLowerCase() === "h") {
     handleTriggerHint();
-  } else if (e.key.toLowerCase() === "a") {
+  } else if (e.key.toLowerCase() === "f") {
     handleAutoFillNotes();
   }
 }
@@ -768,135 +809,124 @@ onUnmounted(() => {
 <template>
   <UApp :locale="uiLocale">
     <div
-      class="app-shell flex min-h-screen w-full flex-col bg-zinc-50 text-zinc-900 antialiased dark:bg-[#0d141b] dark:text-zinc-100"
+      class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
       <Transition name="screen" mode="out-in">
-        <!-- MENU -->
+        <!-- MENU: the menu is itself a 3×3 box, New game filling four of its cells. -->
         <div
           v-if="currentScreen === 'menu'"
-          class="flex flex-1 flex-col items-center justify-center gap-10 px-6 py-12"
+          class="relative flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12"
         >
+          <button
+            @click="currentScreen = 'settings'"
+            :aria-label="$t('menu.settings')"
+            :title="$t('menu.settings')"
+            class="tile absolute top-4 right-4 grid h-11 w-11 place-items-center text-zinc-600 dark:text-zinc-300"
+          >
+            <AppIcon class="h-5 w-5" path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </button>
+
           <div class="text-center">
             <h1
               class="wordmark relative isolate inline-block text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl dark:text-zinc-50"
             >
               {{ $t("menu.title") }}
             </h1>
-            <p class="mt-3 text-[11px] font-semibold text-zinc-500">
+            <p class="mt-3 text-sm text-zinc-500">
               {{ $t("menu.subtitle") }}
             </p>
             <!-- Level / progress -->
-            <div class="mx-auto mt-5 w-full max-w-[220px]" data-testid="level-badge">
-              <p class="text-[11px] font-bold text-violet-600 dark:text-violet-300">
+            <div class="mx-auto mt-5 w-full max-w-[240px]" data-testid="level-badge">
+              <p class="text-xs font-bold text-violet-700 dark:text-violet-300">
                 {{ $t("level.label", { n: playerLevel.level }) }}
-                <span class="text-zinc-500"
+                <span class="font-semibold text-zinc-500"
                   >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
                 >
               </p>
-              <div class="mt-1.5 h-1.5 w-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+              <div class="tray mt-2 h-2 w-full overflow-hidden !rounded-full">
                 <div
-                  class="h-full bg-violet-600 hover:bg-violet-700"
+                  class="h-full rounded-full bg-violet-600"
                   :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
                 />
               </div>
             </div>
           </div>
-          <div class="flex w-full max-w-sm flex-col items-center gap-3">
-            <!-- New game -->
+
+          <nav
+            :aria-label="$t('menu.title')"
+            class="tray grid aspect-square w-full max-w-[26rem] grid-cols-3 grid-rows-3 gap-2 p-2 sm:gap-2.5 sm:p-2.5"
+          >
             <button
               @click="currentScreen = 'difficulty'"
-              class="w-full bg-violet-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 hover:brightness-110 active:scale-95"
+              class="tile tile-primary relative col-span-2 row-span-2 flex flex-col justify-between overflow-hidden p-4 text-left sm:p-5"
             >
-              {{ $t("menu.start") }}
+              <!-- A faint corner of a puzzle, so the tile says what it starts. -->
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 90 90"
+                class="pointer-events-none absolute -top-3 -right-3 h-32 w-32 opacity-20 sm:h-40 sm:w-40"
+                fill="none"
+                stroke="currentColor"
+              >
+                <rect x="1" y="1" width="88" height="88" rx="6" stroke-width="2.5" />
+                <path d="M31 1v88M59 1v88M1 31h88M1 59h88" stroke-width="1.2" />
+                <g fill="currentColor" stroke="none" font-family="var(--font-game)" font-weight="800" font-size="19" text-anchor="middle">
+                  <text x="16" y="23">5</text><text x="44" y="23">3</text>
+                  <text x="16" y="51">6</text><text x="74" y="51">9</text>
+                  <text x="44" y="79">8</text><text x="74" y="79">1</text>
+                </g>
+              </svg>
+              <AppIcon
+                class="h-9 w-9 opacity-90"
+                path="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+              <span>
+                <span class="block font-display text-2xl leading-tight font-extrabold sm:text-3xl">{{
+                  $t("menu.start")
+                }}</span>
+                <span class="mt-1 block text-xs font-medium text-violet-100">{{
+                  $t("menu.startHint")
+                }}</span>
+              </span>
             </button>
 
-            <!-- Daily challenge -->
             <button
               @click="handleStartDaily"
               :disabled="!!dailyRecord"
-              :class="
-                dailyRecord
-                  ? 'cursor-default border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-600'
-                  : 'border-violet-500/60 bg-violet-500/5 text-violet-700 hover:bg-violet-500/10 dark:border-violet-400/50 dark:text-violet-200 dark:hover:bg-violet-400/10'
-              "
-              class="flex w-full items-center justify-center gap-2 border px-6 py-4 text-sm font-bold transition-all active:scale-95"
+              :class="dailyRecord ? '' : 'tile-amber'"
+              class="tile menu-cell"
             >
-              <AppIcon
-                class="h-4 w-4 shrink-0"
-                path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-              <span v-if="dailyRecord">{{ $t("menu.dailyCompleted") }}</span>
-              <span v-else>{{ $t("menu.dailyChallenge") }}</span>
+              <AppIcon class="h-5 w-5" path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <span>
+                <span class="block">{{
+                  dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
+                }}</span>
+                <span v-if="dailyStreak > 0" class="block text-[11px] font-semibold opacity-80"
+                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}</span
+                >
+              </span>
             </button>
-            <p
-              v-if="dailyStreak > 0"
-              class="-mt-1 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400"
-            >
-              🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}
-            </p>
 
-            <div class="grid w-full grid-cols-2 gap-3">
-              <!-- Custom puzzle -->
-              <button
-                @click="currentScreen = 'custom-import'"
-                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                <AppIcon
-                  class="h-4 w-4"
-                  path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-                {{ $t("menu.customPuzzle") }}
-              </button>
+            <button @click="currentScreen = 'academy'" class="tile menu-cell">
+              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              <span>{{ $t("menu.academy") }}</span>
+            </button>
 
-              <!-- Academy -->
-              <button
-                @click="currentScreen = 'academy'"
-                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                <AppIcon
-                  class="h-4 w-4"
-                  path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-                {{ $t("menu.academy") }}
-              </button>
+            <button @click="currentScreen = 'stats'" class="tile menu-cell">
+              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <span>{{ $t("menu.stats") }}</span>
+            </button>
 
-              <!-- Statistics -->
-              <button
-                @click="currentScreen = 'stats'"
-                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                <AppIcon
-                  class="h-4 w-4"
-                  path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-                {{ $t("menu.stats") }}
-              </button>
+            <button @click="currentScreen = 'achievements'" class="tile menu-cell">
+              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+              <span>{{ $t("menu.achievements") }}</span>
+            </button>
 
-              <!-- Achievements -->
-              <button
-                @click="currentScreen = 'achievements'"
-                class="flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                <AppIcon
-                  class="h-4 w-4"
-                  path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
-                />
-                {{ $t("menu.achievements") }}
-              </button>
-
-              <!-- Settings -->
-              <button
-                @click="currentScreen = 'settings'"
-                class="col-span-2 flex flex-col items-center justify-center gap-1.5 border border-zinc-300 bg-transparent px-2 py-4 text-center text-[11px] leading-tight font-semibold text-zinc-600 transition-all hover:border-zinc-400 hover:text-zinc-900 active:scale-95 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-zinc-200"
-              >
-                <AppIcon
-                  class="h-4 w-4"
-                  path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                {{ $t("menu.settings") }}
-              </button>
-            </div>
-          </div>
+            <button @click="currentScreen = 'custom-import'" class="tile menu-cell">
+              <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <span>{{ $t("menu.customPuzzle") }}</span>
+            </button>
+          </nav>
         </div>
 
         <!-- DIFFICULTY -->
@@ -943,7 +973,7 @@ onUnmounted(() => {
         <!-- GAME -->
         <div
           v-else-if="currentScreen === 'game'"
-          class="flex w-full max-w-7xl flex-col gap-4 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
+          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
           <!-- 3xl left sidebar: shortcuts & branding -->
           <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
@@ -954,11 +984,13 @@ onUnmounted(() => {
               <ul class="space-y-3">
                 <li
                   v-for="(s, i) in [
+                    { key: '↑←↓→', desc: $t('sidebar.shortcutMove') },
+                    { key: 'WASD', desc: $t('sidebar.shortcutMove') },
                     { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
                     { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
                     { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
                     { key: 'H', desc: $t('sidebar.shortcutGetHint') },
-                    { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
+                    { key: 'F', desc: $t('sidebar.shortcutAutoFillNotes') },
                     { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
                     { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
                   ]"
@@ -1018,13 +1050,9 @@ onUnmounted(() => {
               :is-paused="timer.isPaused.value"
               :mistakes="mistakes"
               :max-mistakes="mistakeLimit"
-              :show-timer="showTimer"
-              :show-mistakes="highlightErrors"
-              :difficulty="
-                practiceTechnique
-                  ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
-                  : activeDifficulty
-              "
+              :show-timer="showTimer && !gameZen"
+              :show-mistakes="highlightErrors && !gameZen"
+:difficulty="difficultyLabel"
               @toggle-pause="timer.togglePause()"
               @exit-game="exitToMenu"
             />
@@ -1074,10 +1102,12 @@ onUnmounted(() => {
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
                 :active-digit="activeDigit"
+                :show-candidates="showCandidates && !activeComplexHint && !nudge"
+                :theme="boardTheme"
                 :nudge-box="nudge"
                 @select-cell="handleSelectCell"
               />
-              <div class="mx-2 flex flex-col gap-2 sm:mx-0">
+              <div class="flex flex-col gap-2.5">
                 <ControlPanel
                   :notes-mode="notesMode"
                   :can-undo="boardHistory.length > 0"
@@ -1102,7 +1132,7 @@ onUnmounted(() => {
               <!-- PAUSE OVERLAY -->
               <div
                 v-if="timer.isPaused.value"
-                class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-black/80 backdrop-blur-sm"
+                class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 rounded-2xl bg-black/80 backdrop-blur-sm"
               >
                 <AppIcon
                   class="h-12 w-12 text-zinc-300"
@@ -1113,7 +1143,7 @@ onUnmounted(() => {
                 </p>
                 <button
                   @click="timer.togglePause()"
-                  class="border-2 border-emerald-500 bg-emerald-600 px-10 py-4 text-base font-black text-white transition-all hover:bg-emerald-700 active:scale-95"
+                  class="tile tile-apply px-10 py-4 text-base font-black"
                 >
                   {{ $t("game.resume") }}
                 </button>
@@ -1161,12 +1191,8 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop w-full max-w-sm border bg-white p-6 text-center shadow-2xl dark:bg-zinc-900"
-          :class="
-            isWinState
-              ? 'border-t-4 border-emerald-500/60 border-t-emerald-500'
-              : 'border-t-4 border-rose-500/40 border-t-rose-500'
-          "
+          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl p-6 text-center shadow-2xl"
+          :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ modalTitle }}
@@ -1271,8 +1297,8 @@ onUnmounted(() => {
           >
             <div class="flex justify-between px-3 py-2">
               <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.difficulty") }}</span>
-              <span class="text-xs font-bold text-zinc-800 capitalize dark:text-zinc-200">{{
-                activeDifficulty
+              <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">{{
+                difficultyLabel
               }}</span>
             </div>
             <div class="flex justify-between px-3 py-2">
@@ -1284,7 +1310,7 @@ onUnmounted(() => {
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-rose-600 dark:text-rose-400'
                 "
-                >{{ mistakes }}{{ mistakeLimit ? ` / ${mistakeLimit}` : "" }}</span
+                >{{ mistakes }}{{ mistakeLimit && !gameZen ? ` / ${mistakeLimit}` : "" }}</span
               >
             </div>
             <div class="flex justify-between px-3 py-2">
@@ -1318,7 +1344,7 @@ onUnmounted(() => {
 
           <button
             @click="handleModalClose"
-            class="w-full border border-zinc-300 bg-zinc-100 py-3 text-sm font-bold text-zinc-900 transition-all hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            class="tile tile-primary w-full py-3 text-sm font-bold"
           >
             {{ $t("modal.close") }}
           </button>
@@ -1331,14 +1357,14 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop w-full max-w-sm border border-t-4 border-t-violet-500 bg-white p-6 text-center shadow-2xl dark:bg-zinc-900"
+          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl !border-t-violet-500 p-6 text-center shadow-2xl"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ $t("resume.title") }}
           </h3>
           <p class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
             {{
-              $t("resume.message", {
+              $t(pendingResume.save.zen ? "resume.messageZen" : "resume.message", {
                 difficulty: $t(`difficulty.${pendingResume.level}`),
                 time: timer.formatTime(pendingResume.save.timerSeconds),
               })
@@ -1347,13 +1373,13 @@ onUnmounted(() => {
           <div class="flex flex-col gap-2">
             <button
               @click="handleResumeConfirm"
-              class="w-full border border-emerald-300 bg-emerald-50 py-3 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-400 hover:bg-emerald-100 active:scale-95 dark:border-emerald-600/60 dark:bg-emerald-900/40 dark:text-emerald-300 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/60"
+              class="tile tile-apply w-full py-3 text-sm font-bold"
             >
               {{ $t("resume.continue") }}
             </button>
             <button
               @click="handleResumeDecline"
-              class="w-full border border-zinc-300 bg-zinc-50 py-3 text-sm font-bold transition-all hover:border-zinc-400 hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+              class="tile w-full py-3 text-sm font-bold"
             >
               {{ $t("resume.newGame") }}
             </button>
@@ -1403,6 +1429,30 @@ onUnmounted(() => {
 
 <!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
+/* A small menu tile: icon at the top, label at the bottom, like a cell's corner marks. */
+.menu-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--color-zinc-800);
+}
+.dark .menu-cell {
+  color: var(--color-zinc-100);
+}
+.menu-cell.tile-amber {
+  color: #422006;
+}
+.dark .menu-cell.tile-amber {
+  color: #fde68a;
+}
+
 /* The one loud thing: a highlighter stroke under the wordmark. */
 .wordmark::after {
   content: "";

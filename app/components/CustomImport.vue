@@ -114,7 +114,7 @@ function loadExample() {
       v-model="raw"
       rows="4"
       placeholder="530070000600195000098000060800060003400803001700020006060000280000419005000080079"
-      class="w-full resize-none border border-zinc-300 bg-zinc-50 p-3 font-game text-sm text-zinc-800 transition-colors outline-none placeholder:text-zinc-400 focus:border-violet-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:placeholder:text-zinc-700"
+      class="w-full resize-none rounded-xl border border-zinc-300 bg-zinc-50 p-3 font-game text-sm text-zinc-800 transition-colors outline-none placeholder:text-zinc-400 focus:border-violet-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:placeholder:text-zinc-700"
       spellcheck="false"
     />
 
@@ -161,12 +161,8 @@ function loadExample() {
     <button
       @click="handleLoad"
       :disabled="!isValid"
-      :class="
-        isValid
-          ? 'border-violet-600 bg-violet-700 text-white hover:bg-violet-600'
-          : 'cursor-not-allowed border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900'
-      "
-      class="w-full border py-4 text-sm font-bold transition-all active:scale-95"
+      :class="isValid ? 'tile-primary' : 'cursor-not-allowed text-zinc-600 dark:text-zinc-400'"
+      class="tile w-full py-4 text-sm font-bold"
     >
       {{ $t("customImport.playPuzzle") }}
     </button>

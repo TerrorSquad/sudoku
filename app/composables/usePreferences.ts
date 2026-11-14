@@ -7,6 +7,7 @@ import { readJSON, writeJSON } from "../utils/safeJson";
 
 export type MistakeLimit = 0 | 3 | 5; // 0 = unlimited
 export type HintStyle = "full" | "nudge";
+export type BoardTheme = "tiles" | "newsprint" | "contrast";
 
 function pref<T>(name: string, fallback: T): Ref<T> {
   const state = ref(readJSON<T>(`sudoku_v1_pref_${name}`, fallback)) as Ref<T>;
@@ -29,6 +30,11 @@ function create() {
     /** Off = wrong entries are not marked; mistakes still count toward the score. */
     highlightErrors: pref("highlight_errors", true),
     hintStyle: pref<HintStyle>("hint_style", "full"),
+    /** Selecting a digit outlines the empty cells where it can still go. */
+    showCandidates: pref("show_candidates", true),
+    /** New games start in Zen: no timer, no mistake limit, no score. */
+    zen: pref("zen", false),
+    boardTheme: pref<BoardTheme>("board_theme", "tiles"),
   };
 }
 

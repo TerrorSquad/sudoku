@@ -26,7 +26,8 @@ export interface ExplanationStep {
 
 export interface ComplexHint {
   title: string;
-  targetCell: CellCoord;
+  /** The cell a placement fills; null for a hint that only removes candidates. */
+  targetCell: CellCoord | null;
   steps: ExplanationStep[];
 }
 
@@ -81,6 +82,24 @@ export function useSudokuEngine(
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
 
+  // The next hint worth showing. A gap in the player's notes is never fed to the solver as a
+  // deduction (it may be a guess, or just unfinished notes, and reading it could smuggle in the
+  // answer). Instead, a removal the notes already show counts as done: such a move joins the
+  // chain silently and the solver looks again, so a hint never asks to remove what's gone.
+  function nextUsefulHint(): SolveMove | null {
+    for (let i = 0; i < 300; i++) {
+      const move = nextHint(currentBoard.value, appliedEliminations.value);
+      if (!move || move.placement) return move;
+      const todo = move.eliminations.filter(({ r, c, num }) => {
+        const notes = notesBoard.value[r]![c]!;
+        return !notes.some(Boolean) || notes[num];
+      });
+      if (todo.length) return { ...move, eliminations: todo };
+      appliedEliminations.value.push(...move.eliminations);
+    }
+    return null;
+  }
+
   function resetHintChain() {
     appliedEliminations.value = [];
     activeMove.value = null;
@@ -118,8 +137,12 @@ export function useSudokuEngine(
   }
 
   // --- GAME MANAGEMENT ---
-  function startNewGame(difficulty: string) {
-    const { puzzle, solution } = generateGradedPuzzle(difficulty);
+  /** `generated` comes from utils/puzzlePool in the app; tests let it generate in place. */
+  function startNewGame(
+    difficulty: string,
+    generated: { puzzle: Grid; solution: Grid } = generateGradedPuzzle(difficulty),
+  ) {
+    const { puzzle, solution } = generated;
 
     initialBoard.value = puzzle.map((row) => row.concat());
     currentBoard.value = puzzle.map((row) => row.concat());
@@ -249,7 +272,7 @@ export function useSudokuEngine(
       type: "trigger",
     }));
 
-    let targetCell: CellCoord;
+    let targetCell: CellCoord | null = null;
     let actionStep: ExplanationStep;
     if (move.placement) {
       targetCell = { r: move.placement.r, c: move.placement.c };
@@ -260,11 +283,9 @@ export function useSudokuEngine(
           row: move.placement.r + 1,
           col: move.placement.c + 1,
         }),
-        highlightCoords: [{ r: targetCell.r, c: targetCell.c, type: "trigger" }],
+        highlightCoords: [], // the target is drawn on its own, in the legend's green
       };
     } else {
-      const focus = move.triggers[0] ?? move.eliminations[0]!;
-      targetCell = { r: focus.r, c: focus.c };
       actionStep = {
         label: t("hint.move.eliminateLabel"),
         description: t("hint.move.eliminateStep", {
@@ -291,13 +312,13 @@ export function useSudokuEngine(
 
   /** Where the next hint would act (a placement, else the first removal), without starting it. */
   function peekHintCell(): CellCoord | null {
-    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const move = nextUsefulHint();
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
     return at ? { r: at.r, c: at.c } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
-    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const move = nextUsefulHint();
     if (!move) {
       activeMove.value = null;
       hintStatus.value = t("hint.move.none");
@@ -307,7 +328,8 @@ export function useSudokuEngine(
     const hint = buildHintFromMove(move);
     activeComplexHint.value = hint;
     currentStepIndex.value = 0;
-    selectedCell.value = hint.targetCell;
+    // The selection's yellow would cover a hint cell's colour, so clear it while the hint shows.
+    selectedCell.value = null;
     updateStepHighlights();
 
     hintStatus.value = hint.title;
@@ -342,27 +364,18 @@ export function useSudokuEngine(
       currentBoard.value[r]![c] = num;
       clearRelationalNotes(r, c, num);
     } else {
-      // Elimination: reveal the affected cells' candidates with the eliminated
-      // digit removed, so the deduction is visible. Detection persists the
-      // removal via appliedEliminations (replayed by the next hint).
+      // Elimination: cross the digit out of the player's notes. A cell without notes first
+      // gets its candidates (minus earlier removals) so the deduction is visible. The removal
+      // persists via appliedEliminations (replayed by the next hint).
       const baseCands = getGridCandidates(currentBoard.value);
-      const byCell = new Map<string, Set<number>>();
-      for (const e of move.eliminations) {
-        const key = `${e.r},${e.c}`;
-        if (!byCell.has(key)) {
-          const set = new Set<number>(baseCands[e.r]![e.c]!);
-          for (const prev of appliedEliminations.value) {
-            if (prev.r === e.r && prev.c === e.c) set.delete(prev.num);
+      for (const { r, c, num } of move.eliminations) {
+        const notes = notesBoard.value[r]![c]!;
+        if (!notes.some(Boolean)) {
+          for (const n of baseCands[r]![c]!) {
+            notes[n] = !appliedEliminations.value.some((p) => p.r === r && p.c === c && p.num === n);
           }
-          byCell.set(key, set);
         }
-        byCell.get(key)!.delete(e.num);
-      }
-      for (const [key, set] of byCell) {
-        const [r, c] = key.split(",").map(Number) as [number, number];
-        const notes = Array(10).fill(false);
-        for (const n of set) notes[n] = true;
-        notesBoard.value[r]![c] = notes;
+        notes[num] = false;
       }
       appliedEliminations.value.push(...move.eliminations);
     }

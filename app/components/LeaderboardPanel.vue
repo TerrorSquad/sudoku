@@ -63,7 +63,7 @@ function formatScore(score: number): string {
         <select
           v-model="selected"
           :aria-label="$t('leaderboard.board')"
-          class="border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+          class="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
         >
           <option v-for="b in boards" :key="b.board.name" :value="b.board.name">
             {{ b.label }}

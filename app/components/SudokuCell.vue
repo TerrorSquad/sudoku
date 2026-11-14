@@ -17,6 +17,8 @@ const props = defineProps<{
   isSameValue: boolean;
   notes: boolean[];
   isHintTrigger: boolean;
+  /** The cell the active hint fills. */
+  isHintTarget?: boolean;
   isHintElimination: boolean;
   colorMode: boolean;
   isFlashing: boolean;
@@ -86,15 +88,13 @@ const cellClasses = computed(() => {
     "border-l": props.col === 0,
     "border-t": props.row === 0,
     "border-r": props.col !== 2 && props.col !== 5,
-    "border-r-2 border-r-zinc-600 dark:border-r-zinc-400": props.col === 2 || props.col === 5,
+    "border-r-2 cell-box-r": props.col === 2 || props.col === 5,
     "border-b": props.row !== 2 && props.row !== 5,
-    "border-b-2 border-b-zinc-600 dark:border-b-zinc-400": props.row === 2 || props.row === 5,
-    "dark:text-zinc-100 text-zinc-900 font-bold": props.isInitial,
-    "dark:text-violet-300 text-violet-600 font-semibold":
-      !props.isInitial && props.value !== 0 && !isWrong.value,
+    "border-b-2 cell-box-b": props.row === 2 || props.row === 5,
+    "cell-given font-bold": props.isInitial,
+    "cell-entry font-semibold": !props.isInitial && props.value !== 0 && !isWrong.value,
     "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100": isWrong.value,
-    "dark:bg-zinc-700/60 bg-zinc-200 dark:border-zinc-400 border-zinc-600":
-      props.isHighlighted && !props.isSelected,
+    "cell-peer": props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
       props.isSameValue && props.value !== 0 && !props.isSelected,
     "dark:!bg-amber-400/30 !bg-amber-200 ring-[3px] dark:ring-amber-300 ring-amber-500 z-10":
@@ -102,6 +102,7 @@ const cellClasses = computed(() => {
     "dark:!bg-rose-800/60 !bg-rose-200 ring-[3px] dark:ring-rose-400 ring-rose-600 z-10":
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
+    "!bg-emerald-500/30 ring-2 ring-inset ring-emerald-500 z-10": props.isHintTarget,
     "!bg-rose-500/30 ring-1 ring-rose-400 z-10": props.isHintElimination,
     "ring-1 ring-inset ring-violet-400/50 !bg-violet-500/10":
       props.isCandidate && !props.isSelected,
@@ -129,7 +130,7 @@ const cellClasses = computed(() => {
     @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
-    class="relative flex cursor-pointer items-center justify-center border-zinc-400 bg-zinc-100 p-0.5 text-3xl font-bold select-none 3xl:text-4xl dark:border-zinc-600 dark:bg-[#131b24]"
+    class="cell relative flex cursor-pointer items-center justify-center p-0.5 text-3xl font-bold select-none 3xl:text-4xl"
   >
     <div
       v-if="value !== 0 && colorMode"
@@ -147,7 +148,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-black text-zinc-600 3xl:text-[13px] dark:text-zinc-400"
+      class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-black 3xl:text-[13px]"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>

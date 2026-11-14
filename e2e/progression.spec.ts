@@ -8,7 +8,7 @@ test("a fast flawless first win crosses level 2 and the menu shows it", async ({
   await page.goto("/");
   await expect(page.getByTestId("level-badge")).toContainText("Level 1");
 
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
@@ -21,7 +21,7 @@ test("a fast flawless first win crosses level 2 and the menu shows it", async ({
 
 test("a clean win shows three stars", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
