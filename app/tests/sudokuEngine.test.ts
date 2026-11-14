@@ -6,6 +6,8 @@ vi.mock("vue-i18n", () => ({
 }));
 
 import { useSudokuEngine } from "../composables/useSudokuEngine";
+import { solveBoard } from "../utils/sudokuCore";
+import type { Grid } from "../utils/sudokuCore";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
   let engine: ReturnType<typeof useSudokuEngine>;
@@ -129,6 +131,55 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       engine.undoMove();
       engine.redoMove();
       expect(engine.currentBoard.value[0]![0]).toBe(0);
+    });
+  });
+
+  describe("hints respect the player's notes", () => {
+    // Its first hint is a pointing pair removing 2 from r5c2 and r5c4.
+    const board = [
+      [9, 3, 6, 8, 5, 0, 0, 1, 0],
+      [0, 7, 2, 6, 3, 0, 5, 9, 8],
+      [5, 0, 0, 0, 0, 0, 0, 3, 6],
+      [0, 0, 0, 0, 0, 3, 6, 8, 9],
+      [8, 0, 3, 0, 6, 9, 0, 4, 0],
+      [6, 0, 0, 0, 8, 0, 1, 5, 3],
+      [7, 0, 0, 0, 4, 6, 3, 2, 5],
+      [3, 6, 0, 0, 0, 5, 8, 7, 4],
+      [2, 4, 5, 3, 7, 8, 9, 6, 1],
+    ] as Grid;
+    const status = { value: "" };
+    const body = { value: "" };
+    const note = (r: number, c: number, nums: number[]) => {
+      engine.notesBoard.value[r]![c] = Array.from({ length: 10 }, (_, n) => nums.includes(n));
+    };
+
+    beforeEach(() => {
+      engine.currentBoard.value = board.map((row) => [...row]);
+      engine.solvedBoard.value = solveBoard(board)!;
+    });
+
+    it("suggests a removal the notes still show", () => {
+      engine.triggerComplexHint(status, body);
+      expect(engine.activeMove.value?.eliminations).toContainEqual({ r: 4, c: 1, num: 2 });
+    });
+
+    it("skips a removal the player already made", () => {
+      note(4, 1, [1, 5]);
+      note(4, 3, [1, 5]);
+      engine.triggerComplexHint(status, body);
+      const elims = engine.activeMove.value?.eliminations ?? [];
+      expect(elims).not.toContainEqual({ r: 4, c: 1, num: 2 });
+      expect(elims).not.toContainEqual({ r: 4, c: 3, num: 2 });
+    });
+
+    it("never trusts a note that crossed out the answer", () => {
+      const { r, c } = { r: 4, c: 1 };
+      const answer = engine.solvedBoard.value[r]![c]!;
+      note(r, c, [1, 2, 5].filter((n) => n !== answer));
+      engine.triggerComplexHint(status, body);
+      const move = engine.activeMove.value!;
+      if (move.placement) expect(move.placement.num).toBe(engine.solvedBoard.value[move.placement.r]![move.placement.c]);
+      for (const e of move.eliminations) expect(e.num).not.toBe(engine.solvedBoard.value[e.r]![e.c]);
     });
   });
 });

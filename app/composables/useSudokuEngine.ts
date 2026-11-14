@@ -81,6 +81,25 @@ export function useSudokuEngine(
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
 
+  // Candidates the player already crossed out in their own notes count as done,
+  // so a hint never asks them to remove what's gone. Cells without notes say
+  // nothing, and the solution digit is never trusted as removed (a mistaken
+  // note must not steer the solver into a wrong deduction).
+  function knownEliminations(): DigitAt[] {
+    const out = [...appliedEliminations.value];
+    const cands = getGridCandidates(currentBoard.value);
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const notes = notesBoard.value[r]![c]!;
+        if (currentBoard.value[r]![c] !== 0 || !notes.some(Boolean)) continue;
+        for (const num of cands[r]![c]!) {
+          if (!notes[num] && num !== solvedBoard.value[r]![c]) out.push({ r, c, num });
+        }
+      }
+    }
+    return out;
+  }
+
   function resetHintChain() {
     appliedEliminations.value = [];
     activeMove.value = null;
@@ -291,13 +310,13 @@ export function useSudokuEngine(
 
   /** Where the next hint would act (a placement, else the first removal), without starting it. */
   function peekHintCell(): CellCoord | null {
-    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const move = nextHint(currentBoard.value, knownEliminations());
     const at = move?.placement ?? move?.eliminations[0] ?? move?.triggers[0];
     return at ? { r: at.r, c: at.c } : null;
   }
 
   function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
-    const move = nextHint(currentBoard.value, appliedEliminations.value);
+    const move = nextHint(currentBoard.value, knownEliminations());
     if (!move) {
       activeMove.value = null;
       hintStatus.value = t("hint.move.none");
@@ -346,12 +365,13 @@ export function useSudokuEngine(
       // digit removed, so the deduction is visible. Detection persists the
       // removal via appliedEliminations (replayed by the next hint).
       const baseCands = getGridCandidates(currentBoard.value);
+      const known = knownEliminations();
       const byCell = new Map<string, Set<number>>();
       for (const e of move.eliminations) {
         const key = `${e.r},${e.c}`;
         if (!byCell.has(key)) {
           const set = new Set<number>(baseCands[e.r]![e.c]!);
-          for (const prev of appliedEliminations.value) {
+          for (const prev of known) {
             if (prev.r === e.r && prev.c === e.c) set.delete(prev.num);
           }
           byCell.set(key, set);
