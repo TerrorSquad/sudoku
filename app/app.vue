@@ -1043,6 +1043,8 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'game'"
           class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
+          <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
+          <p class="sr-only" aria-live="polite">{{ hintStatus }}</p>
           <!-- 3xl left sidebar: shortcuts & branding -->
           <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
             <div>
