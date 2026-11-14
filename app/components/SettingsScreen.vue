@@ -10,6 +10,9 @@ import {
   type Backup,
 } from "../utils/progressBackup";
 
+// Opened from the pause screen: back returns to the game, and the settings a game is started
+// with (colour mode, the mistake limit) stay locked until it ends.
+defineProps<{ inGame?: boolean }>();
 const emit = defineEmits<{ (e: "back-to-menu"): void }>();
 
 const {
@@ -102,7 +105,7 @@ const style = computed({
           class="h-4 w-4"
           path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
         />
-        <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
+        <span class="hidden sm:inline">{{ inGame ? $t("settings.backToGame") : $t("menu.back") }}</span>
       </button>
       <div class="min-w-0 flex-1">
         <h1
@@ -141,8 +144,11 @@ const style = computed({
         </h2>
 
         <label class="s-row">
-          <span class="s-label">{{ $t("settings.colorMode") }}</span>
-          <USwitch v-model="colorMode" />
+          <span>
+            <span class="s-label">{{ $t("settings.colorMode") }}</span>
+            <span v-if="inGame" class="s-hint">{{ $t("settings.lockedInGame") }}</span>
+          </span>
+          <USwitch v-model="colorMode" :disabled="inGame" />
         </label>
 
         <label class="s-row">
@@ -167,8 +173,11 @@ const style = computed({
         </label>
 
         <label class="s-row">
-          <span class="s-label">{{ $t("settings.mistakeLimit") }}</span>
-          <select v-model="limit" class="s-select">
+          <span>
+            <span class="s-label">{{ $t("settings.mistakeLimit") }}</span>
+            <span v-if="inGame" class="s-hint">{{ $t("settings.lockedInGame") }}</span>
+          </span>
+          <select v-model="limit" class="s-select" :disabled="inGame">
             <option value="3">3</option>
             <option value="5">5</option>
             <option value="0">{{ $t("settings.limitNone") }}</option>
@@ -208,6 +217,7 @@ const style = computed({
           <USwitch v-model="hapticsEnabled" />
         </label>
 
+        <template v-if="!inGame">
         <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("settings.groupData") }}
         </h2>
@@ -264,6 +274,7 @@ const style = computed({
             </button>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </div>

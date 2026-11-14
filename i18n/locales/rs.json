@@ -11,7 +11,7 @@
   "menu.settings": "Podešavanja",
   "menu.back": "Meni",
   "resume.title": "Pronađena sačuvana igra",
-  "resume.message": "Imaš sačuvanu {difficulty} igru na {time}. Nastaviti je ili započeti novu?",
+  "resume.message": "Imaš sačuvanu igru ({difficulty}, {time}). Nastavljaš je ili počinješ novu?",
   "resume.continue": "Nastavi",
   "resume.newGame": "Počni novu igru",
   "resume.cancel": "Otkaži",
@@ -407,10 +407,10 @@
   "academy.caption.coloring": "{num} je ulančan kroz polja gde ima samo dva mesta (indigo). Jedna od dve naizmenične boje mora biti {num}, pa ga gubi {nElim} polja, u roze ({elimList}).",
   "menu.startHint": "Šest nivoa i opušteni Zen režim",
   "settings.boardTheme": "Izgled table",
-  "settings.boardTiles": "Pločice",
+  "settings.boardTiles": "Papir na kockice",
   "settings.boardNewsprint": "Novine",
   "settings.boardContrast": "Visok kontrast",
-  "resume.messageZen": "Imaš sačuvanu Zen igru ({difficulty}). Nastavi je ili počni novu?",
+  "resume.messageZen": "Imaš sačuvanu Zen igru ({difficulty}). Nastavljaš je ili počinješ novu?",
   "modal.needed": "Potrebne tehnike",
   "modal.openLesson": "Otvori lekciju u Akademiji",
   "game.best": "Rekord {time}",
@@ -429,5 +429,7 @@
   "academy.tech.bug-plus-one.howItHelps": "Nađi cifru tog polja koja se tri puta javlja u njegovom redu, koloni i kvadratu. Bez nje bi svako polje moglo da uzme svog drugog kandidata i slagalica bi imala dva rešenja, zato ta cifra ide u to polje.",
   "academy.caption.finnedXWing": "{num} skoro formira X-Wing (indigo), uz peraje u jednom kvadratu. Bilo da je peraje {num} ili nije, polja tog kvadrata na ukrštenim linijama ga gube: {nElim} polja u roze ({elimList}).",
   "academy.caption.wWing": "Dva polja imaju isti par, a druga cifra para ima samo dva mesta u nekom redu, koloni ili kvadratu, od kojih svako polje vidi po jedno (indigo). Jedno od dva polja mora biti {num}, pa ga gubi {nElim} polja koja vide oba, u roze ({elimList}).",
-  "academy.caption.bug": "Sva prazna polja (indigo) imaju po dva kandidata, osim polja {cell}, koje ima tri. {num} se tri puta javlja u njegovom redu, koloni i kvadratu. Bez te cifre slagalica bi imala dva rešenja, pa u {cell} ide {num}."
+  "academy.caption.bug": "Sva prazna polja (indigo) imaju po dva kandidata, osim polja {cell}, koje ima tri. {num} se tri puta javlja u njegovom redu, koloni i kvadratu. Bez te cifre slagalica bi imala dva rešenja, pa u {cell} ide {num}.",
+  "settings.backToGame": "Nazad u igru",
+  "settings.lockedInGame": "Zaključano do kraja ove igre"
 }

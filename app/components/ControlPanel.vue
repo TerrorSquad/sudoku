@@ -107,7 +107,7 @@ defineEmits<{
     <button
       @click="$emit('auto-notes')"
       :title="`${$t('controls.auto')} (F)`"
-      class="tile flex flex-col items-center justify-center gap-1 py-4 text-violet-600 3xl:gap-2 3xl:py-4 lg:py-3 dark:text-violet-400"
+      class="tile flex flex-col items-center justify-center gap-1 py-4 text-violet-600 3xl:gap-2 3xl:py-4 lg:py-3 dark:text-violet-300"
     >
       <AppIcon
         class="h-5 w-5 3xl:h-7 3xl:w-7"

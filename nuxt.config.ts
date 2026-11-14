@@ -10,8 +10,10 @@ export default defineNuxtConfig({
   // Self-hosted by @nuxt/fonts at build time, so the PWA keeps them offline.
   fonts: {
     families: [
-      { name: "Bricolage Grotesque", provider: "google", weights: [500, 600, 700, 800] },
-      { name: "Instrument Sans", provider: "google", weights: [400, 500, 600, 700] },
+      // Upright only, Latin + Latin Extended (Serbian Latin's č ć š ž đ): every style and
+      // script Google offers added 96 @font-face rules and 23 KB of CSS.
+      { name: "Fraunces", provider: "google", weights: [500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
+      { name: "Inter Tight", provider: "google", weights: [400, 500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
     ],
   },
   pwa: {
@@ -25,8 +27,8 @@ export default defineNuxtConfig({
       description:
         "Sudoku with a step-by-step hint analyzer, daily puzzles, and a technique academy.",
       lang: "en",
-      theme_color: "#0d141b",
-      background_color: "#0d141b",
+      theme_color: "#17294a",
+      background_color: "#17294a",
       display: "standalone",
       orientation: "portrait",
       categories: ["games", "puzzle", "education"],
@@ -62,7 +64,7 @@ export default defineNuxtConfig({
     baseURL: process.env.NUXT_APP_BASE_URL ?? "/",
     head: {
       meta: [
-        { name: "theme-color", content: "#0d141b" },
+        { name: "theme-color", content: "#17294a" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
         { name: "apple-mobile-web-app-title", content: "Sudoku Pro" },

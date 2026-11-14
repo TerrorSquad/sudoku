@@ -48,7 +48,8 @@ defineEmits<{
       <!-- The best sits under the clock on phones (no room beside it), to its left from sm up. -->
       <div v-if="showTimer" class="flex flex-col items-center sm:flex-row-reverse sm:gap-2">
         <span
-          class="font-mono text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
+          data-testid="timer"
+          class="text-base font-bold text-zinc-900 tabular-nums 3xl:text-xl dark:text-zinc-100"
           >{{ formattedTime }}</span
         >
         <!-- Struck through once the clock passes it, so it doesn't rely on colour alone. -->

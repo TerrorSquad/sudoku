@@ -43,7 +43,7 @@ test("hiding the timer removes the clock but keeps pause", async ({ page }) => {
   await page.getByRole("switch", { name: "Show timer" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
   await playCustom(page);
-  await expect(page.locator(".font-mono.tabular-nums.font-bold")).toHaveCount(0);
+  await expect(page.getByTestId("timer")).toHaveCount(0);
   await expect(page.getByLabel("Pause")).toBeVisible();
 });
 

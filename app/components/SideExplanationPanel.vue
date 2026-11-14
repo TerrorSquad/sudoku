@@ -76,7 +76,7 @@ const isLastStep = computed(() => {
         v-if="currentStep"
         class="space-y-2 border border-zinc-200 bg-zinc-100 p-4 dark:border-zinc-800 dark:bg-zinc-950/60"
       >
-        <h4 class="font-mono text-xs font-black text-amber-700 3xl:text-sm dark:text-amber-400">
+        <h4 class="text-xs font-bold text-amber-700 3xl:text-sm dark:text-amber-400">
           {{ $t("hint.step", { n: currentStepIndex + 1 }) }}: {{ currentStep.label }}
         </h4>
         <p class="text-sm leading-relaxed text-zinc-700 3xl:text-base dark:text-zinc-300">

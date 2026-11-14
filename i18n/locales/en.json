@@ -407,7 +407,7 @@
   "academy.caption.coloring": "{num} is chained through cells where it has only two spots (indigo). One of the two alternating colors must be {num}, so {nElim} cell(s) lose it, in rose ({elimList}).",
   "menu.startHint": "Six levels, plus a relaxed Zen mode",
   "settings.boardTheme": "Board style",
-  "settings.boardTiles": "Tiles",
+  "settings.boardTiles": "Graph paper",
   "settings.boardNewsprint": "Newsprint",
   "settings.boardContrast": "High contrast",
   "resume.messageZen": "You have a saved {difficulty} Zen game. Continue it or start a new one?",
@@ -429,5 +429,7 @@
   "academy.tech.bug-plus-one.howItHelps": "Find the digit in that cell that appears three times in its row, column and box. Without it, every cell could switch to its other candidate and the puzzle would have two solutions, so that digit goes in the cell.",
   "academy.caption.finnedXWing": "{num} nearly forms an X-Wing (indigo), with a fin in one box. Whether the fin holds {num} or not, the cells of that box on the crossing lines lose it: {nElim} cell(s) in rose ({elimList}).",
   "academy.caption.wWing": "Two cells hold the same pair, and the pair's other digit has only two spots in a row, column or box, one seen by each cell (indigo). One of the two cells must be {num}, so {nElim} cell(s) seeing both lose it, in rose ({elimList}).",
-  "academy.caption.bug": "Every empty cell (indigo) has two candidates except {cell}, which has three. {num} appears three times in its row, column and box. Without it the puzzle would have two solutions, so {cell} is {num}."
+  "academy.caption.bug": "Every empty cell (indigo) has two candidates except {cell}, which has three. {num} appears three times in its row, column and box. Without it the puzzle would have two solutions, so {cell} is {num}.",
+  "settings.backToGame": "Back to game",
+  "settings.lockedInGame": "Locked until this game ends"
 }
