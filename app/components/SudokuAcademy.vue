@@ -9,10 +9,10 @@ import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples"
 import { masteryFor } from "../utils/mastery";
 import {
   ACADEMY_TECHNIQUES,
-  isoWeekKey,
   nextChallenge,
-  techniqueOfWeek,
+  weekOf,
   type Tier,
+  type Week,
 } from "../utils/progression";
 import ExampleGrid from "./ExampleGrid.vue";
 
@@ -22,7 +22,7 @@ const props = defineProps<{ focus?: TechniqueId | null }>();
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
   (e: "practice", id: TechniqueId): void;
-  (e: "weekly", id: TechniqueId): void;
+  (e: "weekly", week: Week): void;
 }>();
 
 const { t } = useI18n();
@@ -35,13 +35,14 @@ const techniques = ACADEMY_TECHNIQUES;
 // The technique path: completed challenges, and the one the player is on.
 const path = useTechniquePath();
 const done = path.getDone();
-const next = nextChallenge(done);
+const nextId = nextChallenge(done);
 const doneCount = techniques.filter((tech) => done.includes(tech.id)).length;
 const pathState = (id: TechniqueId) =>
-  done.includes(id) ? "done" : id === next ? "next" : "locked";
-const week = isoWeekKey();
-const weekly = techniqueOfWeek();
-const weeklyDone = path.getWeeksDone().includes(week);
+  done.includes(id) ? "done" : id === nextId ? "next" : "locked";
+// Key, technique and seed all from one date, so a click after midnight Sunday can't mix weeks.
+const week = weekOf();
+const weeklyDone = path.getWeeksDone().includes(week.key);
+const stepOf = (id: TechniqueId) => techniques.findIndex((tech) => tech.id === id) + 1;
 
 const MASTERY_STYLE = [
   "",
@@ -229,15 +230,15 @@ const total = computed(() => techniques.length);
               :style="{ width: `${(doneCount / total) * 100}%` }"
             />
           </div>
-          <template v-if="next">
+          <template v-if="nextId">
             <p class="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
-              {{ $t("path.nextHint", { name: techName(next) }) }}
+              {{ $t("path.nextHint", { name: techName(nextId) }) }}
             </p>
             <button
               class="tile tile-primary mt-3 w-full px-3 py-2.5 text-sm font-bold"
-              @click="emit('practice', next)"
+              @click="emit('practice', nextId)"
             >
-              {{ $t("path.next") }}: {{ techName(next) }}
+              {{ $t("path.next") }}: {{ techName(nextId) }}
             </button>
           </template>
           <p v-else class="mt-3 text-sm font-bold text-emerald-700 dark:text-emerald-400">
@@ -255,12 +256,12 @@ const total = computed(() => techniques.length);
             >
           </div>
           <p class="mt-2 text-base font-black text-zinc-900 dark:text-zinc-100">
-            {{ techName(weekly) }}
+            {{ techName(week.technique) }}
           </p>
           <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{{ $t("weekly.desc") }}</p>
           <button
             class="tile tile-amber mt-3 w-full px-3 py-2.5 text-sm font-bold"
-            @click="emit('weekly', weekly)"
+            @click="emit('weekly', week)"
           >
             {{ $t("weekly.play") }}
           </button>
@@ -333,10 +334,10 @@ const total = computed(() => techniques.length);
                   class="border border-violet-500/40 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-bold text-violet-700 dark:text-violet-300"
                   >{{ $t("path.next") }}</span
                 >
-                <span v-else :title="$t('path.cardLocked')" class="text-zinc-500">
-                  <AppIcon class="h-3.5 w-3.5" aria-hidden="true" path="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                  <span class="sr-only">{{ $t("path.cardLocked") }}</span>
-                </span>
+                <!-- A later step: just its place on the path, not a lock (the lesson is free). -->
+                <span v-else class="text-[10px] font-bold text-zinc-500 tabular-nums">{{
+                  $t("path.step", { n: stepOf(tech.id) })
+                }}</span>
                 <span
                   v-if="countOf(tech.id) > 0"
                   :class="MASTERY_STYLE[masteryOf(tech.id)]"

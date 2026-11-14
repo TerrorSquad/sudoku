@@ -5,11 +5,11 @@ import {
   DRILL_COUNTS,
   WEEKLY_TECHNIQUES,
   completesChallenge,
-  isoWeekKey,
   lockOf,
-  levelsOpenedBy,
+  lockedLevels,
   nextChallenge,
-  techniqueOfWeek,
+  weekOf,
+  withZenWins,
 } from "../utils/progression";
 
 const w = (wins: Record<string, number>) =>
@@ -43,10 +43,25 @@ describe("difficulty unlocks", () => {
     expect(lockOf("master", {}, true)).toBeNull();
   });
 
-  it("reports what a win just opened", () => {
-    expect(levelsOpenedBy(w({ medium: 1 }), w({ medium: 2 }))).toEqual(["hard"]);
-    expect(levelsOpenedBy(w({ medium: 2 }), w({ medium: 3 }))).toEqual([]);
-    expect(levelsOpenedBy(w({ hard: 1 }), w({ hard: 2 }))).toEqual(["expert"]);
+  it("treats a best score with no recorded wins (pre-wins saves) as a beaten level", () => {
+    const legacy = { expert: { wins: 0, best: 900 } };
+    expect(lockOf("expert", legacy)).toBeNull();
+    expect(lockOf("hard", legacy)).toBeNull();
+    expect(lockOf("master", legacy)).toEqual({ at: "expert", have: 1, need: 2 });
+  });
+
+  it("lists what is locked, counting saves as open", () => {
+    expect(lockedLevels({}, () => false)).toEqual(["hard", "expert", "master"]);
+    expect(lockedLevels({}, (d) => d === "expert")).toEqual(["hard", "master"]);
+  });
+
+  it("adds Zen wins, which score nothing, and ignores malformed Zen data", () => {
+    const merged = withZenWins(w({ medium: 1 }), { medium: 1, hard: 2 });
+    expect(merged.medium?.wins).toBe(2);
+    expect(lockOf("hard", merged)).toBeNull();
+    expect(lockOf("expert", merged)).toBeNull();
+    expect(withZenWins(w({ medium: 1 }), "junk")).toEqual(w({ medium: 1 }));
+    expect(withZenWins({}, { hard: "2", easy: -1 })).toEqual({});
   });
 });
 
@@ -70,19 +85,29 @@ describe("technique path", () => {
 });
 
 describe("technique of the week", () => {
+  const key = (y: number, m: number, d: number) => weekOf(new Date(y, m, d)).key;
+
   it("keys ISO weeks, Monday-first, with the ISO year at the edges", () => {
-    expect(isoWeekKey(new Date(2026, 10, 14))).toBe("2026-W46"); // Saturday
-    expect(isoWeekKey(new Date(2026, 10, 9))).toBe("2026-W46"); // Monday
-    expect(isoWeekKey(new Date(2026, 10, 8))).toBe("2026-W45"); // Sunday
-    expect(isoWeekKey(new Date(2027, 0, 1))).toBe("2026-W53");
-    expect(isoWeekKey(new Date(2024, 11, 30))).toBe("2025-W01");
+    expect(key(2026, 10, 14)).toBe("2026-W46"); // Saturday
+    expect(key(2026, 10, 9)).toBe("2026-W46"); // Monday
+    expect(key(2026, 10, 8)).toBe("2026-W45"); // Sunday
+    expect(key(2027, 0, 1)).toBe("2026-W53");
+    expect(key(2024, 11, 30)).toBe("2025-W01");
+  });
+
+  it("pins one week's technique and seed, so a rotation change shows up here", () => {
+    expect(weekOf(new Date(2026, 10, 14))).toEqual({
+      key: "2026-W46",
+      technique: "pointing",
+      seed: "2026-W46:pointing",
+    });
   });
 
   it("is the same all week and rotates through every searchable technique", () => {
-    expect(techniqueOfWeek(new Date(2026, 10, 9))).toBe(techniqueOfWeek(new Date(2026, 10, 15)));
+    expect(weekOf(new Date(2026, 10, 9))).toEqual(weekOf(new Date(2026, 10, 15)));
     const seen = new Set<string>();
     for (let i = 0; i < WEEKLY_TECHNIQUES.length; i++)
-      seen.add(techniqueOfWeek(new Date(2026, 0, 5 + 7 * i)));
+      seen.add(weekOf(new Date(2026, 0, 5 + 7 * i)).technique);
     expect(seen.size).toBe(WEEKLY_TECHNIQUES.length);
     expect(WEEKLY_TECHNIQUES.some((id) => DRILL_COUNTS.has(id))).toBe(false);
   });

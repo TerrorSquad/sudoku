@@ -441,7 +441,7 @@
   "path.nextHint": "Reši vežbu koja traži tehniku {name} i ideš dalje.",
   "path.allDone": "Prešao si ceo put: svih {n} izazova.",
   "path.cardDone": "Rešeno",
-  "path.cardLocked": "Dolazi kasnije na putu kroz tehnike",
+  "path.step": "Korak {n}",
   "path.completed": "✓ Izazov rešen: {name}",
   "path.drillNoCount": "Ovo je bila pripremljena pozicija. Izazov se računa tek kad rešiš celu slagalicu za vežbu.",
   "path.menu": "Put {done}/{total}",

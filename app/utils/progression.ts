@@ -10,11 +10,16 @@ export const LADDER: Difficulty[] = ["beginner", "easy", "medium", "hard", "expe
 /** Wins at the level below (or harder) that open the next one. */
 export const WINS_TO_UNLOCK = 2;
 
-/** useScore's perDifficulty map: the win counts that already exist and already sync. */
-export type WinsByDifficulty = Record<string, { wins: number } | undefined>;
+/** useScore's perDifficulty map (the win counts that already exist and already sync). */
+export type WinsByDifficulty = Record<string, { wins: number; best?: number } | undefined>;
 
+/** Beginner to Medium (and custom, off the ladder) are always open. */
+const LAST_OPEN = LADDER.indexOf("medium");
+
+// A best score with no wins is a level beaten before wins were counted (useScore's migration).
+const winsAt = (e: WinsByDifficulty[string]) => Math.max(e?.wins ?? 0, (e?.best ?? 0) > 0 ? 1 : 0);
 const winsFrom = (wins: WinsByDifficulty, i: number) =>
-  LADDER.slice(i).reduce((n, d) => n + (wins[d]?.wins ?? 0), 0);
+  LADDER.slice(i).reduce((n, d) => n + winsAt(wins[d]), 0);
 
 export interface Lock {
   /** The level whose wins (or harder ones) open this one. */
@@ -24,20 +29,36 @@ export interface Lock {
 }
 
 /**
- * null when `level` is open. Beginner–Medium (and custom) are always open; a harder level opens
- * after WINS_TO_UNLOCK wins at the level below or harder. A win at the level itself or harder
- * keeps it open (nobody loses what they've beaten), as does a game in progress at it.
+ * null when `level` is open. A level past Medium opens after WINS_TO_UNLOCK wins at the level
+ * below or harder. A win at the level itself or harder keeps it open (nobody loses what they've
+ * beaten), as does a game in progress at it.
  */
 export function lockOf(level: Difficulty, wins: WinsByDifficulty, hasSave = false): Lock | null {
   const i = LADDER.indexOf(level);
-  if (i < 3 || hasSave || winsFrom(wins, i) > 0) return null;
+  if (i <= LAST_OPEN || hasSave || winsFrom(wins, i) > 0) return null;
   const have = winsFrom(wins, i - 1);
   return have >= WINS_TO_UNLOCK ? null : { at: LADDER[i - 1]!, have, need: WINS_TO_UNLOCK };
 }
 
-/** Levels a win just opened: locked by `before`'s wins, open by `after`'s. */
-export function levelsOpenedBy(before: WinsByDifficulty, after: WinsByDifficulty): Difficulty[] {
-  return LADDER.filter((d) => lockOf(d, before) && !lockOf(d, after));
+/** The levels locked right now; a win that opens one of them announces it. */
+export function lockedLevels(
+  wins: WinsByDifficulty,
+  hasSave: (d: Difficulty) => boolean,
+): Difficulty[] {
+  return LADDER.filter((d) => lockOf(d, wins, hasSave(d)));
+}
+
+/**
+ * Zen wins score nothing, so they live in their own {difficulty: count} map; they still open
+ * levels. `zen` is read from storage, so anything malformed is ignored.
+ */
+export function withZenWins(wins: WinsByDifficulty, zen: unknown): WinsByDifficulty {
+  const out = { ...wins };
+  if (!zen || typeof zen !== "object") return out;
+  for (const [d, n] of Object.entries(zen)) {
+    if (typeof n === "number" && n > 0) out[d] = { ...out[d], wins: (out[d]?.wins ?? 0) + n };
+  }
+  return out;
 }
 
 // ---- Technique path -----------------------------------------------------------------------
@@ -105,20 +126,23 @@ export const WEEKLY_TECHNIQUES = ACADEMY_TECHNIQUES.map((t) => t.id).filter(
 
 const DAY = 86_400_000;
 
-/** The ISO week (Monday-first) of a local date, e.g. "2026-W46"; seeds the week's puzzle. */
-export function isoWeekKey(date: Date = new Date()): string {
-  // Thursday decides the ISO year; UTC midnights avoid DST-length days.
-  const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  const thursday = new Date(day + (3 - ((new Date(day).getUTCDay() + 6) % 7)) * DAY);
-  const year = thursday.getUTCFullYear();
-  const week = 1 + Math.floor((thursday.getTime() - Date.UTC(year, 0, 1)) / (7 * DAY));
-  return `${year}-W${String(week).padStart(2, "0")}`;
+export interface Week {
+  /** The ISO week (Monday-first) of a local date, e.g. "2026-W46". */
+  key: string;
+  technique: TechniqueId;
+  /** Seeds the week's practice puzzle, the same for everyone. */
+  seed: string;
 }
 
-/** Rotates through WEEKLY_TECHNIQUES one ISO week at a time, the same for everyone. */
-export function techniqueOfWeek(date: Date = new Date()): TechniqueId {
+/** The technique of the week: rotates through WEEKLY_TECHNIQUES one ISO week at a time. */
+export function weekOf(date: Date = new Date()): Week {
+  // UTC midnights avoid DST-length days; the ISO year is the one its Thursday falls in.
   const day = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const monday = day - ((new Date(day).getUTCDay() + 6) % 7) * DAY;
+  const year = new Date(monday + 3 * DAY).getUTCFullYear();
+  const n = 1 + Math.floor((monday + 3 * DAY - Date.UTC(year, 0, 1)) / (7 * DAY));
+  const key = `${year}-W${String(n).padStart(2, "0")}`;
   // 1970-01-05 was a Monday: whole weeks since then.
-  const weeks = Math.floor((day - 4 * DAY) / (7 * DAY));
-  return WEEKLY_TECHNIQUES[weeks % WEEKLY_TECHNIQUES.length]!;
+  const technique = WEEKLY_TECHNIQUES[((monday - 4 * DAY) / (7 * DAY)) % WEEKLY_TECHNIQUES.length]!;
+  return { key, technique, seed: `${key}:${technique}` };
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
-import { lockOf } from "../utils/progression";
+import { LADDER, lockOf } from "../utils/progression";
 import { prefetchPuzzle } from "../utils/puzzlePool";
 
 defineProps<{ activeDifficulty: Difficulty }>();
@@ -11,7 +11,8 @@ const { zen } = usePreferences();
 // Levels with a save in progress, so the player sees where a resume prompt will appear.
 const { loadDifficulty } = useGameSave();
 // Read in setup, not onMounted, so a locked level never flashes open (or the reverse).
-const wins = useScore().getStats().perDifficulty;
+const inProgress = new Set(LADDER.filter((k) => loadDifficulty(k) !== null));
+const wins = useScore().unlockWins();
 const lockFor = (d: Difficulty) => lockOf(d, wins, inProgress.has(d));
 onMounted(() => {
   // Have a board ready for every open level by the time one is picked.
@@ -73,7 +74,6 @@ const DIFFICULTIES: {
     groupHoverText: "group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-300",
   },
 ];
-const inProgress = new Set(DIFFICULTIES.map((d) => d.key).filter((k) => loadDifficulty(k) !== null));
 
 function pick(d: Difficulty) {
   if (!lockFor(d)) emit("select-difficulty", d);
@@ -176,4 +176,3 @@ function pick(d: Difficulty) {
     </div>
   </div>
 </template>
-
