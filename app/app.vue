@@ -21,7 +21,7 @@ import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { useGameSave, type GameSave } from "./composables/useGameSave";
+import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
@@ -117,6 +117,7 @@ const achievements = useAchievements();
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
+let dailyDate = ""; // the date of the Daily being played, stamped on its save
 // A Zen game hides the timer and mistake count, has no mistake limit and records no score.
 const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
@@ -154,7 +155,7 @@ const modalTitle = ref<string>("");
 const modalMessage = ref<string>("");
 const isWinState = ref<boolean>(false);
 
-const pendingResume = ref<{ save: GameSave; level: Difficulty } | null>(null);
+const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
@@ -226,6 +227,7 @@ watch(
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
       zen: gameZen.value,
+      daily: isDailyMode.value ? dailyDate : undefined,
     });
   },
   { deep: true },
@@ -239,7 +241,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   activeDigit.value = null;
   reachedLevel.value = null;
   timer.stopTimer();
-  if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
+  if (!practiceTechnique.value)
+    gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
   if (win) {
     cue("win");
     flashWin();
@@ -321,7 +324,8 @@ function handleModalClose() {
 
 function resumeSavedGame(s: GameSave) {
   practiceTechnique.value = null;
-  isDailyMode.value = false;
+  isDailyMode.value = !!s.daily;
+  dailyDate = s.daily ?? "";
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -383,7 +387,9 @@ function handleResumeConfirm() {
 
 function handleResumeDecline() {
   if (!pendingResume.value) return;
-  handleStartGame(pendingResume.value.level);
+  const { level } = pendingResume.value;
+  if (level === "daily") startDaily();
+  else handleStartGame(level);
   pendingResume.value = null;
 }
 
@@ -643,7 +649,16 @@ function handleAutoFillNotes() {
   hintStatus.value = t("game.notesFilled");
 }
 
+// Only today's Daily can be resumed; one saved on an earlier day is dropped.
 function handleStartDaily() {
+  const saved = gameSave.loadDifficulty("daily");
+  if (saved?.daily === dailyPuzzle.todayKey()) pendingResume.value = { save: saved, level: "daily" };
+  else startDaily();
+}
+
+function startDaily() {
+  gameSave.clearDifficulty("daily");
+  dailyDate = dailyPuzzle.todayKey();
   practiceTechnique.value = null;
   gameZen.value = false;
   isDailyMode.value = true;
