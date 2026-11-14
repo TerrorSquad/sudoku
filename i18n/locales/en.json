@@ -403,5 +403,20 @@
   "settings.boardTiles": "Tiles",
   "settings.boardNewsprint": "Newsprint",
   "settings.boardContrast": "High contrast",
-  "resume.messageZen": "You have a saved {difficulty} Zen game. Continue it or start a new one?"
+  "resume.messageZen": "You have a saved {difficulty} Zen game. Continue it or start a new one?",
+  "hint.move.finned-x-wing.name": "Finned X-Wing",
+  "hint.move.finned-x-wing.desc": "{num} almost forms an X-Wing across two lines, except for a fin: extra spots inside one box. Either the X-Wing holds or a fin cell is {num}, and either way {num} can be removed from {count} cell(s) of that box on the crossing lines.",
+  "hint.move.w-wing.name": "W-Wing",
+  "hint.move.w-wing.desc": "Two cells that don't see each other hold the same pair: {num} and one other digit. That other digit has only two spots in a row, column or box, and each cell sees one of them, so the two cells can't both be it. One of them is {num}, so it can be removed from {count} cell(s) that see both.",
+  "hint.move.bug-plus-one.name": "BUG+1",
+  "hint.move.bug-plus-one.desc": "Every empty cell has two candidates except this one, which has three. If it weren't {num}, every digit would have exactly two spots in each row, column and box, and the puzzle would have two solutions. So it must be {num}.",
+  "academy.tech.finned-x-wing.lookFor": "An X-Wing that's nearly there: a digit in two rows (or columns) fits the same two columns (or rows), apart from a few extra candidates, the fin, all in one box.",
+  "academy.tech.finned-x-wing.howItHelps": "Either no fin cell is the digit and the X-Wing works as usual, or one is and the rest of its box loses the digit. Either way, cells in the fin's box on the X-Wing's columns (or rows) lose it.",
+  "academy.tech.w-wing.lookFor": "Two cells with the same two candidates, X and Y, that don't see each other, and a row, column or box where X has only two spots, each seen by one of the cells.",
+  "academy.tech.w-wing.howItHelps": "Those two spots can't both lose X, so the two cells can't both be X. One of them is Y, and any cell that sees both loses Y.",
+  "academy.tech.bug-plus-one.lookFor": "Late in the puzzle, every empty cell has exactly two candidates except one, which has three.",
+  "academy.tech.bug-plus-one.howItHelps": "Find the digit in that cell that appears three times in its row, column and box. Without it, every cell could switch to its other candidate and the puzzle would have two solutions, so that digit goes in the cell.",
+  "academy.caption.finnedXWing": "{num} nearly forms an X-Wing (indigo), with a fin in one box. Whether the fin holds {num} or not, the cells of that box on the crossing lines lose it: {nElim} cell(s) in rose ({elimList}).",
+  "academy.caption.wWing": "Two cells hold the same pair, and the pair's other digit has only two spots in a row, column or box, one seen by each cell (indigo). One of the two cells must be {num}, so {nElim} cell(s) seeing both lose it, in rose ({elimList}).",
+  "academy.caption.bug": "Every empty cell (indigo) has two candidates except {cell}, which has three. {num} appears three times in its row, column and box. Without it the puzzle would have two solutions, so {cell} is {num}."
 }

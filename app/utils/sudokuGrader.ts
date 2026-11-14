@@ -9,8 +9,9 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sud
 //   1 — singles only (naked/hidden single)
 //   2 — pairs: naked/hidden pair, pointing, claiming
 //   3 — naked/hidden triple, X-Wing
-//   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Unique Rectangle, XY-Wing
-//   5 — Jellyfish, XYZ-Wing, Simple Coloring
+//   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Finned X-Wing,
+//       Unique Rectangle, XY-Wing, W-Wing
+//   5 — Jellyfish, XYZ-Wing, Simple Coloring, BUG+1
 
 // 1..5 = hardest technique tier required to fully solve.
 // STUCK = no implemented technique makes progress (needs guessing / a technique
@@ -382,7 +383,10 @@ export type TechniqueId =
   | "skyscraper"
   | "two-string-kite"
   | "unique-rectangle"
-  | "simple-coloring";
+  | "simple-coloring"
+  | "finned-x-wing"
+  | "w-wing"
+  | "bug-plus-one";
 
 export interface CellRC {
   r: number;
@@ -879,6 +883,128 @@ function findSimpleColoringMove(s: SolveState): SolveMove | null {
   return null;
 }
 
+// --- Finned X-Wing (and Sashimi) ---
+// An X-Wing on v in two rows (or columns), except for extra candidates, the fin, all in one box.
+// If no fin cell is v, the X-Wing is real and clears v from both cover columns; if one is, v is
+// gone from the rest of the fin's box. Cover-column cells inside that box, off the two rows, lose v
+// either way. Sashimi (a corner already missing) follows the same logic.
+function findFinnedXWingMove(s: SolveState): SolveMove | null {
+  for (const baseIsRow of [true, false]) {
+    const cell = (u: number, p: number) => (baseIsRow ? idx(u, p) : idx(p, u));
+    for (let v = 1; v <= 9; v++) {
+      const pos = Array.from({ length: 9 }, (_, u) =>
+        [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => s.board[cell(u, p)] === 0 && s.cands[cell(u, p)]! & bit(v)),
+      );
+      for (let u1 = 0; u1 < 9; u1++) {
+        for (let u2 = u1 + 1; u2 < 9; u2++) {
+          if (pos[u1]!.length < 2 || pos[u2]!.length < 2) continue;
+          const union = [...new Set([...pos[u1]!, ...pos[u2]!])];
+          // Two columns is a plain X-Wing; fins fit in one box, so at most three more columns.
+          if (union.length < 3 || union.length > 5) continue;
+          for (const [p1, p2] of combos(union, 2) as Iterable<[number, number]>) {
+            const isCover = (p: number) => p === p1 || p === p2;
+            if (!pos[u1]!.some(isCover) || !pos[u2]!.some(isCover)) continue;
+            const fins = [u1, u2].flatMap((u) => pos[u]!.filter((p) => !isCover(p)).map((p) => cell(u, p)));
+            const finBox = boxOf(fins[0]!);
+            if (fins.some((i) => boxOf(i) !== finBox)) continue;
+            const elims: DigitAt[] = [];
+            for (const p of [p1, p2]) {
+              for (let u = 0; u < 9; u++) {
+                const i = cell(u, p);
+                if (u === u1 || u === u2 || boxOf(i) !== finBox) continue;
+                if (s.board[i] === 0 && s.cands[i]! & bit(v)) elims.push({ ...rc(i), num: v });
+              }
+            }
+            if (elims.length) {
+              return {
+                technique: "finned-x-wing",
+                tier: 4,
+                eliminations: elims,
+                triggers: [u1, u2].flatMap((u) => pos[u]!.map((p) => rc(cell(u, p)))),
+                digits: [v],
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// --- W-Wing ---
+// Two cells holding only {x, y} that don't see each other, and a strong link on x (a unit where x
+// has two spots) with one end seen by each cell. If neither cell were y, both would be x and the
+// link would lose x at both ends, so one of them is y: any cell seeing both loses y.
+function findWWingMove(s: SolveState): SolveMove | null {
+  const bivalue: number[] = [];
+  for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
+  const linksOf: ReturnType<typeof strongLinks>[] = [];
+  for (const [a, b] of combos(bivalue, 2) as Iterable<[number, number]>) {
+    if (s.cands[a] !== s.cands[b] || sees(a, b)) continue;
+    for (const x of maskDigits(s.cands[a]!)) {
+      const y = maskDigits(s.cands[a]! & ~bit(x))[0]!;
+      const elims = seeingAll(s, y, [a, b]);
+      if (!elims.length) continue;
+      for (const link of (linksOf[x] ??= strongLinks(s, x))) {
+        // sees() rules out the link ending on a or b, since a and b don't see each other.
+        const ends =
+          sees(a, link.a) && sees(b, link.b)
+            ? [link.a, link.b]
+            : sees(a, link.b) && sees(b, link.a)
+              ? [link.b, link.a]
+              : null;
+        if (!ends) continue;
+        return {
+          technique: "w-wing",
+          tier: 4,
+          eliminations: elims.map((i) => ({ ...rc(i), num: y })),
+          triggers: [a, b, ...ends].map(rc),
+          digits: [y],
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// --- BUG+1 (bivalue universal grave + 1) ---
+// Every empty cell holds two candidates except one, which holds three. Take away the right one of
+// its three and each digit would sit in exactly two cells of every unit that lacks it: a "grave"
+// where switching every cell to its other candidate is a second solution. The puzzle has one
+// solution, so the cell must be that digit (the one it adds a third copy of in its units).
+function findBugPlusOneMove(s: SolveState): SolveMove | null {
+  let odd = -1;
+  for (let i = 0; i < 81; i++) {
+    if (s.board[i] !== 0 || popcount(s.cands[i]!) === 2) continue;
+    if (popcount(s.cands[i]!) !== 3 || odd !== -1) return null;
+    odd = i;
+  }
+  if (odd === -1) return null;
+  for (const v of maskDigits(s.cands[odd]!)) {
+    const mask = (i: number) => (i === odd ? s.cands[i]! & ~bit(v) : s.cands[i]!);
+    const grave = ALL_UNITS.every((unit) =>
+      maskDigits(ALL_MASK).every((d) => {
+        const n = unit.filter((i) => s.board[i] === 0 && mask(i) & bit(d)).length;
+        return n === 0 || n === 2;
+      }),
+    );
+    if (grave) {
+      const rest: number[] = [];
+      for (let i = 0; i < 81; i++) if (s.board[i] === 0 && i !== odd) rest.push(i);
+      return {
+        technique: "bug-plus-one",
+        tier: 5,
+        placement: { ...rc(odd), num: v },
+        eliminations: [],
+        triggers: rest.map(rc),
+        digits: [v],
+      };
+    }
+  }
+  return null;
+}
+
 // Easiest-first dispatch — mirrors the grading tier order.
 function findNextMove(s: SolveState): SolveMove | null {
   return (
@@ -895,17 +1021,21 @@ function findNextMove(s: SolveState): SolveMove | null {
     findFishMove(s, 3) ??
     findTurbotMove(s, false) ??
     findTurbotMove(s, true) ??
+    findFinnedXWingMove(s) ??
     findUniqueRectangleMove(s) ??
     findXYWingMove(s) ??
+    findWWingMove(s) ??
     findFishMove(s, 4) ??
     findXYZWingMove(s) ??
-    findSimpleColoringMove(s)
+    findSimpleColoringMove(s) ??
+    findBugPlusOneMove(s)
   );
 }
 
-/** Grading runs the structured finders too: apply a found move's eliminations. */
+/** Grading runs the structured finders too: apply a found move's placement or eliminations. */
 function applyMove(s: SolveState, move: SolveMove | null): boolean {
   if (!move) return false;
+  if (move.placement) place(s, idx(move.placement.r, move.placement.c), move.placement.num);
   for (const e of move.eliminations) s.cands[idx(e.r, e.c)]! &= ~bit(e.num);
   return true;
 }
@@ -954,13 +1084,18 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         eliminateFish(s, 3) ||
         applyMove(s, findTurbotMove(s, false)) ||
         applyMove(s, findTurbotMove(s, true)) ||
+        applyMove(s, findFinnedXWingMove(s)) ||
         applyMove(s, findUniqueRectangleMove(s)) ||
-        eliminateXYWing(s),
+        eliminateXYWing(s) ||
+        applyMove(s, findWWingMove(s)),
     },
     {
       tier: 5,
       run: () =>
-        eliminateFish(s, 4) || eliminateXYZWing(s) || applyMove(s, findSimpleColoringMove(s)),
+        eliminateFish(s, 4) ||
+        eliminateXYZWing(s) ||
+        applyMove(s, findSimpleColoringMove(s)) ||
+        applyMove(s, findBugPlusOneMove(s)),
     },
   ];
 
