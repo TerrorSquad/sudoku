@@ -39,9 +39,13 @@ const techniques: Technique[] = [
   { id: "hidden-quad", tier: "Advanced" },
   { id: "x-wing", tier: "Advanced" },
   { id: "swordfish", tier: "Advanced" },
+  { id: "skyscraper", tier: "Advanced" },
+  { id: "two-string-kite", tier: "Advanced" },
   { id: "jellyfish", tier: "Advanced" },
+  { id: "unique-rectangle", tier: "Expert" },
   { id: "xy-wing", tier: "Expert" },
   { id: "xyz-wing", tier: "Expert" },
+  { id: "simple-coloring", tier: "Expert" },
 ];
 
 const MASTERY_STYLE = [
@@ -139,6 +143,14 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
       return t("academy.caption.xyWing", { num, nElim, elimList });
     case "xyz-wing":
       return t("academy.caption.xyzWing", { num, nElim, elimList });
+    case "skyscraper":
+      return t("academy.caption.skyscraper", { num, nElim, elimList });
+    case "two-string-kite":
+      return t("academy.caption.kite", { num, nElim, elimList });
+    case "unique-rectangle":
+      return t("academy.caption.uniqueRectangle", { digits, nElim, elimList });
+    case "simple-coloring":
+      return t("academy.caption.coloring", { num, nElim, elimList });
     default:
       return "";
   }

@@ -13,6 +13,30 @@ function applyPlacement(board: Grid, move: SolveMove): Grid {
 }
 
 describe("nextHint — soundness", () => {
+  it("skyscraper, kite, unique rectangle and coloring fire, and never remove a solution digit", () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 100; seed++) {
+      const { puzzle, solution } = generatePuzzle(62, makeRng(seed));
+      const board = puzzle.map((r) => r.concat());
+      const elims: { r: number; c: number; num: number }[] = [];
+      for (let step = 0; step < 600; step++) {
+        const move = nextHint(board, elims);
+        if (!move) break;
+        seen.add(move.technique);
+        if (move.placement) {
+          const { r, c, num } = move.placement;
+          expect(num).toBe(solution[r]![c]);
+          board[r]![c] = num;
+        } else {
+          for (const e of move.eliminations) expect(e.num).not.toBe(solution[e.r]![e.c]);
+          elims.push(...move.eliminations);
+        }
+      }
+    }
+    for (const t of ["skyscraper", "two-string-kite", "unique-rectangle", "simple-coloring"])
+      expect(seen).toContain(t);
+  });
+
   it("a placement is always the value that actually solves the cell", () => {
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const { puzzle, solution } = generatePuzzle(45, makeRng(seed));
