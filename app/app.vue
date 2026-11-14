@@ -65,9 +65,10 @@ const CUES = {
   hint: [playHint, null],
   unlock: [playUnlock, null],
 } as const;
-function cue(kind: keyof typeof CUES) {
+// `arg` tunes the sound: the digit for a placement, units completed at once for a completion.
+function cue(kind: keyof typeof CUES, ...arg: number[]) {
   const [sound, vibration] = CUES[kind];
-  if (soundEnabled.value) sound();
+  if (soundEnabled.value) (sound as (...a: number[]) => void)(...arg);
   if (vibration && hapticsEnabled.value) haptic(vibration);
 }
 const engine = useSudokuEngine(
@@ -415,13 +416,16 @@ function flashCompletedUnits(r: number, c: number) {
   // Cells ripple outward from the digit just placed: 45 ms per step of distance.
   const RIPPLE_MS = 45;
   const cells: FlashCell[] = [];
+  let units = 0;
   const add = (cr: number, cc: number) =>
     cells.push({ r: cr, c: cc, delay: Math.max(Math.abs(cr - r), Math.abs(cc - c)) * RIPPLE_MS });
 
   if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
+    units++;
     for (let i = 0; i < 9; i++) add(r, i);
   }
   if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
+    units++;
     for (let i = 0; i < 9; i++) add(i, c);
   }
   const boxR = r - (r % 3);
@@ -436,13 +440,14 @@ function flashCompletedUnits(r: number, c: number) {
     }
   }
   if (boxComplete) {
+    units++;
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) add(boxR + i, boxC + j);
     }
   }
 
   if (!cells.length) return;
-  cue("complete");
+  cue("complete", units, currentBoard.value[r]![c]!);
   runFlash(cells);
 }
 
@@ -494,7 +499,7 @@ function handleInputNumber(num: number) {
         // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
         // it still counts toward the score.
         if (!highlightErrors.value) {
-          cue("place"); // sounds identical to a correct entry
+          cue("place", num); // sounds identical to a correct entry
         } else {
           cue("mistake");
           if (conflicts.length > 0) {
@@ -526,7 +531,7 @@ function handleInputNumber(num: number) {
           }
         }
       } else {
-        cue("place");
+        cue("place", num);
         mistakeExplainer.value = "";
         clearRelationalNotes(r, c, num);
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
@@ -541,14 +546,15 @@ function handleInputNumber(num: number) {
 
 function handleNextStep() {
   const title = activeComplexHint.value?.title;
-  const wasPlacement = !!engine.activeMove.value?.placement;
+  const placed = engine.activeMove.value?.placement?.num;
+  const wasPlacement = !!placed;
   nextHintStep(() => {
     if (title) {
       if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
       techStats.record(title);
     }
     hintsUsed.value++;
-    if (wasPlacement) cue("place");
+    if (placed) cue("place", placed);
     if (checkWinCondition()) {
       triggerLocalModal(
         t("modal.win"),
@@ -591,12 +597,13 @@ function handleTriggerHint() {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const name = activeComplexHint.value.title;
-  const wasPlacement = !!engine.activeMove.value?.placement;
+  const placed = engine.activeMove.value?.placement?.num;
+  const wasPlacement = !!placed;
   hintsUsed.value++;
   if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
   techStats.record(name);
   engine.applyComplexHint();
-  if (wasPlacement) cue("place");
+  if (placed) cue("place", placed);
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
