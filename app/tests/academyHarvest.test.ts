@@ -17,6 +17,9 @@ const WANTED: TechniqueId[] = [
   "two-string-kite",
   "unique-rectangle",
   "simple-coloring",
+  "finned-x-wing",
+  "w-wing",
+  "bug-plus-one",
 ];
 
 function harvest(technique: TechniqueId): AcademyExample | null {
@@ -27,10 +30,11 @@ function harvest(technique: TechniqueId): AcademyExample | null {
       const move = nextHint(board, elims);
       if (!move) break;
       if (move.technique === technique) {
-        // Pencil marks for the pattern and the cells it clears, as the solver sees them.
+        // Pencil marks for the pattern and the cells it clears or fills, as the solver sees them.
+        const target = move.placement ? [{ r: move.placement.r, c: move.placement.c }] : [];
         const cands = getGridCandidates(board);
         const notes: Record<string, number[]> = {};
-        for (const { r, c } of [...move.triggers, ...move.eliminations]) {
+        for (const { r, c } of [...move.triggers, ...move.eliminations, ...target]) {
           notes[`${r}-${c}`] = cands[r]![c]!.filter(
             (n) => !elims.some((e) => e.r === r && e.c === c && e.num === n),
           );
@@ -44,11 +48,11 @@ function harvest(technique: TechniqueId): AcademyExample | null {
         return {
           board: board.map((r) => [...r]),
           notes,
-          target: [],
+          target,
           trigger: cells(move.triggers),
           elimination: cells(move.eliminations),
           digits: move.digits,
-          placement: null,
+          placement: move.placement ?? null,
         };
       }
       if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;

@@ -2,7 +2,9 @@ import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
 
 import { readJSON, writeJSON } from "../utils/safeJson";
 
-const saveKey = (d: Difficulty) => `sudoku_v1_save_${d}`;
+/** One slot per difficulty, plus the Daily's own (it plays as medium but must not overwrite it). */
+export type SaveSlot = Difficulty | "daily";
+const saveKey = (slot: SaveSlot) => `sudoku_v1_save_${slot}`;
 
 export interface GameSave {
   currentBoard: Grid;
@@ -16,19 +18,21 @@ export interface GameSave {
   hintsUsed?: number;
   /** Zen game: no timer, mistake limit or score. Older saves restore as false. */
   zen?: boolean;
+  /** Set on a Daily: the local date (YYYY-MM-DD) of its puzzle. */
+  daily?: string;
   savedAt: number;
 }
 
 export function useGameSave() {
   function save(state: Omit<GameSave, "savedAt">): void {
-    writeJSON(saveKey(state.difficulty), { ...state, savedAt: Date.now() });
+    writeJSON(saveKey(state.daily ? "daily" : state.difficulty), { ...state, savedAt: Date.now() });
   }
 
-  function loadDifficulty(d: Difficulty): GameSave | null {
+  function loadDifficulty(d: SaveSlot): GameSave | null {
     return readJSON<GameSave | null>(saveKey(d), null);
   }
 
-  function clearDifficulty(d: Difficulty): void {
+  function clearDifficulty(d: SaveSlot): void {
     localStorage.removeItem(saveKey(d));
   }
 

@@ -52,7 +52,8 @@ function validEntry(key: string, value: string): boolean {
       isGrid(save.solvedBoard) &&
       Array.isArray(save.notesBoard) &&
       save.notesBoard.length === 9 &&
-      save.difficulty === key.slice("sudoku_v1_save_".length)
+      // The Daily plays as medium but has its own slot.
+      (save.daily ? "daily" : save.difficulty) === key.slice("sudoku_v1_save_".length)
     );
   }
   if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);

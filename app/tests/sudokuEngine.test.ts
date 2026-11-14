@@ -207,5 +207,32 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       if (move.placement) expect(move.placement.num).toBe(engine.solvedBoard.value[move.placement.r]![move.placement.c]);
       for (const e of move.eliminations) expect(e.num).not.toBe(engine.solvedBoard.value[e.r]![e.c]);
     });
+
+    it("points at a wrong entry before any technique, and applying it clears the cell", () => {
+      engine.initialBoard.value = board.map((row) => [...row]);
+      const answer = engine.solvedBoard.value[4]![1]!;
+      const wrong = [1, 2, 5].find((n) => n !== answer)!; // a candidate, so no visible clash
+      engine.currentBoard.value[4]![1] = wrong;
+      expect(engine.peekHintCell()).toEqual({ r: 4, c: 1 });
+
+      engine.triggerComplexHint(status, body);
+      const hint = engine.activeComplexHint.value!;
+      expect(hint.wrongEntry).toBe(true);
+      expect(hint.title).toBe("hint.wrong.name");
+      expect(hint.targetCell).toEqual({ r: 4, c: 1 });
+      expect(engine.activeMove.value).toBeNull();
+
+      engine.nextHintStep(() => {});
+      engine.nextHintStep(() => {});
+      expect(engine.currentBoard.value[4]![1]).toBe(0);
+      expect(engine.activeComplexHint.value).toBeNull();
+
+      engine.triggerComplexHint(status, body);
+      expect(engine.activeComplexHint.value?.wrongEntry).toBeUndefined();
+      expect(engine.activeMove.value?.eliminations).toContainEqual({ r: 4, c: 1, num: 2 });
+
+      engine.undoMove(); // the clear is one undoable step
+      expect(engine.currentBoard.value[4]![1]).toBe(wrong);
+    });
   });
 });

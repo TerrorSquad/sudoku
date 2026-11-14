@@ -21,7 +21,7 @@ import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { useGameSave, type GameSave } from "./composables/useGameSave";
+import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
@@ -118,6 +118,7 @@ const achievements = useAchievements();
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
+let dailyDate = ""; // the date of the Daily being played, stamped on its save
 // A Zen game hides the timer and mistake count, has no mistake limit and records no score.
 const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
@@ -155,10 +156,10 @@ const modalTitle = ref<string>("");
 const modalMessage = ref<string>("");
 const isWinState = ref<boolean>(false);
 
-const pendingResume = ref<{ save: GameSave; level: Difficulty } | null>(null);
+const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
-const techniqueLog = ref<string[]>([]);
+const techniqueLog = ref<TechniqueId[]>([]);
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
@@ -239,6 +240,7 @@ watch(
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
       zen: gameZen.value,
+      daily: isDailyMode.value ? dailyDate : undefined,
     });
   },
   { deep: true },
@@ -258,14 +260,16 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   activeDigit.value = null;
   reachedLevel.value = null;
   timer.stopTimer();
-  if (!practiceTechnique.value) gameSave.clearDifficulty(activeDifficulty.value);
+  if (!practiceTechnique.value)
+    gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
   if (win) {
     cue("win");
     flashWin();
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
     } else {
-      if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
+      if (isDailyMode.value)
+        dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
       const breakdown = computeScore({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
@@ -282,7 +286,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         seconds: timer.timerSeconds.value,
         mistakes: mistakes.value,
         hints: hintsUsed.value,
-        daily: isDailyMode.value ? dailyPuzzle.todayKey() : null,
+        daily: isDailyMode.value ? dailyDate : null,
       });
       lastScore.value = breakdown;
       isNewBest.value = result.isNewBest;
@@ -346,7 +350,8 @@ function openLesson(id: TechniqueId) {
 
 function resumeSavedGame(s: GameSave) {
   practiceTechnique.value = null;
-  isDailyMode.value = false;
+  isDailyMode.value = !!s.daily;
+  dailyDate = s.daily ?? "";
   restoreGame(s);
   activeDifficulty.value = s.difficulty;
   mistakes.value = s.mistakes;
@@ -408,7 +413,9 @@ function handleResumeConfirm() {
 
 function handleResumeDecline() {
   if (!pendingResume.value) return;
-  handleStartGame(pendingResume.value.level);
+  const { level } = pendingResume.value;
+  if (level === "daily") startDaily();
+  else handleStartGame(level);
   pendingResume.value = null;
 }
 
@@ -580,13 +587,12 @@ function handleInputNumber(num: number) {
 }
 
 function handleNextStep() {
-  const title = activeComplexHint.value?.title;
+  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
-  const wasPlacement = !!placed;
   nextHintStep(() => {
-    if (title) {
-      if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
-      techStats.record(title);
+    if (tech) {
+      if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+      techStats.record(tech);
     }
     hintsUsed.value++;
     if (placed) cue("place", placed);
@@ -599,7 +605,9 @@ function handleNextStep() {
         true,
       );
     } else {
-      hintStatus.value = wasPlacement ? t("game.cellFilled") : t("game.candidatesCleared");
+      hintStatus.value = t(
+        !tech ? "game.wrongCleared" : placed ? "game.cellFilled" : "game.candidatesCleared",
+      );
       hintBody.value = "";
     }
   });
@@ -633,18 +641,21 @@ function handleTriggerHint() {
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
-  const name = activeComplexHint.value.title;
+  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
-  const wasPlacement = !!placed;
   hintsUsed.value++;
-  if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
-  techStats.record(name);
+  if (tech) {
+    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    techStats.record(tech);
+  }
   engine.applyComplexHint();
   if (placed) cue("place", placed);
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
-    hintStatus.value = wasPlacement ? t("game.instantApplied") : t("game.candidatesCleared");
+    hintStatus.value = t(
+      !tech ? "game.wrongCleared" : placed ? "game.instantApplied" : "game.candidatesCleared",
+    );
     hintBody.value = "";
   }
 }
@@ -666,7 +677,16 @@ function handleAutoFillNotes() {
   hintStatus.value = t("game.notesFilled");
 }
 
+// Only today's Daily can be resumed; one saved on an earlier day is dropped.
 function handleStartDaily() {
+  const saved = gameSave.loadDifficulty("daily");
+  if (saved?.daily === dailyPuzzle.todayKey()) pendingResume.value = { save: saved, level: "daily" };
+  else startDaily();
+}
+
+function startDaily() {
+  gameSave.clearDifficulty("daily");
+  dailyDate = dailyPuzzle.todayKey();
   practiceTechnique.value = null;
   gameZen.value = false;
   isDailyMode.value = true;
@@ -1381,12 +1401,12 @@ onUnmounted(() => {
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
-                  v-for="name in techniqueLog"
-                  :key="name"
-                  :title="$t('modal.usedTotal', { n: techStatsTotals[name] ?? 1 })"
+                  v-for="id in techniqueLog"
+                  :key="id"
+                  :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
                   class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
-                  >{{ name }}
-                  <span class="opacity-70">×{{ techStatsTotals[name] ?? 1 }}</span></span
+                  >{{ $t(`hint.move.${id}.name`) }}
+                  <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
                 >
               </div>
             </div>

@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 
-import { decide, hashData, readCloud, type CloudFile } from "../utils/cloudSync";
+import {
+  cloudData,
+  decide,
+  hashData,
+  readCloud,
+  withLocalOnly,
+  type CloudFile,
+} from "../utils/cloudSync";
 
 const score = (total: number) => JSON.stringify({ total });
 const file = (data: Record<string, string>, updatedAt: number): CloudFile => ({
@@ -104,5 +111,17 @@ describe("decide", () => {
       action: "upload",
       replaced: file(A, 7),
     });
+  });
+});
+
+describe("the Daily's save stays on the device", () => {
+  const daily = { sudoku_v1_save_daily: "{}" };
+
+  it("is left out of what syncs (v1.2.0 would call the whole file corrupt)", () => {
+    expect(cloudData({ ...A, ...daily })).toEqual(A);
+  });
+
+  it("survives restoring a cloud copy", () => {
+    expect(withLocalOnly(file(B, 5), { ...A, ...daily }).data).toEqual({ ...B, ...daily });
   });
 });

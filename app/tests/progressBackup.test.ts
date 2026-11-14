@@ -168,6 +168,21 @@ describe("progress backup", () => {
         difficulty: "hard",
       }),
     ).toEqual({ ok: false, error: "invalid" });
+    // The Daily plays as medium in its own slot; a plain medium save doesn't belong there.
+    const save = (extra: object) => ({
+      currentBoard: grid,
+      initialBoard: grid,
+      solvedBoard: grid,
+      notesBoard: Array.from({ length: 9 }, () => []),
+      difficulty: "medium",
+      ...extra,
+    });
+    expect(bad("sudoku_v1_save_daily", save({ daily: "2026-03-04" }))).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_save_daily", save({}))).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_save_medium", save({ daily: "2026-03-04" }))).toEqual({
+      ok: false,
+      error: "invalid",
+    });
   });
 
   it("names the file by date", () => {

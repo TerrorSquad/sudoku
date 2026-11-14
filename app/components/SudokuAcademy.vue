@@ -28,7 +28,7 @@ interface Technique {
 
 // Exactly the techniques the in-game analyzer uses (and can hint), in the order
 // the solver tries them. Names/descriptions/captions come from i18n; the name
-// reuses the in-game hint title so the per-technique ×N badge matches.
+// reuses the in-game hint title.
 const techniques: Technique[] = [
   { id: "naked-single", tier: "Basic" },
   { id: "hidden-single", tier: "Basic" },
@@ -44,11 +44,14 @@ const techniques: Technique[] = [
   { id: "swordfish", tier: "Advanced" },
   { id: "skyscraper", tier: "Advanced" },
   { id: "two-string-kite", tier: "Advanced" },
+  { id: "finned-x-wing", tier: "Advanced" },
   { id: "jellyfish", tier: "Advanced" },
   { id: "unique-rectangle", tier: "Expert" },
   { id: "xy-wing", tier: "Expert" },
+  { id: "w-wing", tier: "Expert" },
   { id: "xyz-wing", tier: "Expert" },
   { id: "simple-coloring", tier: "Expert" },
+  { id: "bug-plus-one", tier: "Expert" },
 ];
 
 const MASTERY_STYLE = [
@@ -58,7 +61,7 @@ const MASTERY_STYLE = [
   "border-amber-400/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
 ] as const;
 
-const countOf = (id: TechniqueId) => techStats.getCount(techName(id));
+const countOf = (id: TechniqueId) => techStats.getCount(id);
 const masteryOf = (id: TechniqueId) => masteryFor(countOf(id));
 const masteryTitle = (id: TechniqueId) =>
   countOf(id) === 0
@@ -154,6 +157,12 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
       return t("academy.caption.uniqueRectangle", { digits, nElim, elimList });
     case "simple-coloring":
       return t("academy.caption.coloring", { num, nElim, elimList });
+    case "finned-x-wing":
+      return t("academy.caption.finnedXWing", { num, nElim, elimList });
+    case "w-wing":
+      return t("academy.caption.wWing", { num, nElim, elimList });
+    case "bug-plus-one":
+      return t("academy.caption.bug", { cell: RC(ex.placement!), num: ex.placement!.num });
     default:
       return "";
   }
