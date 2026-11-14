@@ -3,6 +3,7 @@
 // docs/specs/2026-10-27-wavedash-platform-design.md, phase 3.
 
 import { parseBackup, type Backup } from "./progressBackup";
+import { mergeRecords, readRecords } from "./records";
 
 /** The one cloud file: a progressBackup export plus when it was uploaded. */
 export const CLOUD_FILE = "progress.json";
@@ -14,17 +15,37 @@ export const SYNC_BACKUP_KEY = "sudoku_sync_backup";
 
 // The Daily's save stays on this device: v1.2.0 rejects a whole cloud file that holds it (it
 // expects every save slot to be named after a difficulty), and it only resumes the same day anyway.
-const LOCAL_ONLY = ["sudoku_v1_save_daily"];
+const LOCAL_ONLY = new Set(["sudoku_v1_save_daily"]);
 
 /** The local data as it is synced: everything but the LOCAL_ONLY keys. */
 export function cloudData(local: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.includes(k)));
+  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.has(k)));
 }
 
-/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries. */
+const RECORDS_KEY = "sudoku_v1_records";
+const parseJson = (text: string | undefined): unknown => {
+  try {
+    return JSON.parse(text ?? "null");
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * A cloud copy to restore, carrying over this device's LOCAL_ONLY entries, and its personal records
+ * where they beat the cloud's (a restore after a conflict must not cost a record set here).
+ */
 export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
-  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.includes(k));
-  return { ...file, data: { ...file.data, ...Object.fromEntries(kept) } };
+  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.has(k));
+  const data = { ...file.data, ...Object.fromEntries(kept) };
+  if (local[RECORDS_KEY]) {
+    const merged = mergeRecords(
+      readRecords(parseJson(local[RECORDS_KEY])),
+      readRecords(parseJson(file.data[RECORDS_KEY])),
+    );
+    data[RECORDS_KEY] = JSON.stringify(merged);
+  }
+  return { ...file, data };
 }
 
 export interface CloudFile extends Backup {

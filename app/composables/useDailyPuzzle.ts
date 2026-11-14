@@ -1,5 +1,6 @@
 import type { Grid } from "../types/sudoku";
 
+import { longestStreak } from "../utils/records";
 import { readJSON, writeJSON } from "../utils/safeJson";
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
@@ -84,15 +85,35 @@ export function useDailyPuzzle() {
     return computeStreak((k) => getRecordFor(k)?.completed === true);
   }
 
-  function getBestTime(): number {
-    let keys: string[] = [];
+  function storedKeys(): string[] {
     try {
-      keys = Object.keys(localStorage);
+      return Object.keys(localStorage);
     } catch {
-      // SSR or blocked storage: no history to compare against.
+      return []; // SSR or blocked storage: no history to compare against.
     }
-    return fastestDaily(keys, getRecordFor);
   }
 
-  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, getBestTime, todayKey };
+  function getBestTime(): number {
+    return fastestDaily(storedKeys(), getRecordFor);
+  }
+
+  /** The longest streak ever, from every completed Daily on record (so it covers old ones too). */
+  function getLongestStreak(): number {
+    const dates = storedKeys()
+      .filter((k) => k.startsWith(SAVE_PREFIX))
+      .map((k) => k.slice(SAVE_PREFIX.length))
+      .filter((d) => getRecordFor(d)?.completed);
+    return longestStreak(dates);
+  }
+
+  return {
+    getBoard,
+    getRecord,
+    getRecordFor,
+    markComplete,
+    getStreak,
+    getBestTime,
+    getLongestStreak,
+    todayKey,
+  };
 }

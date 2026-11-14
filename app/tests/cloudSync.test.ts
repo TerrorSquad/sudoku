@@ -125,3 +125,20 @@ describe("the Daily's save stays on the device", () => {
     expect(withLocalOnly(file(B, 5), { ...A, ...daily }).data).toEqual({ ...B, ...daily });
   });
 });
+
+describe("personal records on restore", () => {
+  const rec = (r: object) => JSON.stringify(r);
+
+  it("keeps a better local best and takes the cloud's running counts", () => {
+    const local = { ...A, sudoku_v1_records: rec({ mostInDay: 6, cleanRun: 1, bestCleanRun: 2 }) };
+    const cloud = { ...B, sudoku_v1_records: rec({ mostInDay: 2, cleanRun: 4, bestCleanRun: 4 }) };
+    const restored = JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_records!);
+    expect(restored).toMatchObject({ mostInDay: 6, cleanRun: 4, bestCleanRun: 4 });
+  });
+
+  it("keeps local records the cloud copy doesn't have yet", () => {
+    const local = { ...A, sudoku_v1_records: rec({ mostInDay: 3, hardestNoHint: "hard" }) };
+    const restored = JSON.parse(withLocalOnly(file(B, 5), local).data.sudoku_v1_records!);
+    expect(restored).toMatchObject({ mostInDay: 3, hardestNoHint: "hard" });
+  });
+});
