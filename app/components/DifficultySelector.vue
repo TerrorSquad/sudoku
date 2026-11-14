@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
+import { lockOf } from "../utils/progression";
 import { prefetchPuzzle } from "../utils/puzzlePool";
 
 defineProps<{ activeDifficulty: Difficulty }>();
@@ -9,13 +10,12 @@ const { zen } = usePreferences();
 
 // Levels with a save in progress, so the player sees where a resume prompt will appear.
 const { loadDifficulty } = useGameSave();
-const inProgress = ref<Set<Difficulty>>(new Set());
+// Read in setup, not onMounted, so a locked level never flashes open (or the reverse).
+const wins = useScore().getStats().perDifficulty;
+const lockFor = (d: Difficulty) => lockOf(d, wins, inProgress.has(d));
 onMounted(() => {
-  // Have a board ready for every level by the time one is picked.
-  for (const d of DIFFICULTIES) prefetchPuzzle(d.key);
-  inProgress.value = new Set(
-    DIFFICULTIES.map((d) => d.key).filter((k) => loadDifficulty(k) !== null),
-  );
+  // Have a board ready for every open level by the time one is picked.
+  for (const d of DIFFICULTIES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
 });
 
 const emit = defineEmits<{
@@ -73,6 +73,11 @@ const DIFFICULTIES: {
     groupHoverText: "group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-300",
   },
 ];
+const inProgress = new Set(DIFFICULTIES.map((d) => d.key).filter((k) => loadDifficulty(k) !== null));
+
+function pick(d: Difficulty) {
+  if (!lockFor(d)) emit("select-difficulty", d);
+}
 </script>
 
 <template>
@@ -100,11 +105,16 @@ const DIFFICULTIES: {
       </label>
 
       <div class="grid grid-cols-2 gap-3">
+        <!-- A locked level stays visible and focusable, saying what opens it. The requirement is
+             its description, not part of its name, so "Medium" names only the Medium tile. -->
         <button
           v-for="d in DIFFICULTIES"
           :key="d.key"
-          @click="emit('select-difficulty', d.key)"
-          :class="d.hoverClass"
+          @click="pick(d.key)"
+          :aria-disabled="lockFor(d.key) ? 'true' : undefined"
+          :aria-describedby="lockFor(d.key) ? `unlock-${d.key}` : undefined"
+          :data-locked="lockFor(d.key) ? '' : undefined"
+          :class="lockFor(d.key) ? 'cursor-not-allowed' : d.hoverClass"
           class="tile group p-5 text-left"
         >
           <span class="mb-2 flex h-5 items-center justify-between">
@@ -118,17 +128,40 @@ const DIFFICULTIES: {
               />
             </span>
             <span
-              v-if="inProgress.has(d.key)"
+              v-if="lockFor(d.key)"
+              class="flex items-center gap-1 text-[10px] font-bold text-zinc-600 dark:text-zinc-400"
+            >
+              <AppIcon
+                class="h-3.5 w-3.5"
+                path="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+              {{ $t("difficulty.locked") }}
+            </span>
+            <span
+              v-else-if="inProgress.has(d.key)"
               class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:text-violet-300"
               >{{ $t("difficulty.inProgress") }}</span
             >
           </span>
           <span
-            :class="d.groupHoverText"
+            :class="lockFor(d.key) ? '' : d.groupHoverText"
             class="block text-lg font-bold text-zinc-900 dark:text-zinc-100"
             >{{ $t(`difficulty.${d.key}`) }}</span
           >
-          <span class="mt-1 block text-xs leading-snug text-zinc-500 dark:text-zinc-400">{{
+          <span
+            v-if="lockFor(d.key)"
+            :id="`unlock-${d.key}`"
+            aria-hidden="true"
+            class="mt-1 block text-xs leading-snug font-semibold text-zinc-600 dark:text-zinc-300"
+            >{{
+              $t("difficulty.unlockReq", {
+                n: lockFor(d.key)!.need,
+                level: $t(`difficulty.${lockFor(d.key)!.at}`),
+                have: lockFor(d.key)!.have,
+              })
+            }}</span
+          >
+          <span v-else class="mt-1 block text-xs leading-snug text-zinc-500 dark:text-zinc-400">{{
             $t(`difficulty.${d.key}Desc`)
           }}</span>
         </button>
@@ -143,3 +176,4 @@ const DIFFICULTIES: {
     </div>
   </div>
 </template>
+

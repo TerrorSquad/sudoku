@@ -147,15 +147,17 @@
       transform 0.07s ease-out,
       box-shadow 0.07s ease-out;
   }
-  .tile:where(button, a, label):hover:not(:disabled) {
+  .tile:where(button, a, label):hover:not(:disabled, [aria-disabled="true"]) {
     border-color: var(--tray-line);
   }
-  .tile:where(button, a, label):active:not(:disabled),
+  .tile:where(button, a, label):active:not(:disabled, [aria-disabled="true"]),
   .tile[aria-pressed="true"] {
     transform: translate(2px, 3px);
     box-shadow: 0 0 0 var(--tile-lip);
   }
-  .tile:disabled {
+  /* aria-disabled: locked but still focusable, so its reason can be read. */
+  .tile:disabled,
+  .tile[aria-disabled="true"] {
     box-shadow: none;
     border-style: dashed;
   }

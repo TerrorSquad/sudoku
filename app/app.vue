@@ -25,16 +25,25 @@ import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGame
 import { usePreferences } from "./composables/usePreferences";
 import { useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
+import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { haptic } from "./utils/haptics";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
+import {
+  ACADEMY_TECHNIQUES,
+  isoWeekKey,
+  lockOf,
+  levelsOpenedBy,
+  nextChallenge,
+} from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
+import { makeRng, seedFromString } from "./utils/sudokuCore";
 import { neededTechniques } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
@@ -124,6 +133,13 @@ const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
 const practiceTechnique = ref<TechniqueId | null>(null);
 const practiceLoading = ref(false);
+// The practice game's ISO week when it is the technique of the week, and whether it is a real
+// puzzle or the Academy drill: both decide what a win counts for on the technique path.
+const practiceWeek = ref<string | null>(null);
+let practiceKind: "puzzle" | "drill" = "puzzle";
+const techniquePath = useTechniquePath();
+// Win-modal lines for progress the win made: a level unlocked, a path challenge, the week's puzzle.
+const progressNotes = ref<string[]>([]);
 
 const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
@@ -143,7 +159,7 @@ const activeDifficulty = ref<Difficulty>("medium");
 // What the dashboard chip and the win modal call this game, in the player's language.
 const difficultyLabel = computed(() =>
   practiceTechnique.value
-    ? `${t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
+    ? `${practiceWeek.value ? t("weekly.title") : t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
     : isDailyMode.value
       ? t("difficulty.daily")
       : gameZen.value
@@ -223,6 +239,11 @@ const dailyStreak = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getStreak();
 });
+const pathDone = computed(() => {
+  void currentScreen.value;
+  const done = techniquePath.getDone();
+  return ACADEMY_TECHNIQUES.filter((tech) => done.includes(tech.id)).length;
+});
 
 // Auto-save on every meaningful state change while a game is active.
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
@@ -261,6 +282,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
+  progressNotes.value = [];
   timer.stopTimer();
   if (!practiceTechnique.value)
     gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
@@ -269,6 +291,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     flashWin();
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
+      if (practised) recordPracticeWin(practised);
     } else {
       if (isDailyMode.value)
         dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
@@ -278,6 +301,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         mistakes: mistakes.value,
         hintsUsed: hintsUsed.value,
       });
+      const winsBefore = score.getStats().perDifficulty;
       const result = score.record(
         activeDifficulty.value,
         breakdown.total,
@@ -296,6 +320,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       const before = levelFor(result.previousTotal).level;
       const after = levelFor(result.stats.total).level;
       reachedLevel.value = after > before ? after : null;
+      for (const level of levelsOpenedBy(winsBefore, result.stats.perDifficulty))
+        progressNotes.value.push(t("difficulty.unlocked", { level: t(`difficulty.${level}`) }));
       const unlocked = achievements.evaluate({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
@@ -310,7 +336,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         distinctTechniques: Object.keys(techStats.getAll()).length,
       });
       toastIds.value.push(...unlocked);
-      if (unlocked.length) cue("unlock");
+      if (unlocked.length || progressNotes.value.length) cue("unlock");
       animateScoreCountUp(breakdown.total);
       saveToCloud();
     }
@@ -323,6 +349,21 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     });
   } else {
     lastScore.value = null;
+  }
+}
+
+// A practice win can complete the technique path's current challenge and the week's puzzle.
+function recordPracticeWin(id: TechniqueId) {
+  const name = t(`hint.move.${id}.name`);
+  const wasNext = nextChallenge(techniquePath.getDone()) === id;
+  if (techniquePath.recordWin(id, practiceKind)) progressNotes.value.push(t("path.completed", { name }));
+  // The current challenge, not completed: a drill where only a real puzzle counts.
+  else if (wasNext) progressNotes.value.push(t("path.drillNoCount"));
+  if (practiceWeek.value && techniquePath.markWeekDone(practiceWeek.value))
+    progressNotes.value.push(t("weekly.won", { name }));
+  if (progressNotes.value.length) {
+    cue("unlock");
+    saveToCloud();
   }
 }
 
@@ -402,6 +443,8 @@ function handleChooseDifficulty(level: Difficulty) {
   const existing = gameSave.loadDifficulty(level);
   if (existing) {
     pendingResume.value = { save: existing, level };
+  } else if (lockOf(level, score.getStats().perDifficulty)) {
+    return; // the selector shows it locked; never start one past it
   } else {
     handleStartGame(level);
   }
@@ -712,6 +755,7 @@ function handleLoadCustomPuzzle(
   practice: TechniqueId | null = null,
 ) {
   practiceTechnique.value = practice;
+  practiceWeek.value = null;
   isDailyMode.value = false;
   gameZen.value = false;
   activeDifficulty.value = "custom";
@@ -730,15 +774,19 @@ function handleLoadCustomPuzzle(
 }
 
 let practiceToken = 0;
-async function handlePractice(technique: TechniqueId) {
+// `week` set: the technique of the week, seeded by its ISO week so everyone gets the same board.
+async function handlePractice(technique: TechniqueId, week: string | null = null) {
   if (practiceLoading.value) return; // a double-click must not start two searches
   practiceLoading.value = true;
   const token = ++practiceToken;
   try {
-    const p = await generatePracticePuzzle(technique);
+    const rng = week ? makeRng(seedFromString(`${week}:${technique}`)) : Math.random;
+    const p = await generatePracticePuzzle(technique, rng);
     // The player may have left the Academy while the search ran; don't yank them into a game.
     if (token !== practiceToken || currentScreen.value !== "academy") return;
     handleLoadCustomPuzzle(p.board, technique);
+    practiceWeek.value = week;
+    practiceKind = p.kind;
     if (p.notes) {
       for (const [key, digits] of Object.entries(p.notes)) {
         const [r, c] = key.split("-").map(Number) as [number, number];
@@ -965,7 +1013,12 @@ onUnmounted(() => {
               class="tile menu-cell"
             >
               <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              <span>{{ $t("menu.academy") }}</span>
+              <span>
+                <span class="block">{{ $t("menu.academy") }}</span>
+                <span class="block text-[11px] font-semibold opacity-80">{{
+                  $t("path.menu", { done: pathDone, total: ACADEMY_TECHNIQUES.length })
+                }}</span>
+              </span>
             </button>
 
             <button @click="currentScreen = 'stats'" class="tile menu-cell">
@@ -999,6 +1052,7 @@ onUnmounted(() => {
           :focus="academyFocus"
           @back-to-menu="currentScreen = 'menu'"
           @practice="handlePractice"
+          @weekly="(id) => handlePractice(id, isoWeekKey())"
         />
 
         <!-- STATISTICS -->
@@ -1298,6 +1352,13 @@ onUnmounted(() => {
             class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-700 dark:text-violet-300"
           >
             ▲ {{ $t("level.up", { n: reachedLevel }) }}
+          </p>
+          <p
+            v-for="note in isWinState ? progressNotes : []"
+            :key="note"
+            class="score-badge mb-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 dark:text-emerald-300"
+          >
+            {{ note }}
           </p>
 
           <!-- Score headline -->
