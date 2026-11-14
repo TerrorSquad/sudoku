@@ -3,6 +3,7 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 
 import { fakeWavedash } from "./fakeWavedash";
+import { resumeMedium, seedMediumSave } from "./seed";
 
 // Automated WCAG 2.x A/AA scan of every screen in both colour schemes. Axe catches roughly a
 // third of real issues (contrast, names, roles, ARIA misuse) — it complements, not replaces,
@@ -79,12 +80,8 @@ for (const scheme of ["light", "dark"] as const) {
           JSON.stringify({ cleanRun: 1, bestCleanRun: 1, mostInDay: 1 }),
         );
       });
-      await page.goto("/");
-      await page.getByRole("button", { name: "Your puzzle" }).click();
-      await page
-        .locator("textarea")
-        .fill("534678912672195348198342567859761423426853791713904856961537284287419635345286179");
-      await page.getByRole("button", { name: "Play Puzzle" }).click();
+      await seedMediumSave(page, [49]);
+      await resumeMedium(page);
       await page.locator(".grid.aspect-square.w-full.grid-cols-9 [data-cell]").nth(49).click();
       await page.keyboard.press("2");
       await expect(page.getByTestId("perfect-stamp")).toHaveClass(/stamp-in/);

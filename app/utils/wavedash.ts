@@ -9,6 +9,7 @@ import {
   cloudData,
   decide,
   hashData,
+  mergedRecords,
   readCloud,
   withLocalOnly,
   type CloudFile,
@@ -16,6 +17,7 @@ import {
   type SyncMeta,
 } from "./cloudSync";
 import { applyBackup, createBackup } from "./progressBackup";
+import { RECORDS_KEY } from "./records";
 import { readJSON, writeJSON } from "./safeJson";
 
 type Response<T> = { success: true; data: T } | { success: false; data: null; message: string };
@@ -263,7 +265,12 @@ export async function syncFromCloud(timeoutMs = 5000) {
         markSynced(decision.file);
         break;
       case "upload":
-        if (decision.replaced && !keep("conflict", decision.replaced)) return;
+        if (decision.replaced) {
+          if (!keep("conflict", decision.replaced)) return;
+          // The cloud copy being replaced may hold a better record than this device.
+          if (decision.replaced.data[RECORDS_KEY])
+            writeJSON(RECORDS_KEY, mergedRecords(local.data, decision.replaced.data));
+        }
         canUpload = true;
         // A missing or corrupt cloud file needs the upload even if local matches the last sync.
         await upload(wd, cloud.kind !== "ok");

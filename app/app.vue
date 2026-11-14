@@ -237,12 +237,14 @@ const records = useRecords();
 // Personal records this win broke, for the win modal: at most two lines.
 const newRecords = ref<NewRecord[]>([]);
 
-// What a win can break, read before and after recording it. Custom boards have no fastest time.
+// Practice and custom boards don't count: a one-blank custom board could be won over and over.
+const countsForRecords = () => !practiceTechnique.value && activeDifficulty.value !== "custom";
+
+// What a win can break, read before and after recording it.
 function recordSnapshot(): Snapshot {
-  const d = activeDifficulty.value;
   return {
     ...records.get(),
-    fastest: d === "custom" ? 0 : (score.getStats().perDifficulty[d]?.bestTime ?? 0),
+    fastest: score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0,
     streak: dailyPuzzle.getLongestStreak(),
   };
 }
@@ -325,7 +327,8 @@ function winStepTo(k: number) {
   if (k <= winStars.value) cue("tick", k);
   else if (row < rows.length) {
     const sum = rows.slice(0, row + 1).reduce((a, r) => a + r.value, 0);
-    countScoreTo(row === rows.length - 1 ? lastScore.value!.total : sum);
+    // Penalties can take the running sum below zero; the real total is floored, so it lands there.
+    countScoreTo(row === rows.length - 1 ? lastScore.value!.total : Math.max(0, sum));
   } else cue("stamp");
 }
 
@@ -435,7 +438,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (win) {
     cue("win");
     flashWin();
-    const recordsBefore = practised ? null : recordSnapshot();
+    const recordsBefore = countsForRecords() ? recordSnapshot() : null;
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
       if (practised) {
@@ -497,8 +500,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         hints: hintsUsed.value,
       });
       newRecords.value = brokenRecords(recordsBefore, recordSnapshot()).slice(0, 2);
-      saveToCloud();
     }
+    if (!practised) saveToCloud();
     startWinSteps();
     // After the score is safe: a damaged log must cost the stuck moments, not the win.
     try {
@@ -515,7 +518,6 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     });
   } else {
     lastScore.value = null;
-    if (!practised) records.recordLoss();
   }
 }
 
@@ -779,6 +781,8 @@ function handleInputNumber(num: number) {
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
         mistakes.value++;
+        // The first mistake ends the clean run now: abandoning the game mustn't save it.
+        if (mistakes.value === 1 && countsForRecords()) records.recordMistake();
         // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
         // it still counts toward the score.
         if (!highlightErrors.value) {
@@ -822,10 +826,9 @@ function handleInputNumber(num: number) {
         clearRelationalNotes(r, c, num);
         logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
-        if (highlightErrors.value) flashCompletedUnits(r, c);
-        if (checkWinCondition()) {
-          triggerLocalModal(t("modal.win"), winMessage(), true);
-        }
+        // A winning move gets the win's wave and cue alone, not three stacked on each other.
+        if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
+        else if (highlightErrors.value) flashCompletedUnits(r, c);
       }
     }
   }
@@ -1140,7 +1143,8 @@ function redo() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (showModal.value) skipWinSteps();
+  // A key still held from the winning move, or pressed before the steps start, skips nothing.
+  if (showModal.value && !e.repeat && winStep.value) skipWinSteps();
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
   if (showModal.value || practiceLoading.value || finishing.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
@@ -1666,7 +1670,7 @@ onUnmounted(() => {
         v-if="showModal"
         :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-        @pointerdown="skipWinSteps"
+        @pointerdown="winStep && skipWinSteps()"
       >
         <div
           class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[6px] p-6 text-center shadow-2xl"
@@ -2089,7 +2093,7 @@ onUnmounted(() => {
   padding: 0.2rem 0.8rem;
   border: 0.25rem double currentColor;
   border-radius: 0.375rem;
-  color: var(--color-rose-600);
+  color: var(--color-rose-700);
   font-family: var(--font-display);
   font-size: 1.125rem;
   font-weight: 900;

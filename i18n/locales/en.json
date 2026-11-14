@@ -470,5 +470,5 @@
   "records.cleanRun": "Most wins in a row without a mistake",
   "records.noHint": "Hardest level won without hints",
   "records.fastest": "Fastest times are in the table above.",
-  "records.since": "These records count from your next win."
+  "records.since": "All records but the Daily streak count from your next win."
 }

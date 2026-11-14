@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   NO_RECORDS,
-  addLoss,
+  breakCleanRun,
   addWin,
   brokenRecords,
   longestStreak,
@@ -42,12 +42,12 @@ describe("addWin", () => {
     r = addWin(r, win({ day: "2026-11-16" }));
     expect(r).toMatchObject({ day: "2026-11-16", dayWins: 1, mostInDay: 3 });
   });
-  it("runs clean wins until a mistake or a loss", () => {
+  it("runs clean wins until a mistaken win or a mistake in a game", () => {
     let r = addWin(addWin(NO_RECORDS, win()), win({ hints: 4 })); // hints don't break it
     expect(r).toMatchObject({ cleanRun: 2, bestCleanRun: 2 });
     r = addWin(r, win({ mistakes: 1 }));
     expect(r).toMatchObject({ cleanRun: 0, bestCleanRun: 2 });
-    r = addLoss(addWin(r, win()));
+    r = breakCleanRun(addWin(r, win()));
     expect(r).toMatchObject({ cleanRun: 0, bestCleanRun: 2 });
   });
   it("keeps the hardest level won without a hint", () => {

@@ -4,6 +4,7 @@ import {
   cloudData,
   decide,
   hashData,
+  mergedRecords,
   readCloud,
   withLocalOnly,
   type CloudFile,
@@ -134,6 +135,18 @@ describe("personal records on restore", () => {
     const cloud = { ...B, sudoku_v1_records: rec({ mostInDay: 2, cleanRun: 4, bestCleanRun: 4 }) };
     const restored = JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_records!);
     expect(restored).toMatchObject({ mostInDay: 6, cleanRun: 4, bestCleanRun: 4 });
+  });
+
+  it("keeps the cloud's better best when a conflict uploads local", () => {
+    const local = { sudoku_v1_records: rec({ day: "d2", dayWins: 1, mostInDay: 2, cleanRun: 1 }) };
+    const cloud = { sudoku_v1_records: rec({ mostInDay: 7, bestCleanRun: 9, cleanRun: 9 }) };
+    expect(mergedRecords(local, cloud)).toMatchObject({
+      day: "d2",
+      dayWins: 1,
+      mostInDay: 7,
+      cleanRun: 1,
+      bestCleanRun: 9,
+    });
   });
 
   it("keeps local records the cloud copy doesn't have yet", () => {

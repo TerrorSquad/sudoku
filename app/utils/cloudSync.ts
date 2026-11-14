@@ -3,7 +3,7 @@
 // docs/specs/2026-10-27-wavedash-platform-design.md, phase 3.
 
 import { parseBackup, type Backup } from "./progressBackup";
-import { mergeRecords, readRecords } from "./records";
+import { RECORDS_KEY, mergeRecords, readRecords } from "./records";
 
 /** The one cloud file: a progressBackup export plus when it was uploaded. */
 export const CLOUD_FILE = "progress.json";
@@ -22,7 +22,6 @@ export function cloudData(local: Record<string, string>): Record<string, string>
   return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.has(k)));
 }
 
-const RECORDS_KEY = "sudoku_v1_records";
 const parseJson = (text: string | undefined): unknown => {
   try {
     return JSON.parse(text ?? "null");
@@ -32,19 +31,21 @@ const parseJson = (text: string | undefined): unknown => {
 };
 
 /**
- * A cloud copy to restore, carrying over this device's LOCAL_ONLY entries, and its personal records
- * where they beat the cloud's (a restore after a conflict must not cost a record set here).
+ * The personal records of `kept` (the copy a sync keeps), with any better best from `replaced`, so
+ * neither direction of a conflict costs a record. The running counts stay `kept`'s.
  */
+export function mergedRecords(kept: Record<string, string>, replaced: Record<string, string>) {
+  return mergeRecords(
+    readRecords(parseJson(replaced[RECORDS_KEY])),
+    readRecords(parseJson(kept[RECORDS_KEY])),
+  );
+}
+
+/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries and better records. */
 export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
   const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.has(k));
   const data = { ...file.data, ...Object.fromEntries(kept) };
-  if (local[RECORDS_KEY]) {
-    const merged = mergeRecords(
-      readRecords(parseJson(local[RECORDS_KEY])),
-      readRecords(parseJson(file.data[RECORDS_KEY])),
-    );
-    data[RECORDS_KEY] = JSON.stringify(merged);
-  }
+  if (local[RECORDS_KEY]) data[RECORDS_KEY] = JSON.stringify(mergedRecords(file.data, local));
   return { ...file, data };
 }
 
@@ -107,12 +108,8 @@ export function readCloud(text: string): CloudRead {
 }
 
 const scoreTotal = (data: Record<string, string>) => {
-  try {
-    const total = (JSON.parse(data.sudoku_v1_score ?? "null") as { total?: unknown } | null)?.total;
-    return typeof total === "number" ? total : 0;
-  } catch {
-    return 0;
-  }
+  const total = (parseJson(data.sudoku_v1_score) as { total?: unknown } | null)?.total;
+  return typeof total === "number" ? total : 0;
 };
 
 /**

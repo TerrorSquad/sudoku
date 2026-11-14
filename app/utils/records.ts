@@ -9,6 +9,8 @@ import type { Difficulty } from "../types/sudoku";
 
 import { LADDER } from "./progression";
 
+export const RECORDS_KEY = "sudoku_v1_records";
+
 export interface Records {
   /** Local date (YYYY-MM-DD) of the latest win, and how many wins that day has had. */
   day: string;
@@ -69,16 +71,16 @@ export function addWin(rec: Records, win: WinFacts): Records {
   };
 }
 
-/** A game lost to the mistake limit ends the clean run. */
-export const addLoss = (rec: Records): Records => ({ ...rec, cleanRun: 0 });
+/** The first mistake in a game ends the clean run, whether the game is then won or abandoned. */
+export const breakCleanRun = (rec: Records): Records => ({ ...rec, cleanRun: 0 });
 
-/** Restoring another copy keeps the better of each best; the running counts follow `incoming`. */
-export function mergeRecords(local: Records, incoming: Records): Records {
+/** Two copies of the records as one: the better of each best, `incoming`'s running counts. */
+export function mergeRecords(other: Records, incoming: Records): Records {
   return {
     ...incoming,
-    mostInDay: Math.max(local.mostInDay, incoming.mostInDay),
-    bestCleanRun: Math.max(local.bestCleanRun, incoming.bestCleanRun),
-    hardestNoHint: harder(incoming.hardestNoHint, local.hardestNoHint),
+    mostInDay: Math.max(other.mostInDay, incoming.mostInDay),
+    bestCleanRun: Math.max(other.bestCleanRun, incoming.bestCleanRun),
+    hardestNoHint: harder(incoming.hardestNoHint, other.hardestNoHint),
   };
 }
 

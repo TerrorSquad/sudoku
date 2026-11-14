@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { SOLVED, resumeMedium, seedMediumSave } from "./seed";
+
 const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const SOLVED = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
 const blank = (...at: number[]) =>
   Array.from(SOLVED, (d, i) => (at.includes(i) ? "0" : d)).join("");
 const cell = (page: Page, n: number) => page.locator(`${BOARD} [data-cell]`).nth(n);
@@ -45,10 +46,14 @@ test("a clean win is stamped Perfect, after the stars and score lines play in", 
   await expect(stamp).toHaveClass(/stamp-in/, { timeout: 4000 });
 });
 
-test("any key skips the win modal's steps to the end", async ({ page }) => {
+test("a key skips the win modal's steps to the end, once they have started", async ({ page }) => {
   await playCustom(page, blank(49));
   await place(page, 49, "2");
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  // Before the first step (still behind the win wave) a key skips nothing.
+  await page.keyboard.press("Shift");
+  await expect(page.locator(".win-done")).toHaveCount(0);
+  await page.locator(".star-pop").first().waitFor({ timeout: 3000 });
   await page.keyboard.press("Shift");
   await expect(page.getByTestId("perfect-stamp")).toHaveClass(/stamp-in/, { timeout: 300 });
   await expect(page.locator(".star-pop")).toHaveCount(3);
@@ -63,6 +68,28 @@ test("a win with a mistake gets no stamp", async ({ page }) => {
   await expect(page.getByTestId("perfect-stamp")).toHaveCount(0);
 });
 
+test("custom boards don't count toward records", async ({ page }) => {
+  await playCustom(page, blank(49));
+  await place(page, 49, "2");
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("sudoku_v1_records"))).toBeNull();
+});
+
+test("the first mistake ends the clean run, even if the game is abandoned", async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "sudoku_v1_records",
+      JSON.stringify({ cleanRun: 3, bestCleanRun: 3, mostInDay: 1 }),
+    ),
+  );
+  await seedMediumSave(page, [48, 49]);
+  await resumeMedium(page);
+  await place(page, 49, "3"); // wrong
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("sudoku_v1_records")!)))
+    .toMatchObject({ cleanRun: 0, bestCleanRun: 3 });
+});
+
 test("a win that breaks a record says so on the win modal", async ({ page }) => {
   await page.addInitScript(() => {
     if (localStorage.getItem("sudoku_v1_records")) return;
@@ -72,14 +99,25 @@ test("a win that breaks a record says so on the win modal", async ({ page }) => 
       "sudoku_v1_records",
       JSON.stringify({ day, dayWins: 1, mostInDay: 1, cleanRun: 1, bestCleanRun: 1 }),
     );
+    localStorage.setItem(
+      "sudoku_v1_score",
+      JSON.stringify({
+        total: 500,
+        gamesWon: 1,
+        best: { medium: 500 },
+        perDifficulty: { medium: { best: 500, wins: 1, bestTime: 400 } },
+      }),
+    );
   });
-  await playCustom(page, blank(49));
+  await seedMediumSave(page, [49], 100);
+  await resumeMedium(page);
   await place(page, 49, "2");
 
+  // Fastest first; the clean run makes the second line, the day's wins don't fit.
   const lines = page.getByTestId("new-record");
   await expect(lines).toHaveCount(2);
-  await expect(lines.nth(0)).toHaveText("New record: 2 wins in a row without a mistake (was 1)");
-  await expect(lines.nth(1)).toHaveText("New record: 2 wins in one day (was 1)");
+  await expect(lines.nth(0)).toHaveText(/^New record: fastest Medium, 01:4\d \(was 06:40\)$/);
+  await expect(lines.nth(1)).toHaveText("New record: 2 wins in a row without a mistake (was 1)");
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("sudoku_v1_records")!));
   expect(stored).toMatchObject({ dayWins: 2, mostInDay: 2, cleanRun: 2, bestCleanRun: 2 });
 });
