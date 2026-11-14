@@ -44,6 +44,19 @@ useHead(() => ({
   title: t("menu.title"),
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
+// The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
+// win, so both get the resolved colour (whichever media query matches, it is the right one).
+const uiColorMode = useColorMode();
+useHead(() => {
+  const content = uiColorMode.value === "dark" ? "#1c252f" : "#17294a";
+  return {
+    meta: ["light", "dark"].map((s) => ({
+      name: "theme-color",
+      media: `(prefers-color-scheme: ${s})`,
+      content,
+    })),
+  };
+});
 
 const {
   colorMode,

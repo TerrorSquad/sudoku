@@ -64,7 +64,10 @@ export default defineNuxtConfig({
     baseURL: process.env.NUXT_APP_BASE_URL ?? "/",
     head: {
       meta: [
-        { name: "theme-color", content: "#17294a" },
+        // Navy ink on paper, the slate ground (--ground in main.css) in dark mode. app.vue
+        // repaints both when Settings forces a theme the system doesn't use.
+        { name: "theme-color", media: "(prefers-color-scheme: light)", content: "#17294a" },
+        { name: "theme-color", media: "(prefers-color-scheme: dark)", content: "#1c252f" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
         { name: "apple-mobile-web-app-title", content: "Sudoku Pro" },
