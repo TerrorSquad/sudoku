@@ -25,6 +25,9 @@ const ALL: TechniqueId[] = [
   "two-string-kite",
   "unique-rectangle",
   "simple-coloring",
+  "finned-x-wing",
+  "w-wing",
+  "bug-plus-one",
 ];
 
 describe("practice puzzles", () => {

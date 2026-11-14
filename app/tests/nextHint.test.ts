@@ -13,9 +13,10 @@ function applyPlacement(board: Grid, move: SolveMove): Grid {
 }
 
 describe("nextHint — soundness", () => {
-  it("skyscraper, kite, unique rectangle and coloring fire, and never remove a solution digit", () => {
+  it("the single-digit, wing and uniqueness techniques fire, and never remove a solution digit", () => {
     const seen = new Set<string>();
-    for (let seed = 1; seed <= 100; seed++) {
+    // Simple Coloring first shows up at seed 431, once the techniques tried before it run dry.
+    for (let seed = 1; seed <= 450; seed++) {
       const { puzzle, solution } = generatePuzzle(62, makeRng(seed));
       const board = puzzle.map((r) => r.concat());
       const elims: { r: number; c: number; num: number }[] = [];
@@ -33,7 +34,15 @@ describe("nextHint — soundness", () => {
         }
       }
     }
-    for (const t of ["skyscraper", "two-string-kite", "unique-rectangle", "simple-coloring"])
+    for (const t of [
+      "skyscraper",
+      "two-string-kite",
+      "unique-rectangle",
+      "simple-coloring",
+      "finned-x-wing",
+      "w-wing",
+      "bug-plus-one",
+    ])
       expect(seen).toContain(t);
   });
 
