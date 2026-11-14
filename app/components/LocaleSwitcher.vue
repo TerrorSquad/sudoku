@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineProps<{ disabled?: boolean }>();
 const { locale, locales, setLocale, t } = useI18n();
 
 const items = computed(() =>
@@ -22,6 +23,7 @@ const selected = computed({
     :items="items"
     value-key="value"
     :aria-label="label"
+    :disabled="disabled"
     class="w-28"
   />
 </template>

@@ -121,7 +121,7 @@ function loadExample() {
     <div class="flex items-center justify-between text-xs">
       <span
         :class="cleaned.length === 81 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-500'"
-        class="font-mono font-bold"
+        class="font-bold tabular-nums"
       >
         {{ cleaned.length }} / 81
       </span>

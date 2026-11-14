@@ -84,13 +84,13 @@ const tierStyles: Record<Tier, { badge: string; heading: string; border: string 
     border: "border-amber-500/20 hover:border-amber-500/50",
   },
   Advanced: {
-    badge: "bg-violet-500/15 dark:text-violet-400 text-violet-600 border-violet-500/30",
-    heading: "dark:text-violet-400 text-violet-600",
+    badge: "bg-violet-500/15 dark:text-violet-300 text-violet-600 border-violet-500/30",
+    heading: "dark:text-violet-300 text-violet-600",
     border: "border-violet-500/20 hover:border-violet-500/50",
   },
   Expert: {
-    badge: "bg-rose-500/15 dark:text-rose-400 text-rose-600 border-rose-500/30",
-    heading: "dark:text-rose-400 text-rose-600",
+    badge: "bg-rose-500/15 dark:text-rose-300 text-rose-600 border-rose-500/30",
+    heading: "dark:text-rose-300 text-rose-600",
     border: "border-rose-500/20 hover:border-rose-500/50",
   },
 };
@@ -192,6 +192,7 @@ const total = computed(() => techniques.length);
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
+        :aria-label="$t('menu.back')"
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >

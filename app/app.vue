@@ -319,7 +319,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       particleCount: 160,
       spread: 80,
       origin: { y: 0.55 },
-      colors: ["#345fc9", "#6b92e9", "#bdd1f7", "#fbbf24", "#34d399"],
+      colors: ["#17294a", "#2a52a8", "#8aabe2", "#ffe680", "#c2352b"],
     });
   } else {
     lastScore.value = null;
@@ -1192,7 +1192,7 @@ onUnmounted(() => {
               <!-- PAUSE OVERLAY -->
               <div
                 v-if="timer.isPaused.value"
-                class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
+                class="pause-overlay absolute top-0 left-0 -right-1 -bottom-1 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
               >
                 <AppIcon
                   class="h-12 w-12 text-zinc-500"
@@ -1352,7 +1352,7 @@ onUnmounted(() => {
                 >
               </div>
               <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
-                <span class="font-semibold text-zinc-500">{{ $t("modal.scoreLifetime") }}</span>
+                <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{ $t("modal.scoreLifetime") }}</span>
                 <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
                   lifetimeTotal
                 }}</span>

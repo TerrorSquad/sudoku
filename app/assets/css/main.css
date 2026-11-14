@@ -69,7 +69,8 @@
   --color-zinc-200: #cdd5de;
   --color-zinc-300: #b3becb;
   --color-zinc-400: #94a2b3;
-  --color-zinc-500: #8a99ab;
+  --color-zinc-500: #97a5b6;
+  --color-zinc-600: #5a6a7e;
   --color-zinc-700: #3a4757;
   --color-zinc-800: #2a3542;
   --color-zinc-900: #1f2934;
@@ -97,8 +98,19 @@
   --tile-edge: rgb(230 234 239 / 0.2);
   --tile-lip: rgb(0 0 0 / 0.35);
 }
+/* The grid sits on its own fixed layer: a background-image on the shell itself would hide every
+   text's background from axe, which then skips its contrast check. */
 .app-shell {
+  position: relative;
+  isolation: isolate;
   background-color: var(--ground);
+}
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     linear-gradient(var(--grid-bold) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-bold) 1px, transparent 1px),

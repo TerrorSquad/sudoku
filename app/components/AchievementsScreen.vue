@@ -23,6 +23,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
+        :aria-label="$t('menu.back')"
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >

@@ -26,8 +26,8 @@ test("Settings opens from the pause screen and returns to the paused game", asyn
 
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  // The settings a game starts with stay put until it ends, and the data tools are hidden.
-  await expect(page.getByText("Locked until this game ends")).toHaveCount(2);
+  // Language, colour mode and the mistake limit stay put until the game ends; data tools are hidden.
+  await expect(page.getByText("Locked until this game ends")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Import" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Back to game" }).click();

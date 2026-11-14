@@ -99,6 +99,7 @@ const style = computed({
     >
       <button
         @click="emit('back-to-menu')"
+        :aria-label="inGame ? $t('settings.backToGame') : $t('menu.back')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
         <AppIcon
@@ -121,8 +122,11 @@ const style = computed({
     <div class="mx-auto w-full max-w-md flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <div class="flex flex-col gap-3">
         <label class="s-row">
-          <span class="s-label">{{ $t("settings.language") }}</span>
-          <LocaleSwitcher />
+          <span>
+            <span class="s-label">{{ $t("settings.language") }}</span>
+            <span v-if="inGame" class="s-hint">{{ $t("settings.lockedInGame") }}</span>
+          </span>
+          <LocaleSwitcher :disabled="inGame" />
         </label>
 
         <label class="s-row">
