@@ -12,8 +12,8 @@ describe("migrateTechniqueStats", () => {
   });
 
   it("keeps a key it can't map instead of dropping it", () => {
-    expect(migrateTechniqueStats({ "W-Wing": 2, "Naked Pair": 1 })).toEqual({
-      "W-Wing": 2,
+    expect(migrateTechniqueStats({ "XY-Chain": 2, "Naked Pair": 1 })).toEqual({
+      "XY-Chain": 2,
       "naked-pair": 1,
     });
   });

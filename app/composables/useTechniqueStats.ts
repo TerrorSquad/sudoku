@@ -8,7 +8,7 @@ const KEY = "sudoku_v1_technique_stats";
 // language split them. Every title ever stored (per git history) is one of these base names, in
 // any case, optionally followed by " — <unit or type>" ("Hidden Single — Row", "Goli Triplet —
 // Red 3", "Unique Rectangle — Type 1"). Frozen: new counts use ids. Titles of techniques the
-// solver no longer has (W-Wing, XY-Chain, BUG+1…) have no id and are kept as they are.
+// solver no longer has (XY-Chain, Empty Rectangle…) have no id and are kept as they are.
 const LEGACY_TITLES: Record<string, TechniqueId> = {
   "naked single": "naked-single",
   "goli singl": "naked-single",
@@ -49,6 +49,10 @@ const LEGACY_TITLES: Record<string, TechniqueId> = {
   "jedinstveni pravougaonik": "unique-rectangle",
   "simple coloring": "simple-coloring",
   "jednostavno bojenje": "simple-coloring",
+  "finned x-wing": "finned-x-wing",
+  "x-wing sa perajem": "finned-x-wing",
+  "w-wing": "w-wing",
+  "bug+1": "bug-plus-one",
 };
 
 /** The id a stored key stands for: itself unless it's a legacy title. */
