@@ -1081,3 +1081,38 @@ export function techniquesRequired(puzzle: Grid): Set<TechniqueId> | null {
   }
   return null;
 }
+
+// findNextMove's dispatch order, easiest first (pointing and box-line share one finder).
+const SOLVER_ORDER: TechniqueId[] = [
+  "naked-single",
+  "hidden-single",
+  "pointing",
+  "box-line",
+  "naked-pair",
+  "hidden-pair",
+  "naked-triple",
+  "hidden-triple",
+  "x-wing",
+  "naked-quad",
+  "hidden-quad",
+  "swordfish",
+  "skyscraper",
+  "two-string-kite",
+  "unique-rectangle",
+  "xy-wing",
+  "jellyfish",
+  "xyz-wing",
+  "simple-coloring",
+];
+
+/**
+ * The distinct techniques `puzzle`'s givens need, hardest first, for the win screen. Singles are
+ * left out unless nothing harder was needed; empty when logic alone can't finish the board.
+ */
+export function neededTechniques(puzzle: Grid): TechniqueId[] {
+  const used = techniquesRequired(puzzle);
+  if (!used) return [];
+  const all = SOLVER_ORDER.filter((id) => used.has(id)).toReversed();
+  const hard = all.filter((id) => id !== "naked-single" && id !== "hidden-single");
+  return hard.length ? hard : all;
+}

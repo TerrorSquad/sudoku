@@ -35,6 +35,7 @@ import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
+import { neededTechniques } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
@@ -158,6 +159,10 @@ const pendingResume = ref<{ save: GameSave; level: Difficulty } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<string[]>([]);
+// What the won puzzle's givens required (not what the player used), for the win modal.
+const neededTechs = ref<TechniqueId[]>([]);
+// The Academy lesson to open on, when a win-modal chip led there.
+const academyFocus = ref<TechniqueId | null>(null);
 const mistakeExplainer = ref<string>("");
 
 const flashCells = ref<FlashCell[]>([]);
@@ -235,6 +240,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalTitle.value = title;
   modalMessage.value = message;
   isWinState.value = win;
+  // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
+  neededTechs.value = win ? neededTechniques(initialBoard.value) : [];
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -317,6 +324,12 @@ function handleModalClose() {
   isDailyMode.value = false;
   currentScreen.value = "menu";
   timer.resetTimer();
+}
+
+function openLesson(id: TechniqueId) {
+  handleModalClose();
+  academyFocus.value = id;
+  currentScreen.value = "academy";
 }
 
 function resumeSavedGame(s: GameSave) {
@@ -907,7 +920,13 @@ onUnmounted(() => {
               </span>
             </button>
 
-            <button @click="currentScreen = 'academy'" class="tile menu-cell">
+            <button
+              @click="
+                academyFocus = null;
+                currentScreen = 'academy';
+              "
+              class="tile menu-cell"
+            >
               <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               <span>{{ $t("menu.academy") }}</span>
             </button>
@@ -940,6 +959,7 @@ onUnmounted(() => {
         <!-- ACADEMY -->
         <SudokuAcademy
           v-else-if="currentScreen === 'academy'"
+          :focus="academyFocus"
           @back-to-menu="currentScreen = 'menu'"
           @practice="handlePractice"
         />
@@ -1324,6 +1344,22 @@ onUnmounted(() => {
                 "
                 >{{ hintsUsed }}</span
               >
+            </div>
+            <div v-if="neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
+              <p class="mb-2 text-xs font-semibold text-zinc-500">
+                {{ $t("modal.needed") }}
+              </p>
+              <div class="flex flex-wrap gap-1">
+                <button
+                  v-for="id in neededTechs"
+                  :key="id"
+                  @click="openLesson(id)"
+                  :title="$t('modal.openLesson')"
+                  class="border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                >
+                  {{ $t(`hint.move.${id}.name`) }}
+                </button>
+              </div>
             </div>
             <div v-if="techniqueLog.length" class="px-3 py-2">
               <p class="mb-2 text-xs font-semibold text-zinc-500">

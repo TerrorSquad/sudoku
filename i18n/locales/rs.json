@@ -403,5 +403,7 @@
   "settings.boardTiles": "Pločice",
   "settings.boardNewsprint": "Novine",
   "settings.boardContrast": "Visok kontrast",
-  "resume.messageZen": "Imaš sačuvanu Zen igru ({difficulty}). Nastavi je ili počni novu?"
+  "resume.messageZen": "Imaš sačuvanu Zen igru ({difficulty}). Nastavi je ili počni novu?",
+  "modal.needed": "Ova slagalica je tražila",
+  "modal.openLesson": "Otvori lekciju u Akademiji"
 }
