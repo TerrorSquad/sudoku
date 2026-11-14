@@ -904,7 +904,7 @@ onUnmounted(() => {
               {{ $t("menu.subtitle") }}
             </p>
             <!-- Level / progress -->
-            <div class="mx-auto mt-5 w-full max-w-[240px]" data-testid="level-badge">
+            <div class="mx-auto mt-5 w-full max-w-[15rem]" data-testid="level-badge">
               <p class="text-xs font-bold text-violet-700 dark:text-violet-300">
                 {{ $t("level.label", { n: playerLevel.level }) }}
                 <span class="font-semibold text-zinc-500"
@@ -969,7 +969,7 @@ onUnmounted(() => {
                 <span class="block">{{
                   dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
                 }}</span>
-                <span v-if="dailyStreak > 0" class="block text-[11px] font-semibold opacity-80"
+                <span v-if="dailyStreak > 0" class="block text-[0.6875rem] font-semibold opacity-80"
                   >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}</span
                 >
               </span>
@@ -1049,7 +1049,7 @@ onUnmounted(() => {
         <!-- GAME -->
         <div
           v-else-if="currentScreen === 'game'"
-          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
+          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[15rem_minmax(0,1fr)_26.25rem] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
           <p class="sr-only" aria-live="polite">{{ hintStatus }}</p>
@@ -1076,7 +1076,7 @@ onUnmounted(() => {
                   class="flex items-center gap-3"
                 >
                   <kbd
-                    class="min-w-[60px] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                    class="min-w-[3.75rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                     >{{ s.key }}</kbd
                   >
                   <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
@@ -1281,7 +1281,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl p-6 text-center shadow-2xl"
+          class="modal-pop panel w-full max-w-sm border-t-[0.375rem] !rounded-2xl p-6 text-center shadow-2xl"
           :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1322,7 +1322,7 @@ onUnmounted(() => {
 
           <!-- Score headline -->
           <div v-if="isWinState && lastScore" class="mb-5">
-            <p class="text-[11px] font-semibold text-zinc-500">
+            <p class="text-[0.6875rem] font-semibold text-zinc-500">
               {{ $t("modal.scoreTotal") }}
             </p>
             <p
@@ -1332,7 +1332,7 @@ onUnmounted(() => {
             </p>
             <p
               v-if="isNewBest"
-              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-300"
+              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-700 dark:text-amber-300"
             >
               ★ {{ $t("modal.scoreNewBest") }}
             </p>
@@ -1425,7 +1425,7 @@ onUnmounted(() => {
                   :key="id"
                   @click="openLesson(id)"
                   :title="$t('modal.openLesson')"
-                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
                 >
                   {{ $t(`hint.move.${id}.name`) }}
                 </button>
@@ -1440,7 +1440,7 @@ onUnmounted(() => {
                   v-for="id in techniqueLog"
                   :key="id"
                   :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
-                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
+                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-700 dark:text-amber-400"
                   >{{ $t(`hint.move.${id}.name`) }}
                   <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
                 >
@@ -1463,7 +1463,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel w-full max-w-sm border-t-[6px] !rounded-2xl !border-t-violet-500 p-6 text-center shadow-2xl"
+          class="modal-pop panel w-full max-w-sm border-t-[0.375rem] !rounded-2xl !border-t-violet-500 p-6 text-center shadow-2xl"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ $t("resume.title") }}

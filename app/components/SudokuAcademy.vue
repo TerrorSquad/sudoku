@@ -222,7 +222,7 @@ const total = computed(() => techniques.length);
     <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
       <!-- Example legend -->
       <div
-        class="panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 text-[11px] text-zinc-600 sm:mb-8 sm:px-4 dark:text-zinc-400"
+        class="panel mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 text-[0.6875rem] text-zinc-600 sm:mb-8 sm:px-4 dark:text-zinc-400"
       >
         <span class="font-bold text-zinc-700 dark:text-zinc-300">{{ $t("academy.colors") }}</span>
         <span class="flex items-center gap-1.5"
@@ -248,7 +248,7 @@ const total = computed(() => techniques.length);
           <h2 :class="tierStyles[tier].heading" class="text-lg font-black sm:text-xl">
             {{ $t(`academy.tier.${tier}`) }}
           </h2>
-          <span :class="tierStyles[tier].badge" class="border px-2 py-0.5 text-[10px] font-bold">
+          <span :class="tierStyles[tier].badge" class="border px-2 py-0.5 text-[0.625rem] font-bold">
             {{ byTier(tier).length }}
           </span>
           <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
@@ -274,7 +274,7 @@ const total = computed(() => techniques.length);
                 <span
                   v-if="countOf(tech.id) > 0"
                   :class="MASTERY_STYLE[masteryOf(tech.id)]"
-                  class="border px-1.5 py-0.5 text-[9px] font-bold"
+                  class="border px-1.5 py-0.5 text-[0.5625rem] font-bold"
                   :title="masteryTitle(tech.id)"
                   >{{ $t(`academy.mastery.${masteryOf(tech.id)}`) }} ×{{ countOf(tech.id) }}</span
                 >
@@ -289,7 +289,7 @@ const total = computed(() => techniques.length);
             <div class="flex items-start gap-4">
               <div class="min-w-0 flex-1 space-y-3">
                 <div>
-                  <p class="mb-1 text-[10px] font-bold text-zinc-500">
+                  <p class="mb-1 text-[0.625rem] font-bold text-zinc-500">
                     {{ $t("academy.lookForLabel") }}
                   </p>
                   <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
@@ -297,7 +297,7 @@ const total = computed(() => techniques.length);
                   </p>
                 </div>
                 <div>
-                  <p class="mb-1 text-[10px] font-bold text-zinc-500">
+                  <p class="mb-1 text-[0.625rem] font-bold text-zinc-500">
                     {{ $t("academy.howItHelpsLabel") }}
                   </p>
                   <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
@@ -308,7 +308,7 @@ const total = computed(() => techniques.length);
               <!-- Thumbnail of the worked example; the full one opens on click. -->
               <div
                 v-if="!expanded.has(tech.id) && exampleFor(tech.id)"
-                class="hidden w-[104px] shrink-0 sm:block"
+                class="hidden w-[6.5rem] shrink-0 sm:block"
               >
                 <ExampleGrid
                   mini
@@ -332,7 +332,7 @@ const total = computed(() => techniques.length);
               class="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800"
               @click.stop
             >
-              <p class="mb-3 text-center text-[10px] font-bold text-zinc-500">
+              <p class="mb-3 text-center text-[0.625rem] font-bold text-zinc-500">
                 {{ $t("academy.workedExample") }}
               </p>
               <ExampleGrid

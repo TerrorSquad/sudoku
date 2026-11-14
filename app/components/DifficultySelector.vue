@@ -119,7 +119,7 @@ const DIFFICULTIES: {
             </span>
             <span
               v-if="inProgress.has(d.key)"
-              class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:text-violet-300"
+              class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[0.5625rem] font-bold text-violet-600 dark:text-violet-300"
               >{{ $t("difficulty.inProgress") }}</span
             >
           </span>

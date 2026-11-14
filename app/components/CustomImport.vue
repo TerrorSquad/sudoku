@@ -151,7 +151,7 @@ function loadExample() {
             c === 2 || c === 5 ? 'border-r-2 border-r-zinc-500' : '',
             r === 2 || r === 5 ? 'border-b-2 border-b-zinc-500' : '',
           ]"
-          class="flex aspect-square items-center justify-center bg-zinc-100 font-game text-[11px] dark:bg-zinc-900"
+          class="flex aspect-square items-center justify-center bg-zinc-100 font-game text-[0.6875rem] dark:bg-zinc-900"
         >
           {{ cell !== 0 ? cell : "·" }}
         </div>

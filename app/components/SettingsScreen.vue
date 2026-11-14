@@ -143,7 +143,7 @@ const style = computed({
           </select>
         </label>
 
-        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+        <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("settings.groupGame") }}
         </h2>
 
@@ -207,7 +207,7 @@ const style = computed({
           </select>
         </label>
 
-        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+        <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("settings.groupFeedback") }}
         </h2>
 
@@ -222,7 +222,7 @@ const style = computed({
         </label>
 
         <template v-if="!inGame">
-        <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
+        <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("settings.groupData") }}
         </h2>
 

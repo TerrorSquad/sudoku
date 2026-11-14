@@ -79,7 +79,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
                     : $t(`achievements.${a.id}.name`)
                 }}
               </h3>
-              <span class="text-[9px] font-bold text-zinc-500">{{
+              <span class="text-[0.5625rem] font-bold text-zinc-500">{{
                 $t(`achievements.tier.${a.tier}`)
               }}</span>
             </div>
@@ -92,7 +92,7 @@ const date = (ms: number) => new Date(ms).toLocaleDateString(locale.value);
             </p>
             <p
               v-if="a.id in unlocked"
-              class="mt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+              class="mt-1.5 text-[0.625rem] font-semibold text-emerald-600 dark:text-emerald-400"
             >
               ✓ {{ date(unlocked[a.id]!) }}
             </p>

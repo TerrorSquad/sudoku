@@ -38,7 +38,7 @@ function cellClass(r: number, c: number) {
 
 <template>
   <div
-    :class="mini ? 'max-w-[104px]' : 'max-w-[280px]'"
+    :class="mini ? 'max-w-[6.5rem]' : 'max-w-[17.5rem]'"
     class="mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-zinc-900"
   >
     <template v-for="(row, r) in board" :key="r">
@@ -46,12 +46,12 @@ function cellClass(r: number, c: number) {
         v-for="(val, c) in row"
         :key="c"
         class="relative flex aspect-square items-center justify-center border border-zinc-300 font-game font-bold text-zinc-800 dark:border-zinc-800 dark:text-zinc-200"
-        :class="[cellClass(r, c), mini ? 'text-[7px]' : 'text-sm sm:text-base']"
+        :class="[cellClass(r, c), mini ? 'text-[0.4375rem]' : 'text-sm sm:text-base']"
       >
         <span v-if="val !== 0">{{ val }}</span>
         <div
           v-else-if="!mini && candidates(r, c).length"
-          class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 font-game text-[7px] leading-none font-semibold text-amber-700 sm:text-[8px] dark:text-amber-400"
+          class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 font-game text-[0.4375rem] leading-none font-semibold text-amber-700 sm:text-[0.5rem] dark:text-amber-400"
         >
           <div v-for="n in 9" :key="n" class="flex items-center justify-center">
             {{ candidates(r, c).includes(n) ? n : "" }}

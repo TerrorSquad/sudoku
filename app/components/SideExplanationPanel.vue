@@ -51,7 +51,7 @@ const isLastStep = computed(() => {
     <div v-else class="flex flex-col gap-4">
       <!-- Technique title -->
       <div class="border-b border-zinc-200 pb-3 dark:border-zinc-800">
-        <span class="mb-1 block text-[10px] font-bold text-amber-700 dark:text-amber-400">
+        <span class="mb-1 block text-[0.625rem] font-bold text-amber-700 dark:text-amber-400">
           {{ $t("hint.detectedTechnique") }}
         </span>
         <h2

@@ -46,14 +46,14 @@ defineEmits<{
       {{ " " }}
       <span
         v-if="9 - counts[n]! > 0"
-        class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-300"
+        class="absolute top-1 right-1.5 text-[0.625rem] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[0.8125rem] dark:text-violet-300"
       >
         {{ Math.max(0, 9 - counts[n]!) }}
       </span>
       <span
         v-else
         :key="`done-${n}`"
-        class="digit-done absolute top-1 right-1.5 text-[11px] leading-none font-black text-emerald-600 3xl:text-[14px] dark:text-emerald-400"
+        class="digit-done absolute top-1 right-1.5 text-[0.6875rem] leading-none font-black text-emerald-600 3xl:text-sm dark:text-emerald-400"
         >✓</span
       >
     </button>

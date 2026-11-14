@@ -26,7 +26,7 @@ defineEmits<{
         path="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
       />
       <span
-        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
+        class="text-[0.625rem] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.undo") }}</span
       >
     </button>
@@ -44,7 +44,7 @@ defineEmits<{
         path="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"
       />
       <span
-        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
+        class="text-[0.625rem] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.redo") }}</span
       >
     </button>
@@ -60,7 +60,7 @@ defineEmits<{
         path="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
       />
       <span
-        class="text-[10px] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
+        class="text-[0.625rem] font-semibold whitespace-nowrap text-zinc-600 3xl:text-xs dark:text-zinc-400"
         >{{ $t("controls.erase") }}</span
       >
     </button>
@@ -81,7 +81,7 @@ defineEmits<{
         path="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
       />
       <span
-        class="text-[10px] font-semibold whitespace-nowrap 3xl:text-xs"
+        class="text-[0.625rem] font-semibold whitespace-nowrap 3xl:text-xs"
         :class="notesMode ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-600 dark:text-zinc-400'"
         >{{ $t("controls.notes") }}</span
       >
@@ -98,7 +98,7 @@ defineEmits<{
         path="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
       />
       <span
-        class="text-[10px] font-bold whitespace-nowrap text-amber-900 3xl:text-xs dark:text-amber-300"
+        class="text-[0.625rem] font-bold whitespace-nowrap text-amber-900 3xl:text-xs dark:text-amber-300"
         >{{ $t("controls.hint") }}</span
       >
     </button>
@@ -113,7 +113,7 @@ defineEmits<{
         class="h-5 w-5 3xl:h-7 3xl:w-7"
         path="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
       />
-      <span class="text-[10px] font-semibold whitespace-nowrap 3xl:text-xs">{{
+      <span class="text-[0.625rem] font-semibold whitespace-nowrap 3xl:text-xs">{{
         $t("controls.auto")
       }}</span>
     </button>

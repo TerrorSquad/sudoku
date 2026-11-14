@@ -88,18 +88,18 @@ const cellClasses = computed(() => {
     "border-l": props.col === 0,
     "border-t": props.row === 0,
     "border-r": props.col !== 2 && props.col !== 5,
-    "border-r-2 cell-box-r": props.col === 2 || props.col === 5,
+    "border-r-[0.125rem] cell-box-r": props.col === 2 || props.col === 5,
     "border-b": props.row !== 2 && props.row !== 5,
-    "border-b-2 cell-box-b": props.row === 2 || props.row === 5,
+    "border-b-[0.125rem] cell-box-b": props.row === 2 || props.row === 5,
     "cell-given font-bold": props.isInitial,
     "cell-entry font-semibold": !props.isInitial && props.value !== 0 && !isWrong.value,
     "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100": isWrong.value,
     "cell-peer": props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
       props.isSameValue && props.value !== 0 && !props.isSelected,
-    "dark:!bg-amber-400/30 !bg-amber-200 ring-[3px] dark:ring-amber-300 ring-amber-500 z-10":
+    "dark:!bg-amber-400/30 !bg-amber-200 ring-[0.1875rem] dark:ring-amber-300 ring-amber-500 z-10":
       props.isSelected && !isBad.value,
-    "dark:!bg-rose-800/60 !bg-rose-200 ring-[3px] dark:ring-rose-400 ring-rose-600 z-10":
+    "dark:!bg-rose-800/60 !bg-rose-200 ring-[0.1875rem] dark:ring-rose-400 ring-rose-600 z-10":
       props.isSelected && isBad.value,
     "!bg-indigo-500/30 ring-1 ring-indigo-400 z-10": props.isHintTrigger,
     "!bg-emerald-500/30 ring-2 ring-inset ring-emerald-500 z-10": props.isHintTarget,
@@ -148,7 +148,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[10px] font-black 3xl:text-[13px]"
+      class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[0.625rem] font-black 3xl:text-[0.8125rem]"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>
