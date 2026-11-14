@@ -157,7 +157,7 @@ const isWinState = ref<boolean>(false);
 const pendingResume = ref<{ save: GameSave; level: Difficulty } | null>(null);
 
 const hintsUsed = ref<number>(0);
-const techniqueLog = ref<string[]>([]);
+const techniqueLog = ref<TechniqueId[]>([]);
 const mistakeExplainer = ref<string>("");
 
 const flashCells = ref<FlashCell[]>([]);
@@ -555,14 +555,13 @@ function handleInputNumber(num: number) {
 }
 
 function handleNextStep() {
-  const title = activeComplexHint.value?.title;
-  const wrongEntry = activeComplexHint.value?.wrongEntry;
+  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
   const wasPlacement = !!placed;
   nextHintStep(() => {
-    if (title && !wrongEntry) {
-      if (!techniqueLog.value.includes(title)) techniqueLog.value.push(title);
-      techStats.record(title);
+    if (tech) {
+      if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+      techStats.record(tech);
     }
     hintsUsed.value++;
     if (placed) cue("place", placed);
@@ -609,14 +608,13 @@ function handleTriggerHint() {
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
-  const name = activeComplexHint.value.title;
-  const wrongEntry = activeComplexHint.value.wrongEntry;
+  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
   const wasPlacement = !!placed;
   hintsUsed.value++;
-  if (!wrongEntry) {
-    if (!techniqueLog.value.includes(name)) techniqueLog.value.push(name);
-    techStats.record(name);
+  if (tech) {
+    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    techStats.record(tech);
   }
   engine.applyComplexHint();
   if (placed) cue("place", placed);
@@ -1335,12 +1333,12 @@ onUnmounted(() => {
               </p>
               <div class="flex flex-wrap gap-1">
                 <span
-                  v-for="name in techniqueLog"
-                  :key="name"
-                  :title="$t('modal.usedTotal', { n: techStatsTotals[name] ?? 1 })"
+                  v-for="id in techniqueLog"
+                  :key="id"
+                  :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
                   class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
-                  >{{ name }}
-                  <span class="opacity-70">×{{ techStatsTotals[name] ?? 1 }}</span></span
+                  >{{ $t(`hint.move.${id}.name`) }}
+                  <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
                 >
               </div>
             </div>
