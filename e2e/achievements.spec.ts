@@ -8,12 +8,12 @@ async function winCustomPuzzle(page: import("@playwright/test").Page) {
   // Night Owl keys off the real hour; pin the clock so the unlock count is deterministic.
   await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(ALMOST_SOLVED);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 }
 
 test("winning pops an unlock toast and the trophy case records it", async ({ page }) => {

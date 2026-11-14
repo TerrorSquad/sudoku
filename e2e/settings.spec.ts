@@ -7,7 +7,7 @@ const FIVE_BLANKS =
   "000008912672195348198342567859761423426853791713924856961537284287419635345286179";
 
 async function playCustom(page: Page) {
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(FIVE_BLANKS);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
 }
@@ -22,7 +22,7 @@ test("the default limit of 3 mistakes ends the game", async ({ page }) => {
   await page.goto("/");
   await playCustom(page);
   await enterWrongDigits(page, ["9", "8", "9"]);
-  await expect(page.getByRole("heading", { name: "Game Over" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeVisible();
 });
 
 test("an unlimited mistake limit keeps the game going and hides the maximum", async ({ page }) => {
@@ -32,7 +32,7 @@ test("an unlimited mistake limit keeps the game going and hides the maximum", as
   await page.getByRole("button", { name: "Menu" }).click();
   await playCustom(page);
   await enterWrongDigits(page, ["9", "8", "9", "8", "9"]);
-  await expect(page.getByRole("heading", { name: "Game Over" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
   await expect(page.getByText("Mistakes:").locator("..")).toContainText("5");
   await expect(page.getByText("/ 3")).toBeHidden();
 });
@@ -56,7 +56,7 @@ test("with mistake highlighting off, wrong entries are unmarked and can't end th
   await page.getByRole("button", { name: "Menu" }).click();
   await playCustom(page);
   await enterWrongDigits(page, ["9", "8", "9", "8"]);
-  await expect(page.getByRole("heading", { name: "Game Over" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
   await expect(page.getByText("Mistakes:")).toBeHidden();
   // Screen readers get no "wrong entry" either.
   await expect(cell(page, 0)).toHaveAttribute("aria-label", /your entry 8/);

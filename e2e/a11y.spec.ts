@@ -40,11 +40,11 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Back to Menu" }).click();
 
       for (const [button, screen] of [
-        ["Sudoku Academy", "academy"],
+        ["Academy", "academy"],
         ["Statistics", "stats"],
         ["Achievements", "achievements"],
         ["Settings", "settings"],
-        ["Custom Puzzle", "custom puzzle"],
+        ["Your puzzle", "custom puzzle"],
       ] as const) {
         await page.getByRole("button", { name: button }).click();
         await scan(page, screen);
@@ -110,6 +110,15 @@ test("arrow keys move the selection and focus, clamped at the edges", async ({ p
   for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowUp");
   for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowLeft");
   await expect(cell(0, 0)).toHaveAttribute("aria-selected", "true");
+
+  // WASD walks the same way.
+  await page.keyboard.press("d");
+  await page.keyboard.press("s");
+  await page.keyboard.press("s");
+  await page.keyboard.press("a");
+  await page.keyboard.press("w");
+  await expect(cell(1, 0)).toHaveAttribute("aria-selected", "true");
+  await expect(cell(1, 0)).toBeFocused();
 });
 
 test("reduced motion removes animation durations", async ({ page }) => {

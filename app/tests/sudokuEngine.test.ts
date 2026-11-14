@@ -7,7 +7,7 @@ vi.mock("vue-i18n", () => ({
 
 import { useSudokuEngine } from "../composables/useSudokuEngine";
 import { solveBoard } from "../utils/sudokuCore";
-import type { Grid } from "../utils/sudokuCore";
+import type { Grid } from "../types/sudoku";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
   let engine: ReturnType<typeof useSudokuEngine>;

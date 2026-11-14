@@ -14,7 +14,7 @@ async function startDigitFirstGame(page: Page) {
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("switch", { name: "Digit-first input" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(FIVE_BLANKS);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
 }

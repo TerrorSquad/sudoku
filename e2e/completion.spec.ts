@@ -14,7 +14,7 @@ async function place(page: Page, n: number, digit: string) {
 
 test("completing a row ripples outward from the placed digit", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(PUZZLE);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
 
@@ -36,7 +36,7 @@ test("completing a row ripples outward from the placed digit", async ({ page }) 
 
 test("winning sweeps the whole board before the result fades in", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Custom Puzzle" }).click();
+  await page.getByRole("button", { name: "Your puzzle" }).click();
   await page.locator("textarea").fill(PUZZLE);
   await page.getByRole("button", { name: "Play Puzzle" }).click();
   await place(page, 0, "5");
@@ -44,5 +44,5 @@ test("winning sweeps the whole board before the result fades in", async ({ page 
   await place(page, 80, "9");
 
   await expect(page.locator("[data-cell].cell-flash")).toHaveCount(81, { timeout: 2000 });
-  await expect(page.getByRole("heading", { name: "Puzzle Solved!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 });

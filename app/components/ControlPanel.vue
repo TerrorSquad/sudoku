@@ -16,6 +16,7 @@ defineEmits<{
     <!-- Undo -->
     <button
       @click="$emit('undo')"
+      :title="`${$t('controls.undo')} (Ctrl+Z)`"
       :disabled="!canUndo"
       :aria-label="$t('controls.undo')"
       class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
@@ -33,6 +34,7 @@ defineEmits<{
     <!-- Redo -->
     <button
       @click="$emit('redo')"
+      :title="`${$t('controls.redo')} (Ctrl+Y)`"
       :disabled="!canRedo"
       :aria-label="$t('controls.redo')"
       class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
@@ -50,6 +52,7 @@ defineEmits<{
     <!-- Erase -->
     <button
       @click="$emit('erase')"
+      :title="`${$t('controls.erase')} (Backspace)`"
       class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       <AppIcon
@@ -65,6 +68,7 @@ defineEmits<{
     <!-- Notes -->
     <button
       @click="$emit('toggle-notes')"
+      :title="`${$t('controls.notes')} (N)`"
       class="relative flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
       :class="notesMode ? 'border-violet-500/40' : ''"
     >
@@ -86,6 +90,7 @@ defineEmits<{
     <!-- Hint -->
     <button
       @click="$emit('trigger-hint')"
+      :title="`${$t('controls.hint')} (H)`"
       class="flex flex-col items-center justify-center gap-1 border border-amber-500/30 bg-amber-300/40 py-3 transition-all hover:bg-amber-300/60 active:scale-95 3xl:gap-2 3xl:py-4 dark:bg-amber-400/15 dark:hover:bg-amber-400/25"
     >
       <AppIcon
@@ -101,6 +106,7 @@ defineEmits<{
     <!-- Auto-fill notes -->
     <button
       @click="$emit('auto-notes')"
+      :title="`${$t('controls.auto')} (F)`"
       class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 text-violet-600 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:text-violet-400 dark:hover:bg-zinc-800"
     >
       <AppIcon

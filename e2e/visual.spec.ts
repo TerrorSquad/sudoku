@@ -205,7 +205,7 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     test("academy", async ({ page }) => {
-      await page.getByRole("button", { name: "Sudoku Academy" }).click();
+      await page.getByRole("button", { name: "Academy" }).click();
       await shot(page, "academy");
     });
 
@@ -215,7 +215,7 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     test("custom puzzle", async ({ page }) => {
-      await page.getByRole("button", { name: "Custom Puzzle" }).click();
+      await page.getByRole("button", { name: "Your puzzle" }).click();
       await shot(page, "custom-import");
     });
   });

@@ -131,6 +131,14 @@ const currentScreen = ref<
   | "settings"
 >("menu");
 const activeDifficulty = ref<Difficulty>("medium");
+// What the dashboard chip and the win modal call this game, in the player's language.
+const difficultyLabel = computed(() =>
+  practiceTechnique.value
+    ? `${t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
+    : isDailyMode.value
+      ? t("difficulty.daily")
+      : t(`difficulty.${activeDifficulty.value}`),
+);
 
 const showModal = ref<boolean>(false);
 const modalTitle = ref<string>("");
@@ -495,7 +503,7 @@ function handleInputNumber(num: number) {
             });
           }
           if (mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
-            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg"));
+            triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg", { n: mistakeLimit.value }));
           }
         }
       } else {
@@ -508,7 +516,7 @@ function handleInputNumber(num: number) {
           triggerLocalModal(
             t("modal.win"),
             t("modal.winMsg", {
-              difficulty: activeDifficulty.value,
+              difficulty: difficultyLabel.value,
               time: timer.formatTime(timer.timerSeconds.value),
             }),
             true,
@@ -671,11 +679,16 @@ function exitToMenu() {
   currentScreen.value = "menu";
 }
 
-const ARROW_STEPS: Record<string, [number, number]> = {
+// Arrows and WASD both walk the grid (so auto-fill notes lives on F, not A).
+const MOVE_STEPS: Record<string, [number, number]> = {
   ArrowUp: [-1, 0],
   ArrowDown: [1, 0],
   ArrowLeft: [0, -1],
   ArrowRight: [0, 1],
+  w: [-1, 0],
+  s: [1, 0],
+  a: [0, -1],
+  d: [0, 1],
 };
 
 const clamp = (n: number) => Math.min(8, Math.max(0, n));
@@ -703,7 +716,7 @@ function redo() {
     triggerLocalModal(
       t("modal.win"),
       t("modal.winMsg", {
-        difficulty: activeDifficulty.value,
+        difficulty: difficultyLabel.value,
         time: timer.formatTime(timer.timerSeconds.value),
       }),
       true,
@@ -728,10 +741,10 @@ function handleKeyDown(e: KeyboardEvent) {
     activeDigit.value = null;
     return;
   }
-  const arrow = ARROW_STEPS[e.key];
-  if (arrow) {
+  const step = MOVE_STEPS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (step) {
     e.preventDefault();
-    moveSelection(arrow[0], arrow[1]);
+    moveSelection(step[0], step[1]);
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
@@ -742,7 +755,7 @@ function handleKeyDown(e: KeyboardEvent) {
     notesMode.value = !notesMode.value;
   } else if (e.key.toLowerCase() === "h") {
     handleTriggerHint();
-  } else if (e.key.toLowerCase() === "a") {
+  } else if (e.key.toLowerCase() === "f") {
     handleAutoFillNotes();
   }
 }
@@ -954,11 +967,13 @@ onUnmounted(() => {
               <ul class="space-y-3">
                 <li
                   v-for="(s, i) in [
+                    { key: '↑←↓→', desc: $t('sidebar.shortcutMove') },
+                    { key: 'WASD', desc: $t('sidebar.shortcutMove') },
                     { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
                     { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
                     { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
                     { key: 'H', desc: $t('sidebar.shortcutGetHint') },
-                    { key: 'A', desc: $t('sidebar.shortcutAutoFillNotes') },
+                    { key: 'F', desc: $t('sidebar.shortcutAutoFillNotes') },
                     { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
                     { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
                   ]"
@@ -1020,11 +1035,7 @@ onUnmounted(() => {
               :max-mistakes="mistakeLimit"
               :show-timer="showTimer"
               :show-mistakes="highlightErrors"
-              :difficulty="
-                practiceTechnique
-                  ? `${$t('practice.label')} · ${$t(`hint.move.${practiceTechnique}.name`)}`
-                  : activeDifficulty
-              "
+:difficulty="difficultyLabel"
               @toggle-pause="timer.togglePause()"
               @exit-game="exitToMenu"
             />
@@ -1271,8 +1282,8 @@ onUnmounted(() => {
           >
             <div class="flex justify-between px-3 py-2">
               <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.difficulty") }}</span>
-              <span class="text-xs font-bold text-zinc-800 capitalize dark:text-zinc-200">{{
-                activeDifficulty
+              <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">{{
+                difficultyLabel
               }}</span>
             </div>
             <div class="flex justify-between px-3 py-2">
