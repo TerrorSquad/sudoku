@@ -33,12 +33,12 @@ defineEmits<{
       :class="[
         9 - counts[n]! <= 0
           ? 'pointer-events-none opacity-30'
-          : 'hover:bg-zinc-100 active:scale-95 dark:hover:bg-zinc-800',
+          : '',
         digitFirst && activeDigit === n
           ? '!border-violet-500 !bg-violet-100 ring-2 ring-violet-500 dark:!bg-violet-500/20'
           : '',
       ]"
-      class="relative flex items-center justify-center border border-zinc-200 bg-zinc-50 py-5 font-game text-3xl font-black transition-all 3xl:py-5 3xl:text-4xl lg:py-3 lg:text-2xl dark:border-zinc-800 dark:bg-zinc-900"
+      class="tile relative flex items-center justify-center py-5 font-game text-3xl font-black 3xl:py-5 3xl:text-4xl lg:py-3 lg:text-2xl"
     >
       <span v-if="colorMode" :class="dotClass(n)" class="h-6 w-6 3xl:h-9 3xl:w-9" />
       <span v-else>{{ n }}</span>

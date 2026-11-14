@@ -153,7 +153,7 @@
   "modal.scoreTotal": "Poeni",
   "modal.scoreNewBest": "Novi rekord!",
   "modal.scoreLifetime": "Ukupno poena",
-  "customImport.title": "Prilagođena slagalica",
+  "customImport.title": "Tvoja slagalica",
   "customImport.back": "Nazad",
   "customImport.description": "Nalepi 81 cifru (0 = prazno polje). Razmaci i novi redovi se zanemaruju.",
   "customImport.loadExample": "Učitaj primer",
@@ -397,5 +397,10 @@
   "academy.caption.skyscraper": "{num} ima po dva mesta u dve linije (indigo), a po jedan kraj im je poravnat. Jedan od druga dva kraja mora biti {num}, pa ga gube polja koja vide oba: {nElim} polja u roze ({elimList}).",
   "academy.caption.kite": "{num} ima dva mesta u redu i dva u koloni (indigo), spojena u jednom kvadratu. Jedan daleki kraj mora biti {num}, pa ga gubi {nElim} polja koja vide oba, u roze ({elimList}).",
   "academy.caption.uniqueRectangle": "Tri ugla (indigo) imaju samo {digits}. Kad bi četvrti ugao bio jedna od njih, slagalica bi imala dva rešenja, pa se {digits} uklanjaju iz njega, u roze ({elimList}).",
-  "academy.caption.coloring": "{num} je ulančan kroz polja gde ima samo dva mesta (indigo). Jedna od dve naizmenične boje mora biti {num}, pa ga gubi {nElim} polja, u roze ({elimList})."
+  "academy.caption.coloring": "{num} je ulančan kroz polja gde ima samo dva mesta (indigo). Jedna od dve naizmenične boje mora biti {num}, pa ga gubi {nElim} polja, u roze ({elimList}).",
+  "menu.startHint": "Šest nivoa i opušteni Zen režim",
+  "settings.boardTheme": "Izgled table",
+  "settings.boardTiles": "Pločice",
+  "settings.boardNewsprint": "Novine",
+  "settings.boardContrast": "Visok kontrast"
 }

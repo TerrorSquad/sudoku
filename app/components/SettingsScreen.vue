@@ -22,6 +22,7 @@ const {
   highlightErrors,
   hintStyle,
   showCandidates,
+  boardTheme,
 } = usePreferences();
 
 const vibrationSupported = canVibrate();
@@ -91,7 +92,7 @@ const style = computed({
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
         @click="emit('back-to-menu')"
@@ -124,6 +125,15 @@ const style = computed({
         <label class="s-row">
           <span class="s-label">{{ $t("settings.theme") }}</span>
           <UColorModeButton />
+        </label>
+
+        <label class="s-row">
+          <span class="s-label">{{ $t("settings.boardTheme") }}</span>
+          <select v-model="boardTheme" class="s-select">
+            <option value="tiles">{{ $t("settings.boardTiles") }}</option>
+            <option value="newsprint">{{ $t("settings.boardNewsprint") }}</option>
+            <option value="contrast">{{ $t("settings.boardContrast") }}</option>
+          </select>
         </label>
 
         <h2 class="mt-3 text-[13px] font-bold text-zinc-600 dark:text-zinc-400">
@@ -265,13 +275,10 @@ const style = computed({
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border: 1px solid var(--color-zinc-200);
-  background: var(--color-zinc-50);
+  border: 1px solid var(--tile-edge);
+  border-radius: 14px;
+  background: var(--tile);
   padding: 0.75rem 1rem;
-}
-.dark .s-row {
-  border-color: var(--color-zinc-800);
-  background: var(--color-zinc-900);
 }
 .s-label {
   display: block;
@@ -291,6 +298,7 @@ const style = computed({
 }
 .s-action {
   border: 1px solid var(--color-zinc-300);
+  border-radius: 10px;
   padding: 0.35rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -316,6 +324,7 @@ const style = computed({
   color: var(--color-rose-300);
 }
 .s-notice {
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -334,6 +343,7 @@ const style = computed({
 }
 .s-select {
   border: 1px solid var(--color-zinc-300);
+  border-radius: 8px;
   background: white;
   padding: 0.35rem 0.5rem;
   font-size: 0.875rem;

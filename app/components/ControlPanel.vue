@@ -19,7 +19,7 @@ defineEmits<{
       :title="`${$t('controls.undo')} (Ctrl+Z)`"
       :disabled="!canUndo"
       :aria-label="$t('controls.undo')"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="tile flex flex-col items-center justify-center gap-1 py-4 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -37,7 +37,7 @@ defineEmits<{
       :title="`${$t('controls.redo')} (Ctrl+Y)`"
       :disabled="!canRedo"
       :aria-label="$t('controls.redo')"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="tile flex flex-col items-center justify-center gap-1 py-4 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -53,7 +53,7 @@ defineEmits<{
     <button
       @click="$emit('erase')"
       :title="`${$t('controls.erase')} (Backspace)`"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      class="tile flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
     >
       <AppIcon
         class="h-5 w-5 text-zinc-500 3xl:h-7 3xl:w-7 dark:text-zinc-400"
@@ -69,8 +69,8 @@ defineEmits<{
     <button
       @click="$emit('toggle-notes')"
       :title="`${$t('controls.notes')} (N)`"
-      class="relative flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-4 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 lg:py-3 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-      :class="notesMode ? 'border-violet-500/40' : ''"
+      class="tile relative flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
+      :aria-pressed="notesMode"
     >
       <span
         :class="notesMode ? 'bg-violet-500' : 'bg-zinc-300 dark:bg-zinc-700'"
@@ -82,7 +82,7 @@ defineEmits<{
       />
       <span
         class="text-[10px] font-semibold whitespace-nowrap 3xl:text-xs"
-        :class="notesMode ? 'text-violet-400' : 'text-zinc-600 dark:text-zinc-400'"
+        :class="notesMode ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-600 dark:text-zinc-400'"
         >{{ $t("controls.notes") }}</span
       >
     </button>
@@ -91,7 +91,7 @@ defineEmits<{
     <button
       @click="$emit('trigger-hint')"
       :title="`${$t('controls.hint')} (H)`"
-      class="flex flex-col items-center justify-center gap-1 border border-amber-500/30 bg-amber-300/40 py-3 transition-all hover:bg-amber-300/60 active:scale-95 3xl:gap-2 3xl:py-4 dark:bg-amber-400/15 dark:hover:bg-amber-400/25"
+      class="tile tile-amber flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
     >
       <AppIcon
         class="h-5 w-5 text-amber-900 3xl:h-7 3xl:w-7 dark:text-amber-300"
@@ -107,7 +107,7 @@ defineEmits<{
     <button
       @click="$emit('auto-notes')"
       :title="`${$t('controls.auto')} (F)`"
-      class="flex flex-col items-center justify-center gap-1 border border-zinc-200 bg-zinc-50 py-3 text-violet-600 transition-all hover:bg-zinc-100 active:scale-95 3xl:gap-2 3xl:py-4 dark:border-zinc-800 dark:bg-zinc-900 dark:text-violet-400 dark:hover:bg-zinc-800"
+      class="tile flex flex-col items-center justify-center gap-1 py-4 text-violet-600 3xl:gap-2 3xl:py-4 lg:py-3 dark:text-violet-400"
     >
       <AppIcon
         class="h-5 w-5 3xl:h-7 3xl:w-7"

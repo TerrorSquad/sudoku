@@ -51,7 +51,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
     <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-white/95 py-4 pr-4 pl-4 backdrop-blur sm:pl-8 dark:border-zinc-800 dark:bg-[#0d141b]/95"
+      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
         @click="emit('back-to-menu')"
@@ -79,7 +79,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 
       <div
         v-if="!hasStats"
-        class="flex flex-col items-center gap-5 border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700"
+        class="tray flex flex-col items-center gap-5 px-6 py-16 text-center"
       >
         <AppIcon
           class="h-10 w-10 text-zinc-400 dark:text-zinc-600"
@@ -90,7 +90,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         </p>
         <button
           @click="emit('start-game')"
-          class="bg-violet-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 hover:brightness-110 active:scale-95"
+          class="tile tile-primary px-8 py-3 text-sm font-bold"
         >
           {{ $t("stats.startFirst") }}
         </button>
@@ -100,7 +100,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         <!-- Headline cards -->
         <div class="mb-8 grid grid-cols-3 gap-3">
           <div
-            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
+            class="panel p-4 text-center"
           >
             <p
               class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-50"
@@ -112,7 +112,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             </p>
           </div>
           <div
-            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
+            class="panel p-4 text-center"
           >
             <p
               class="text-2xl leading-tight font-black text-zinc-900 tabular-nums sm:text-3xl dark:text-zinc-100"
@@ -124,7 +124,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             </p>
           </div>
           <div
-            class="border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900/60"
+            class="panel p-4 text-center"
           >
             <p
               class="text-2xl leading-tight font-black text-amber-600 tabular-nums sm:text-3xl dark:text-amber-400"
@@ -211,7 +211,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       >
         <button
           @click="emit('back-to-menu')"
-          class="border border-zinc-300 bg-zinc-50 px-8 py-3 text-sm font-bold text-zinc-700 transition-all hover:bg-zinc-100 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          class="tile px-8 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-300"
         >
           {{ $t("stats.back") }}
         </button>

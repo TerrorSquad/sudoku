@@ -153,11 +153,11 @@
   "modal.scoreTotal": "Score",
   "modal.scoreNewBest": "New best!",
   "modal.scoreLifetime": "Lifetime total",
-  "customImport.title": "Custom Puzzle",
+  "customImport.title": "Your puzzle",
   "customImport.back": "Back",
   "customImport.description": "Paste 81 digits (0 = empty cell). Spaces and newlines are ignored.",
   "customImport.loadExample": "Load example",
-  "customImport.playPuzzle": "Play Puzzle",
+  "customImport.playPuzzle": "Play puzzle",
   "customImport.errorExpectedDigits": "Expected 81 digits, got {count}.",
   "customImport.errorOnlyDigits": "Only digits 0–9 are allowed.",
   "customImport.errorRowDuplicate": "Row {row} has duplicate {value}.",
@@ -397,5 +397,10 @@
   "academy.caption.skyscraper": "{num} has two spots in each of two lines (indigo), with one end of each lined up. One of the other ends must be {num}, so cells seeing both lose it: {nElim} cell(s) in rose ({elimList}).",
   "academy.caption.kite": "{num} has two spots in a row and two in a column (indigo), joined in one box. One far end must be {num}, so {nElim} cell(s) seeing both lose it, in rose ({elimList}).",
   "academy.caption.uniqueRectangle": "Three corners (indigo) hold only {digits}. If the fourth corner were one of them, the puzzle would have two solutions, so {digits} are removed from it, in rose ({elimList}).",
-  "academy.caption.coloring": "{num} is chained through cells where it has only two spots (indigo). One of the two alternating colors must be {num}, so {nElim} cell(s) lose it, in rose ({elimList})."
+  "academy.caption.coloring": "{num} is chained through cells where it has only two spots (indigo). One of the two alternating colors must be {num}, so {nElim} cell(s) lose it, in rose ({elimList}).",
+  "menu.startHint": "Six levels, plus a relaxed Zen mode",
+  "settings.boardTheme": "Board style",
+  "settings.boardTiles": "Tiles",
+  "settings.boardNewsprint": "Newsprint",
+  "settings.boardContrast": "High contrast"
 }

@@ -52,3 +52,78 @@
 .dark {
   --color-zinc-500: #8796a9;
 }
+
+/* Puzzle box: screens are trays of raised tiles that sink when pressed. The lip under a tile is
+   a solid offset, not a blurred shadow, so tiles read as physical pieces. */
+:root {
+  --ground: #e8edf3;
+  --tray: #d9e0e9;
+  --tile: #ffffff;
+  --tile-edge: #c5cdd8;
+  --tile-lip: #b1bccb;
+}
+.dark {
+  --ground: #0d141b;
+  --tray: #070b10;
+  --tile: #17202b;
+  --tile-edge: #2a3544;
+  --tile-lip: #03060a;
+}
+
+@layer components {
+  .tray {
+    background: var(--tray);
+    border-radius: 20px;
+    box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.07);
+  }
+  .panel {
+    background: var(--tile);
+    border: 1px solid var(--tile-edge);
+    border-radius: 14px;
+  }
+  .tile {
+    background: var(--tile);
+    border: 1px solid var(--tile-edge);
+    border-radius: 12px;
+    box-shadow: 0 4px 0 var(--tile-lip);
+    transition:
+      transform 0.07s ease-out,
+      box-shadow 0.07s ease-out;
+  }
+  .tile:where(button, a, label):hover:not(:disabled) {
+    filter: brightness(1.04);
+  }
+  .tile:where(button, a, label):active:not(:disabled),
+  .tile[aria-pressed="true"] {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--tile-lip);
+  }
+  .tile:disabled {
+    box-shadow: 0 1px 0 var(--tile-lip);
+    transform: translateY(3px);
+  }
+  .tile-primary {
+    --tile: var(--color-violet-600);
+    --tile-edge: var(--color-violet-700);
+    --tile-lip: var(--color-violet-900);
+    color: #fff;
+  }
+  .tile-amber {
+    --tile: #fcd34d;
+    --tile-edge: #f0b429;
+    --tile-lip: #b7791f;
+    color: #422006;
+  }
+  .tile-apply {
+    --tile: #059669;
+    --tile-edge: #047857;
+    --tile-lip: #064e3b;
+    color: #fff;
+  }
+  .dark .tile-amber {
+    --tile: #3b2f12;
+    --tile-edge: #6b5216;
+    --tile-lip: #1c1406;
+    color: #fde68a;
+  }
+}

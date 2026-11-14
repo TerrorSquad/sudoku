@@ -23,7 +23,7 @@ const isLastStep = computed(() => {
 
 <template>
   <div
-    class="flex w-full flex-col border border-zinc-200 bg-zinc-50 p-4 select-none 3xl:mt-12 dark:border-zinc-800 dark:bg-zinc-900/40"
+    class="panel flex w-full flex-col p-4 select-none 3xl:mt-12"
   >
     <!-- Empty state -->
     <div
@@ -31,7 +31,7 @@ const isLastStep = computed(() => {
       class="flex flex-col items-center justify-center p-6 py-10 text-center"
     >
       <div
-        class="mb-4 border border-zinc-300 bg-zinc-100 p-3 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800"
+        class="tray mb-4 p-3 text-amber-600 dark:text-amber-400"
       >
         <AppIcon
           class="h-8 w-8"
@@ -112,9 +112,9 @@ const isLastStep = computed(() => {
             :class="
               currentStepIndex === 0
                 ? 'pointer-events-none opacity-30'
-                : 'text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800'
+                : 'text-zinc-800 dark:text-zinc-200'
             "
-            class="border border-zinc-200 bg-zinc-50 py-2.5 text-xs font-bold transition-all active:scale-95 3xl:py-3 3xl:text-sm dark:border-zinc-800 dark:bg-zinc-900"
+            class="tile py-2.5 text-xs font-bold 3xl:py-3 3xl:text-sm"
           >
             {{ $t("hint.prev") }}
           </button>
@@ -123,10 +123,10 @@ const isLastStep = computed(() => {
             @click="emit('next-step')"
             :class="
               isLastStep
-                ? 'border-emerald-500 bg-emerald-600/20 text-emerald-700 hover:bg-emerald-600/30 dark:text-emerald-400'
-                : 'border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400'
+                ? 'tile-apply'
+                : 'tile-amber'
             "
-            class="border py-2.5 text-xs font-black transition-all active:scale-95"
+            class="tile py-2.5 text-xs font-black 3xl:py-3 3xl:text-sm"
           >
             {{ isLastStep ? $t("hint.apply") : $t("hint.next") }}
           </button>
