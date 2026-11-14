@@ -3,7 +3,14 @@ import { describe, it, expect } from "vitest";
 import type { Grid } from "../types/sudoku";
 
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
-import { solveLogically, gradePuzzle, generateGradedPuzzle, STUCK } from "../utils/sudokuGrader";
+import {
+  solveLogically,
+  gradePuzzle,
+  generateGradedPuzzle,
+  neededTechniques,
+  techniquesRequired,
+  STUCK,
+} from "../utils/sudokuGrader";
 
 const grade = (d: string, seed: number) => generateGradedPuzzle(d, makeRng(seed)).grade;
 
@@ -74,5 +81,25 @@ describe("sudokuGrader — graded generation", () => {
     const avg = (d: string) => [1, 2, 3, 4, 5].reduce((s, seed) => s + grade(d, seed), 0) / 5;
     expect(avg("beginner")).toBeLessThanOrEqual(avg("hard"));
     expect(avg("easy")).toBeLessThanOrEqual(avg("expert"));
+  });
+});
+
+describe("sudokuGrader — neededTechniques", () => {
+  it("lists only singles when nothing harder is needed", () => {
+    const needed = neededTechniques(generatePuzzle(20, makeRng(5)).puzzle);
+    expect(needed.length).toBeGreaterThan(0);
+    for (const id of needed) expect(["naked-single", "hidden-single"]).toContain(id);
+  });
+
+  it("drops the singles and puts the hardest technique first", () => {
+    const { puzzle } = generateGradedPuzzle("expert", makeRng(7));
+    // The solver met these easiest-first: hidden single, pointing, hidden pair, xy-wing, naked single.
+    expect([...techniquesRequired(puzzle)!]).toContain("naked-single");
+    expect(neededTechniques(puzzle)).toEqual(["xy-wing", "hidden-pair", "pointing"]);
+  });
+
+  it("is empty when logic alone can't finish the board", () => {
+    const empty: Grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
+    expect(neededTechniques(empty)).toEqual([]);
   });
 });

@@ -45,6 +45,20 @@ interface DailyRecord {
   mistakes: number;
 }
 
+/** Fastest completed Daily among the stored `keys`, in seconds; 0 when there is none. */
+export function fastestDaily(
+  keys: string[],
+  getRecordFor: (dateKey: string) => DailyRecord | null,
+): number {
+  let best = 0;
+  for (const key of keys) {
+    if (!key.startsWith(SAVE_PREFIX)) continue;
+    const r = getRecordFor(key.slice(SAVE_PREFIX.length));
+    if (r?.completed && r.time > 0 && (best === 0 || r.time < best)) best = r.time;
+  }
+  return best;
+}
+
 export function useDailyPuzzle() {
   // Evaluated per call, not once: a tab or PWA left open past midnight must roll over.
   const todayKey = () => localDateKey();
@@ -70,5 +84,15 @@ export function useDailyPuzzle() {
     return computeStreak((k) => getRecordFor(k)?.completed === true);
   }
 
-  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, todayKey };
+  function getBestTime(): number {
+    let keys: string[] = [];
+    try {
+      keys = Object.keys(localStorage);
+    } catch {
+      // SSR or blocked storage: no history to compare against.
+    }
+    return fastestDaily(keys, getRecordFor);
+  }
+
+  return { getBoard, getRecord, getRecordFor, markComplete, getStreak, getBestTime, todayKey };
 }

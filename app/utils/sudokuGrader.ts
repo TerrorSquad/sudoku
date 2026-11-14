@@ -1216,3 +1216,42 @@ export function techniquesRequired(puzzle: Grid): Set<TechniqueId> | null {
   }
   return null;
 }
+
+// findNextMove's dispatch order, easiest first (pointing and box-line share one finder).
+// `satisfies` makes tsc fail when a TechniqueId is added without a rank here.
+const SOLVER_RANK = {
+  "naked-single": 0,
+  "hidden-single": 1,
+  pointing: 2,
+  "box-line": 3,
+  "naked-pair": 4,
+  "hidden-pair": 5,
+  "naked-triple": 6,
+  "hidden-triple": 7,
+  "x-wing": 8,
+  "naked-quad": 9,
+  "hidden-quad": 10,
+  swordfish: 11,
+  skyscraper: 12,
+  "two-string-kite": 13,
+  "finned-x-wing": 14,
+  "unique-rectangle": 15,
+  "xy-wing": 16,
+  "w-wing": 17,
+  jellyfish: 18,
+  "xyz-wing": 19,
+  "simple-coloring": 20,
+  "bug-plus-one": 21,
+} satisfies Record<TechniqueId, number>;
+
+/**
+ * The distinct techniques `puzzle`'s givens need, hardest first, for the win screen. Singles are
+ * left out unless nothing harder was needed; empty when logic alone can't finish the board.
+ */
+export function neededTechniques(puzzle: Grid): TechniqueId[] {
+  const used = techniquesRequired(puzzle);
+  if (!used) return [];
+  const all = [...used].toSorted((a, b) => SOLVER_RANK[b] - SOLVER_RANK[a]);
+  const hard = all.filter((id) => id !== "naked-single" && id !== "hidden-single");
+  return hard.length ? hard : all;
+}

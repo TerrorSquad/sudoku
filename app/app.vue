@@ -35,6 +35,7 @@ import { computeScore, type ScoreBreakdown } from "./utils/score";
 import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import { digitLabel } from "./utils/sudokuColors";
+import { neededTechniques } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
@@ -159,6 +160,10 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
+// What the won puzzle's givens required (not what the player used), for the win modal.
+const neededTechs = ref<TechniqueId[]>([]);
+// The Academy lesson to open on, when a win-modal chip led there.
+const academyFocus = ref<TechniqueId | null>(null);
 const mistakeExplainer = ref<string>("");
 
 const flashCells = ref<FlashCell[]>([]);
@@ -204,6 +209,14 @@ const playerLevel = computed(() => {
   void currentScreen.value;
   return levelFor(score.getStats().total);
 });
+// The time to beat, read when a game opens (0 hides it): the fastest Daily in the Daily, else
+// this difficulty's best. Custom and practice boards vary too much for a best to mean anything.
+const bestTime = computed(() => {
+  void currentScreen.value;
+  if (practiceTechnique.value || activeDifficulty.value === "custom") return 0;
+  if (isDailyMode.value) return dailyPuzzle.getBestTime();
+  return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
+});
 const dailyStreak = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getStreak();
@@ -237,6 +250,12 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalTitle.value = title;
   modalMessage.value = message;
   isWinState.value = win;
+  // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
+  const needed = win ? neededTechniques(initialBoard.value) : [];
+  // A drill's pre-filled notes are invisible to the grader, so lead with what was practised.
+  const practised = practiceTechnique.value;
+  neededTechs.value =
+    win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -321,6 +340,12 @@ function handleModalClose() {
   isDailyMode.value = false;
   currentScreen.value = "menu";
   timer.resetTimer();
+}
+
+function openLesson(id: TechniqueId) {
+  handleModalClose();
+  academyFocus.value = id;
+  currentScreen.value = "academy";
 }
 
 function resumeSavedGame(s: GameSave) {
@@ -927,7 +952,13 @@ onUnmounted(() => {
               </span>
             </button>
 
-            <button @click="currentScreen = 'academy'" class="tile menu-cell">
+            <button
+              @click="
+                academyFocus = null;
+                currentScreen = 'academy';
+              "
+              class="tile menu-cell"
+            >
               <AppIcon class="h-5 w-5 text-violet-600 dark:text-violet-300" path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               <span>{{ $t("menu.academy") }}</span>
             </button>
@@ -960,6 +991,7 @@ onUnmounted(() => {
         <!-- ACADEMY -->
         <SudokuAcademy
           v-else-if="currentScreen === 'academy'"
+          :focus="academyFocus"
           @back-to-menu="currentScreen = 'menu'"
           @practice="handlePractice"
         />
@@ -1071,6 +1103,8 @@ onUnmounted(() => {
               :mistakes="mistakes"
               :max-mistakes="mistakeLimit"
               :show-timer="showTimer && !gameZen"
+              :best-time="bestTime ? timer.formatTime(bestTime) : ''"
+              :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
 :difficulty="difficultyLabel"
               @toggle-pause="timer.togglePause()"
@@ -1344,6 +1378,22 @@ onUnmounted(() => {
                 "
                 >{{ hintsUsed }}</span
               >
+            </div>
+            <div v-if="neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
+              <p class="mb-2 text-xs font-semibold text-zinc-500">
+                {{ $t("modal.needed") }}
+              </p>
+              <div class="flex flex-wrap gap-1">
+                <button
+                  v-for="id in neededTechs"
+                  :key="id"
+                  @click="openLesson(id)"
+                  :title="$t('modal.openLesson')"
+                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                >
+                  {{ $t(`hint.move.${id}.name`) }}
+                </button>
+              </div>
             </div>
             <div v-if="techniqueLog.length" class="px-3 py-2">
               <p class="mb-2 text-xs font-semibold text-zinc-500">

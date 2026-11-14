@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 
 import type { TechniqueId } from "../utils/sudokuGrader";
 
@@ -7,6 +7,9 @@ import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
 import { masteryFor } from "../utils/mastery";
 import ExampleGrid from "./ExampleGrid.vue";
+
+// Opens on this technique's lesson, expanded and scrolled to (the win screen links here).
+const props = defineProps<{ focus?: TechniqueId | null }>();
 
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
@@ -165,7 +168,13 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
   }
 }
 
-const expanded = ref<Set<string>>(new Set());
+const expanded = ref<Set<string>>(new Set(props.focus ? [props.focus] : []));
+onMounted(() => {
+  const card = props.focus && document.getElementById(`lesson-${props.focus}`);
+  if (!card) return;
+  card.scrollIntoView();
+  card.focus({ preventScroll: true }); // keyboard and screen-reader users land on the lesson
+});
 function toggleExample(id: string) {
   const next = new Set(expanded.value);
   if (next.has(id)) next.delete(id);
@@ -250,8 +259,10 @@ const total = computed(() => techniques.length);
           <div
             v-for="tech in byTier(tier)"
             :key="tech.id"
+            :id="`lesson-${tech.id}`"
+            tabindex="-1"
             :class="tierStyles[tier].border"
-            class="panel cursor-pointer p-4 sm:p-5"
+            class="panel cursor-pointer scroll-mt-24 p-4 sm:p-5"
             @click="toggleExample(tech.id)"
           >
             <div class="mb-3 flex items-start justify-between gap-3">
