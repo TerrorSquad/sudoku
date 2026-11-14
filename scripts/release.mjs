@@ -1,4 +1,4 @@
-// `pnpm wavedash:release`: builds and pushes to Wavedash (`pnpm wavedash`), then publishes that
+// `pnpm wavedash:release [notes]`: builds and pushes to Wavedash (`pnpm wavedash`), then publishes that
 // build. Right after the push the build is still processing and publish fails with "Only
 // completed builds can be published", so that error (and only that one) is retried for ~2 minutes.
 import { spawn } from "node:child_process";
@@ -27,7 +27,10 @@ if (!id) {
   process.exit(1);
 }
 
-const args = ["publish", id, "--title", `v${process.env.npm_package_version}`, "-y"];
+// Extra arguments are release notes for `wavedash publish`, e.g.
+// `pnpm wavedash:release --summary "…" --added "…" --fixed "…"`.
+const notes = process.argv.slice(2).filter((a) => a !== "--");
+const args = ["publish", id, "--title", `v${process.env.npm_package_version}`, ...notes, "-y"];
 for (let attempt = 1; ; attempt++) {
   const { code, out } = await run("wavedash", args);
   if (code === 0) break;
