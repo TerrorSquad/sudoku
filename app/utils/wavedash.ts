@@ -6,9 +6,11 @@ import {
   CLOUD_FILE,
   META_KEY,
   SYNC_BACKUP_KEY,
+  cloudData,
   decide,
   hashData,
   readCloud,
+  withLocalOnly,
   type CloudFile,
   type CloudRead,
   type SyncMeta,
@@ -244,7 +246,11 @@ export async function syncFromCloud(timeoutMs = 5000) {
     ]);
     if (!cloud) return;
     const local = createBackup(localStorage);
-    const decision = decide(local.data, cloud, readJSON<SyncMeta | null>(META_KEY, null));
+    const decision = decide(
+      cloudData(local.data),
+      cloud,
+      readJSON<SyncMeta | null>(META_KEY, null),
+    );
     switch (decision.action) {
       case "hold":
         return;
@@ -253,7 +259,7 @@ export async function syncFromCloud(timeoutMs = 5000) {
         break;
       case "restore":
         if (Object.keys(local.data).length && !keep("restore", local)) return;
-        applyBackup(localStorage, decision.file);
+        applyBackup(localStorage, withLocalOnly(decision.file, local.data));
         markSynced(decision.file);
         break;
       case "upload":
@@ -273,7 +279,8 @@ const markSynced = (file: CloudFile) =>
   writeJSON(META_KEY, { syncedAt: file.updatedAt, syncedHash: hashData(file.data) });
 
 async function upload(wd: WavedashSDK, force = false) {
-  const backup = createBackup(localStorage);
+  const local = createBackup(localStorage);
+  const backup = { ...local, data: cloudData(local.data) };
   if (!Object.keys(backup.data).length) return;
   const unchanged = hashData(backup.data) === readJSON<SyncMeta | null>(META_KEY, null)?.syncedHash;
   if (unchanged && !force) return;

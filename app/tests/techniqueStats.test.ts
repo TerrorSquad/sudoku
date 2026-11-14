@@ -12,10 +12,46 @@ describe("migrateTechniqueStats", () => {
   });
 
   it("keeps a key it can't map instead of dropping it", () => {
-    expect(migrateTechniqueStats({ "Hidden Single — Row": 2, "Naked Pair": 1 })).toEqual({
-      "Hidden Single — Row": 2,
+    expect(migrateTechniqueStats({ "W-Wing": 2, "Naked Pair": 1 })).toEqual({
+      "W-Wing": 2,
       "naked-pair": 1,
     });
+  });
+
+  it("maps the titles of earlier versions, unit suffixes and all", () => {
+    const legacy: Record<string, string> = {
+      "Hidden Single — Row": "hidden-single",
+      "Hidden Single — Column": "hidden-single",
+      "Hidden Single — Box": "hidden-single",
+      "Skriveni Singl — Red": "hidden-single",
+      "Skriveni Singl — Kolona": "hidden-single",
+      "Skriveni Singl — Kvadrant": "hidden-single",
+      "Naked Pair — Row": "naked-pair",
+      "Naked Pair — Column": "naked-pair",
+      "Naked Pair — Box": "naked-pair",
+      "Goli Par — Kvadrant": "naked-pair",
+      "Pointing Pair — Row": "pointing",
+      "Pointing Pair — Column": "pointing",
+      "Pokazujući Par — Kolona": "pointing",
+      "Box-Line Reduction — Row": "box-line",
+      "Redukcija Kvadrant-Linija — Kolona": "box-line",
+      "Goli Singl": "naked-single",
+      "Skriveni Par": "hidden-pair",
+      "Naked Triple — Row 3": "naked-triple",
+      "Goli Triplet — Red 3": "naked-triple",
+      "Skriveni Triplet — Kolona 2": "hidden-triple",
+      "Skriveni Kvadrupl — Kvadrant 5": "hidden-quad",
+      Meduza: "jellyfish",
+      Sabljarka: "swordfish",
+      Neboder: "skyscraper",
+      "Two-String Kite": "two-string-kite",
+      "Zmaj sa Dva Konca": "two-string-kite",
+      "Unique Rectangle — Type 1": "unique-rectangle",
+      "Jedinstveni Pravougaonik — Tip 2": "unique-rectangle",
+    };
+    for (const [title, id] of Object.entries(legacy)) {
+      expect(migrateTechniqueStats({ [title]: 1 }), title).toEqual({ [id]: 1 });
+    }
   });
 
   it("maps every technique title either locale shows", () => {

@@ -20,6 +20,7 @@ test("with mistakes hidden, a hint points at a wrong entry and clears it", async
   await page.getByRole("button", { name: "Hint", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Wrong digit" })).toBeVisible();
   await expect(page.getByText("The 1 at R5C5 is wrong.")).toBeVisible();
+  await expect(page.getByText("The wrong digit", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await page.getByRole("button", { name: "Apply", exact: true }).click();
 

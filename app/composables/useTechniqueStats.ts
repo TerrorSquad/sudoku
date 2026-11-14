@@ -5,46 +5,63 @@ import { readJSON, writeJSON } from "../utils/safeJson";
 const KEY = "sudoku_v1_technique_stats";
 
 // Counts used to be keyed by the hint title in the player's language at the time, so switching
-// language split them. These are the titles that were ever stored (frozen: new counts use ids).
+// language split them. Every title ever stored (per git history) is one of these base names, in
+// any case, optionally followed by " — <unit or type>" ("Hidden Single — Row", "Goli Triplet —
+// Red 3", "Unique Rectangle — Type 1"). Frozen: new counts use ids. Titles of techniques the
+// solver no longer has (W-Wing, XY-Chain, BUG+1…) have no id and are kept as they are.
 const LEGACY_TITLES: Record<string, TechniqueId> = {
-  "Naked Single": "naked-single",
-  "Goli singl": "naked-single",
-  "Hidden Single": "hidden-single",
-  "Skriveni singl": "hidden-single",
-  "Pointing Pair": "pointing",
-  "Pokazujući par": "pointing",
-  "Box-Line Reduction": "box-line",
-  "Redukcija kvadrat-linija": "box-line",
-  "Naked Pair": "naked-pair",
-  "Goli par": "naked-pair",
-  "Hidden Pair": "hidden-pair",
-  "Skriveni par": "hidden-pair",
-  "Naked Triple": "naked-triple",
-  "Goli tripl": "naked-triple",
-  "Hidden Triple": "hidden-triple",
-  "Skriveni tripl": "hidden-triple",
-  "Naked Quad": "naked-quad",
-  "Goli kvadrupl": "naked-quad",
-  "Hidden Quad": "hidden-quad",
-  "Skriveni kvadrupl": "hidden-quad",
-  "X-Wing": "x-wing",
-  Swordfish: "swordfish",
-  Jellyfish: "jellyfish",
-  "XY-Wing": "xy-wing",
-  "XYZ-Wing": "xyz-wing",
-  Skyscraper: "skyscraper",
-  "2-String Kite": "two-string-kite",
-  "Unique Rectangle": "unique-rectangle",
-  "Jedinstveni pravougaonik": "unique-rectangle",
-  "Simple Coloring": "simple-coloring",
-  "Jednostavno bojenje": "simple-coloring",
+  "naked single": "naked-single",
+  "goli singl": "naked-single",
+  "hidden single": "hidden-single",
+  "skriveni singl": "hidden-single",
+  "pointing pair": "pointing",
+  "pokazujući par": "pointing",
+  "box-line reduction": "box-line",
+  "redukcija kvadrat-linija": "box-line",
+  "redukcija kvadrant-linija": "box-line",
+  "naked pair": "naked-pair",
+  "goli par": "naked-pair",
+  "hidden pair": "hidden-pair",
+  "skriveni par": "hidden-pair",
+  "naked triple": "naked-triple",
+  "goli tripl": "naked-triple",
+  "goli triplet": "naked-triple",
+  "hidden triple": "hidden-triple",
+  "skriveni tripl": "hidden-triple",
+  "skriveni triplet": "hidden-triple",
+  "naked quad": "naked-quad",
+  "goli kvadrupl": "naked-quad",
+  "hidden quad": "hidden-quad",
+  "skriveni kvadrupl": "hidden-quad",
+  "x-wing": "x-wing",
+  swordfish: "swordfish",
+  sabljarka: "swordfish",
+  jellyfish: "jellyfish",
+  meduza: "jellyfish",
+  "xy-wing": "xy-wing",
+  "xyz-wing": "xyz-wing",
+  skyscraper: "skyscraper",
+  neboder: "skyscraper",
+  "2-string kite": "two-string-kite",
+  "two-string kite": "two-string-kite",
+  "zmaj sa dva konca": "two-string-kite",
+  "unique rectangle": "unique-rectangle",
+  "jedinstveni pravougaonik": "unique-rectangle",
+  "simple coloring": "simple-coloring",
+  "jednostavno bojenje": "simple-coloring",
 };
+
+/** The id a stored key stands for: itself unless it's a legacy title. */
+function idOf(key: string): string {
+  const base = key.split(" — ")[0]!.toLowerCase();
+  return Object.hasOwn(LEGACY_TITLES, base) ? LEGACY_TITLES[base]! : key;
+}
 
 /** Re-keys title-keyed counts by technique id, summing languages; unknown keys are kept as-is. */
 export function migrateTechniqueStats(stats: Record<string, number>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [key, n] of Object.entries(stats)) {
-    const id = Object.hasOwn(LEGACY_TITLES, key) ? LEGACY_TITLES[key]! : key;
+    const id = idOf(key);
     out[id] = (out[id] ?? 0) + n;
   }
   return out;
@@ -53,7 +70,7 @@ export function migrateTechniqueStats(stats: Record<string, number>): Record<str
 export function useTechniqueStats() {
   function getAll(): Record<string, number> {
     const stored = readJSON<Record<string, number>>(KEY, {});
-    if (!Object.keys(stored).some((k) => Object.hasOwn(LEGACY_TITLES, k))) return stored;
+    if (Object.keys(stored).every((k) => idOf(k) === k)) return stored;
     const migrated = migrateTechniqueStats(stored);
     writeJSON(KEY, migrated);
     return migrated;

@@ -88,12 +88,13 @@ const isLastStep = computed(() => {
       <div
         class="space-y-1.5 border-t border-zinc-200 pt-3 text-xs font-medium text-zinc-500 3xl:text-sm dark:border-zinc-800/60"
       >
-        <!-- Only the colours this hint uses: a placement has a target, a removal has eliminations. -->
+        <!-- Only the colours this hint uses: a placement has a target, a removal has eliminations,
+             a wrong entry only its cell. -->
         <div v-if="activeComplexHint.targetCell" class="flex items-center gap-2">
           <span class="h-3 w-3 shrink-0 border border-emerald-500 bg-emerald-500/20" />
-          <span>{{ $t("hint.targetCell") }}</span>
+          <span>{{ $t(activeComplexHint.wrongEntry ? "hint.wrongCell" : "hint.targetCell") }}</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div v-if="!activeComplexHint.wrongEntry" class="flex items-center gap-2">
           <span class="h-3 w-3 shrink-0 border border-indigo-400 bg-indigo-500/20" />
           <span>{{ $t("hint.triggerCells") }}</span>
         </div>

@@ -61,8 +61,9 @@ export function useDailyPuzzle() {
     return getRecordFor(todayKey());
   }
 
-  function markComplete(time: number, mistakes: number): void {
-    writeJSON(SAVE_PREFIX + todayKey(), { completed: true, time, mistakes });
+  /** `dateKey` is the Daily's own day: a game started before midnight can end after it. */
+  function markComplete(time: number, mistakes: number, dateKey: string): void {
+    writeJSON(SAVE_PREFIX + dateKey, { completed: true, time, mistakes });
   }
 
   function getStreak(): number {

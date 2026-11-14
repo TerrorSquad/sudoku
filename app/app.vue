@@ -249,7 +249,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
     } else {
-      if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
+      if (isDailyMode.value)
+        dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
       const breakdown = computeScore({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
@@ -266,7 +267,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         seconds: timer.timerSeconds.value,
         mistakes: mistakes.value,
         hints: hintsUsed.value,
-        daily: isDailyMode.value ? dailyPuzzle.todayKey() : null,
+        daily: isDailyMode.value ? dailyDate : null,
       });
       lastScore.value = breakdown;
       isNewBest.value = result.isNewBest;
@@ -563,7 +564,6 @@ function handleInputNumber(num: number) {
 function handleNextStep() {
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
-  const wasPlacement = !!placed;
   nextHintStep(() => {
     if (tech) {
       if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
@@ -580,7 +580,9 @@ function handleNextStep() {
         true,
       );
     } else {
-      hintStatus.value = wasPlacement ? t("game.cellFilled") : t("game.candidatesCleared");
+      hintStatus.value = t(
+        !tech ? "game.wrongCleared" : placed ? "game.cellFilled" : "game.candidatesCleared",
+      );
       hintBody.value = "";
     }
   });
@@ -616,7 +618,6 @@ function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placed = engine.activeMove.value?.placement?.num;
-  const wasPlacement = !!placed;
   hintsUsed.value++;
   if (tech) {
     if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
@@ -627,7 +628,9 @@ function handleInstantApplyHint() {
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
   } else {
-    hintStatus.value = wasPlacement ? t("game.instantApplied") : t("game.candidatesCleared");
+    hintStatus.value = t(
+      !tech ? "game.wrongCleared" : placed ? "game.instantApplied" : "game.candidatesCleared",
+    );
     hintBody.value = "";
   }
 }
