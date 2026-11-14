@@ -41,7 +41,7 @@ const today = daily.todayKey();
               ? 'bg-violet-500 dark:bg-violet-400'
               : 'bg-zinc-200 dark:bg-zinc-800',
           d.key === today
-            ? 'ring-1 ring-violet-500 ring-offset-1 dark:ring-violet-300 dark:ring-offset-[#0d141b]'
+            ? 'ring-1 ring-violet-500 ring-offset-1 dark:ring-violet-300 dark:ring-offset-[var(--ground)]'
             : '',
         ]"
         class="h-5 w-5"

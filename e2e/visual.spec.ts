@@ -53,8 +53,8 @@ function savedGame() {
 }
 
 const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-// The in-game clock only (stats tables also use font-mono/tabular-nums but are static).
-const TIMER = ".font-mono.tabular-nums.font-bold";
+// The in-game clock only.
+const TIMER = "[data-testid=timer]";
 
 async function settle(page: Page) {
   // The first capture after a cold dev-server start can land mid-hydration.

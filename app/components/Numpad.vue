@@ -46,7 +46,7 @@ defineEmits<{
       {{ " " }}
       <span
         v-if="9 - counts[n]! > 0"
-        class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-400"
+        class="absolute top-1 right-1.5 text-[10px] leading-none font-extrabold text-violet-600 tabular-nums 3xl:text-[13px] dark:text-violet-300"
       >
         {{ Math.max(0, 9 - counts[n]!) }}
       </span>

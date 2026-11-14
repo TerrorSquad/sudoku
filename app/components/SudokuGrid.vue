@@ -126,25 +126,27 @@ function hasConflict(r: number, c: number): boolean {
 <!-- Non-scoped: the .dark ancestor lives on <html>. Unlayered, so these beat the plain Tailwind
      utilities, while the !important highlight utilities (selection, hints, conflicts) still win. -->
 <style>
+/* Graph paper (the default; stored as "tiles"): white squares, pale-blue rules, navy box lines,
+   the printed puzzle in navy and your entries in pen blue. Dark: chalk on slate. */
 .board[data-theme="tiles"] {
-  --cell-bg: #f7f9fc;
-  --cell-peer: #dfe5ef;
-  --cell-line: #c3cbd8;
-  --cell-box: #4d5a6c;
-  --cell-frame: #3a4556;
-  --cell-given: #17202b;
-  --cell-entry: #2b4fa8;
-  --cell-note: #4d5a6c;
+  --cell-bg: #fdfdfb;
+  --cell-peer: #e3ebf7;
+  --cell-line: #b9c8de;
+  --cell-box: #17294a;
+  --cell-frame: #17294a;
+  --cell-given: #17294a;
+  --cell-entry: #2a52a8;
+  --cell-note: #55657a;
 }
 .dark .board[data-theme="tiles"] {
-  --cell-bg: #131b24;
-  --cell-peer: #233042;
-  --cell-line: #2f3b4c;
-  --cell-box: #8796a9;
-  --cell-frame: #94a1b2;
-  --cell-given: #eef1f5;
-  --cell-entry: #93b3f1;
-  --cell-note: #a3afc0;
+  --cell-bg: #222c36;
+  --cell-peer: #2e3a47;
+  --cell-line: #3d4a59;
+  --cell-box: #cdd5de;
+  --cell-frame: #e6eaef;
+  --cell-given: #f4f6f8;
+  --cell-entry: #9cbcf0;
+  --cell-note: #a9b5c3;
 }
 /* Newsprint: ink on grey paper, a ballpoint for your entries, serif digits like the puzzle page. */
 .board[data-theme="newsprint"] {
@@ -216,5 +218,6 @@ function hasConflict(r: number, c: number): boolean {
 }
 .board .cell-note {
   color: var(--cell-note);
+  font-family: var(--font-sans);
 }
 </style>

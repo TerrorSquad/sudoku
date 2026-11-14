@@ -1,41 +1,55 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* "Solver's notebook": cool graph-paper greys + a blue pencil, with amber as the highlighter.
-   Re-tuning the zinc and violet scales here recolours every existing utility at once. */
+/* Graph paper: squared paper, a printed puzzle in navy ink, your entries in fountain-pen blue,
+   mistakes in a teacher's red pen and a yellow highlighter. Dark mode is chalk on a slate.
+   Re-tuning the zinc, violet and rose scales here recolours every existing utility at once. */
 @theme {
   --breakpoint-3xl: 1600px;
 
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bricolage Grotesque", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  /* Board digits and key caps. Not monospace any more: Bricolage has sturdy, legible numerals. */
-  --font-game: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  /* Board digits and key caps: printed numerals, like a puzzle page. */
+  --font-game: "Fraunces", ui-serif, Georgia, serif;
 
-  /* Ink and graph paper (cool slate instead of neutral grey). */
-  --color-zinc-50: #f6f8fa;
-  --color-zinc-100: #eef1f5;
-  --color-zinc-200: #dde3ea;
-  --color-zinc-300: #c5cdd8;
-  --color-zinc-400: #94a1b2;
-  --color-zinc-500: #566377;
-  --color-zinc-600: #4d5a6c;
-  --color-zinc-700: #3a4556;
-  --color-zinc-800: #252f3d;
-  --color-zinc-900: #17202b;
-  --color-zinc-950: #0d141b;
+  /* Paper and navy ink. */
+  --color-zinc-50: #f8fafc;
+  --color-zinc-100: #eef2f5;
+  --color-zinc-200: #dbe2ea;
+  --color-zinc-300: #c2ccd7;
+  --color-zinc-400: #8f9cad;
+  --color-zinc-500: #55657a;
+  --color-zinc-600: #475870;
+  --color-zinc-700: #33465e;
+  --color-zinc-800: #223650;
+  --color-zinc-900: #17294a;
+  --color-zinc-950: #0e1a30;
 
-  /* Blue pencil: player entries, primary actions, links. */
-  --color-violet-50: #eef3fd;
-  --color-violet-100: #dce7fb;
-  --color-violet-200: #bdd1f7;
-  --color-violet-300: #93b3f1;
-  --color-violet-400: #6b92e9;
-  --color-violet-500: #4a74dc;
-  --color-violet-600: #345fc9;
-  --color-violet-700: #2b4fa8;
-  --color-violet-800: #274387;
-  --color-violet-900: #253b6b;
-  --color-violet-950: #172544;
+  /* Fountain-pen blue: player entries, primary actions, links. */
+  --color-violet-50: #eef3fb;
+  --color-violet-100: #dae5f6;
+  --color-violet-200: #b7ccee;
+  --color-violet-300: #8aabe2;
+  --color-violet-400: #5d87d2;
+  --color-violet-500: #3b67bf;
+  --color-violet-600: #2a52a8;
+  --color-violet-700: #234489;
+  --color-violet-800: #1f3a6f;
+  --color-violet-900: #1c3259;
+  --color-violet-950: #121f38;
+
+  /* Red pen. */
+  --color-rose-50: #fdf1f0;
+  --color-rose-100: #fbe0dd;
+  --color-rose-200: #f6c0ba;
+  --color-rose-300: #ee978e;
+  --color-rose-400: #e26a5f;
+  --color-rose-500: #d1473b;
+  --color-rose-600: #c2352b;
+  --color-rose-700: #a12a22;
+  --color-rose-800: #842520;
+  --color-rose-900: #6e231f;
+  --color-rose-950: #3c0f0c;
 }
 
 @layer base {
@@ -47,83 +61,135 @@
   }
 }
 
-/* Secondary text is zinc-500 on both paper and slate. Dark needs a lighter step than light
-   does to keep 4.5:1, and swapping the variable keeps every existing utility honest. */
+/* Dark mode is chalk on a slate: the same scale, re-tuned so dark: utilities land on slate greys
+   and chalk whites. Secondary text (zinc-500) needs a lighter step to keep 4.5:1. */
 .dark {
-  --color-zinc-500: #8796a9;
+  --color-zinc-50: #f4f6f8;
+  --color-zinc-100: #e6eaef;
+  --color-zinc-200: #cdd5de;
+  --color-zinc-300: #b3becb;
+  --color-zinc-400: #94a2b3;
+  --color-zinc-500: #97a5b6;
+  --color-zinc-600: #5a6a7e;
+  --color-zinc-700: #3a4757;
+  --color-zinc-800: #2a3542;
+  --color-zinc-900: #1f2934;
+  --color-zinc-950: #161e27;
 }
 
-/* Puzzle box: screens are trays of raised tiles that sink when pressed. The lip under a tile is
-   a solid offset, not a blurred shadow, so tiles read as physical pieces. */
+/* The page is squared paper: a 24px grid, a stronger line every five squares. */
 :root {
-  --ground: #e8edf3;
-  --tray: #d9e0e9;
-  --tile: #ffffff;
-  --tile-edge: #c5cdd8;
-  --tile-lip: #b1bccb;
+  --ground: #f1f4f7;
+  --grid-fine: rgb(42 82 168 / 0.07);
+  --grid-bold: rgb(42 82 168 / 0.13);
+  --tray: rgb(255 255 255 / 0.55);
+  --tray-line: #17294a;
+  --tile: #fdfdfb;
+  --tile-edge: rgb(23 41 74 / 0.28);
+  --tile-lip: rgb(23 41 74 / 0.16);
 }
 .dark {
-  --ground: #0d141b;
-  --tray: #070b10;
-  --tile: #17202b;
-  --tile-edge: #2a3544;
-  --tile-lip: #03060a;
+  --ground: #1c252f;
+  --grid-fine: rgb(255 255 255 / 0.035);
+  --grid-bold: rgb(255 255 255 / 0.07);
+  --tray: rgb(0 0 0 / 0.18);
+  --tray-line: #cdd5de;
+  --tile: #253039;
+  --tile-edge: rgb(230 234 239 / 0.2);
+  --tile-lip: rgb(0 0 0 / 0.35);
+}
+/* The grid sits on its own fixed layer: a background-image on the shell itself would hide every
+   text's background from axe, which then skips its contrast check. */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--ground);
+}
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(var(--grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-fine) 1px, transparent 1px);
+  background-size:
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
+  background-position: -1px -1px;
 }
 
+/* Cards are paper on the grid: a pen outline and a printed offset shadow. A tray is a box drawn
+   in ink around the cards it holds, like a sudoku box around its cells. */
 @layer components {
   .tray {
     background: var(--tray);
-    border-radius: 20px;
-    box-shadow: inset 0 2px 0 rgb(0 0 0 / 0.07);
+    border: 2px solid var(--tray-line);
+    border-radius: 10px;
   }
   .panel {
     background: var(--tile);
-    border: 1px solid var(--tile-edge);
-    border-radius: 14px;
+    border: 1.5px solid var(--tile-edge);
+    border-radius: 8px;
+    box-shadow: 3px 3px 0 var(--tile-lip);
   }
   .tile {
     background: var(--tile);
-    border: 1px solid var(--tile-edge);
-    border-radius: 12px;
-    box-shadow: 0 4px 0 var(--tile-lip);
+    border: 1.5px solid var(--tile-edge);
+    border-radius: 7px;
+    box-shadow: 2px 3px 0 var(--tile-lip);
     transition:
       transform 0.07s ease-out,
       box-shadow 0.07s ease-out;
   }
   .tile:where(button, a, label):hover:not(:disabled) {
-    filter: brightness(1.04);
+    border-color: var(--tray-line);
   }
   .tile:where(button, a, label):active:not(:disabled),
   .tile[aria-pressed="true"] {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--tile-lip);
+    transform: translate(2px, 3px);
+    box-shadow: 0 0 0 var(--tile-lip);
   }
   .tile:disabled {
-    box-shadow: 0 1px 0 var(--tile-lip);
-    transform: translateY(3px);
+    box-shadow: none;
+    border-style: dashed;
   }
+  /* Navy ink: the one filled card per screen. */
   .tile-primary {
-    --tile: var(--color-violet-600);
-    --tile-edge: var(--color-violet-700);
-    --tile-lip: var(--color-violet-900);
-    color: #fff;
+    --tile: var(--color-zinc-900);
+    --tile-edge: var(--color-zinc-900);
+    --tile-lip: rgb(23 41 74 / 0.3);
+    color: #fdfdfb;
   }
+  .dark .tile-primary {
+    --tile: #e6eaef;
+    --tile-edge: #e6eaef;
+    --tile-lip: rgb(0 0 0 / 0.4);
+    color: #17294a;
+  }
+  /* Highlighter yellow. */
   .tile-amber {
-    --tile: #fcd34d;
-    --tile-edge: #f0b429;
-    --tile-lip: #b7791f;
-    color: #422006;
-  }
-  .tile-apply {
-    --tile: #059669;
-    --tile-edge: #047857;
-    --tile-lip: #064e3b;
-    color: #fff;
+    --tile: #ffe680;
+    --tile-edge: #d9b52c;
+    --tile-lip: rgb(160 120 10 / 0.3);
+    color: #3d2c00;
   }
   .dark .tile-amber {
-    --tile: #3b2f12;
-    --tile-edge: #6b5216;
-    --tile-lip: #1c1406;
-    color: #fde68a;
+    --tile: #4a3f17;
+    --tile-edge: #8a7428;
+    --tile-lip: rgb(0 0 0 / 0.35);
+    color: #ffe680;
+  }
+  /* Green ink: confirm. */
+  .tile-apply {
+    --tile: #2f7d54;
+    --tile-edge: #26674a;
+    --tile-lip: rgb(20 70 45 / 0.35);
+    color: #fff;
   }
 }

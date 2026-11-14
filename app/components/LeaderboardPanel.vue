@@ -118,7 +118,7 @@ function formatScore(score: number): string {
               {{ entry.globalRank }}
             </span>
             <span class="min-w-0 flex-1 truncate">{{ entry.username }}</span>
-            <span class="font-mono tabular-nums">{{ formatScore(entry.score) }}</span>
+            <span class="tabular-nums">{{ formatScore(entry.score) }}</span>
           </li>
         </ol>
         <p

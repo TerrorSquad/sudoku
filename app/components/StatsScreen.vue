@@ -61,6 +61,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
     >
       <button
+        :aria-label="$t('menu.back')"
         @click="emit('back-to-menu')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
@@ -173,7 +174,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
                   </td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.wins }}</td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.best.toLocaleString() }}</td>
-                  <td class="px-3 py-2 text-right font-mono tabular-nums">
+                  <td class="px-3 py-2 text-right tabular-nums">
                     {{ formatTime(row.bestTime) }}
                   </td>
                 </tr>

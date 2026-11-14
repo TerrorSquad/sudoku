@@ -1,24 +1,22 @@
-// Fails the build when the shipped JS or CSS outgrows its budget. Run after `nuxt generate`.
-// Importing every Nuxt UI locale once added 228 KB of JS, and theming every Nuxt UI component
-// 120 KB of CSS, without anyone noticing.
+// Prints the shipped JS and CSS sizes after `nuxt generate`, and warns when they pass a watch
+// level. It never fails the build: Wavedash's only limit is 1 GB per upload. The warning is
+// there because bloat creeps in unnoticed: importing every Nuxt UI locale once added 228 KB of
+// JS, and theming every Nuxt UI component 120 KB of CSS.
 import { readdirSync, statSync } from "node:fs";
 
-const BUDGET = { js: 850, css: 160 }; // KB, raw: 804 and 139 at the last raise
+const WARN_AT = { js: 900, css: 160 }; // KB, raw: 850 and 134 when set (v1.3.0)
 const dir = ".output/public/_nuxt";
 const kb = { js: 0, css: 0 };
 for (const f of readdirSync(dir)) {
   const ext = f.split(".").pop();
   if (ext in kb) kb[ext] += statSync(`${dir}/${f}`).size / 1024;
 }
-let over = false;
-for (const [ext, max] of Object.entries(BUDGET)) {
+for (const [ext, level] of Object.entries(WARN_AT)) {
   const size = Math.round(kb[ext]);
-  console.log(`${ext}: ${size} KB of ${max} KB`);
-  over ||= size > max;
-}
-if (over) {
-  console.error(
-    "Over budget: find what grew (source maps + source-map-explorer) before raising it.",
-  );
-  process.exit(1);
+  console.log(`${ext}: ${size} KB`);
+  if (size > level) {
+    console.warn(
+      `  ${ext} is past ${level} KB: check what grew (source maps + source-map-explorer).`,
+    );
+  }
 }

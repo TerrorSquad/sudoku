@@ -160,6 +160,8 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
+// Settings opened from the pause screen go back to the paused game, not the menu.
+const settingsFromGame = ref(false);
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
@@ -317,7 +319,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       particleCount: 160,
       spread: 80,
       origin: { y: 0.55 },
-      colors: ["#345fc9", "#6b92e9", "#bdd1f7", "#fbbf24", "#34d399"],
+      colors: ["#17294a", "#2a52a8", "#8aabe2", "#ffe680", "#c2352b"],
     });
   } else {
     lastScore.value = null;
@@ -863,7 +865,10 @@ onUnmounted(() => {
           class="relative flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12"
         >
           <button
-            @click="currentScreen = 'settings'"
+            @click="
+              settingsFromGame = false;
+              currentScreen = 'settings';
+            "
             :aria-label="$t('menu.settings')"
             :title="$t('menu.settings')"
             class="tile absolute top-4 right-4 grid h-11 w-11 place-items-center text-zinc-600 dark:text-zinc-300"
@@ -888,7 +893,7 @@ onUnmounted(() => {
                   >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
                 >
               </p>
-              <div class="tray mt-2 h-2 w-full overflow-hidden !rounded-full">
+              <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
                 <div
                   class="h-full rounded-full bg-violet-600"
                   :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
@@ -929,7 +934,7 @@ onUnmounted(() => {
                 <span class="block font-display text-2xl leading-tight font-extrabold sm:text-3xl">{{
                   $t("menu.start")
                 }}</span>
-                <span class="mt-1 block text-xs font-medium text-violet-100">{{
+                <span class="mt-1 block text-xs font-medium opacity-80">{{
                   $t("menu.startHint")
                 }}</span>
               </span>
@@ -1012,7 +1017,8 @@ onUnmounted(() => {
         <!-- SETTINGS -->
         <SettingsScreen
           v-else-if="currentScreen === 'settings'"
-          @back-to-menu="currentScreen = 'menu'"
+          :in-game="settingsFromGame"
+          @back-to-menu="currentScreen = settingsFromGame ? 'game' : 'menu'"
         />
 
         <!-- CUSTOM IMPORT -->
@@ -1186,13 +1192,13 @@ onUnmounted(() => {
               <!-- PAUSE OVERLAY -->
               <div
                 v-if="timer.isPaused.value"
-                class="pause-overlay absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 rounded-2xl bg-black/80 backdrop-blur-sm"
+                class="pause-overlay absolute top-0 left-0 -right-1 -bottom-1 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
               >
                 <AppIcon
-                  class="h-12 w-12 text-zinc-300"
+                  class="h-12 w-12 text-zinc-500"
                   path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
-                <p class="text-xl font-black text-zinc-100">
+                <p class="font-display text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                   {{ $t("game.pausedTitle") }}
                 </p>
                 <button
@@ -1200,6 +1206,16 @@ onUnmounted(() => {
                   class="tile tile-apply px-10 py-4 text-base font-black"
                 >
                   {{ $t("game.resume") }}
+                </button>
+                <button
+                  @click="
+                    settingsFromGame = true;
+                    currentScreen = 'settings';
+                  "
+                  class="flex items-center gap-2 text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
+                >
+                  <AppIcon class="h-4 w-4" path="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  {{ $t("menu.settings") }}
                 </button>
               </div>
             </div>
@@ -1336,7 +1352,7 @@ onUnmounted(() => {
                 >
               </div>
               <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
-                <span class="font-semibold text-zinc-500">{{ $t("modal.scoreLifetime") }}</span>
+                <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{ $t("modal.scoreLifetime") }}</span>
                 <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
                   lifetimeTotal
                 }}</span>
