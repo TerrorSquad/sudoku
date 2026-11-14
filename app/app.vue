@@ -175,6 +175,12 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
 // Settings opened from the pause screen go back to the paused game, not the menu.
 const settingsFromGame = ref(false);
+// Still in the game, for state that should survive that Settings detour (armed digit, nudge).
+const inGame = computed(
+  () =>
+    currentScreen.value === "game" ||
+    (currentScreen.value === "settings" && settingsFromGame.value),
+);
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
@@ -455,8 +461,8 @@ function handleSelectCell(coord: CellCoord) {
 
 // An armed digit is meaningless once the player leaves the game, turns the mode off, or has
 // placed all nine of it.
-watch([currentScreen, digitFirst], () => {
-  if (currentScreen.value !== "game" || !digitFirst.value) activeDigit.value = null;
+watch([inGame, digitFirst], () => {
+  if (!inGame.value || !digitFirst.value) activeDigit.value = null;
 });
 watch(numberCounts, (counts) => {
   if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
@@ -631,7 +637,9 @@ const nudge = ref<CellCoord | null>(null);
 const nudgeBox = computed(() => (nudge.value ? boxNumber(nudge.value) : 0));
 const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
 watch(currentBoard, () => (nudge.value = null), { deep: true });
-watch(currentScreen, () => (nudge.value = null));
+watch(inGame, (playing) => {
+  if (!playing) nudge.value = null;
+});
 
 function handleTriggerHint() {
   if (activeComplexHint.value) {
