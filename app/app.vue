@@ -53,6 +53,7 @@ const {
   highlightErrors,
   hintStyle,
   showCandidates,
+  zen,
 } = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
@@ -113,6 +114,8 @@ const achievements = useAchievements();
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
 const isDailyMode = ref(false);
+// A Zen game hides the timer and mistake count, has no mistake limit and records no score.
+const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
 const practiceTechnique = ref<TechniqueId | null>(null);
 const practiceLoading = ref(false);
@@ -138,7 +141,9 @@ const difficultyLabel = computed(() =>
     ? `${t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
     : isDailyMode.value
       ? t("difficulty.daily")
-      : t(`difficulty.${activeDifficulty.value}`),
+      : gameZen.value
+        ? `${t(`difficulty.${activeDifficulty.value}`)} · ${t("difficulty.zen")}`
+        : t(`difficulty.${activeDifficulty.value}`),
 );
 
 const showModal = ref<boolean>(false);
@@ -217,6 +222,7 @@ watch(
       timerSeconds: timer.timerSeconds.value,
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
+      zen: gameZen.value,
     });
   },
   { deep: true },
@@ -234,7 +240,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (win) {
     cue("win");
     flashWin();
-    if (practiceTechnique.value) {
+    if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
     } else {
       if (isDailyMode.value) dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value);
@@ -292,6 +298,16 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   }
 }
 
+// Zen games never mention the clock.
+function winMessage() {
+  return gameZen.value
+    ? t("modal.winZenMsg", { difficulty: difficultyLabel.value })
+    : t("modal.winMsg", {
+        difficulty: difficultyLabel.value,
+        time: timer.formatTime(timer.timerSeconds.value),
+      });
+}
+
 function handleModalClose() {
   showModal.value = false;
   practiceTechnique.value = null;
@@ -311,6 +327,7 @@ function resumeSavedGame(s: GameSave) {
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = s.hintsUsed ?? 0;
+  gameZen.value = s.zen ?? false;
   techniqueLog.value = [];
   timer.resetTimer();
   timer.timerSeconds.value = s.timerSeconds;
@@ -320,6 +337,7 @@ function resumeSavedGame(s: GameSave) {
 
 function handleStartGame(level: Difficulty) {
   practiceTechnique.value = null;
+  gameZen.value = zen.value;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
@@ -503,7 +521,7 @@ function handleInputNumber(num: number) {
               num: digitLabel(num, colorMode.value, t),
             });
           }
-          if (mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
+          if (!gameZen.value && mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
             triggerLocalModal(t("modal.gameOver"), t("modal.gameOverMsg", { n: mistakeLimit.value }));
           }
         }
@@ -514,14 +532,7 @@ function handleInputNumber(num: number) {
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
         if (highlightErrors.value) flashCompletedUnits(r, c);
         if (checkWinCondition()) {
-          triggerLocalModal(
-            t("modal.win"),
-            t("modal.winMsg", {
-              difficulty: difficultyLabel.value,
-              time: timer.formatTime(timer.timerSeconds.value),
-            }),
-            true,
-          );
+          triggerLocalModal(t("modal.win"), winMessage(), true);
         }
       }
     }
@@ -613,6 +624,7 @@ function handleAutoFillNotes() {
 
 function handleStartDaily() {
   practiceTechnique.value = null;
+  gameZen.value = false;
   isDailyMode.value = true;
   activeDifficulty.value = "medium";
   mistakes.value = 0;
@@ -634,6 +646,7 @@ function handleLoadCustomPuzzle(
   practice: TechniqueId | null = null,
 ) {
   practiceTechnique.value = practice;
+  gameZen.value = false;
   activeDifficulty.value = "custom";
   mistakes.value = 0;
   hintStatus.value = t("game.newBoard");
@@ -714,14 +727,7 @@ function redo() {
   if (showModal.value || practiceLoading.value) return;
   redoMove();
   if (checkWinCondition()) {
-    triggerLocalModal(
-      t("modal.win"),
-      t("modal.winMsg", {
-        difficulty: difficultyLabel.value,
-        time: timer.formatTime(timer.timerSeconds.value),
-      }),
-      true,
-    );
+    triggerLocalModal(t("modal.win"), winMessage(), true);
   }
 }
 
@@ -1034,8 +1040,8 @@ onUnmounted(() => {
               :is-paused="timer.isPaused.value"
               :mistakes="mistakes"
               :max-mistakes="mistakeLimit"
-              :show-timer="showTimer"
-              :show-mistakes="highlightErrors"
+              :show-timer="showTimer && !gameZen"
+              :show-mistakes="highlightErrors && !gameZen"
 :difficulty="difficultyLabel"
               @toggle-pause="timer.togglePause()"
               @exit-game="exitToMenu"
@@ -1297,7 +1303,7 @@ onUnmounted(() => {
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-rose-600 dark:text-rose-400'
                 "
-                >{{ mistakes }}{{ mistakeLimit ? ` / ${mistakeLimit}` : "" }}</span
+                >{{ mistakes }}{{ mistakeLimit && !gameZen ? ` / ${mistakeLimit}` : "" }}</span
               >
             </div>
             <div class="flex justify-between px-3 py-2">

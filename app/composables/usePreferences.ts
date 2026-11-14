@@ -31,6 +31,8 @@ function create() {
     hintStyle: pref<HintStyle>("hint_style", "full"),
     /** Selecting a digit outlines the empty cells where it can still go. */
     showCandidates: pref("show_candidates", true),
+    /** New games start in Zen: no timer, no mistake limit, no score. */
+    zen: pref("zen", false),
   };
 }
 

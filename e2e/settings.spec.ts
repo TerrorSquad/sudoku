@@ -95,3 +95,19 @@ test("the numpad's remaining counts don't reveal wrong entries when highlighting
   await enterWrongDigits(page, ["3"]);
   await expect(pad("3")).toBeDisabled();
 });
+
+test("Zen hides the clock and mistakes, and never ends the game", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("switch", { name: /Zen/ }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await expect(page.getByText("Beginner · Zen")).toBeVisible();
+  await expect(page.getByText(/^\d\d:\d\d$/)).toBeHidden();
+
+  // Every digit into one empty cell: at least eight are wrong.
+  const empty = page.locator(`${BOARD} [data-cell]`).filter({ hasNotText: /^[1-9]$/ });
+  await empty.first().click();
+  for (const d of "123456789") await page.keyboard.press(d);
+  await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
+  await expect(page.getByText("Mistakes:")).toBeHidden();
+});

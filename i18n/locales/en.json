@@ -374,5 +374,8 @@
   "difficulty.daily": "Daily",
   "sidebar.shortcutMove": "Move",
   "settings.showCandidates": "Show where a digit fits",
-  "settings.showCandidatesHint": "Selecting a digit outlines the empty cells it can still go in, following your notes."
+  "settings.showCandidatesHint": "Selecting a digit outlines the empty cells it can still go in, following your notes.",
+  "difficulty.zen": "Zen",
+  "difficulty.zenDesc": "No timer, no mistake limit, no score. Just the puzzle.",
+  "modal.winZenMsg": "You solved the {difficulty} puzzle at your own pace."
 }

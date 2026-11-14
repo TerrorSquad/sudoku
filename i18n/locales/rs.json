@@ -136,7 +136,7 @@
   "modal.gameOver": "Kraj igre",
   "modal.gameOverMsg": "Stigao si do granice od {n} grešaka. Probaj novu tablu.",
   "modal.win": "Slagalica rešena!",
-  "modal.winMsg": "Rešio si {difficulty} slagalicu za {time}.",
+  "modal.winMsg": "Rešio si slagalicu ({difficulty}) za {time}.",
   "modal.winHintMsg": "Rešio si slagalicu uz pomoć analizatora za {time}.",
   "modal.winInstantMsg": "Rešio si slagalicu uz pomoć analizatora!",
   "modal.close": "Zatvori",
@@ -374,5 +374,8 @@
   "difficulty.daily": "Dnevna",
   "sidebar.shortcutMove": "Pomeranje",
   "settings.showCandidates": "Prikaži gde cifra staje",
-  "settings.showCandidatesHint": "Kad izabereš cifru, obeležena su prazna polja u koja još može da stane, po tvojim beleškama."
+  "settings.showCandidatesHint": "Kad izabereš cifru, obeležena su prazna polja u koja još može da stane, po tvojim beleškama.",
+  "difficulty.zen": "Zen",
+  "difficulty.zenDesc": "Bez sata, bez granice grešaka, bez poena. Samo slagalica.",
+  "modal.winZenMsg": "Rešio si slagalicu ({difficulty}) svojim tempom."
 }

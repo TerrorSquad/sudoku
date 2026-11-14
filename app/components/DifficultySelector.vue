@@ -3,6 +3,8 @@ import type { Difficulty } from "../types/sudoku";
 
 defineProps<{ activeDifficulty: Difficulty }>();
 
+const { zen } = usePreferences();
+
 // Levels with a save in progress, so the player sees where a resume prompt will appear.
 const { loadDifficulty } = useGameSave();
 const inProgress = ref<Set<Difficulty>>(new Set());
@@ -80,6 +82,20 @@ const DIFFICULTIES: {
         </h2>
         <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ $t("difficulty.subtitle") }}</p>
       </div>
+
+      <label
+        class="flex cursor-pointer items-center justify-between gap-4 border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <span>
+          <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
+            $t("difficulty.zen")
+          }}</span>
+          <span class="block text-xs text-zinc-500 dark:text-zinc-400">{{
+            $t("difficulty.zenDesc")
+          }}</span>
+        </span>
+        <USwitch v-model="zen" />
+      </label>
 
       <div class="grid grid-cols-2 gap-3">
         <button

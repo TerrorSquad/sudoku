@@ -14,6 +14,8 @@ export interface GameSave {
   mistakes: number;
   /** Optional: saves from before hints were persisted restore as 0. */
   hintsUsed?: number;
+  /** Zen game: no timer, mistake limit or score. Older saves restore as false. */
+  zen?: boolean;
   savedAt: number;
 }
 
