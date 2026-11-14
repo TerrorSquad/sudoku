@@ -29,6 +29,8 @@ function create() {
     /** Off = wrong entries are not marked; mistakes still count toward the score. */
     highlightErrors: pref("highlight_errors", true),
     hintStyle: pref<HintStyle>("hint_style", "full"),
+    /** Selecting a digit outlines the empty cells where it can still go. */
+    showCandidates: pref("show_candidates", true),
   };
 }
 

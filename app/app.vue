@@ -52,6 +52,7 @@ const {
   mistakeLimit,
   highlightErrors,
   hintStyle,
+  showCandidates,
 } = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
@@ -1085,6 +1086,7 @@ onUnmounted(() => {
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
                 :active-digit="activeDigit"
+                :show-candidates="showCandidates"
                 :nudge-box="nudge"
                 @select-cell="handleSelectCell"
               />

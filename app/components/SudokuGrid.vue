@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
 
 import SudokuCell from "./SudokuCell.vue";
@@ -18,6 +20,8 @@ const props = defineProps<{
   showErrors: boolean;
   /** Digit-first input: highlights this digit and where it can still go. */
   activeDigit?: number | null;
+  /** Outline the empty cells where the focused digit can still go. */
+  showCandidates?: boolean;
   /** "Nudge first" hints: any cell of the 3x3 box to point at. */
   nudgeBox?: CellCoord | null;
 }>();
@@ -38,17 +42,24 @@ function flashFor(r: number, c: number): FlashCell | undefined {
   return props.flashCells.find((cell) => cell.r === r && cell.c === c);
 }
 
+// The digit the board is about right now: the armed one, else the one in the selected cell.
+const focusDigit = computed(() => {
+  if (props.activeDigit) return props.activeDigit;
+  const sel = props.selectedCell;
+  return sel ? props.currentBoard[sel.r]![sel.c]! : 0;
+});
+
 function isSameValue(r: number, c: number): boolean {
-  if (props.activeDigit) return props.currentBoard[r]![c] === props.activeDigit;
-  if (!props.selectedCell) return false;
-  const selVal = props.currentBoard[props.selectedCell.r]![props.selectedCell.c]!;
-  return selVal !== 0 && props.currentBoard[r]![c] === selVal;
+  return focusDigit.value !== 0 && props.currentBoard[r]![c] === focusDigit.value;
 }
 
-// An empty cell where the armed digit doesn't already appear in its row, column or box.
+// An empty cell where the focused digit doesn't already appear in its row, column or box, and
+// that the player's own notes (if any) haven't ruled it out of.
 function isCandidate(r: number, c: number): boolean {
-  const d = props.activeDigit;
-  if (!d || props.currentBoard[r]![c] !== 0) return false;
+  const d = focusDigit.value;
+  if (!props.showCandidates || !d || props.currentBoard[r]![c] !== 0) return false;
+  const notes = props.notesBoard[r]![c]!;
+  if (notes.some(Boolean) && !notes[d]) return false;
   const b = props.currentBoard;
   for (let i = 0; i < 9; i++) if (b[r]![i] === d || b[i]![c] === d) return false;
   const br = r - (r % 3);

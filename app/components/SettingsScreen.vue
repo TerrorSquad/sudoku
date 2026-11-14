@@ -21,6 +21,7 @@ const {
   mistakeLimit,
   highlightErrors,
   hintStyle,
+  showCandidates,
 } = usePreferences();
 
 const vibrationSupported = canVibrate();
@@ -140,6 +141,14 @@ const style = computed({
             <span class="s-hint">{{ $t("settings.digitFirstHint") }}</span>
           </span>
           <USwitch v-model="digitFirst" />
+        </label>
+
+        <label class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.showCandidates") }}</span>
+            <span class="s-hint">{{ $t("settings.showCandidatesHint") }}</span>
+          </span>
+          <USwitch v-model="showCandidates" />
         </label>
 
         <label class="s-row">

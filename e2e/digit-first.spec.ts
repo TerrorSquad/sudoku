@@ -83,3 +83,23 @@ test("a stray tap with another digit armed never replaces an existing entry", as
   await cell(page, 0).click(); // 4 is armed; cell 0 already holds a different entry
   await expect(cell(page, 0)).toHaveText("3");
 });
+
+test("selecting a placed digit outlines where it can still go, following notes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(FIVE_BLANKS);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+
+  await cell(page, 15).click(); // a given 3 (row 2)
+  await expect(cell(page, 1)).toHaveClass(/ring-violet-400\/50/);
+
+  // Notes that leave 3 out rule the cell out.
+  await cell(page, 1).click();
+  await page.keyboard.press("n");
+  await page.keyboard.press("4");
+  await page.keyboard.press("n");
+  await cell(page, 15).click();
+  await expect(cell(page, 1)).not.toHaveClass(/ring-violet-400\/50/);
+});

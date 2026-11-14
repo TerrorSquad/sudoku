@@ -372,5 +372,7 @@
   "leaderboard.notRanked": "You're not on this board yet.",
   "difficulty.custom": "Custom",
   "difficulty.daily": "Daily",
-  "sidebar.shortcutMove": "Move"
+  "sidebar.shortcutMove": "Move",
+  "settings.showCandidates": "Show where a digit fits",
+  "settings.showCandidatesHint": "Selecting a digit outlines the empty cells it can still go in, following your notes."
 }
