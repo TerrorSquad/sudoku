@@ -53,28 +53,23 @@
 }
 
 @layer base {
-  /* Big screens draw the whole UI bigger. Every size is in rem, so the root font-size scales it all:
-     16px up to a 1920×1080-class viewport (phones and laptops are untouched), 32px at 3840×2160,
-     whichever dimension runs out first. Media queries read rem as the browser default, not this, so
-     a 4K TV gets the wide layout drawn at twice the size, not a phone layout. Size new things in
-     rem, not px.
-     The Display size setting (--ui-scale, set by app.vue) multiplies that, never below the auto size
-     and never past --fit, the most the game screen still fits (measured): 44rem wide (the game
-     dashboard in the 12-column layout) and 31rem tall. */
+  /* Big screens draw the whole UI bigger. Every size is in rem, so the root font-size scales it all.
+     Half strength: half the browser default plus a share of the viewport, so 16px up to a
+     1920×1080-class viewport (phones and laptops are untouched), 24px at 3840×2160, whichever
+     dimension runs out first, at most 150%. Half, not full, because browser zoom shrinks the CSS
+     viewport: at full strength zooming in on a big screen shrank the root size by the same factor
+     and cancelled the zoom (WCAG 1.4.4). Now zoom keeps most of its effect there, and all of it at
+     1080p and below. Media queries read rem as the browser default, not this, so a 4K TV gets the
+     wide layout drawn bigger, not a phone layout. Size new things in rem, not px.
+     The Display size setting multiplies it by --ui-scale, which app.vue keeps at 1 on the game
+     screen: the board already fills the height there, and a bigger rem would only shrink it. On a
+     phone it stops where the widest screen (the Academy) still fits across: 19rem. */
   html {
-    --auto-font-size: clamp(100%, min(100vw / 120, 100vh / 67.5), 200%);
-    --fit: min(100vw / 44, 100vh / 31);
-    font-size: max(
-      var(--auto-font-size),
-      min(var(--auto-font-size) * var(--ui-scale, 1), var(--fit))
+    --auto-font-size: clamp(100%, 50% + min(100vw / 240, 100vh / 135), 150%);
+    font-size: min(
+      var(--auto-font-size) * var(--ui-scale, 1),
+      max(var(--auto-font-size), 100vw / 19)
     );
-  }
-  /* Below lg (portrait) the board spans the width and everything else stacks under it in about
-     19rem, so only the height the board leaves over can grow; a phone's row of controls needs 20.5rem. */
-  @media (orientation: portrait) and (max-width: 1023px) {
-    html {
-      --fit: min(100vw / 20.5, (100vh - 100vw) / 19);
-    }
   }
   h1,
   h2,

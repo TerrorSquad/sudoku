@@ -34,6 +34,15 @@ export function statsKey(difficulty: string, daily: boolean): string {
   return daily ? "daily" : difficulty;
 }
 
+/**
+ * Wins at a level, for anything that counts games rather than times (Specialist, unlocks): the
+ * Daily is a Medium board, so Medium and Daily wins count together, as before they had two rows.
+ */
+export function winsAt(perDifficulty: Record<string, { wins: number } | undefined>, key: string) {
+  const wins = (k: string) => perDifficulty[k]?.wins ?? 0;
+  return key === "medium" || key === "daily" ? wins("medium") + wins("daily") : wins(key);
+}
+
 export function useScore() {
   function getStats(): ScoreStats {
     const parsed = readJSON<Partial<ScoreStats>>(KEY, {});
@@ -84,10 +93,12 @@ export function useScore() {
 
   /** Every win that counts toward opening difficulties: scored ones plus Zen ones. */
   function unlockWins(): WinsByDifficulty {
-    const wins: WinsByDifficulty = { ...getStats().perDifficulty };
+    const per = getStats().perDifficulty;
     // A Daily is a Medium board with its own stats row (statsKey); it still opens Hard.
-    const daily = wins.daily?.wins ?? 0;
-    if (daily) wins.medium = { ...wins.medium, wins: (wins.medium?.wins ?? 0) + daily };
+    const wins: WinsByDifficulty = {
+      ...per,
+      medium: { ...per.medium, wins: winsAt(per, "medium") },
+    };
     return withZenWins(wins, readJSON<unknown>(ZEN_KEY, {}));
   }
 

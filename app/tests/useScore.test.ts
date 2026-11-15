@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { statsKey, useScore } from "../composables/useScore";
+import { statsKey, useScore, winsAt } from "../composables/useScore";
 
 describe("useScore: the Daily keeps its own row", () => {
   beforeEach(() => {
@@ -27,5 +27,19 @@ describe("useScore: the Daily keeps its own row", () => {
     expect(gamesWon).toBe(2);
     // ...and a Daily still counts as a Medium win toward opening Hard.
     expect(score.unlockWins().medium?.wins).toBe(2);
+  });
+});
+
+describe("winsAt (Specialist and unlocks count games, not rows)", () => {
+  const per = { medium: { wins: 6 }, daily: { wins: 4 }, hard: { wins: 3 } };
+
+  it("counts Medium and Daily wins together, from either side", () => {
+    expect(winsAt(per, "medium")).toBe(10);
+    expect(winsAt(per, "daily")).toBe(10);
+  });
+
+  it("counts any other level on its own", () => {
+    expect(winsAt(per, "hard")).toBe(3);
+    expect(winsAt(per, "expert")).toBe(0);
   });
 });

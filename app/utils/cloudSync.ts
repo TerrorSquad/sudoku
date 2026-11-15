@@ -2,7 +2,7 @@
 // tests/cloudSync.test.ts. The SDK calls live in utils/wavedash.ts. Design:
 // docs/specs/2026-10-27-wavedash-platform-design.md, phase 3.
 
-import { parseBackup, type Backup } from "./progressBackup";
+import { BACKUP_PREFIX, parseBackup, validEntry, type Backup } from "./progressBackup";
 
 /** The one cloud file: a progressBackup export plus when it was uploaded. */
 export const CLOUD_FILE = "progress.json";
@@ -14,16 +14,18 @@ export const SYNC_BACKUP_KEY = "sudoku_sync_backup";
 
 // The Daily's save stays on this device: v1.2.0 rejects a whole cloud file that holds it (it
 // expects every save slot to be named after a difficulty), and it only resumes the same day anyway.
-const LOCAL_ONLY = ["sudoku_v1_save_daily"];
+// Display size is per device (a TV and a phone want different ones), and older versions reject
+// any preference that isn't a boolean.
+const LOCAL_ONLY = new Set(["sudoku_v1_save_daily", "sudoku_v1_pref_ui_scale"]);
 
 /** The local data as it is synced: everything but the LOCAL_ONLY keys. */
 export function cloudData(local: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.includes(k)));
+  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.has(k)));
 }
 
 /** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries. */
 export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
-  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.includes(k));
+  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.has(k));
   return { ...file, data: { ...file.data, ...Object.fromEntries(kept) } };
 }
 
@@ -68,6 +70,31 @@ export function hashData(data: Record<string, string>): string {
   return `${(h >>> 0).toString(16)}:${text.length}`;
 }
 
+/**
+ * A well-formed v1 file whose only rejected entries are preferences: a later version added a
+ * setting or a value this one doesn't know. Calling it corrupt would upload over it with no undo.
+ */
+function newerPrefsOnly(data: unknown): boolean {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  const entries = Object.entries(data);
+  if (!entries.every(([k, v]) => k.startsWith(BACKUP_PREFIX) && typeof v === "string"))
+    return false;
+  const rejected = entries.filter(([k, v]) => !validEntry(k, v as string));
+  return (
+    rejected.length > 0 &&
+    rejected.every(([k, v]) => k.startsWith("sudoku_v1_pref_") && isJson(v as string))
+  );
+}
+
+function isJson(text: string): boolean {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function readCloud(text: string): CloudRead {
   const parsed = parseBackup(text);
   if (parsed.ok) {
@@ -75,8 +102,11 @@ export function readCloud(text: string): CloudRead {
     if (typeof updatedAt === "number") return { kind: "ok", file: { ...parsed.backup, updatedAt } };
   }
   try {
-    const raw = JSON.parse(text) as { app?: unknown; version?: unknown };
+    const raw = JSON.parse(text) as { app?: unknown; version?: unknown; data?: unknown };
     if (raw?.app === "sudoku-pro" && typeof raw.version === "number" && raw.version > 1) {
+      return { kind: "newer" };
+    }
+    if (raw?.app === "sudoku-pro" && raw.version === 1 && newerPrefsOnly(raw.data)) {
       return { kind: "newer" };
     }
   } catch {

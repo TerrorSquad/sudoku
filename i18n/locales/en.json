@@ -411,7 +411,7 @@
   "settings.boardNewsprint": "Newsprint",
   "settings.boardContrast": "High contrast",
   "settings.uiScale": "Display size",
-  "settings.uiScaleHint": "Makes everything bigger, for a TV across the room.",
+  "settings.uiScaleHint": "Makes the menus, the Academy and Statistics bigger, for a TV across the room. The game board already fills the screen.",
   "settings.uiScale0": "Normal",
   "settings.uiScale1": "Large",
   "settings.uiScale2": "Extra large",

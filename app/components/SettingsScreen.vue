@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import {
-  UI_SCALES,
-  usePreferences,
-  type HintStyle,
-  type MistakeLimit,
-} from "../composables/usePreferences";
+import { usePreferences, type HintStyle, type MistakeLimit } from "../composables/usePreferences";
 import { canVibrate } from "../utils/haptics";
+import { UI_SCALES } from "../utils/preferenceValues";
 import {
   applyBackup,
   backupFilename,

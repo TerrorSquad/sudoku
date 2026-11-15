@@ -1,5 +1,7 @@
 import { ref, watch, type Ref } from "vue";
 
+import type { BoardTheme, UiScale } from "../utils/preferenceValues";
+
 import { readJSON, writeJSON } from "../utils/safeJson";
 
 // One place for every player preference, persisted per key under sudoku_v1_pref_*. The refs are
@@ -7,10 +9,7 @@ import { readJSON, writeJSON } from "../utils/safeJson";
 
 export type MistakeLimit = 0 | 3 | 5; // 0 = unlimited
 export type HintStyle = "full" | "nudge";
-export type BoardTheme = "tiles" | "newsprint" | "contrast";
-/** Multiplies the root font-size (main.css), so the whole UI grows: for a TV across the room. */
-export const UI_SCALES = [1, 1.25, 1.5, 1.75] as const;
-export type UiScale = (typeof UI_SCALES)[number];
+export type { BoardTheme, UiScale };
 
 function pref<T>(name: string, fallback: T): Ref<T> {
   const state = ref(readJSON<T>(`sudoku_v1_pref_${name}`, fallback)) as Ref<T>;

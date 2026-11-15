@@ -130,7 +130,7 @@ const cellClasses = computed(() => {
     @animationend="onAnimationEnd"
     @click="$emit('click')"
     :class="cellClasses"
-    class="cell relative flex cursor-pointer items-center justify-center p-0.5 text-3xl font-bold select-none 3xl:text-4xl"
+    class="cell relative flex cursor-pointer items-center justify-center p-0.5 text-3xl font-bold select-none 3xl:text-[length:max(2.25rem,4.6cqw)] 3xl:leading-[calc(2.5/2.25)]"
   >
     <div
       v-if="value !== 0 && colorMode"
@@ -148,7 +148,7 @@ const cellClasses = computed(() => {
 
     <div
       v-else
-      class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[0.625rem] font-black 3xl:text-[0.8125rem]"
+      class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[0.625rem] font-black 3xl:text-[length:max(0.8125rem,1.6cqw)]"
     >
       <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
         <span>{{ notes[n] ? n : "" }}</span>
@@ -158,33 +158,6 @@ const cellClasses = computed(() => {
 </template>
 
 <style scoped>
-/* Digits and notes keep the template's rem sizes, but never outgrow the cell: a big Display size
-   grows the rem while the board, sized by the viewport height, shrinks. cqw is the board's width
-   (SudokuGrid is the container); each cap sits just above the default size at every breakpoint,
-   so the normal sizes are untouched. */
-.cell {
-  font-size: min(1.875rem, 8.5cqw);
-}
-.cell-note {
-  font-size: min(0.625rem, 2.9cqw);
-}
-@media (width >= 64rem) {
-  .cell {
-    font-size: min(1.875rem, 7cqw);
-  }
-  .cell-note {
-    font-size: min(0.625rem, 2.4cqw);
-  }
-}
-@media (width >= 100rem) {
-  .cell {
-    font-size: min(2.25rem, 7cqw);
-  }
-  .cell-note {
-    font-size: min(0.8125rem, 2.4cqw);
-  }
-}
-
 /* Board "prints in" diagonally from the top-left when a game opens. */
 @keyframes cell-in {
   0% {

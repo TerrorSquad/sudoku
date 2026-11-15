@@ -2,7 +2,7 @@
 // Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
 import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
-import { ref, computed, watch, watchEffect, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { BoardUnit, DigitAt, TechniqueId } from "./utils/sudokuGrader";
@@ -23,7 +23,7 @@ import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
-import { statsKey, useScore } from "./composables/useScore";
+import { statsKey, useScore, winsAt } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
@@ -88,9 +88,6 @@ const {
   boardTheme,
   uiScale,
 } = usePreferences();
-// Display size: main.css multiplies the root font-size by it. Set during setup, before the first
-// render, so the app never paints at the wrong size.
-watchEffect(() => document.documentElement.style.setProperty("--ui-scale", String(uiScale.value)));
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
 const CUES = {
@@ -169,7 +166,22 @@ const progressNotes = ref<{ text: string; ok: boolean }[]>([]);
 
 const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
-const hintStatus = ref<string>(t("game.ready"));
+// The game's status line ("Wrong digit here!", "Notes auto-filled!"), read out by the sr-only
+// aria-live region on the game screen. aria-live only speaks a change, so say() clears it first:
+// the same message twice in a row is read twice.
+const announcement = ref("");
+function say(message: string) {
+  announcement.value = "";
+  nextTick(() => (announcement.value = message));
+}
+const hintStatus = {
+  get value() {
+    return announcement.value;
+  },
+  set value(message: string) {
+    say(message);
+  },
+};
 const hintBody = ref<string>("");
 const currentScreen = ref<
   | "menu"
@@ -181,6 +193,16 @@ const currentScreen = ref<
   | "achievements"
   | "settings"
 >("menu");
+// Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
+// the game, whose board already fills the height: there a bigger rem would only shrink it. Set
+// during setup, so the first paint is right, then as each screen enters (the screen Transition is
+// out-in), so the screen leaving never jumps.
+function applyUiScale() {
+  const scale = currentScreen.value === "game" ? 1 : uiScale.value;
+  document.documentElement.style.setProperty("--ui-scale", String(scale));
+}
+applyUiScale();
+watch(uiScale, applyUiScale);
 const activeDifficulty = ref<Difficulty>("medium");
 // What the dashboard chip and the win modal call this game, in the player's language.
 const difficultyLabel = computed(() =>
@@ -204,11 +226,14 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
 // Settings opened from the pause screen go back to the paused game, not the menu.
 const settingsFromGame = ref(false);
-// Still in the game, for state that should survive that Settings detour (armed digit, nudge).
+// Set when a nudge's technique opened the Academy: Back returns to the paused game.
+const academyFromGame = ref(false);
+// Still in the game, for state that should survive those detours (armed digit, nudge).
 const inGame = computed(
   () =>
     currentScreen.value === "game" ||
-    (currentScreen.value === "settings" && settingsFromGame.value),
+    (currentScreen.value === "settings" && settingsFromGame.value) ||
+    (currentScreen.value === "academy" && academyFromGame.value),
 );
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
@@ -386,7 +411,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         colorMode: colorMode.value,
         hour: new Date().getHours(),
         gamesWon: result.stats.gamesWon,
-        winsAtDifficulty: result.stats.perDifficulty[key]?.wins ?? 0,
+        winsAtDifficulty: winsAt(result.stats.perDifficulty, key),
         dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
         distinctTechniques: Object.keys(techStats.getAll()).length,
       });
@@ -457,9 +482,6 @@ function handleModalClose() {
   currentScreen.value = "menu";
   timer.resetTimer();
 }
-
-// Set when a nudge's technique opened the Academy: Back returns to the paused game.
-const academyFromGame = ref(false);
 
 function openLesson(id: TechniqueId) {
   handleModalClose();
@@ -1088,7 +1110,7 @@ onUnmounted(() => {
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
-      <Transition name="screen" mode="out-in">
+      <Transition name="screen" mode="out-in" @before-enter="applyUiScale">
         <!-- MENU: the menu is itself a 3×3 box, New game filling four of its cells. -->
         <div
           v-if="currentScreen === 'menu'"
@@ -1300,10 +1322,10 @@ onUnmounted(() => {
         <!-- GAME -->
         <div
           v-else-if="currentScreen === 'game'"
-          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[min(15rem,18%)_minmax(0,1fr)_min(26.25rem,30%)] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
+          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[15rem_minmax(0,1fr)_26.25rem] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
-          <p class="sr-only" aria-live="polite">{{ hintStatus }}</p>
+          <p class="sr-only" aria-live="polite">{{ announcement }}</p>
           <!-- 3xl left sidebar: shortcuts & branding -->
           <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
             <div>

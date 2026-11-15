@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import type { BoardTheme } from "../composables/usePreferences";
 import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
+import type { BoardTheme } from "../utils/preferenceValues";
 import type { BoardUnit } from "../utils/sudokuGrader";
 
 import SudokuCell from "./SudokuCell.vue";
