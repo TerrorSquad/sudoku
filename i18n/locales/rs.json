@@ -567,5 +567,6 @@
   "spot.again": "Igraj ponovo",
   "spot.key.skip": "preskoči",
   "hint.learnIt": "Prvi put vidiš ovo? Nauči korak po korak",
-  "hint.learnAgain": "Ponovi lekciju"
+  "hint.learnAgain": "Ponovi lekciju",
+  "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo."
 }

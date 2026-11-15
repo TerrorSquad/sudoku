@@ -10,13 +10,19 @@ type Job =
   | { id: number; difficulty: string }
   | { id: number; technique: TechniqueId; seed: number };
 
+// An async handler's throw never reaches the page's onerror, so every failure is posted back:
+// the pool then generates that job in place instead of waiting forever.
 self.onmessage = async (e: MessageEvent<Job>) => {
   const job = e.data;
-  if ("technique" in job) {
-    const lesson = await quickLesson(job.technique, makeRng(job.seed));
-    self.postMessage({ id: job.id, lesson });
-    return;
+  try {
+    if ("technique" in job) {
+      const lesson = await quickLesson(job.technique, makeRng(job.seed));
+      self.postMessage({ id: job.id, lesson });
+      return;
+    }
+    const { puzzle, solution } = generateGradedPuzzle(job.difficulty);
+    self.postMessage({ id: job.id, puzzle, solution });
+  } catch (err) {
+    self.postMessage({ id: job.id, error: String(err) });
   }
-  const { puzzle, solution } = generateGradedPuzzle(job.difficulty);
-  self.postMessage({ id: job.id, puzzle, solution });
 };

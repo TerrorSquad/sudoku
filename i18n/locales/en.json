@@ -567,5 +567,6 @@
   "spot.again": "Play again",
   "spot.key.skip": "skip",
   "hint.learnIt": "New to this? Learn it step by step",
-  "hint.learnAgain": "Replay its lesson"
+  "hint.learnAgain": "Replay its lesson",
+  "spot.failed": "This position couldn’t be set up. Go back and try again."
 }

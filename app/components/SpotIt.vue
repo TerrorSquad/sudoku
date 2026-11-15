@@ -70,15 +70,32 @@ let round = 0;
 let positions: (Promise<Lesson> | undefined)[] = [];
 let slots: ReturnType<typeof buildRound> = [];
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
-const ensure = (i: number) => {
+const ensure = (i: number, retry = 0) => {
   const s = slots[i];
-  if (s && !positions[i]) positions[i] = makeLesson(s.technique, s.seed);
+  if (!s || (positions[i] && !retry)) return;
+  // A retry tries another position of the same technique.
+  const p = makeLesson(s.technique, s.seed + retry);
+  p.catch(() => {}); // the look-ahead may fail before load() awaits it; load() handles it
+  positions[i] = p;
 };
+// ponytail: a round left early lets its one look-ahead finish in the worker (under a second of
+// work); cancelling would mean an abort signal through generatePracticePuzzle.
 
 // The clock: what earlier positions took, plus this one so far.
 let findStart = 0;
 const now = ref(0);
 const tick = setInterval(() => (now.value = performance.now()), 100);
+// A hidden tab stops the clock: the time away is added to findStart when the tab comes back.
+let hiddenAt = 0;
+function onVisibility() {
+  if (phase.value !== "find") return;
+  if (document.hidden) hiddenAt = performance.now();
+  else if (hiddenAt) {
+    findStart += performance.now() - hiddenAt;
+    hiddenAt = 0;
+    now.value = performance.now();
+  }
+}
 const clock = computed(() => {
   const live =
     phase.value === "find"
@@ -105,7 +122,20 @@ async function load(i: number) {
   index.value = i;
   ensure(i);
   ensure(i + 1);
-  const L = await positions[i]!;
+  let L: Lesson;
+  try {
+    L = await positions[i]!;
+  } catch {
+    if (mine !== round) return;
+    // Another position of the same technique; if that fails too, say so (Back still works).
+    ensure(i, 1);
+    try {
+      L = await positions[i]!;
+    } catch {
+      if (mine === round) feedback.value = { text: t("spot.failed"), ok: false };
+      return;
+    }
+  }
   if (mine !== round) return; // a new round started, or the screen closed
   lesson.value = L;
   instances = instancesOf(L);
@@ -116,6 +146,8 @@ async function load(i: number) {
   feedback.value = null;
   phase.value = "find";
   findStart = now.value = performance.now();
+  // Up while the tab is hidden (the reveal timer ran on): the clock waits for the player.
+  hiddenAt = document.hidden ? findStart : 0;
 }
 
 function shake({ r, c }: CellCoord) {
@@ -251,7 +283,7 @@ function onKey(e: KeyboardEvent) {
     nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
   } else if ((key === "Enter" || key === " ") && selected.value && !onButton) {
     e.preventDefault();
-    tap(selected.value);
+    if (!e.repeat) tap(selected.value); // a held key isn't a stack of +5 s taps
   } else if (key === "h" && !e.repeat) {
     skip();
   }
@@ -259,10 +291,12 @@ function onKey(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener("keydown", onKey);
+  document.addEventListener("visibilitychange", onVisibility);
   startRound();
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", onKey);
+  document.removeEventListener("visibilitychange", onVisibility);
   clearInterval(tick);
   clearTimeout(revealTimer);
   round++; // drops a position still loading
