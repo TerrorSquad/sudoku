@@ -507,5 +507,11 @@
   "records.since": "All records but the Daily streak count from your next win.",
   "settings.clockRuns": "The clock keeps running while the board is in view.",
   "settings.boardThemeHint": "Colors the whole app and the board.",
-  "modal.nextPuzzle": "Next puzzle: {level}"
+  "modal.nextPuzzle": "Next puzzle: {level}",
+  "sidebar.shortcutPause": "Pause / resume",
+  "sidebar.shortcutHelp": "All shortcuts",
+  "modal.share": "Share result",
+  "modal.copied": "Copied to clipboard",
+  "modal.shareMistakes": "mistakes: {n}",
+  "modal.shareHints": "hints: {n}"
 }
