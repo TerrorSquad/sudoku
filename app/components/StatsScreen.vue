@@ -2,6 +2,7 @@
 import { computed } from "vue";
 
 import { useDailyPuzzle } from "../composables/useDailyPuzzle";
+import { useRecords } from "../composables/useRecords";
 import { useScore } from "../composables/useScore";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { hasWavedash } from "../utils/wavedash";
@@ -16,6 +17,18 @@ const daily = useDailyPuzzle();
 const stats = score.getStats();
 const onWavedash = hasWavedash();
 const streak = daily.getStreak();
+const records = useRecords().get();
+
+// Fastest times are the per-difficulty table's Best time column, not repeated here.
+const recordRows = [
+  { key: "streak", value: daily.getLongestStreak() },
+  { key: "mostInDay", value: records.mostInDay },
+  { key: "cleanRun", value: records.bestCleanRun },
+  {
+    key: "noHint",
+    value: records.hardestNoHint ? t(`difficulty.${records.hardestNoHint}`) : 0,
+  },
+];
 
 const DIFFICULTY_ORDER = [
   "beginner",
@@ -178,6 +191,29 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               </tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Personal records -->
+        <div class="mb-8" data-testid="records">
+          <h2 class="mb-3 text-xs font-bold text-zinc-500">{{ $t("records.title") }}</h2>
+          <dl
+            class="divide-y divide-zinc-200 border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800"
+          >
+            <div
+              v-for="row in recordRows"
+              :key="row.key"
+              class="flex items-baseline justify-between gap-3 px-3 py-2"
+            >
+              <dt class="text-zinc-700 dark:text-zinc-300">{{ $t(`records.${row.key}`) }}</dt>
+              <dd class="font-bold text-zinc-900 tabular-nums dark:text-zinc-100">
+                {{ row.value || $t("stats.dash") }}
+              </dd>
+            </div>
+          </dl>
+          <p class="mt-2 text-xs text-zinc-500">
+            <template v-if="!records.mostInDay">{{ $t("records.since") }}</template>
+            {{ difficultyRows.length ? $t("records.fastest") : "" }}
+          </p>
         </div>
 
         <!-- Top techniques -->

@@ -67,6 +67,24 @@ export function playComplete(units = 1, digit = 1): void {
   if (units > 1) tone(root * 2, steps.length * 0.065, 0.5, 0.07);
 }
 
+/** All nine of a digit are in: its note twinkles up two octaves, quick and bright. */
+export function playDigitDone(digit = 1): void {
+  const f = digitFreq(digit);
+  [1, 2, 3, 4].forEach((ratio, i) => tone(f * ratio, 0.05 + i * 0.05, 0.14, 0.06, "triangle"));
+}
+
+/** A star filling in on the win modal: a soft, short tick that climbs with each star. */
+export function playTick(step = 1): void {
+  tone(1320 + step * 180, 0, 0.05, 0.05, "triangle");
+}
+
+/** The red-pen "Perfect!" stamp landing: a low thud with a papery snap on top. */
+export function playStamp(): void {
+  tone(110, 0, 0.18, 0.22, "triangle");
+  tone(82, 0.01, 0.2, 0.14);
+  tone(2400, 0, 0.03, 0.03, "square");
+}
+
 export function playHint(): void {
   tone(880, 0, 0.1, 0.1);
   tone(1175, 0.09, 0.14, 0.1);

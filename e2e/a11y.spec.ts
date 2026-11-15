@@ -3,6 +3,7 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 
 import { fakeWavedash } from "./fakeWavedash";
+import { resumeMedium, seedMediumSave } from "./seed";
 
 // Automated WCAG 2.x A/AA scan of every screen in both colour schemes. Axe catches roughly a
 // third of real issues (contrast, names, roles, ARIA misuse) — it complements, not replaces,
@@ -69,6 +70,27 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: /Easy/ }).click();
       await expect(page.locator(".grid.aspect-square")).toBeVisible();
       await scan(page, "game (colour mode)");
+    });
+
+    test("win modal with a stamp and a record, then the stats records", async ({ page }) => {
+      await page.addInitScript(() => {
+        if (localStorage.getItem("sudoku_v1_records")) return;
+        localStorage.setItem(
+          "sudoku_v1_records",
+          JSON.stringify({ cleanRun: 1, bestCleanRun: 1, mostInDay: 1 }),
+        );
+      });
+      await seedMediumSave(page, [49]);
+      await resumeMedium(page);
+      await page.locator(".grid.aspect-square.w-full.grid-cols-9 [data-cell]").nth(49).click();
+      await page.keyboard.press("2");
+      await expect(page.getByTestId("perfect-stamp")).toHaveClass(/stamp-in/);
+      await expect(page.getByTestId("new-record")).toHaveCount(1);
+      await scan(page, "win modal");
+      await page.getByRole("button", { name: "Close" }).click();
+      await page.getByRole("button", { name: "Statistics" }).click();
+      await expect(page.getByTestId("records")).toBeVisible();
+      await scan(page, "stats (records)");
     });
 
     test("game screen", async ({ page }) => {

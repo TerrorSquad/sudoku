@@ -20,9 +20,10 @@ import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
 import { useAchievements } from "./composables/useAchievements";
-import { useDailyPuzzle } from "./composables/useDailyPuzzle";
+import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
+import { useRecords } from "./composables/useRecords";
 import { statsKey, useScore, winsAt } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniquePath } from "./composables/useTechniquePath";
@@ -39,8 +40,19 @@ import {
   type Week,
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
+import { brokenRecords, type NewRecord, type Snapshot } from "./utils/records";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
-import { playComplete, playHint, playMistake, playPlace, playUnlock, playWin } from "./utils/sound";
+import {
+  playComplete,
+  playDigitDone,
+  playHint,
+  playMistake,
+  playPlace,
+  playStamp,
+  playTick,
+  playUnlock,
+  playWin,
+} from "./utils/sound";
 import { starsFor } from "./utils/stars";
 import {
   onBoard,
@@ -97,8 +109,12 @@ const CUES = {
   win: [playWin, "win"],
   hint: [playHint, null],
   unlock: [playUnlock, null],
+  digit: [playDigitDone, "digit"],
+  tick: [playTick, null],
+  stamp: [playStamp, "stamp"],
 } as const;
-// `arg` tunes the sound: the digit for a placement, units completed at once for a completion.
+// `arg` tunes the sound: the digit for a placement or a finished digit, units completed at once
+// for a completion, the star's number for a tick.
 function cue(kind: keyof typeof CUES, ...arg: number[]) {
   const [sound, vibration] = CUES[kind];
   if (soundEnabled.value) (sound as (...a: number[]) => void)(...arg);
@@ -265,21 +281,125 @@ const isNewBest = ref<boolean>(false);
 const lifetimeTotal = ref<number>(0);
 // Set when the just-won game crossed a level threshold, for the win modal banner.
 const reachedLevel = ref<number | null>(null);
-const displayedScore = ref<number>(0); // animated count-up of lastScore.total
+const records = useRecords();
+// Personal records this win broke, for the win modal: at most two lines.
+const newRecords = ref<NewRecord[]>([]);
 
-// Count `displayedScore` up to the final total over ~0.8s for a little flourish.
-function animateScoreCountUp(to: number) {
-  const start = performance.now();
-  const duration = 800;
+// Practice and custom boards don't count: a one-blank custom board could be won over and over.
+const countsForRecords = () => !practiceTechnique.value && activeDifficulty.value !== "custom";
+
+// What a win can break, read before and after recording it. A Daily's time is compared with
+// earlier Dailies (its own score row), like its "New best" chip.
+function recordSnapshot(): Snapshot {
+  const key = statsKey(activeDifficulty.value, isDailyMode.value);
+  return {
+    ...records.get(),
+    fastest: score.getStats().perDifficulty[key]?.bestTime ?? 0,
+    streak: dailyPuzzle.getLongestStreak(),
+  };
+}
+
+function recordLine(r: NewRecord): string {
+  const show = (v: number | string) =>
+    r.kind === "fastest"
+      ? timer.formatTime(v as number)
+      : r.kind === "noHint"
+        ? t(`difficulty.${v}`)
+        : v;
+  return t(`records.new.${r.kind}`, {
+    difficulty: t(`difficulty.${statsKey(activeDifficulty.value, isDailyMode.value)}`),
+    value: show(r.value),
+    was: show(r.was),
+  });
+}
+
+// A clean win: no mistakes and no hints (a nudge counts as one). Zen too: it's how you played.
+const perfect = computed(() => isWinState.value && mistakes.value === 0 && hintsUsed.value === 0);
+const winStars = computed(() => starsFor(mistakes.value, hintsUsed.value));
+const scoreRows = computed(() => {
+  const s = lastScore.value;
+  if (!s) return [];
+  const good = "text-emerald-700 dark:text-emerald-400";
+  return [
+    { key: "scoreBase", value: s.base, cls: "text-zinc-800 dark:text-zinc-200" },
+    { key: "scoreSpeed", value: s.speedBonus, cls: good },
+    { key: "scoreFlawless", value: s.flawlessBonus, cls: good },
+    {
+      key: "scoreMistakePenalty",
+      value: -s.mistakePenalty,
+      cls: "text-rose-600 dark:text-rose-400",
+    },
+    { key: "scoreHintPenalty", value: -s.hintPenalty, cls: "text-amber-700 dark:text-amber-400" },
+  ].filter((row, i) => !i || row.value);
+});
+
+// The win modal plays in steps once it has faded in: each earned star with a tick, then each
+// score line as the total counts up through it, then the stamp. The DOM holds the real numbers
+// throughout (unrevealed parts are only transparent). A tap or key skips to the end, and reduced
+// motion starts there.
+const WIN_STEPS_AT_MS = 1100; // as .modal-delay finishes fading the result in
+const WIN_STEP_MS = 160;
+const winStepCount = computed(
+  () => winStars.value + scoreRows.value.length + (perfect.value ? 1 : 0),
+);
+const winStep = ref(0);
+// The total has landed: what hangs off it (a new best, records, the lifetime line) shows now.
+const scoreLanded = computed(() => winStep.value >= winStars.value + scoreRows.value.length);
+const winSkipped = ref(false);
+const displayedScore = ref<number>(0); // the visual total; the real one sits beside it, sr-only
+let winTimers: ReturnType<typeof setTimeout>[] = [];
+let countFrame = 0;
+
+function stopWinSteps() {
+  winTimers.forEach(clearTimeout);
+  winTimers = [];
+  cancelAnimationFrame(countFrame);
+}
+
+function startWinSteps() {
+  stopWinSteps();
+  winStep.value = 0;
+  winSkipped.value = false;
   displayedScore.value = 0;
-  function tick(now: number) {
-    const p = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
-    displayedScore.value = Math.round(to * eased);
-    if (p < 1) requestAnimationFrame(tick);
-    else displayedScore.value = to;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    skipWinSteps();
+    if (perfect.value) cue("stamp");
+    return;
   }
-  requestAnimationFrame(tick);
+  for (let k = 1; k <= winStepCount.value; k++)
+    winTimers.push(setTimeout(() => winStepTo(k), WIN_STEPS_AT_MS + (k - 1) * WIN_STEP_MS));
+}
+
+function winStepTo(k: number) {
+  winStep.value = k;
+  const rows = scoreRows.value;
+  const row = k - winStars.value - 1;
+  if (k <= winStars.value) cue("tick", k);
+  else if (row < rows.length) {
+    const sum = rows.slice(0, row + 1).reduce((a, r) => a + r.value, 0);
+    // Penalties can take the running sum below zero; the real total is floored, so it lands there.
+    countScoreTo(row === rows.length - 1 ? lastScore.value!.total : Math.max(0, sum));
+  } else cue("stamp");
+}
+
+function skipWinSteps() {
+  if (winStep.value >= winStepCount.value) return;
+  stopWinSteps();
+  winSkipped.value = true;
+  winStep.value = winStepCount.value;
+  displayedScore.value = lastScore.value?.total ?? 0;
+}
+
+function countScoreTo(to: number) {
+  cancelAnimationFrame(countFrame);
+  const from = displayedScore.value;
+  const start = performance.now();
+  const tick = (now: number) => {
+    const p = Math.min(1, (now - start) / WIN_STEP_MS);
+    displayedScore.value = Math.round(from + (to - from) * (1 - (1 - p) ** 3));
+    if (p < 1) countFrame = requestAnimationFrame(tick);
+  };
+  countFrame = requestAnimationFrame(tick);
 }
 
 // Lifetime per-technique usage from localStorage; refreshed when the win modal opens
@@ -354,6 +474,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   neededTechs.value =
     win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
   stuck.value = [];
+  newRecords.value = [];
   showModal.value = true;
   activeDigit.value = null;
   reachedLevel.value = null;
@@ -367,6 +488,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (win) {
     cue("win");
     flashWin();
+    const recordsBefore = countsForRecords() ? recordSnapshot() : null;
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
       if (practised) {
@@ -375,7 +497,6 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         score.recordZenWin(activeDifficulty.value);
         announceUnlocks(lockedBefore);
         if (progressNotes.value.length) cue("unlock");
-        saveToCloud();
       }
     } else {
       if (isDailyMode.value)
@@ -417,9 +538,18 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       });
       toastIds.value.push(...unlocked);
       if (unlocked.length || progressNotes.value.length) cue("unlock");
-      animateScoreCountUp(breakdown.total);
-      saveToCloud();
     }
+    if (recordsBefore) {
+      records.recordWin({
+        day: localDateKey(),
+        difficulty: activeDifficulty.value,
+        mistakes: mistakes.value,
+        hints: hintsUsed.value,
+      });
+      newRecords.value = brokenRecords(recordsBefore, recordSnapshot()).slice(0, 2);
+    }
+    if (!practised) saveToCloud();
+    startWinSteps();
     // After the score is safe: a damaged log must cost the stuck moments, not the win.
     try {
       if (!gameZen.value) stuck.value = stuckMoments(initialBoard.value, placements.value);
@@ -476,6 +606,7 @@ function winMessage() {
 }
 
 function handleModalClose() {
+  stopWinSteps();
   showModal.value = false;
   practiceTechnique.value = null;
   isDailyMode.value = false;
@@ -596,7 +727,7 @@ watch(numberCounts, (counts) => {
   if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
 });
 
-// A correct placement may finish a row, column, and/or box — flash every
+// A correct placement may finish a row, column, and/or box, or the last of a digit — flash every
 // cell of each newly-completed unit. "Complete" means every cell already
 // matches the solution, not just non-empty (a wrong-but-unconflicting digit
 // can sit in a cell without being flagged, so equality is the real check).
@@ -634,8 +765,18 @@ function flashCompletedUnits(r: number, c: number) {
     }
   }
 
+  // All nine of the placed digit are in, and right: its cells light up with the units (a cell in
+  // both is listed twice, at the same delay, which the grid shows once).
+  const num = currentBoard.value[r]![c]!;
+  const solvedCells = solvedBoard.value.flatMap((row, sr) =>
+    row.flatMap((v, sc) => (v === num ? [[sr, sc] as const] : [])),
+  );
+  const digitDone = solvedCells.every(([sr, sc]) => currentBoard.value[sr]![sc] === num);
+  if (digitDone) for (const [sr, sc] of solvedCells) add(sr, sc);
+
   if (!cells.length) return;
-  cue("complete", units, currentBoard.value[r]![c]!);
+  if (units) cue("complete", units, num);
+  if (digitDone) cue("digit", num);
   runFlash(cells);
 }
 
@@ -684,6 +825,8 @@ function handleInputNumber(num: number) {
       const conflicts = engine.getConflictCells(r, c, num);
       if (num !== solvedBoard.value[r]![c] || conflicts.length > 0) {
         mistakes.value++;
+        // The first mistake ends the clean run now: abandoning the game mustn't save it.
+        if (mistakes.value === 1 && countsForRecords()) records.recordMistake();
         // With "Highlight mistakes" off the entry stays unmarked and can't end the game;
         // it still counts toward the score.
         if (!highlightErrors.value) {
@@ -727,10 +870,9 @@ function handleInputNumber(num: number) {
         clearRelationalNotes(r, c, num);
         logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
-        if (highlightErrors.value) flashCompletedUnits(r, c);
-        if (checkWinCondition()) {
-          triggerLocalModal(t("modal.win"), winMessage(), true);
-        }
+        // A winning move gets the win's wave and cue alone, not three stacked on each other.
+        if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
+        else if (highlightErrors.value) flashCompletedUnits(r, c);
       }
     }
   }
@@ -1047,6 +1189,8 @@ function redo() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
+  // A key still held from the winning move, or pressed before the steps start, skips nothing.
+  if (showModal.value && !e.repeat && winStep.value) skipWinSteps();
   if (currentScreen.value !== "game" || timer.isPaused.value) return;
   if (showModal.value || practiceLoading.value || finishing.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
@@ -1102,6 +1246,7 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
   document.removeEventListener("visibilitychange", handlePageHidden);
   if (flashTimeout) clearTimeout(flashTimeout);
+  stopWinSteps();
 });
 </script>
 
@@ -1571,8 +1716,9 @@ onUnmounted(() => {
       <!-- MODAL -->
       <div
         v-if="showModal"
-        :class="isWinState ? 'modal-delay' : ''"
+        :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+        @pointerdown="winStep && skipWinSteps()"
       >
         <div
           class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
@@ -1585,25 +1731,34 @@ onUnmounted(() => {
             {{ modalMessage }}
           </p>
 
-          <!-- Star rating -->
+          <!-- Star rating: each earned star fills in on its own step -->
           <div
             v-if="isWinState"
             class="mb-4 flex justify-center gap-1.5"
             role="img"
-            :aria-label="$t('modal.stars', { n: starsFor(mistakes, hintsUsed) })"
+            :aria-label="$t('modal.stars', { n: winStars })"
           >
             <span
               v-for="n in 3"
               :key="n"
-              :style="{ animationDelay: `${n * 120}ms` }"
               :class="
-                n <= starsFor(mistakes, hintsUsed)
+                n <= winStars && winStep >= n
                   ? 'star-pop text-amber-400'
                   : 'text-zinc-300 dark:text-zinc-700'
               "
               class="text-3xl leading-none"
               aria-hidden="true"
               >★</span
+            >
+          </div>
+
+          <!-- A clean win gets the teacher's red-pen stamp, last -->
+          <div v-if="perfect" class="mb-4 flex justify-center">
+            <span
+              data-testid="perfect-stamp"
+              class="perfect-stamp"
+              :class="winStep >= winStepCount ? 'stamp-in' : 'opacity-0'"
+              >{{ $t("modal.perfect") }}</span
             >
           </div>
 
@@ -1625,8 +1780,17 @@ onUnmounted(() => {
           >
             {{ note.text }}
           </p>
+          <p
+            v-for="r in isWinState ? newRecords : []"
+            :key="r.kind"
+            data-testid="new-record"
+            :class="scoreLanded ? 'win-in' : 'opacity-0'"
+            class="mb-4 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-800 dark:text-amber-300"
+          >
+            {{ recordLine(r) }}
+          </p>
 
-          <!-- Score headline -->
+          <!-- Score headline: the total counts up through the lines as they appear -->
           <div v-if="isWinState && lastScore" class="mb-5">
             <p class="text-[0.6875rem] font-semibold text-zinc-500">
               {{ $t("modal.scoreTotal") }}
@@ -1634,11 +1798,13 @@ onUnmounted(() => {
             <p
               class="text-5xl leading-tight font-black text-zinc-900 tabular-nums dark:text-zinc-50"
             >
-              {{ displayedScore }}
+              <span aria-hidden="true">{{ displayedScore }}</span>
+              <span class="sr-only">{{ lastScore.total }}</span>
             </p>
             <p
               v-if="isNewBest"
-              class="score-badge mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-700 dark:text-amber-300"
+              :class="scoreLanded ? 'win-in' : 'opacity-0'"
+              class="mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-800 dark:text-amber-300"
             >
               ★ {{ $t("modal.scoreNewBest") }}
             </p>
@@ -1647,37 +1813,21 @@ onUnmounted(() => {
             <div
               class="mt-3 divide-y divide-zinc-200 border border-zinc-200 text-left text-xs dark:divide-zinc-800 dark:border-zinc-800"
             >
-              <div class="flex justify-between px-3 py-1.5">
-                <span class="text-zinc-500">{{ $t("modal.scoreBase") }}</span>
-                <span class="font-bold text-zinc-800 tabular-nums dark:text-zinc-200">{{
-                  lastScore.base
-                }}</span>
-              </div>
-              <div v-if="lastScore.speedBonus" class="flex justify-between px-3 py-1.5">
-                <span class="text-zinc-500">{{ $t("modal.scoreSpeed") }}</span>
-                <span class="font-bold text-emerald-600 tabular-nums dark:text-emerald-400"
-                  >+{{ lastScore.speedBonus }}</span
+              <div
+                v-for="(row, i) in scoreRows"
+                :key="row.key"
+                :class="winStep > winStars + i ? 'win-in' : 'opacity-0'"
+                class="flex justify-between px-3 py-1.5"
+              >
+                <span class="text-zinc-500">{{ $t(`modal.${row.key}`) }}</span>
+                <span :class="row.cls" class="font-bold tabular-nums"
+                  >{{ i ? (row.value > 0 ? "+" : "−") : "" }}{{ Math.abs(row.value) }}</span
                 >
               </div>
-              <div v-if="lastScore.flawlessBonus" class="flex justify-between px-3 py-1.5">
-                <span class="text-zinc-500">{{ $t("modal.scoreFlawless") }}</span>
-                <span class="font-bold text-emerald-600 tabular-nums dark:text-emerald-400"
-                  >+{{ lastScore.flawlessBonus }}</span
-                >
-              </div>
-              <div v-if="lastScore.mistakePenalty" class="flex justify-between px-3 py-1.5">
-                <span class="text-zinc-500">{{ $t("modal.scoreMistakePenalty") }}</span>
-                <span class="font-bold text-rose-600 tabular-nums dark:text-rose-400"
-                  >−{{ lastScore.mistakePenalty }}</span
-                >
-              </div>
-              <div v-if="lastScore.hintPenalty" class="flex justify-between px-3 py-1.5">
-                <span class="text-zinc-500">{{ $t("modal.scoreHintPenalty") }}</span>
-                <span class="font-bold text-amber-700 tabular-nums dark:text-amber-400"
-                  >−{{ lastScore.hintPenalty }}</span
-                >
-              </div>
-              <div class="flex justify-between bg-zinc-500/5 px-3 py-1.5">
+              <div
+                :class="scoreLanded ? 'win-in' : 'opacity-0'"
+                class="flex justify-between bg-zinc-500/5 px-3 py-1.5"
+              >
                 <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{
                   $t("modal.scoreLifetime")
                 }}</span>
@@ -1705,7 +1855,7 @@ onUnmounted(() => {
                 class="text-xs font-bold"
                 :class="
                   mistakes === 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : 'text-rose-600 dark:text-rose-400'
                 "
                 >{{ mistakes }}{{ mistakeLimit && !gameZen ? ` / ${mistakeLimit}` : "" }}</span
@@ -1717,7 +1867,7 @@ onUnmounted(() => {
                 class="text-xs font-bold"
                 :class="
                   hintsUsed === 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : 'text-amber-700 dark:text-amber-400'
                 "
                 >{{ hintsUsed }}</span
@@ -1972,6 +2122,58 @@ onUnmounted(() => {
 }
 .star-pop {
   animation: star-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* A win-modal line appearing on its step. */
+.win-in {
+  animation: win-in 0.22s ease-out both;
+}
+@keyframes win-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+/* "Perfect!" in the teacher's red pen, stamped on at a slant. */
+.perfect-stamp {
+  display: inline-block;
+  padding: 0.2rem 0.8rem;
+  border: 0.25rem double currentColor;
+  border-radius: 0.375rem;
+  color: var(--color-rose-700);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+}
+.dark .perfect-stamp {
+  color: var(--color-rose-300);
+}
+.stamp-in {
+  animation: stamp-in 0.3s cubic-bezier(0.3, 1.3, 0.5, 1) both;
+}
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-8deg) scale(2.2);
+  }
+  65% {
+    opacity: 1;
+    transform: rotate(-8deg) scale(0.94);
+  }
+  100% {
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+/* Skipped (a tap or a key): everything is already in place. */
+.win-done .win-in,
+.win-done .star-pop,
+.win-done .stamp-in {
+  animation: none;
 }
 
 @keyframes modal-pop {
