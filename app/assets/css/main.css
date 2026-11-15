@@ -116,6 +116,119 @@
   --tile-edge: rgb(230 234 239 / 0.2);
   --tile-lip: rgb(0 0 0 / 0.35);
 }
+/* Themes (Settings, stored as the board theme) recolour the whole app, not just the board: the ink
+   scale, the page and the cards. Graph paper is the default above. */
+:root[data-theme="newsprint"] {
+  --color-zinc-50: #f7f6f3;
+  --color-zinc-100: #efede8;
+  --color-zinc-200: #e0ddd5;
+  --color-zinc-300: #c9c5ba;
+  --color-zinc-400: #9a958a;
+  --color-zinc-500: #5c584f;
+  --color-zinc-600: #4f4b43;
+  --color-zinc-700: #3b3832;
+  --color-zinc-800: #2b2a27;
+  --color-zinc-900: #1e1d1a;
+  --color-zinc-950: #121110;
+  --ground: #eae8e2;
+  --grid-fine: transparent;
+  --grid-bold: rgb(30 29 26 / 0.06);
+  --tray: rgb(255 255 255 / 0.45);
+  --tray-line: #1e1d1a;
+  --tile: #f7f6f2;
+  --tile-edge: rgb(30 29 26 / 0.3);
+  --tile-lip: rgb(30 29 26 / 0.16);
+}
+:root.dark[data-theme="newsprint"] {
+  --color-zinc-50: #f3f0e9;
+  --color-zinc-100: #e9e5dc;
+  --color-zinc-200: #d4cfc3;
+  --color-zinc-300: #bdb7a9;
+  --color-zinc-400: #a29c8e;
+  --color-zinc-500: #a8a294;
+  --color-zinc-600: #6b665b;
+  --color-zinc-700: #47443d;
+  --color-zinc-800: #34322d;
+  --color-zinc-900: #282622;
+  --color-zinc-950: #1b1a17;
+  --ground: #1d1c19;
+  --grid-bold: rgb(255 255 255 / 0.04);
+  --tray: rgb(0 0 0 / 0.18);
+  --tray-line: #d4cfc3;
+  --tile: #2a2925;
+  --tile-edge: rgb(236 231 220 / 0.2);
+  --tile-lip: rgb(0 0 0 / 0.35);
+}
+/* High contrast: black ink on white (white on black in dark mode), no grid, solid outlines. */
+:root[data-theme="contrast"] {
+  --color-zinc-50: #ffffff;
+  --color-zinc-100: #f2f2f2;
+  --color-zinc-200: #dedede;
+  --color-zinc-300: #9e9e9e;
+  --color-zinc-400: #6b6b6b;
+  --color-zinc-500: #3d3d3d;
+  --color-zinc-600: #2e2e2e;
+  --color-zinc-700: #1f1f1f;
+  --color-zinc-800: #141414;
+  --color-zinc-900: #000000;
+  --color-zinc-950: #000000;
+  --ground: #ffffff;
+  --grid-fine: transparent;
+  --grid-bold: transparent;
+  --tray: transparent;
+  --tray-line: #000000;
+  --tile: #ffffff;
+  --tile-edge: #000000;
+  --tile-lip: #000000;
+}
+:root.dark[data-theme="contrast"] {
+  --color-zinc-50: #ffffff;
+  --color-zinc-100: #f5f5f5;
+  --color-zinc-200: #e6e6e6;
+  --color-zinc-300: #d0d0d0;
+  --color-zinc-400: #b5b5b5;
+  --color-zinc-500: #cccccc;
+  --color-zinc-600: #8a8a8a;
+  --color-zinc-700: #5c5c5c;
+  --color-zinc-800: #333333;
+  --color-zinc-900: #141414;
+  --color-zinc-950: #000000;
+  --ground: #000000;
+  --tray-line: #ffffff;
+  --tile: #000000;
+  --tile-edge: #ffffff;
+  --tile-lip: rgb(255 255 255 / 0.45);
+}
+
+/* Settings over the game: a sheet on the right, a bottom sheet on phones; the board stays in view. */
+.settings-sheet {
+  margin: 0 0 0 auto;
+  width: min(28rem, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: inherit;
+  background: var(--ground);
+  border-left: 2px solid var(--tray-line);
+  box-shadow: -0.5rem 0 1.5rem rgb(0 0 0 / 0.18);
+}
+.settings-sheet::backdrop {
+  background: transparent;
+}
+@media (max-width: 639px) {
+  .settings-sheet {
+    margin: auto 0 0;
+    width: 100vw;
+    height: 55dvh;
+    border-left: 0;
+    border-top: 2px solid var(--tray-line);
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+}
+
 /* The grid sits on its own fixed layer: a background-image on the shell itself would hide every
    text's background from axe, which then skips its contrast check. */
 .app-shell {

@@ -22,22 +22,42 @@ test("pausing shows the overlay and freezes the timer; resume hides it", async (
   await expect(page.getByText("Paused")).toBeHidden();
 });
 
-test("Settings opens from the pause screen and returns to the paused game", async ({ page }) => {
+test("Settings slides over the running game, and a theme change shows on the board", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Hard/ }).click();
+  // Selected before Settings opens, so a key leaking through would fill it.
+  const empty = page.locator('[data-cell][aria-label*="empty"]').first();
+  const at = await empty.getAttribute("data-cell");
+  await empty.click();
   await page.getByLabel("Pause").click();
-  const frozenAt = await page.getByTestId("timer").textContent();
 
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-  // Language, colour mode and the mistake limit stay put until the game ends; data tools are hidden.
-  await expect(page.getByText("Locked until this game ends")).toHaveCount(3);
-  await expect(page.getByRole("button", { name: "Import" })).toHaveCount(0);
+  const sheet = page.getByRole("dialog", { name: "Settings" });
+  await expect(sheet).toBeVisible();
+  // The board is in view, so the clock runs: no pause overlay, no free look.
+  await expect(page.getByText("Paused")).toBeHidden();
+  await expect(sheet.getByText("The clock keeps running")).toBeVisible();
+  const before = await page.getByTestId("timer").textContent();
+  await expect(page.getByTestId("timer")).not.toHaveText(before ?? "", { timeout: 3000 });
 
-  await page.getByRole("button", { name: "Back to game" }).click();
-  await expect(page.getByText("Paused")).toBeVisible();
-  await expect(page.getByTestId("timer")).toHaveText(frozenAt ?? "");
+  // Language, colour mode and the mistake limit stay put until the game ends; data tools are hidden.
+  await expect(sheet.getByText("Locked until this game ends")).toHaveCount(3);
+  await expect(sheet.getByRole("button", { name: "Import" })).toHaveCount(0);
+
+  await sheet.getByLabel("Theme").selectOption("newsprint");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "newsprint");
+  await expect(page.locator(".board")).toHaveAttribute("data-theme", "newsprint");
+
+  // Keys typed in the sheet never reach the board.
+  await page.keyboard.press("5");
+  await expect(page.locator(`[data-cell="${at}"]`)).toHaveAttribute("aria-label", /empty/);
+
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText("Paused")).toBeHidden();
 });
 
 test("the Settings detour keeps an armed digit and a shown nudge", async ({ page }) => {
@@ -62,7 +82,6 @@ test("the Settings detour keeps an armed digit and a shown nudge", async ({ page
   await page.getByLabel("Pause").click();
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Back to game" }).click();
-  await page.locator(".pause-overlay").getByRole("button", { name: "Resume" }).click();
 
   await expect(three).toHaveAttribute("aria-pressed", "true");
   await expect(nudge).toBeVisible();
