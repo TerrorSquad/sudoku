@@ -506,5 +506,6 @@
   "records.fastest": "Fastest times are in the table above.",
   "records.since": "All records but the Daily streak count from your next win.",
   "settings.clockRuns": "The clock keeps running while the board is in view.",
-  "settings.boardThemeHint": "Colors the whole app and the board."
+  "settings.boardThemeHint": "Colors the whole app and the board.",
+  "modal.nextPuzzle": "Next puzzle: {level}"
 }

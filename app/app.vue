@@ -603,11 +603,29 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
 // Levels that were locked before this win (counting saves) and are open now.
 function announceUnlocks(lockedBefore: Difficulty[]) {
   const wins = score.unlockWins();
-  for (const level of lockedBefore.filter((d) => !lockOf(d, wins)))
+  for (const level of lockedBefore.filter((d) => !lockOf(d, wins))) {
+    justUnlocked.value ??= level;
     progressNotes.value.push({
       text: t("difficulty.unlocked", { level: t(`difficulty.${level}`) }),
       ok: true,
     });
+  }
+}
+
+// The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
+// the Daily, which has one puzzle a day). None for practice and custom boards.
+const justUnlocked = ref<Difficulty | null>(null);
+const nextLevel = computed<Difficulty | null>(() => {
+  if (practiceTechnique.value || activeDifficulty.value === "custom") return null;
+  if (justUnlocked.value) return justUnlocked.value;
+  return isDailyMode.value ? "medium" : activeDifficulty.value;
+});
+function handleNextPuzzle() {
+  const level = nextLevel.value;
+  if (!level) return;
+  // Straight to the next board: passing through the menu would cancel its start (startToken).
+  closeModal();
+  handleChooseDifficulty(level);
 }
 
 // A practice win can complete the week's puzzle. The path's challenges are its lessons.
@@ -634,13 +652,17 @@ function winMessage() {
       });
 }
 
-function handleModalClose() {
+function closeModal() {
   stopWinSteps();
   showModal.value = false;
+  justUnlocked.value = null;
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  currentScreen.value = "menu";
   timer.resetTimer();
+}
+function handleModalClose() {
+  closeModal();
+  currentScreen.value = "menu";
 }
 
 function openLesson(id: TechniqueId) {
@@ -2005,9 +2027,23 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <button @click="handleModalClose" class="tile tile-primary w-full py-3 text-sm font-bold">
-            {{ $t("modal.close") }}
-          </button>
+          <div class="flex gap-2">
+            <button
+              v-if="nextLevel"
+              @click="handleNextPuzzle"
+              data-testid="next-puzzle"
+              class="tile tile-primary flex-1 py-3 text-sm font-bold"
+            >
+              {{ $t("modal.nextPuzzle", { level: $t(`difficulty.${nextLevel}`) }) }}
+            </button>
+            <button
+              @click="handleModalClose"
+              :class="nextLevel ? 'px-5' : 'tile-primary flex-1'"
+              class="tile py-3 text-sm font-bold"
+            >
+              {{ $t("modal.close") }}
+            </button>
+          </div>
         </div>
       </div>
 
