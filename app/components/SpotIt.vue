@@ -1,0 +1,470 @@
+<script setup lang="ts">
+// Spot it: ten positions from one Academy tier, against the clock. Tap the pattern's cells (the
+// lesson's step 1, no step 2); a wrong tap adds MISS_PENALTY, skipping shows it and adds
+// SKIP_PENALTY. The clock only runs while a position is up, not while the next one loads.
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+
+import type { CellCoord, NotesGrid } from "../types/sudoku";
+import type { BoardTheme } from "../utils/preferenceValues";
+import type { Tier } from "../utils/progression";
+import type { TechniqueId } from "../utils/sudokuGrader";
+
+import {
+  findPrompt,
+  instancesOf,
+  missText,
+  tapPattern,
+  type Instance,
+  type Lesson,
+} from "../utils/lesson";
+import { patternMarks } from "../utils/patternMarks";
+import { makeLesson } from "../utils/puzzlePool";
+import { readJSON, writeJSON } from "../utils/safeJson";
+import {
+  MISS_PENALTY,
+  ROUND_SIZE,
+  SKIP_PENALTY,
+  SPOT_BEST_KEY,
+  breakdown,
+  buildRound,
+  formatSpotTime,
+  mergeSpotBest,
+  readSpotBest,
+  totalTime,
+  type SpotResult,
+} from "../utils/spotIt";
+import { digitLabel } from "../utils/sudokuColors";
+import { makeRng, solveBoard } from "../utils/sudokuCore";
+import { saveToCloud } from "../utils/wavedash";
+import AppIcon from "./AppIcon.vue";
+import SudokuGrid from "./SudokuGrid.vue";
+
+const props = defineProps<{ tier: Tier; colorMode: boolean; theme: BoardTheme }>();
+const emit = defineEmits<{
+  (e: "back"): void;
+  (e: "lesson", id: TechniqueId): void;
+  (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
+}>();
+const { t } = useI18n();
+const digit = (n: number) => digitLabel(n, props.colorMode, t);
+const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
+
+/** How long a found (or skipped) pattern stays drawn before the next position. */
+const REVEAL_MS = 1100;
+
+const phase = ref<"loading" | "find" | "reveal" | "done">("loading");
+const index = ref(0);
+const lesson = ref<Lesson | null>(null);
+let instances: Instance[] = [];
+const shown = ref<Instance | null>(null);
+const found = ref<CellCoord[]>([]);
+const selected = ref<CellCoord | null>(null);
+const misses = ref(0);
+const results = ref<SpotResult[]>([]);
+const feedback = ref<{ text: string; ok: boolean } | null>(null);
+const best = ref<number | undefined>();
+const newBest = ref(false);
+
+// A round: its positions, made in the puzzle worker ahead of the player.
+let round = 0;
+let positions: (Promise<Lesson> | undefined)[] = [];
+let slots: ReturnType<typeof buildRound> = [];
+let revealTimer: ReturnType<typeof setTimeout> | undefined;
+const ensure = (i: number) => {
+  const s = slots[i];
+  if (s && !positions[i]) positions[i] = makeLesson(s.technique, s.seed);
+};
+
+// The clock: what earlier positions took, plus this one so far.
+let findStart = 0;
+const now = ref(0);
+const tick = setInterval(() => (now.value = performance.now()), 100);
+const clock = computed(() => {
+  const live =
+    phase.value === "find"
+      ? Math.max(0, now.value - findStart) / 1000 + misses.value * MISS_PENALTY
+      : 0;
+  return totalTime(results.value) + live;
+});
+
+function startRound() {
+  clearTimeout(revealTimer);
+  round++;
+  // A test pins the round with window.spotSeed; players get a fresh one.
+  const seed = (window as { spotSeed?: number }).spotSeed ?? Math.floor(Math.random() * 2 ** 31);
+  slots = buildRound(props.tier, makeRng(seed));
+  positions = [];
+  results.value = [];
+  newBest.value = false;
+  void load(0);
+}
+
+async function load(i: number) {
+  const mine = round;
+  phase.value = "loading";
+  index.value = i;
+  ensure(i);
+  ensure(i + 1);
+  const L = await positions[i]!;
+  if (mine !== round) return; // a new round started, or the screen closed
+  lesson.value = L;
+  instances = instancesOf(L);
+  shown.value = null;
+  found.value = [];
+  selected.value = null;
+  misses.value = 0;
+  feedback.value = null;
+  phase.value = "find";
+  findStart = now.value = performance.now();
+}
+
+function shake({ r, c }: CellCoord) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.querySelector(`[data-cell="${r}-${c}"]`)?.animate(
+    [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
+    { duration: 320 },
+  );
+}
+
+function tap(cell: CellCoord) {
+  selected.value = cell;
+  const L = lesson.value;
+  if (phase.value !== "find" || !L) return;
+  if (found.value.some((f) => f.r === cell.r && f.c === cell.c)) return;
+  const res = tapPattern(instances, found.value, cell);
+  if (res.miss) {
+    misses.value++;
+    shake(cell);
+    emit("cue", "mistake");
+    feedback.value = {
+      text: `${missText(L, cell, t, digit)} ${t("spot.penalty", { s: MISS_PENALTY })}`,
+      ok: false,
+    };
+    return;
+  }
+  found.value = res.found;
+  if (res.complete) return settle(res.complete, false);
+  feedback.value = {
+    text: t("lesson.found", { n: res.found.length, total: L.pattern.length }),
+    ok: true,
+  };
+}
+
+function skip() {
+  if (phase.value === "find") settle(instances[0]!, true);
+}
+
+function settle(instance: Instance, skipped: boolean) {
+  const seconds =
+    (performance.now() - findStart) / 1000 +
+    misses.value * MISS_PENALTY +
+    (skipped ? SKIP_PENALTY : 0);
+  results.value = [
+    ...results.value,
+    { technique: lesson.value!.technique, seconds, misses: misses.value, skipped },
+  ];
+  shown.value = instance;
+  phase.value = "reveal";
+  feedback.value = skipped
+    ? { text: t("spot.skipped", { s: SKIP_PENALTY }), ok: false }
+    : { text: t("spot.found"), ok: true };
+  emit("cue", skipped ? "hint" : "place");
+  revealTimer = setTimeout(
+    () => (index.value + 1 < ROUND_SIZE ? load(index.value + 1) : finishRound()),
+    REVEAL_MS,
+  );
+}
+
+function finishRound() {
+  const total = Math.round(totalTime(results.value) * 10) / 10;
+  const stored = readJSON<unknown>(SPOT_BEST_KEY, {});
+  best.value = readSpotBest(stored)[props.tier];
+  newBest.value = best.value === undefined || total < best.value;
+  // Merged into the raw entry, so tiers this version can't read survive.
+  writeJSON(SPOT_BEST_KEY, mergeSpotBest(stored, { [props.tier]: total }));
+  phase.value = "done";
+  emit("cue", newBest.value ? "unlock" : "place");
+  saveToCloud();
+}
+
+const rows = computed(() => breakdown(results.value));
+
+// The board: the pattern found so far; once settled, the whole move drawn in pen.
+const L = computed(() => lesson.value);
+const notes = computed<NotesGrid>(
+  () =>
+    L.value?.notes.map((row) =>
+      row.map((ns) => Array.from({ length: 10 }, (_, n) => ns.includes(n))),
+    ) ?? [],
+);
+const solved = computed(() => (L.value ? solveBoard(L.value.board)! : []));
+const triggers = computed(() => shown.value?.pattern ?? found.value);
+const eliminationCells = computed(
+  () => shown.value?.eliminations.map(({ r, c }) => ({ r, c })) ?? [],
+);
+const target = computed(() =>
+  shown.value && L.value?.placement ? { r: L.value.placement.r, c: L.value.placement.c } : null,
+);
+const marks = computed(() => {
+  if (!shown.value || !L.value) return [];
+  const has = (r: number, c: number, n: number) => !!L.value!.notes[r]?.[c]?.includes(n);
+  const move = {
+    ...L.value.move,
+    triggers: shown.value.pattern,
+    eliminations: shown.value.eliminations,
+  };
+  return patternMarks(move, has, true);
+});
+const prompt = computed(() => (L.value ? findPrompt(L.value, t, digit) : ""));
+
+// Arrows or WASD walk the grid, Enter or Space taps, H skips, Esc leaves; once done Enter plays
+// again. (S is WASD's down, so skipping is H, the key that shows the answer everywhere else.)
+const STEPS: Record<string, [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+  w: [-1, 0],
+  s: [1, 0],
+  a: [0, -1],
+  d: [0, 1],
+};
+function onKey(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const onButton = !!(e.target as HTMLElement).closest?.("button");
+  if (key === "Escape") return emit("back");
+  if (phase.value === "done") {
+    if (key === "Enter" && !onButton) {
+      e.preventDefault();
+      startRound();
+    }
+    return;
+  }
+  const move = STEPS[key];
+  if (move) {
+    e.preventDefault();
+    const cur = selected.value;
+    const r = Math.min(8, Math.max(0, (cur?.r ?? 0) + (cur ? move[0] : 0)));
+    const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
+    selected.value = { r, c };
+    nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+  } else if ((key === "Enter" || key === " ") && selected.value && !onButton) {
+    e.preventDefault();
+    tap(selected.value);
+  } else if (key === "h" && !e.repeat) {
+    skip();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", onKey);
+  startRound();
+});
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKey);
+  clearInterval(tick);
+  clearTimeout(revealTimer);
+  round++; // drops a position still loading
+});
+</script>
+
+<template>
+  <div class="flex min-h-screen w-full flex-col">
+    <div
+      class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
+    >
+      <button
+        :aria-label="$t('lesson.back')"
+        @click="emit('back')"
+        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+      >
+        <AppIcon
+          class="h-4 w-4"
+          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+        />
+        <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
+      </button>
+      <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
+        {{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}
+      </h1>
+      <span
+        v-if="phase !== 'done'"
+        data-testid="spot-clock"
+        class="font-game text-lg font-bold text-zinc-900 tabular-nums dark:text-zinc-50"
+        >{{ formatSpotTime(clock) }}</span
+      >
+    </div>
+
+    <!-- Results -->
+    <div v-if="phase === 'done'" class="mx-auto w-full max-w-md px-4 py-6" data-testid="spot-done">
+      <section class="panel flex flex-col gap-3 p-5 text-center">
+        <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">{{ $t("spot.total") }}</p>
+        <p
+          data-testid="spot-total"
+          class="font-display text-4xl font-black text-zinc-900 tabular-nums dark:text-zinc-50"
+        >
+          {{ formatSpotTime(totalTime(results)) }}
+        </p>
+        <p v-if="newBest" class="text-sm font-bold text-amber-700 dark:text-amber-400">
+          {{ $t("spot.newBest") }}
+          <span v-if="best !== undefined" class="font-semibold">{{
+            $t("spot.was", { time: formatSpotTime(best) })
+          }}</span>
+        </p>
+        <p v-else-if="best !== undefined" class="text-sm text-zinc-600 dark:text-zinc-400">
+          {{ $t("spot.best", { time: formatSpotTime(best) }) }}
+        </p>
+      </section>
+
+      <h2 class="mt-6 mb-2 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+        {{ $t("spot.breakdown") }}
+      </h2>
+      <ul class="flex flex-col gap-2" data-testid="spot-breakdown">
+        <li v-for="row in rows" :key="row.technique" class="panel flex items-center gap-3 p-3">
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
+              techName(row.technique)
+            }}</span>
+            <span class="block text-xs text-zinc-600 dark:text-zinc-400">
+              {{ $t("spot.average", { time: formatSpotTime(row.average) }) }}
+              <template v-if="row.misses"> · {{ $t("spot.misses", { n: row.misses }) }}</template>
+              <template v-if="row.skips"> · {{ $t("spot.skips", { n: row.skips }) }}</template>
+            </span>
+          </span>
+          <button
+            v-if="row.weak"
+            @click="emit('lesson', row.technique)"
+            class="tile shrink-0 px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
+          >
+            {{ $t("spot.learn") }}
+          </button>
+        </li>
+      </ul>
+
+      <div class="mt-6 flex gap-2">
+        <button @click="startRound" class="tile tile-primary flex-1 py-3 text-sm font-bold">
+          {{ $t("spot.again") }}
+        </button>
+        <button @click="emit('back')" class="tile flex-1 py-3 text-sm font-bold">
+          {{ $t("lesson.back") }}
+        </button>
+      </div>
+    </div>
+
+    <!-- A position -->
+    <div
+      v-else
+      class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 py-3 sm:px-5 lg:grid lg:grid-cols-12 lg:gap-6"
+    >
+      <section
+        class="panel order-first flex flex-col gap-3 p-4 lg:order-last lg:col-span-5 lg:self-start"
+        data-testid="spot-coach"
+      >
+        <div class="flex gap-1" aria-hidden="true">
+          <div
+            v-for="n in ROUND_SIZE"
+            :key="n"
+            :class="
+              n - 1 < results.length
+                ? results[n - 1]!.skipped
+                  ? 'bg-rose-500'
+                  : 'bg-violet-600'
+                : n - 1 === index
+                  ? 'bg-violet-300 dark:bg-violet-800'
+                  : 'bg-zinc-200 dark:bg-zinc-800'
+            "
+            class="h-1 flex-grow rounded-full"
+          />
+        </div>
+        <p
+          class="text-xs font-bold text-violet-700 dark:text-violet-300"
+          data-testid="spot-progress"
+        >
+          {{ $t("spot.progress", { n: index + 1, total: ROUND_SIZE }) }}
+          <template v-if="lesson && phase !== 'loading'">
+            · {{ techName(lesson.technique) }}</template
+          >
+        </p>
+        <p
+          v-if="phase === 'loading'"
+          class="text-base leading-snug font-semibold text-zinc-600 dark:text-zinc-400"
+        >
+          {{ $t("spot.loading") }}
+        </p>
+        <p v-else class="text-base leading-snug font-semibold text-zinc-900 dark:text-zinc-100">
+          {{ prompt }}
+        </p>
+        <button
+          :disabled="phase !== 'find'"
+          @click="skip"
+          class="tile self-start px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
+        >
+          {{ $t("spot.skip", { s: SKIP_PENALTY }) }}
+        </button>
+        <p
+          role="status"
+          :class="
+            feedback?.ok
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-rose-700 dark:text-rose-300'
+          "
+          class="min-h-5 text-sm font-semibold"
+        >
+          {{ feedback?.text }}
+        </p>
+        <ul
+          class="spot-keys flex flex-wrap gap-x-3 gap-y-1 border-t border-zinc-200 pt-2 text-[0.6875rem] text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
+        >
+          <li
+            v-for="k in [
+              { key: '↑←↓→', desc: $t('lesson.key.move') },
+              { key: 'Enter', desc: $t('lesson.key.tap') },
+              { key: 'H', desc: $t('spot.key.skip') },
+              { key: 'Esc', desc: $t('lesson.key.back') },
+            ]"
+            :key="k.key"
+          >
+            <kbd
+              class="border border-zinc-300 bg-zinc-100 px-1 font-game font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              >{{ k.key }}</kbd
+            >
+            {{ k.desc }}
+          </li>
+        </ul>
+      </section>
+
+      <div class="lg:col-span-7">
+        <SudokuGrid
+          v-if="lesson"
+          :key="index"
+          :current-board="lesson.board"
+          :initial-board="lesson.board"
+          :solved-board="solved"
+          :notes-board="notes"
+          :selected-cell="selected"
+          :active-hint-cell="target"
+          :hint-triggers="triggers"
+          :hint-eliminations="eliminationCells"
+          :conflict-cells="[]"
+          :color-mode="colorMode"
+          :flash-cells="[]"
+          :show-errors="false"
+          :theme="theme"
+          :marks="marks"
+          :class="phase === 'loading' && 'opacity-40'"
+          @select-cell="tap"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* A touch-only device has no keys to list. */
+@media not (any-pointer: fine) {
+  .spot-keys {
+    display: none;
+  }
+}
+</style>
