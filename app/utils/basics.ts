@@ -122,9 +122,18 @@ export const BASICS_IDS = Object.keys(BASICS) as BasicsId[];
 export const candidatesAt = (board: Grid, { r, c }: CellRC): number[] =>
   board[r]![c] ? [] : getGridCandidates(board)[r]![c]!;
 
-/** Which of the cell's units already holds `d` (the reason it can't go there), if any. */
-export function blockedBy(board: Grid, { r, c }: CellRC, d: number): BoardUnit["kind"] | null {
-  for (const kind of ["row", "col", "box"] as const)
+/**
+ * Which of the cell's units already holds `d` (the reason it can't go there), if any; `first` is
+ * checked first, so a box exercise names the box.
+ */
+export function blockedBy(
+  board: Grid,
+  { r, c }: CellRC,
+  d: number,
+  first?: BoardUnit["kind"],
+): BoardUnit["kind"] | null {
+  const kinds = ["row", "col", "box"] as const;
+  for (const kind of first ? [first, ...kinds.filter((k) => k !== first)] : kinds)
     if (unitCells({ kind, r, c }).some((p) => board[p.r]![p.c] === d)) return kind;
   return null;
 }

@@ -134,7 +134,7 @@ function input(num: number) {
   if (num !== answer.value) {
     if (tk.scan) return reject(cell, "basics.miss.digit", { d: digit(tk.scan) });
     if (tk.withNotes) return reject(cell, "basics.miss.notMark", { d: digit(num) });
-    const unit = blockedBy(board.value, cell, num);
+    const unit = blockedBy(board.value, cell, num, tk.unit?.kind);
     return reject(cell, unit ? `basics.miss.${unit}` : "basics.miss.otherCell", { d: digit(num) });
   }
   board.value[cell.r]![cell.c] = num;
@@ -153,7 +153,7 @@ function pencil(cell: CellCoord, num: number) {
     marks[num] = false;
     return (feedback.value = null);
   }
-  const unit = blockedBy(board.value, cell, num);
+  const unit = blockedBy(board.value, cell, num, tk.unit?.kind);
   if (unit) return reject(cell, `basics.miss.${unit}`, { d: digit(num) });
   marks[num] = true;
   if (pencilled.value.length === wanted.value.length) finishNotes();

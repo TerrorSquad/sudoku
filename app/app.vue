@@ -193,6 +193,7 @@ const activeLesson = ref<Lesson | null>(null);
 // The "How to play" lesson on the basics screen.
 const activeBasics = ref<BasicsId>("rule");
 function openBasics(id: BasicsId) {
+  academyFromGame.value = false; // the course never returns to a game
   activeBasics.value = id;
   currentScreen.value = "basics";
 }
@@ -482,11 +483,18 @@ const lessonsDone = computed(() => {
 const pathDone = computed(
   () => ACADEMY_TECHNIQUES.filter((tech) => lessonsDone.value.includes(tech.id)).length,
 );
-// "New to sudoku?" on the menu: a fresh player (no wins, no basics yet) who hasn't dismissed it.
+// "New to sudoku?" on the menu: a fresh player who hasn't dismissed it. Fresh: no win anywhere
+// (the unlock count, so Zen wins count too), no technique lesson and no basics lesson done.
 const showBasicsPrompt = computed(() => {
   void currentScreen.value;
+  const won = Object.values(score.unlockWins()).some(
+    (e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0,
+  );
   return (
-    basicsPrompt.value && score.getStats().gamesWon === 0 && techniquePath.getBasics().length === 0
+    basicsPrompt.value &&
+    !won &&
+    lessonsDone.value.length === 0 &&
+    techniquePath.getBasics().length === 0
   );
 });
 
@@ -735,6 +743,7 @@ function closeModal() {
 }
 function handleModalClose() {
   closeModal();
+  academyFromGame.value = false;
   currentScreen.value = "menu";
 }
 
@@ -1327,6 +1336,7 @@ async function handleLesson(technique: TechniqueId) {
 }
 
 function exitToMenu() {
+  academyFromGame.value = false; // the game is over: no lesson or Academy returns to it
   practiceTechnique.value = null;
   isDailyMode.value = false;
   timer.stopTimer();

@@ -64,6 +64,10 @@ describe("basics lessons", () => {
     const [task] = BASICS.notes;
     expect(blockedBy(task!.board, task!.cell, 4)).toBe("row");
     expect(blockedBy(task!.board, task!.cell, 1)).toBeNull();
+    // The box exercise's 6 shares the empty cell's row and its box: the box is named first.
+    const box = BASICS.rule[2]!;
+    expect(blockedBy(box.board, box.cell, 6)).toBe("row");
+    expect(blockedBy(box.board, box.cell, 6, "box")).toBe("box");
   });
 });
 
