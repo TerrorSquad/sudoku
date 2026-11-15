@@ -147,11 +147,18 @@ export function readStars(raw: unknown): Partial<Record<TechniqueId, Stars>> {
   return out;
 }
 
-/** Each technique's better best, so a sync in either direction never loses a star. */
-export function mergeStars(a: unknown, b: unknown): Partial<Record<TechniqueId, Stars>> {
-  const out = readStars(a);
-  for (const [id, n] of Object.entries(readStars(b)) as [TechniqueId, Stars][])
-    out[id] = Math.max(out[id] ?? 0, n) as Stars;
+/**
+ * Each entry's better best, so a sync in either direction never loses a star. Entries this
+ * version doesn't know (a later version's technique, say) pass through as long as they're
+ * numbers, so an older client never strips them; readStars leaves them out when reading.
+ */
+export function mergeStars(a: unknown, b: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const raw of [a, b]) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    for (const [id, n] of Object.entries(raw))
+      if (typeof n === "number" && Number.isFinite(n)) out[id] = Math.max(out[id] ?? n, n);
+  }
   return out;
 }
 

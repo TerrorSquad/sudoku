@@ -155,9 +155,12 @@ describe("progress backup", () => {
     const stars = "sudoku_v1_lesson_stars";
     expect(bad(stars, { "x-wing": 3, "naked-single": 1 })).toMatchObject({ ok: true });
     expect(bad(stars, {})).toMatchObject({ ok: true });
-    expect(bad(stars, { "x-wing": 4 })).toEqual({ ok: false, error: "invalid" });
-    expect(bad(stars, { "no-such-technique": 2 })).toEqual({ ok: false, error: "invalid" });
+    // A later version's techniques or values are kept (readStars ignores them), not rejected:
+    // rejecting would make its cloud file look corrupt here, and get uploaded over.
+    expect(bad(stars, { "x-wing": 4, "no-such-technique": 2 })).toMatchObject({ ok: true });
     expect(bad(stars, [3])).toEqual({ ok: false, error: "invalid" });
+    expect(bad(stars, 3)).toEqual({ ok: false, error: "invalid" });
+    expect(bad(stars, null)).toEqual({ ok: false, error: "invalid" });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
       bad("sudoku_v1_save_hard", {

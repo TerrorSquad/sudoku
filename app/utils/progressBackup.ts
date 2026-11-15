@@ -3,7 +3,7 @@
 // tests/progressBackup.test.ts.
 
 import { BOARD_THEMES, UI_SCALES } from "./preferenceValues";
-import { LESSON_STARS_KEY, readStars } from "./progression";
+import { LESSON_STARS_KEY } from "./progression";
 
 export const BACKUP_PREFIX = "sudoku_v1_";
 export const MAX_BACKUP_BYTES = 5_000_000;
@@ -66,9 +66,8 @@ export function validEntry(key: string, value: string): boolean {
   if (key === "sudoku_v1_pref_ui_scale") return (UI_SCALES as readonly unknown[]).includes(parsed);
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
   if (key === LESSON_STARS_KEY) {
-    // Every entry must be one the game reads back (a technique, 1–3), or it isn't ours.
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
-    return Object.keys(parsed).length === Object.keys(readStars(parsed)).length;
+    // Shape only: a later version may add techniques or values; readStars ignores what it can't use.
+    return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
   }
   if (key === "sudoku_v1_score") {
     return (

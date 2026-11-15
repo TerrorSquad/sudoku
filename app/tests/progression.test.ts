@@ -110,6 +110,10 @@ describe("lesson flow", () => {
       "x-wing": 3,
       pointing: 3,
     });
+    // A later version's entries pass through (numbers only), so syncing here never strips them.
+    expect(
+      mergeStars({ "new-technique": 2, odd: "x" }, { "new-technique": 4, pointing: 1 }),
+    ).toEqual({ "new-technique": 4, pointing: 1 });
   });
 });
 

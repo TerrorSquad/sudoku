@@ -186,6 +186,8 @@ function crossOut() {
   if (left.length === 1) return input(left[0]!.num);
   if (left.length)
     return say("lesson.whichDigit", false, { digits: left.map((e) => digit(e.num)).join(", ") });
+  // Everything this cell loses is gone already: nothing wrong was tried, so no slip.
+  if (elims.value.some((e) => same(e, cell))) return say("lesson.cellDone", true);
   reject(cell, "lesson.notThisCell");
 }
 
@@ -213,7 +215,8 @@ function finish() {
 // step 2). A naked single has no one digit, so it starts at the box. Applying: the cells to change.
 function showMe() {
   if (step.value === "done") return;
-  slips.value++;
+  // Applying, only the first press shows anything new, so only it costs a star.
+  if (step.value === "find" || reveal.value === 0) slips.value++;
   reveal.value += step.value === "find" && reveal.value === 0 && !lookable ? 2 : 1;
   if (step.value === "find" && reveal.value >= 3) {
     startApply();
@@ -306,7 +309,8 @@ function onKey(e: KeyboardEvent) {
   } else if (key === "Backspace" || key === "Delete" || key === "x") {
     e.preventDefault();
     crossOut();
-  } else if (key === "h") {
+  } else if (key === "h" && !e.repeat) {
+    // Not on key repeat: holding H would race through every stage.
     showMe();
   }
 }

@@ -532,5 +532,6 @@
   "lesson.key.move": "move",
   "lesson.key.tap": "tap",
   "lesson.key.place": "place",
-  "lesson.key.cross": "cross out"
+  "lesson.key.cross": "cross out",
+  "lesson.cellDone": "That cell is done: its marks are crossed out."
 }

@@ -532,5 +532,6 @@
   "lesson.key.move": "pomeri",
   "lesson.key.tap": "izaberi",
   "lesson.key.place": "upiši",
-  "lesson.key.cross": "obriši"
+  "lesson.key.cross": "obriši",
+  "lesson.cellDone": "Tu je sve obrisano što treba."
 }

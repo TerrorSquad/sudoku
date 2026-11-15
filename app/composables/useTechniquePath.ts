@@ -47,9 +47,10 @@ export function useTechniquePath() {
 
   /** Keeps the better of `stars` and the stored best; returns the best before this lesson. */
   function recordStars(id: TechniqueId, stars: Stars): Stars | undefined {
-    const before = getStars();
-    writeJSON(LESSON_STARS_KEY, mergeStars(before, { [id]: stars }));
-    return before[id];
+    // Merged into the raw entry, so entries this version can't read survive.
+    const stored = readJSON<unknown>(LESSON_STARS_KEY, {});
+    writeJSON(LESSON_STARS_KEY, mergeStars(stored, { [id]: stars }));
+    return readStars(stored)[id];
   }
 
   return { getDone, recordLesson, getWeeksDone, markWeekDone, getStars, recordStars };
