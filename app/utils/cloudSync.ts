@@ -3,6 +3,7 @@
 // docs/specs/2026-10-27-wavedash-platform-design.md, phase 3.
 
 import { BACKUP_PREFIX, parseBackup, validEntry, type Backup } from "./progressBackup";
+import { LESSON_STARS_KEY, mergeStars } from "./progression";
 import { RECORDS_KEY, mergeRecords, readRecords } from "./records";
 
 /** The one cloud file: a progressBackup export plus when it was uploaded. */
@@ -43,11 +44,25 @@ export function mergedRecords(kept: Record<string, string>, replaced: Record<str
   );
 }
 
-/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries and better records. */
+/**
+ * The bests (personal records, lesson stars) of `kept` merged with `replaced`'s, as entries to
+ * write, so neither direction of a sync costs one. Only keys `replaced` holds: otherwise `kept`'s
+ * entry already is the best.
+ */
+export function mergedBests(kept: Record<string, string>, replaced: Record<string, string>) {
+  const out: Record<string, string> = {};
+  if (replaced[RECORDS_KEY]) out[RECORDS_KEY] = JSON.stringify(mergedRecords(kept, replaced));
+  if (replaced[LESSON_STARS_KEY])
+    out[LESSON_STARS_KEY] = JSON.stringify(
+      mergeStars(parseJson(kept[LESSON_STARS_KEY]), parseJson(replaced[LESSON_STARS_KEY])),
+    );
+  return out;
+}
+
+/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries and better bests. */
 export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
   const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.has(k));
-  const data = { ...file.data, ...Object.fromEntries(kept) };
-  if (local[RECORDS_KEY]) data[RECORDS_KEY] = JSON.stringify(mergedRecords(file.data, local));
+  const data = { ...file.data, ...Object.fromEntries(kept), ...mergedBests(file.data, local) };
   return { ...file, data };
 }
 

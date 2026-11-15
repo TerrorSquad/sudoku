@@ -462,7 +462,7 @@ const bestTime = computed(() => {
 });
 const dailyStreak = computed(() => {
   void currentScreen.value;
-  return dailyPuzzle.getStreak();
+  return dailyPuzzle.getStreakState();
 });
 const pathDone = computed(() => {
   void currentScreen.value;
@@ -532,8 +532,12 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         if (progressNotes.value.length) cue("unlock");
       }
     } else {
-      if (isDailyMode.value)
+      if (isDailyMode.value) {
+        const earnedBefore = dailyPuzzle.getStreakState().earned;
         dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
+        if (dailyPuzzle.getStreakState().earned > earnedBefore)
+          progressNotes.value.push({ text: t("streak.freezeEarned"), ok: true });
+      }
       const breakdown = computeScore({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
@@ -604,11 +608,76 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
 // Levels that were locked before this win (counting saves) and are open now.
 function announceUnlocks(lockedBefore: Difficulty[]) {
   const wins = score.unlockWins();
-  for (const level of lockedBefore.filter((d) => !lockOf(d, wins)))
+  for (const level of lockedBefore.filter((d) => !lockOf(d, wins))) {
+    justUnlocked.value ??= level;
     progressNotes.value.push({
       text: t("difficulty.unlocked", { level: t(`difficulty.${level}`) }),
       ok: true,
     });
+  }
+}
+
+const GAME_URL = "https://wavedash.com/games/sudoku-pro";
+
+// The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
+// the Daily, which has one puzzle a day). None for practice and custom boards.
+const justUnlocked = ref<Difficulty | null>(null);
+const nextLevel = computed<Difficulty | null>(() => {
+  if (practiceTechnique.value || activeDifficulty.value === "custom") return null;
+  if (justUnlocked.value) return justUnlocked.value;
+  return isDailyMode.value ? "medium" : activeDifficulty.value;
+});
+// Share a win: the system share sheet where there is one (phones), else the clipboard.
+const shared = ref(false);
+async function shareWin() {
+  const lines = [
+    `${t("menu.title")} · ${difficultyLabel.value}`,
+    [
+      gameZen.value ? null : `⏱ ${timer.formatTime(timer.timerSeconds.value)}`,
+      "★".repeat(winStars.value) + "☆".repeat(3 - winStars.value),
+      t("modal.shareMistakes", { n: mistakes.value }),
+      t("modal.shareHints", { n: hintsUsed.value }),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    GAME_URL,
+  ];
+  const text = lines.join("\n");
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    shared.value = true;
+    setTimeout(() => (shared.value = false), 2000);
+  };
+  try {
+    if (!navigator.share) return await copy();
+    try {
+      await navigator.share({ text });
+    } catch (e) {
+      // A dismissed sheet is the player's choice; anything else (an iframe without web-share
+      // permission says NotAllowedError) falls back to the clipboard.
+      if ((e as Error).name !== "AbortError") await copy();
+    }
+  } catch {
+    // A blocked clipboard: nothing more to try.
+  }
+}
+
+// Starting: the modal stays up (its button busy) until the board is ready, so the won board is
+// never live again in between. A saved game at that level goes through the usual resume prompt.
+const nextLoading = ref(false);
+async function handleNextPuzzle() {
+  const level = nextLevel.value;
+  if (!level || nextLoading.value) return;
+  if (gameSave.loadDifficulty(level)) {
+    handleModalClose();
+    currentScreen.value = "difficulty";
+    handleChooseDifficulty(level);
+    return;
+  }
+  nextLoading.value = true;
+  // Straight to the next board (the menu would cancel its start), Zen if this game was.
+  await handleStartGame(level, { zen: gameZen.value, ready: closeModal });
+  nextLoading.value = false;
 }
 
 // A practice win can complete the week's puzzle. The path's challenges are its lessons.
@@ -635,13 +704,18 @@ function winMessage() {
       });
 }
 
-function handleModalClose() {
+function closeModal() {
   stopWinSteps();
   showModal.value = false;
+  finishing.value = false; // a Finish-button win ends with it set
+  justUnlocked.value = null;
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  currentScreen.value = "menu";
   timer.resetTimer();
+}
+function handleModalClose() {
+  closeModal();
+  currentScreen.value = "menu";
 }
 
 function openLesson(id: TechniqueId) {
@@ -676,13 +750,17 @@ function resumeSavedGame(s: GameSave) {
 // A board still generating when the player picks again, or leaves the screen, is dropped.
 let startToken = 0;
 watch(currentScreen, () => startToken++);
-async function handleStartGame(level: Difficulty) {
+async function handleStartGame(
+  level: Difficulty,
+  { zen: zenGame = zen.value, ready = () => {} } = {},
+) {
   const token = ++startToken;
   const generated = await takePuzzle(level);
   if (token !== startToken) return;
+  ready();
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  gameZen.value = zen.value;
+  gameZen.value = zenGame;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
@@ -1215,8 +1293,9 @@ async function handleLesson(technique: TechniqueId) {
   practiceLoading.value = true;
   const token = ++practiceToken;
   try {
+    const from = currentScreen.value; // the Academy, or a finished lesson's next one
     const lesson = await generateLesson(technique);
-    if (token !== practiceToken || currentScreen.value !== "academy") return;
+    if (token !== practiceToken || currentScreen.value !== from) return;
     activeLesson.value = lesson;
     currentScreen.value = "lesson";
   } finally {
@@ -1272,10 +1351,63 @@ function redo() {
   }
 }
 
+// The game's keys: the wide-screen sidebar lists them, and ? opens the same list anywhere.
+const SHORTCUTS = [
+  { key: "↑←↓→", desc: "sidebar.shortcutMove" },
+  { key: "WASD", desc: "sidebar.shortcutMove" },
+  { key: "1–9", desc: "sidebar.shortcutInputNumber" },
+  { key: "Backspace", desc: "sidebar.shortcutEraseCell" },
+  { key: "N", desc: "sidebar.shortcutToggleNotes" },
+  { key: "H", desc: "sidebar.shortcutGetHint" },
+  { key: "F", desc: "sidebar.shortcutAutoFillNotes" },
+  { key: "P", desc: "sidebar.shortcutPause" },
+  { key: "Ctrl+Z", desc: "sidebar.shortcutUndo" },
+  { key: "Ctrl+Y", desc: "sidebar.shortcutRedo" },
+  { key: "?", desc: "sidebar.shortcutHelp" },
+] as const;
+const shortcutsOpen = ref(false);
+const shortcutsSheet = ref<HTMLDialogElement | null>(null);
+watch(shortcutsOpen, (open) => {
+  if (open) shortcutsSheet.value?.showModal();
+  else shortcutsSheet.value?.close();
+});
+
+// On a settled end screen (not over a button, whose own Enter wins): Enter plays the next
+// puzzle, Escape closes.
+function handleModalKey(e: KeyboardEvent) {
+  const target = e.target as HTMLElement;
+  if (target.closest?.("[data-end-modal] button")) return; // the modal's own buttons
+  // A button behind the overlay kept focus (the numpad, Finish): it mustn't press.
+  if (e.key === "Enter" || e.key === " ") e.preventDefault();
+  const settled = !isWinState.value || winStep.value >= winStepCount.value;
+  if (!settled || e.repeat) return;
+  if (e.key === "Enter" && nextLevel.value) {
+    e.preventDefault();
+    handleNextPuzzle();
+  } else if (e.key === "Escape") {
+    handleModalClose();
+  }
+}
+
 function handleKeyDown(e: KeyboardEvent) {
-  // A key still held from the winning move, or pressed before the steps start, skips nothing.
-  if (showModal.value && !e.repeat && winStep.value) skipWinSteps();
-  if (currentScreen.value !== "game" || timer.isPaused.value || settingsOverGame.value) return;
+  if (showModal.value) {
+    handleModalKey(e);
+    // A key still held from the winning move, or pressed before the steps start, skips nothing.
+    if (!e.repeat && winStep.value) skipWinSteps();
+    return;
+  }
+  // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
+  if (currentScreen.value !== "game" || settingsOverGame.value || shortcutsSheet.value?.open)
+    return;
+  if (e.key === "?") {
+    shortcutsOpen.value = true;
+    return;
+  }
+  if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey && !finishing.value) {
+    timer.togglePause();
+    return;
+  }
+  if (timer.isPaused.value) return;
   if (showModal.value || practiceLoading.value || finishing.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
   // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
@@ -1450,8 +1582,13 @@ onUnmounted(() => {
                 <span class="block">{{
                   dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
                 }}</span>
-                <span v-if="dailyStreak > 0" class="block text-[0.6875rem] font-semibold opacity-80"
-                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}</span
+                <span
+                  v-if="dailyStreak.current > 0"
+                  class="block text-[0.6875rem] font-semibold opacity-80"
+                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak.current }) }}
+                  <template v-if="dailyStreak.freezes"
+                    >· ❄ {{ dailyStreak.freezes }}</template
+                  ></span
                 >
               </span>
             </button>
@@ -1534,6 +1671,7 @@ onUnmounted(() => {
             currentScreen = 'academy';
           "
           @practice="handlePractice(activeLesson.technique)"
+          @lesson="handleLesson"
         />
 
         <!-- STATISTICS -->
@@ -1576,26 +1714,12 @@ onUnmounted(() => {
                 {{ $t("sidebar.keyboard") }}
               </p>
               <ul class="space-y-3">
-                <li
-                  v-for="(s, i) in [
-                    { key: '↑←↓→', desc: $t('sidebar.shortcutMove') },
-                    { key: 'WASD', desc: $t('sidebar.shortcutMove') },
-                    { key: '1–9', desc: $t('sidebar.shortcutInputNumber') },
-                    { key: 'Backspace', desc: $t('sidebar.shortcutEraseCell') },
-                    { key: 'N', desc: $t('sidebar.shortcutToggleNotes') },
-                    { key: 'H', desc: $t('sidebar.shortcutGetHint') },
-                    { key: 'F', desc: $t('sidebar.shortcutAutoFillNotes') },
-                    { key: 'Ctrl+Z', desc: $t('sidebar.shortcutUndo') },
-                    { key: 'Ctrl+Y', desc: $t('sidebar.shortcutRedo') },
-                  ]"
-                  :key="i"
-                  class="flex items-center gap-3"
-                >
+                <li v-for="(s, i) in SHORTCUTS" :key="i" class="flex items-center gap-3">
                   <kbd
                     class="min-w-[3.75rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                     >{{ s.key }}</kbd
                   >
-                  <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
+                  <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ $t(s.desc) }}</span>
                 </li>
               </ul>
             </div>
@@ -1772,6 +1896,12 @@ onUnmounted(() => {
                   />
                   {{ $t("menu.settings") }}
                 </button>
+                <button
+                  @click="shortcutsOpen = true"
+                  class="text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
+                >
+                  {{ $t("sidebar.keyboard") }} (?)
+                </button>
               </div>
             </div>
           </div>
@@ -1810,6 +1940,31 @@ onUnmounted(() => {
         />
       </dialog>
 
+      <!-- Every game key, opened with ? (the wide-screen sidebar shows the same list). -->
+      <dialog
+        ref="shortcutsSheet"
+        class="panel m-auto w-[min(22rem,calc(100vw-2rem))] p-5 text-inherit backdrop:bg-black/50"
+        :aria-label="$t('sidebar.keyboard')"
+        @close="shortcutsOpen = false"
+        @click.self="shortcutsOpen = false"
+      >
+        <h2 class="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          {{ $t("sidebar.keyboard") }}
+        </h2>
+        <ul class="space-y-2.5">
+          <li v-for="(s, i) in SHORTCUTS" :key="i" class="flex items-center gap-3">
+            <kbd
+              class="min-w-[4.5rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              >{{ s.key }}</kbd
+            >
+            <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $t(s.desc) }}</span>
+          </li>
+        </ul>
+        <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
+          {{ $t("modal.close") }}
+        </button>
+      </dialog>
+
       <div
         v-if="practiceLoading"
         class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 px-6 text-center backdrop-blur-sm"
@@ -1829,6 +1984,7 @@ onUnmounted(() => {
       <!-- MODAL -->
       <div
         v-if="showModal"
+        data-end-modal
         :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
         @pointerdown="winStep && skipWinSteps()"
@@ -2046,9 +2202,32 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <button @click="handleModalClose" class="tile tile-primary w-full py-3 text-sm font-bold">
-            {{ $t("modal.close") }}
+          <button
+            v-if="isWinState"
+            @click="shareWin"
+            class="mb-2 w-full text-sm font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+          >
+            {{ shared ? $t("modal.copied") : $t("modal.share") }}
           </button>
+          <div class="flex gap-2">
+            <button
+              v-if="nextLevel"
+              @click="handleNextPuzzle"
+              data-testid="next-puzzle"
+              :aria-busy="nextLoading"
+              :disabled="nextLoading"
+              class="tile tile-primary flex-1 py-3 text-sm font-bold"
+            >
+              {{ $t("modal.nextPuzzle", { level: $t(`difficulty.${nextLevel}`) }) }}
+            </button>
+            <button
+              @click="handleModalClose"
+              :class="nextLevel ? 'px-5' : 'tile-primary flex-1'"
+              class="tile py-3 text-sm font-bold"
+            >
+              {{ $t("modal.close") }}
+            </button>
+          </div>
         </div>
       </div>
 

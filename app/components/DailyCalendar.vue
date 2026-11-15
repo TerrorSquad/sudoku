@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { calendarDays } from "../utils/calendar";
+import { FREEZE_EVERY, MAX_FREEZES } from "../utils/streak";
 
 const WEEKS = 12;
 const daily = useDailyPuzzle();
 
+const frozen = new Set(daily.getStreakState().frozen);
 const days = calendarDays(new Date(), WEEKS).map((d) => ({
   key: d.key,
   future: d.future,
   done: !d.future && daily.getRecordFor(d.key)?.completed === true,
+  frozen: frozen.has(d.key),
 }));
 const completed = days.filter((d) => d.done).length;
 const today = daily.todayKey();
@@ -32,14 +35,17 @@ const today = daily.todayKey();
       <span
         v-for="d in days"
         :key="d.key"
-        :title="d.future ? undefined : d.key"
+        :title="d.future ? undefined : d.frozen ? `${d.key} · ${$t('streak.frozenDay')}` : d.key"
         :data-done="d.done"
+        :data-frozen="d.frozen || undefined"
         :class="[
           d.future
             ? 'bg-transparent'
             : d.done
               ? 'bg-violet-500 dark:bg-violet-400'
-              : 'bg-zinc-200 dark:bg-zinc-800',
+              : d.frozen
+                ? 'bg-sky-300 dark:bg-sky-700'
+                : 'bg-zinc-200 dark:bg-zinc-800',
           d.key === today
             ? 'ring-1 ring-violet-500 ring-offset-1 dark:ring-violet-300 dark:ring-offset-[var(--ground)]'
             : '',
@@ -47,5 +53,9 @@ const today = daily.todayKey();
         class="h-5 w-5"
       />
     </div>
+    <p class="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
+      <span class="inline-block h-3 w-3 shrink-0 bg-sky-300 dark:bg-sky-700" aria-hidden="true" />
+      {{ $t("streak.freezeHelp", { n: FREEZE_EVERY, max: MAX_FREEZES }) }}
+    </p>
   </div>
 </template>

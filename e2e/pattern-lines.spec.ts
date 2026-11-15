@@ -1,6 +1,8 @@
 /* oxlint-disable eslint/no-await-in-loop -- browser steps are inherently sequential */
 import { test, expect } from "@playwright/test";
 
+import { resumeMedium, seedMediumSave } from "./seed";
+
 // Its first hint is a pointing pair on 2 (see sudokuEngine.test.ts).
 const POINTING =
   "936850010072630598500000036000003689803069040600080153700046325360005874245378961";
@@ -31,31 +33,15 @@ test("a hint draws its pattern in pen, and applying it strikes the marks through
 });
 
 test("a hint that wins the game leaves no pen marks on the next board", async ({ page }) => {
-  // A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
-  await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page
-    .locator("textarea")
-    .fill("000008912672195348198342567859761423426853791713924856961537284287419635345286179");
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-  for (const [c, d] of [
-    [0, "5"],
-    [1, "3"],
-    [2, "4"],
-    [3, "6"],
-  ] as const) {
-    await page.locator(`[data-cell="0-${c}"]`).click();
-    await page.keyboard.press(d);
-  }
+  // One blank left: the hint's placement wins, and its pen circle must not outlive the board.
+  await seedMediumSave(page, [49]);
+  await resumeMedium(page);
   await page.getByRole("button", { name: "Hint", exact: true }).click();
   const next = page.getByRole("button", { name: /^(Next|Apply)$/ });
   while (await next.count()) await next.first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
-  await page.getByRole("button", { name: "Close" }).click();
-
-  await page.getByRole("button", { name: "New Game" }).click();
-  await page.getByRole("button", { name: /Beginner/ }).click();
-  await expect(page.locator("[data-cell]")).toHaveCount(81);
+  await page.getByTestId("next-puzzle").click();
+  await expect(page.getByTestId("next-puzzle")).toHaveCount(0);
+  await expect(page.locator(".board [data-cell]")).toHaveCount(81);
   await expect(overlay(page)).toHaveCount(0);
 });
 
@@ -74,8 +60,10 @@ test("a lesson draws the pattern once it's found, and Replay draws the move agai
   const digit = /Pointing Pair on (\d)/.exec((await coach.textContent()) ?? "")![1]!;
 
   const show = coach.getByRole("button", { name: "Show me" });
-  await show.click();
-  await show.click();
+  await show.click(); // the digit
+  await show.click(); // the box it works in
+  await expect(overlay(page)).toHaveCount(0);
+  await show.click(); // the pattern itself
   await expect(coach).toContainText("Step 2 of 2");
   await expect(overlay(page).locator(".pm-strong")).not.toHaveCount(0);
   await expect(overlay(page).locator(".pm-cross")).toHaveCount(0); // not the answer yet

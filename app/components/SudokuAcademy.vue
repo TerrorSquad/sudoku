@@ -55,10 +55,13 @@ const MASTERY_STYLE = [
 ] as const;
 
 const countOf = (id: TechniqueId) => techStats.getCount(id);
-const masteryOf = (id: TechniqueId) => masteryFor(countOf(id));
+// Each lesson's best stars; a finished lesson also counts toward mastery (see utils/mastery.ts).
+const lessonStars = path.getStars();
+const starsOf = (id: TechniqueId) => lessonStars[id] ?? 0;
+const masteryOf = (id: TechniqueId) => masteryFor(countOf(id), starsOf(id));
 const masteryTitle = (id: TechniqueId) =>
   countOf(id) === 0
-    ? undefined
+    ? t(`academy.mastery.${masteryOf(id)}`)
     : `${t(`academy.mastery.${masteryOf(id)}`)} · ${t("modal.usedTotal", { n: countOf(id) })}`;
 
 const tiers = [...new Set(techniques.map((tech) => tech.tier))];
@@ -358,11 +361,21 @@ const total = computed(() => techniques.length);
                   $t("path.step", { n: stepOf(tech.id) })
                 }}</span>
                 <span
-                  v-if="countOf(tech.id) > 0"
+                  v-if="starsOf(tech.id)"
+                  data-testid="card-stars"
+                  role="img"
+                  :aria-label="$t('lesson.starsLabel', { n: starsOf(tech.id) })"
+                  :title="$t('lesson.starsLabel', { n: starsOf(tech.id) })"
+                  class="text-xs tracking-tight text-amber-700 dark:text-amber-400"
+                  >{{ "★".repeat(starsOf(tech.id)) + "☆".repeat(3 - starsOf(tech.id)) }}</span
+                >
+                <span
+                  v-if="masteryOf(tech.id) > 0"
                   :class="MASTERY_STYLE[masteryOf(tech.id)]"
                   class="border px-1.5 py-0.5 text-[0.5625rem] font-bold"
                   :title="masteryTitle(tech.id)"
-                  >{{ $t(`academy.mastery.${masteryOf(tech.id)}`) }} ×{{ countOf(tech.id) }}</span
+                  >{{ $t(`academy.mastery.${masteryOf(tech.id)}`)
+                  }}<template v-if="countOf(tech.id)"> ×{{ countOf(tech.id) }}</template></span
                 >
                 <AppIcon
                   class="h-4 w-4 text-zinc-500 transition-transform"

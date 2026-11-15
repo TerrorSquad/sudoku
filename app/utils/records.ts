@@ -84,24 +84,6 @@ export function mergeRecords(other: Records, incoming: Records): Records {
   };
 }
 
-/** The longest run of consecutive calendar days among YYYY-MM-DD dates. */
-export function longestStreak(dates: string[]): number {
-  const days = [
-    ...new Set(
-      dates
-        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-        .map((d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8)) / 86_400_000),
-    ),
-  ].toSorted((a, b) => a - b);
-  let best = 0;
-  let run = 0;
-  days.forEach((d, i) => {
-    run = i && d === days[i - 1]! + 1 ? run + 1 : 1;
-    best = Math.max(best, run);
-  });
-  return best;
-}
-
 /** Everything a win can break, read just before and just after recording it. */
 export interface Snapshot extends Records {
   /** This difficulty's fastest win in seconds; 0 = none, or not a timed level. */
