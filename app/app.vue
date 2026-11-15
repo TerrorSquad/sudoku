@@ -279,7 +279,9 @@ const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
 const inGame = computed(
   () =>
-    currentScreen.value === "game" || (currentScreen.value === "academy" && academyFromGame.value),
+    currentScreen.value === "game" ||
+    ((currentScreen.value === "academy" || currentScreen.value === "lesson") &&
+      academyFromGame.value),
 );
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);

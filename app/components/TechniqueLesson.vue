@@ -30,6 +30,8 @@ const id = L.technique;
 const name = t(`hint.move.${id}.name`);
 const digit = (n: number) => digitLabel(n, props.colorMode, t);
 const digits = L.digits.map(digit).join(", ");
+// What step 2 removes: for hidden subsets that's the other candidates, not the subset's digits.
+const removedDigits = [...new Set(L.eliminations.map((e) => e.num))].map(digit).join(", ");
 
 const board = ref(L.board.map((row) => [...row]));
 const solved = solveBoard(L.board)!;
@@ -81,7 +83,7 @@ const recap = computed(() => [
         row: L.placement.r + 1,
         col: L.placement.c + 1,
       })
-    : t("hint.move.eliminateStep", { digits, count: L.eliminations.length }),
+    : t("hint.move.eliminateStep", { digits: removedDigits, count: L.eliminations.length }),
 ]);
 
 const counts = computed(() => {
