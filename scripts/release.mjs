@@ -32,9 +32,12 @@ if (!id) {
 const notes = process.argv.slice(2).filter((a) => a !== "--");
 const args = ["publish", id, "--title", `v${process.env.npm_package_version}`, ...notes, "-y"];
 for (let attempt = 1; ; attempt++) {
+  // Sequential on purpose: each retry waits for the previous attempt.
+  // oxlint-disable-next-line eslint/no-await-in-loop
   const { code, out } = await run("wavedash", args);
   if (code === 0) break;
   if (!out.includes("Only completed builds") || attempt === TRIES) process.exit(code || 1);
   console.error(`Build still processing; retrying in ${WAIT_MS / 1000} s (${attempt}/${TRIES})…`);
+  // oxlint-disable-next-line eslint/no-await-in-loop
   await sleep(WAIT_MS);
 }

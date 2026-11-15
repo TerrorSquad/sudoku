@@ -8,7 +8,9 @@
   },
   "rules": {
     // Composables define their functions inside and return them, which is the Vue pattern this rule flags.
-    "unicorn/consistent-function-scoping": "off"
+    "unicorn/consistent-function-scoping": "off",
+    // Copying a 9-cell row or a {r, c, num} triple: clearer than a loop, and the cost is nil.
+    "oxc/no-map-spread": "off"
   },
   "overrides": [
     {
@@ -18,6 +20,15 @@
       "files": ["app/tests/**"],
       "rules": {
         "vitest/no-conditional-expect": "off"
+      }
+    },
+    {
+      // A dedicated Worker has one handler of each kind, and Worker postMessage takes no targetOrigin
+      // (that argument only exists on window.postMessage).
+      "files": ["app/utils/puzzlePool.ts", "app/utils/puzzleWorker.ts"],
+      "rules": {
+        "unicorn/prefer-add-event-listener": "off",
+        "unicorn/require-post-message-target-origin": "off"
       }
     }
   ],

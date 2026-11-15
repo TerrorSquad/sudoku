@@ -56,6 +56,8 @@ describe("migrateTechniqueStats", () => {
       "Jedinstveni Pravougaonik — Tip 2": "unique-rectangle",
     };
     for (const [title, id] of Object.entries(legacy)) {
+      // Vitest takes a failure message as the second argument; it names the title that broke.
+      // oxlint-disable-next-line vitest/valid-expect
       expect(migrateTechniqueStats({ [title]: 1 }), title).toEqual({ [id]: 1 });
     }
   });
