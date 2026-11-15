@@ -40,7 +40,7 @@ test("the next challenge's lesson: find the cell, place the digit, and the path 
   const cells = page.locator(`${BOARD} [data-cell]`);
 
   await cells.nth(given).click();
-  await expect(coach.getByRole("status")).toHaveText("Not that cell. Look again.");
+  await expect(coach.getByRole("status")).toHaveText("That cell is already filled.");
   await cells.nth(target).click();
   await expect(coach).toContainText("Step 2 of 2");
   await page.keyboard.press(notes[target]![0]!);
@@ -73,7 +73,12 @@ test("Show me walks an elimination lesson through; only the ruled-out marks can 
   const digit = /Pointing Pair on (\d)/.exec((await coach.textContent()) ?? "")![1]!;
 
   const show = coach.getByRole("button", { name: "Show me" });
-  await show.click(); // where to look
+  await show.click(); // the digit
+  await expect(coach.getByRole("status")).toHaveText(`Watch where ${digit} can go.`);
+  await show.click(); // the box it works in
+  await expect(coach.getByRole("status")).toHaveText(
+    "It's in the highlighted rows, columns or box.",
+  );
   await expect(coach).toContainText("Step 1 of 2");
   await show.click(); // the pattern itself
   await expect(coach).toContainText("Step 2 of 2");

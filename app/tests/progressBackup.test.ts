@@ -152,6 +152,12 @@ describe("progress backup", () => {
     expect(bad("sudoku_v1_pref_board_theme", true)).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_pref_ui_scale", 1.5)).toMatchObject({ ok: true });
     expect(bad("sudoku_v1_pref_ui_scale", 3)).toEqual({ ok: false, error: "invalid" });
+    const stars = "sudoku_v1_lesson_stars";
+    expect(bad(stars, { "x-wing": 3, "naked-single": 1 })).toMatchObject({ ok: true });
+    expect(bad(stars, {})).toMatchObject({ ok: true });
+    expect(bad(stars, { "x-wing": 4 })).toEqual({ ok: false, error: "invalid" });
+    expect(bad(stars, { "no-such-technique": 2 })).toEqual({ ok: false, error: "invalid" });
+    expect(bad(stars, [3])).toEqual({ ok: false, error: "invalid" });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
       bad("sudoku_v1_save_hard", {

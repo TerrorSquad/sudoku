@@ -1,9 +1,15 @@
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { completesChallenge } from "../utils/progression";
+import {
+  LESSON_STARS_KEY,
+  completesChallenge,
+  mergeStars,
+  readStars,
+  type Stars,
+} from "../utils/progression";
 import { readJSON, writeJSON } from "../utils/safeJson";
 
-// Both under sudoku_v1_, so they back up and cloud-sync with the rest of the progress.
+// All under sudoku_v1_, so they back up and cloud-sync with the rest of the progress.
 const PATH_KEY = "sudoku_v1_technique_path";
 const WEEKLY_KEY = "sudoku_v1_weekly_done";
 
@@ -36,5 +42,15 @@ export function useTechniquePath() {
     return true;
   }
 
-  return { getDone, recordLesson, getWeeksDone, markWeekDone };
+  /** Each lesson's best stars (a cloud sync max-merges them, see cloudSync's mergedBests). */
+  const getStars = () => readStars(readJSON<unknown>(LESSON_STARS_KEY, {}));
+
+  /** Keeps the better of `stars` and the stored best; returns the best before this lesson. */
+  function recordStars(id: TechniqueId, stars: Stars): Stars | undefined {
+    const before = getStars();
+    writeJSON(LESSON_STARS_KEY, mergeStars(before, { [id]: stars }));
+    return before[id];
+  }
+
+  return { getDone, recordLesson, getWeeksDone, markWeekDone, getStars, recordStars };
 }

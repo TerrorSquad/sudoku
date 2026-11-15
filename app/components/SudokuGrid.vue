@@ -25,8 +25,8 @@ const props = defineProps<{
   activeDigit?: number | null;
   /** Outline the empty cells where the focused digit can still go. */
   showCandidates?: boolean;
-  /** "Nudge first" hints: the row, column or box to point at. */
-  nudge?: BoardUnit | null;
+  /** "Nudge first" hints: the row, column or box to point at (a lesson's Show me: several). */
+  nudge?: BoardUnit | BoardUnit[] | null;
   /** Board style from Settings: colours and digit face, see the styles below. */
   theme?: BoardTheme;
 }>();
@@ -75,11 +75,14 @@ function isCandidate(r: number, c: number): boolean {
 }
 
 function isNudged(r: number, c: number): boolean {
-  const n = props.nudge;
-  if (!n) return false;
-  if (n.kind === "row") return n.r === r;
-  if (n.kind === "col") return n.c === c;
-  return Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3);
+  const units = props.nudge ? [props.nudge].flat() : [];
+  return units.some((n) =>
+    n.kind === "row"
+      ? n.r === r
+      : n.kind === "col"
+        ? n.c === c
+        : Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3),
+  );
 }
 
 function hasConflict(r: number, c: number): boolean {

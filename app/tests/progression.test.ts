@@ -7,7 +7,11 @@ import {
   completesChallenge,
   lockOf,
   lockedLevels,
+  mergeStars,
   nextChallenge,
+  nextLesson,
+  readStars,
+  starsFor,
   weekOf,
   withZenWins,
 } from "../utils/progression";
@@ -78,6 +82,34 @@ describe("technique path", () => {
     expect(completesChallenge("hidden-single", [])).toBe(false);
     expect(completesChallenge("hidden-single", ["naked-single"])).toBe(true);
     expect(completesChallenge("naked-single", ["naked-single"])).toBe(false);
+  });
+});
+
+describe("lesson flow", () => {
+  const all = ACADEMY_TECHNIQUES.map((t) => t.id);
+
+  it("leads to the path's next step after the step itself, else the next in order", () => {
+    expect(nextLesson("naked-single", ["naked-single"], true)).toBe("hidden-single");
+    // A lesson off the path (ahead of it, or done before): the next technique in order.
+    expect(nextLesson("pointing", ["naked-single"], false)).toBe("box-line");
+    expect(nextLesson("x-wing", ["naked-single"], false)).toBe("swordfish");
+    expect(nextLesson("hidden-single", ["naked-single", "hidden-single"], true)).toBe("pointing");
+    expect(nextLesson("bug-plus-one", all, true)).toBeNull();
+    expect(nextLesson("bug-plus-one", [], false)).toBeNull();
+  });
+
+  it("gives 3 stars for no slips, 2 for one, else 1", () => {
+    expect([0, 1, 2, 7].map(starsFor)).toEqual([3, 2, 1, 1]);
+  });
+
+  it("reads only known techniques with 1–3 stars, and merges to each one's best", () => {
+    expect(readStars({ "x-wing": 2, bogus: 3, pointing: 4, xyz: "3" })).toEqual({ "x-wing": 2 });
+    expect(readStars(null)).toEqual({});
+    expect(readStars([1, 2])).toEqual({});
+    expect(mergeStars({ "x-wing": 2, pointing: 3 }, { "x-wing": 3, pointing: 1 })).toEqual({
+      "x-wing": 3,
+      pointing: 3,
+    });
   });
 });
 

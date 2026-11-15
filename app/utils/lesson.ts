@@ -174,5 +174,189 @@ export async function generateLesson(
     (p.kind === "puzzle" ? lessonFromPuzzle(p.board, technique) : null) ??
     lessonFromExample(technique);
   if (!lesson) throw new Error(`No lesson for technique: ${technique}`);
-  return lesson;
+  // The example is one fixed position; a symmetry of it keeps "Another example" from repeating.
+  return p.kind === "puzzle" ? lesson : shuffleLesson(lesson, rng);
+}
+
+// ---- Variations ----------------------------------------------------------------------------
+
+/**
+ * The same lesson under a sudoku symmetry: digits relabelled, maybe transposed, the bands and the
+ * rows (columns) inside them reordered. Every deduction survives, so a technique whose only
+ * source is the Academy's one example still gets a fresh-looking position each time.
+ */
+export function shuffleLesson(L: Lesson, rng: Rng = Math.random): Lesson {
+  const shuffle = <T>(xs: T[]) => {
+    const a = [...xs];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j]!, a[i]!];
+    }
+    return a;
+  };
+  // to[old line] = new line: bands move as blocks, lines move inside their band.
+  const lineMap = () => {
+    const to: number[] = [];
+    shuffle([0, 1, 2])
+      .flatMap((b) => shuffle([0, 1, 2]).map((i) => b * 3 + i))
+      .forEach((old, k) => (to[old] = k));
+    return to;
+  };
+  const R = lineMap();
+  const C = lineMap();
+  const sigma = [0, ...shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])];
+  const flip = rng() < 0.5;
+  const cell = ({ r, c }: CellRC): CellRC => {
+    const [a, b] = flip ? [c, r] : [r, c];
+    return { r: R[a]!, c: C[b]! };
+  };
+  const at = (x: DigitAt): DigitAt => ({ ...cell(x), num: sigma[x.num]! });
+  const kind = (k: Kind): Kind => (!flip || k === "box" ? k : k === "row" ? "col" : "row");
+  const board: Grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
+  const notes: number[][][] = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => []));
+  for (let r = 0; r < 9; r++)
+    for (let c = 0; c < 9; c++) {
+      const p = cell({ r, c });
+      board[p.r]![p.c] = sigma[L.board[r]![c]!]!;
+      notes[p.r]![p.c] = L.notes[r]![c]!.map((d) => sigma[d]!).toSorted((x, y) => x - y);
+    }
+  const m = L.move;
+  return {
+    technique: L.technique,
+    board,
+    notes,
+    pattern: L.pattern.map(cell),
+    placement: L.placement && at(L.placement),
+    eliminations: L.eliminations.map(at),
+    digits: L.digits.map((d) => sigma[d]!),
+    unit: L.unit && { kind: kind(L.unit.kind), ...cell(L.unit) },
+    move: {
+      ...m,
+      placement: m.placement && at(m.placement),
+      eliminations: m.eliminations.map(at),
+      triggers: m.triggers.map(cell),
+      digits: m.digits.map((d) => sigma[d]!),
+      unit: m.unit && kind(m.unit),
+    },
+  };
+}
+
+// ---- Step 1: what counts, and why a cell doesn't --------------------------------------------
+
+/** One way to finish step 1: the cells to find, and the marks step 2 then removes. */
+export interface Instance {
+  pattern: CellRC[];
+  eliminations: DigitAt[];
+}
+
+const FISH_SIZE: Partial<Record<TechniqueId, number>> = { "x-wing": 2, swordfish: 3, jellyfish: 4 };
+const sameCells = (a: CellRC[], b: CellRC[]) =>
+  a.length === b.length && a.every((p) => b.some((q) => q.r === p.r && q.c === p.c));
+
+/** Every k-item subset (at most C(9,4) = 126 here). */
+function choose<T>(items: T[], k: number): T[][] {
+  if (k === 0) return [[]];
+  return items.flatMap((x, i) => choose(items.slice(i + 1), k - 1).map((rest) => [x, ...rest]));
+}
+
+/**
+ * Every pattern step 1 accepts: the lesson's own, plus for a fish any other fish on the same digit
+ * with as many cells (the prompt names the digit and the count) that also clears something. A
+ * player who spots that one first has found a real one, so it counts.
+ */
+export function instancesOf(L: Lesson): Instance[] {
+  const main = { pattern: L.pattern, eliminations: L.eliminations };
+  const k = FISH_SIZE[L.technique];
+  if (!k) return [main];
+  const d = L.digits[0]!;
+  const has = ({ r, c }: CellRC) => L.notes[r]![c]!.includes(d);
+  const nine = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const others: Instance[] = [];
+  for (const byRow of [true, false]) {
+    const at = (u: number, p: number): CellRC => (byRow ? { r: u, c: p } : { r: p, c: u });
+    const bases: { u: number; ps: number[] }[] = nine
+      .map((u) => ({ u, ps: nine.filter((p) => has(at(u, p))) }))
+      .filter((b) => b.ps.length >= 2 && b.ps.length <= k);
+    const combos: (typeof bases)[] = choose(bases, k);
+    for (const combo of combos) {
+      const cover = new Set<number>(combo.flatMap((b) => b.ps));
+      if (cover.size !== k) continue;
+      const pattern = combo.flatMap((b) => b.ps.map((p) => at(b.u, p)));
+      if (pattern.length !== L.pattern.length || sameCells(pattern, L.pattern)) continue;
+      const base = new Set(combo.map((b) => b.u));
+      const eliminations = [...cover].flatMap((p) =>
+        nine.filter((u) => !base.has(u) && has(at(u, p))).map((u) => ({ ...at(u, p), num: d })),
+      );
+      if (eliminations.length) others.push({ pattern, eliminations });
+    }
+  }
+  return [main, ...others];
+}
+
+/** Techniques whose every pattern cell holds the lesson's (first) digit as a pencil mark. */
+const ON_DIGIT = new Set<TechniqueId>([
+  "hidden-single",
+  "pointing",
+  "box-line",
+  "x-wing",
+  "swordfish",
+  "jellyfish",
+  "skyscraper",
+  "two-string-kite",
+  "finned-x-wing",
+  "simple-coloring",
+]);
+
+export interface Miss {
+  /** An i18n key under lesson.why.*, or lesson.miss when no quick check explains it. */
+  key: string;
+  params?: Record<string, number>;
+}
+
+/**
+ * Why a tapped cell isn't part of the pattern, from the cheapest checks that can tell. Each check
+ * only fires on a cell that no pattern of this kind could use, so the reason is never wrong.
+ */
+export function missReason(L: Lesson, { r, c }: CellRC): Miss {
+  if (L.board[r]![c]) return { key: "lesson.why.filled" };
+  const marks = L.notes[r]![c]!;
+  const d = L.digits[0]!;
+  const t = L.technique;
+  if (t === "naked-single" && marks.length > 1)
+    return { key: "lesson.why.manyMarks", params: { n: marks.length } };
+  if (ON_DIGIT.has(t) && !marks.includes(d)) return { key: "lesson.why.noDigit", params: { d } };
+  const subset = t !== "naked-single" && t !== "hidden-single";
+  if (subset && t.startsWith("hidden-") && !marks.some((n) => L.digits.includes(n)))
+    return { key: "lesson.why.noneOfDigits" };
+  const other = marks.find((n) => !L.digits.includes(n));
+  if (subset && t.startsWith("naked-") && other)
+    return { key: "lesson.why.otherDigit", params: { d: other } };
+  if (L.unit && !inUnit(L.unit.kind, L.unit, { r, c })) return { key: "lesson.why.outside" };
+  const k = FISH_SIZE[t];
+  if (k) {
+    const row = L.notes[r]!.filter((ns) => ns.includes(d)).length;
+    const col = L.notes.filter((line) => line[c]!.includes(d)).length;
+    if (row > k && col > k) return { key: "lesson.why.fishLines", params: { d, row, col, k } };
+  }
+  return { key: "lesson.miss" };
+}
+
+/**
+ * The rows, columns and boxes the pattern works through, for Show me's second stage: the one unit
+ * when it has one, else every line or box two of its cells share (a fish's rows and columns, a
+ * wing's links), else the box of its only cell.
+ */
+export function lessonUnits(L: Lesson): BoardUnit[] {
+  if (L.unit) return [L.unit];
+  const units: BoardUnit[] = [];
+  const add = (u: BoardUnit) => {
+    if (!units.some((v) => v.kind === u.kind && inUnit(u.kind, u, v))) units.push(u);
+  };
+  for (const [i, a] of L.pattern.entries())
+    for (const b of L.pattern.slice(i + 1)) {
+      if (a.r === b.r) add({ kind: "row", ...a });
+      else if (a.c === b.c) add({ kind: "col", ...a });
+      else if (inUnit("box", a, b)) add({ kind: "box", ...a });
+    }
+  return units.length ? units : [{ kind: "box", ...L.pattern[0]! }];
 }

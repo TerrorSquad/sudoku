@@ -115,6 +115,46 @@ export function completesChallenge(id: TechniqueId, done: readonly string[]): bo
   return id === nextChallenge(done);
 }
 
+/**
+ * The lesson a finished one leads to: the path's next step when this lesson was it, else the next
+ * technique in the Academy's order. Null after the last.
+ */
+export function nextLesson(
+  id: TechniqueId,
+  done: readonly string[],
+  credited: boolean,
+): TechniqueId | null {
+  const after = ACADEMY_TECHNIQUES[ACADEMY_TECHNIQUES.findIndex((t) => t.id === id) + 1]?.id;
+  return (credited ? nextChallenge(done) : null) ?? after ?? null;
+}
+
+// ---- Lesson stars --------------------------------------------------------------------------
+
+/** Best stars per technique's lesson: 3 with no help and no wrong move, 2 with one, else 1. */
+export const LESSON_STARS_KEY = "sudoku_v1_lesson_stars";
+export type Stars = 1 | 2 | 3;
+
+export const starsFor = (slips: number): Stars => (slips === 0 ? 3 : slips === 1 ? 2 : 1);
+
+/** Stored stars, keeping only known techniques and 1–3 (the value comes from storage or sync). */
+export function readStars(raw: unknown): Partial<Record<TechniqueId, Stars>> {
+  const out: Partial<Record<TechniqueId, Stars>> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const { id } of ACADEMY_TECHNIQUES) {
+    const v = (raw as Record<string, unknown>)[id];
+    if (v === 1 || v === 2 || v === 3) out[id] = v;
+  }
+  return out;
+}
+
+/** Each technique's better best, so a sync in either direction never loses a star. */
+export function mergeStars(a: unknown, b: unknown): Partial<Record<TechniqueId, Stars>> {
+  const out = readStars(a);
+  for (const [id, n] of Object.entries(readStars(b)) as [TechniqueId, Stars][])
+    out[id] = Math.max(out[id] ?? 0, n) as Stars;
+  return out;
+}
+
 // ---- Technique of the week ----------------------------------------------------------------
 
 /** Techniques the generator reliably finds puzzles for, so the week's puzzle is a real one. */
