@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
+import type { BoardTheme } from "./utils/preferenceValues";
 import type { BoardUnit, DigitAt, TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
@@ -72,20 +73,6 @@ useHead(() => ({
   title: t("menu.title"),
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
-// The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
-// win, so both get the resolved colour (whichever media query matches, it is the right one).
-const uiColorMode = useColorMode();
-useHead(() => {
-  const content = uiColorMode.value === "dark" ? "#1c252f" : "#17294a";
-  return {
-    meta: ["light", "dark"].map((s) => ({
-      name: "theme-color",
-      media: `(prefers-color-scheme: ${s})`,
-      content,
-    })),
-  };
-});
-
 const {
   colorMode,
   soundEnabled,
@@ -100,6 +87,28 @@ const {
   boardTheme,
   uiScale,
 } = usePreferences();
+
+// The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
+// win, so both get the resolved colour (whichever media query matches, it is the right one).
+// data-theme on <html> lets main.css recolour the whole app for the chosen theme.
+const uiColorMode = useColorMode();
+const THEME_COLORS: Record<BoardTheme, [light: string, dark: string]> = {
+  tiles: ["#17294a", "#1c252f"],
+  newsprint: ["#1e1d1a", "#1d1c19"],
+  contrast: ["#000000", "#000000"],
+};
+useHead(() => {
+  const colors = THEME_COLORS[boardTheme.value] ?? THEME_COLORS.tiles; // a hand-edited value
+  const content = colors[uiColorMode.value === "dark" ? 1 : 0];
+  return {
+    htmlAttrs: { "data-theme": boardTheme.value },
+    meta: ["light", "dark"].map((s) => ({
+      name: "theme-color",
+      media: `(prefers-color-scheme: ${s})`,
+      content,
+    })),
+  };
+});
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
 const CUES = {
@@ -240,16 +249,24 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
-// Settings opened from the pause screen go back to the paused game, not the menu.
-const settingsFromGame = ref(false);
+// Settings opened from the game slide over it, so a new theme shows on the real board. The board is
+// in view, so the clock runs while it's open (a paused clock would be a free look at the board).
+const settingsOverGame = ref(false);
+const settingsSheet = ref<HTMLDialogElement | null>(null);
+function openGameSettings() {
+  if (timer.isPaused.value) timer.togglePause();
+  settingsOverGame.value = true;
+}
+watch(settingsOverGame, (open) => {
+  if (open) settingsSheet.value?.showModal();
+  else settingsSheet.value?.close();
+});
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
 const inGame = computed(
   () =>
-    currentScreen.value === "game" ||
-    (currentScreen.value === "settings" && settingsFromGame.value) ||
-    (currentScreen.value === "academy" && academyFromGame.value),
+    currentScreen.value === "game" || (currentScreen.value === "academy" && academyFromGame.value),
 );
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
@@ -1191,7 +1208,7 @@ function redo() {
 function handleKeyDown(e: KeyboardEvent) {
   // A key still held from the winning move, or pressed before the steps start, skips nothing.
   if (showModal.value && !e.repeat && winStep.value) skipWinSteps();
-  if (currentScreen.value !== "game" || timer.isPaused.value) return;
+  if (currentScreen.value !== "game" || timer.isPaused.value || settingsOverGame.value) return;
   if (showModal.value || practiceLoading.value || finishing.value) return;
   // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
   // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
@@ -1262,10 +1279,7 @@ onUnmounted(() => {
           class="relative flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12"
         >
           <button
-            @click="
-              settingsFromGame = false;
-              currentScreen = 'settings';
-            "
+            @click="currentScreen = 'settings'"
             :aria-label="$t('menu.settings')"
             :title="$t('menu.settings')"
             class="tile absolute top-4 right-4 grid h-11 w-11 place-items-center text-zinc-600 dark:text-zinc-300"
@@ -1453,8 +1467,7 @@ onUnmounted(() => {
         <!-- SETTINGS -->
         <SettingsScreen
           v-else-if="currentScreen === 'settings'"
-          :in-game="settingsFromGame"
-          @back-to-menu="currentScreen = settingsFromGame ? 'game' : 'menu'"
+          @back-to-menu="currentScreen = 'menu'"
         />
 
         <!-- CUSTOM IMPORT -->
@@ -1664,10 +1677,7 @@ onUnmounted(() => {
                   {{ $t("game.resume") }}
                 </button>
                 <button
-                  @click="
-                    settingsFromGame = true;
-                    currentScreen = 'settings';
-                  "
+                  @click="openGameSettings"
                   class="flex items-center gap-2 text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
                 >
                   <AppIcon
@@ -1696,6 +1706,22 @@ onUnmounted(() => {
           </div>
         </div>
       </Transition>
+
+      <!-- Settings over the game: a sheet at the side (the bottom on phones), the board in view. -->
+      <dialog
+        ref="settingsSheet"
+        class="settings-sheet"
+        :aria-label="$t('settings.title')"
+        @close="settingsOverGame = false"
+        @click.self="settingsOverGame = false"
+      >
+        <SettingsScreen
+          v-if="settingsOverGame"
+          in-game
+          :timed="!gameZen"
+          @back-to-menu="settingsOverGame = false"
+        />
+      </dialog>
 
       <div
         v-if="practiceLoading"

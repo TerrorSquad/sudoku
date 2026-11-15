@@ -257,7 +257,7 @@
   "settings.title": "Settings",
   "settings.subtitle": "Language, theme and game preferences",
   "settings.language": "Language",
-  "settings.theme": "Theme",
+  "settings.theme": "Light or dark",
   "settings.colorMode": "Color mode",
   "settings.sound": "Sound",
   "settings.back": "Back to Menu",
@@ -406,12 +406,12 @@
   "academy.caption.uniqueRectangle": "Three corners (indigo) hold only {digits}. If the fourth corner were one of them, the puzzle would have two solutions, so {digits} are removed from it, in rose ({elimList}).",
   "academy.caption.coloring": "{num} is chained through cells where it has only two spots (indigo). One of the two alternating colors must be {num}, so {nElim} cell(s) lose it, in rose ({elimList}).",
   "menu.startHint": "Six levels, plus a relaxed Zen mode",
-  "settings.boardTheme": "Board style",
+  "settings.boardTheme": "Theme",
   "settings.boardTiles": "Graph paper",
   "settings.boardNewsprint": "Newsprint",
   "settings.boardContrast": "High contrast",
   "settings.uiScale": "Display size",
-  "settings.uiScaleHint": "Makes the menus, the Academy and Statistics bigger, for a TV across the room. The game board already fills the screen.",
+  "settings.uiScaleHint": "Makes the menus, the Academy and Statistics bigger, for a TV across the room. The game screen keeps its size: the board already fills it.",
   "settings.uiScale0": "Normal",
   "settings.uiScale1": "Large",
   "settings.uiScale2": "Extra large",
@@ -476,5 +476,7 @@
   "records.cleanRun": "Most wins in a row without a mistake",
   "records.noHint": "Hardest level won without hints",
   "records.fastest": "Fastest times are in the table above.",
-  "records.since": "All records but the Daily streak count from your next win."
+  "records.since": "All records but the Daily streak count from your next win.",
+  "settings.clockRuns": "The clock keeps running while the board is in view.",
+  "settings.boardThemeHint": "Colors the whole app and the board."
 }

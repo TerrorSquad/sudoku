@@ -93,6 +93,26 @@ for (const scheme of ["light", "dark"] as const) {
       await scan(page, "stats (records)");
     });
 
+    for (const theme of ["newsprint", "contrast"]) {
+      test(`${theme} theme: menu, game and Settings over it`, async ({ page }) => {
+        await page.addInitScript(
+          (t) => localStorage.setItem("sudoku_v1_pref_board_theme", JSON.stringify(t)),
+          theme,
+        );
+        await page.goto("/");
+        await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        await scan(page, `menu (${theme})`);
+        await page.getByRole("button", { name: "New Game" }).click();
+        await page.getByRole("button", { name: /Easy/ }).click();
+        await expect(page.locator(".grid.aspect-square")).toBeVisible();
+        await scan(page, `game (${theme})`);
+        await page.getByLabel("Pause").click();
+        await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
+        await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+        await scan(page, `settings over the game (${theme})`);
+      });
+    }
+
     test("game screen", async ({ page }) => {
       await page.goto("/");
       await page.getByRole("button", { name: "New Game" }).click();
