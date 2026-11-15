@@ -1403,7 +1403,13 @@ function handleKeyDown(e: KeyboardEvent) {
     return;
   }
   // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
-  if (currentScreen.value !== "game" || settingsOverGame.value || shortcutsSheet.value?.open)
+  // practiceLoading: a lesson opening over the paused game must keep it paused.
+  if (
+    currentScreen.value !== "game" ||
+    settingsOverGame.value ||
+    shortcutsSheet.value?.open ||
+    practiceLoading.value
+  )
     return;
   if (e.key === "?") {
     shortcutsOpen.value = true;
