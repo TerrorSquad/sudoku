@@ -257,10 +257,21 @@ function openGameSettings() {
   if (timer.isPaused.value) timer.togglePause();
   settingsOverGame.value = true;
 }
-watch(settingsOverGame, (open) => {
-  if (open) settingsSheet.value?.showModal();
-  else settingsSheet.value?.close();
-});
+// Post-flush, so the sheet's content exists and showModal() focuses its Back button.
+watch(
+  settingsOverGame,
+  (open) => {
+    if (open) settingsSheet.value?.showModal();
+    else settingsSheet.value?.close();
+  },
+  { flush: "post" },
+);
+// A click outside the sheet closes it, but not a drag that started inside (selecting text).
+let pressedOutside = false;
+function onSheetClick(e: MouseEvent) {
+  if (pressedOutside && e.target === settingsSheet.value) settingsOverGame.value = false;
+  pressedOutside = false;
+}
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
@@ -1252,6 +1263,7 @@ function handlePageHidden() {
     !finishing.value
   ) {
     timer.togglePause();
+    settingsOverGame.value = false; // back on the pause screen, which a paused clock needs
   }
 }
 
@@ -1713,7 +1725,8 @@ onUnmounted(() => {
         class="settings-sheet"
         :aria-label="$t('settings.title')"
         @close="settingsOverGame = false"
-        @click.self="settingsOverGame = false"
+        @pointerdown="pressedOutside = $event.target === settingsSheet"
+        @click="onSheetClick"
       >
         <SettingsScreen
           v-if="settingsOverGame"
