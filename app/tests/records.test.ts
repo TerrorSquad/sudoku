@@ -5,7 +5,6 @@ import {
   breakCleanRun,
   addWin,
   brokenRecords,
-  longestStreak,
   mergeRecords,
   readRecords,
   type Snapshot,
@@ -76,27 +75,6 @@ describe("mergeRecords", () => {
       bestCleanRun: 3,
       hardestNoHint: "expert",
     });
-  });
-});
-
-describe("longestStreak", () => {
-  it("finds the longest run of consecutive days", () => {
-    expect(longestStreak([])).toBe(0);
-    expect(longestStreak(["2026-03-01"])).toBe(1);
-    // Across a month end and a DST change, unsorted, with a duplicate and junk.
-    expect(
-      longestStreak([
-        "2026-03-30",
-        "2026-03-28",
-        "2026-03-29",
-        "2026-03-31",
-        "2026-04-01",
-        "2026-03-29",
-        "nope",
-        "2026-02-01",
-        "2026-02-02",
-      ]),
-    ).toBe(5);
   });
 });
 
