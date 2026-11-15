@@ -83,8 +83,15 @@ const groups = (cells: CellRC[], key: "r" | "c") => {
   return [...out.values()];
 };
 
-// Fish: base lines solid through the corners, cover lines dashed along to what they clear.
-function fish(corners: CellRC[], elims: DigitAt[], n: number, extra: Mark[] = []): Mark[] {
+// Fish: base lines solid through the corners, cover lines dashed along to what they clear (with
+// `reach`; else over the corners only, so they don't give away the cells to clear).
+function fish(
+  corners: CellRC[],
+  elims: DigitAt[],
+  n: number,
+  reach: boolean,
+  extra: Mark[] = [],
+): Mark[] {
   const rows = new Set(corners.map((p) => p.r));
   const cols = new Set(corners.map((p) => p.c));
   // The base is the side the eliminations are off: they sit in the cover lines.
@@ -95,7 +102,7 @@ function fish(corners: CellRC[], elims: DigitAt[], n: number, extra: Mark[] = []
   const along = base === "r" ? "c" : "r";
   const marks: Mark[] = [];
   for (const line of groups(corners, base)) marks.push(...chain(sortBy(line, along), n, "strong"));
-  for (const line of groups([...corners, ...elims], cover))
+  for (const line of groups([...corners, ...(reach ? elims : [])], cover))
     if (line.length > 1) {
       const s = sortBy(line, base);
       marks.push(...chain([s[0]!, s.at(-1)!], n, "weak"));
@@ -104,7 +111,7 @@ function fish(corners: CellRC[], elims: DigitAt[], n: number, extra: Mark[] = []
 }
 
 // Finned X-Wing: find the two cover lines whose leftovers (the fins) share the eliminations' box.
-function finned(move: PatternMove, n: number): Mark[] {
+function finned(move: PatternMove, n: number, reach: boolean): Mark[] {
   const t = uniq(move.triggers);
   const elims = move.eliminations;
   const elimBox = elims[0] ? box(elims[0]) : -1;
@@ -117,16 +124,18 @@ function finned(move: PatternMove, n: number): Mark[] {
         const fins = t.filter((p) => p[key] !== a && p[key] !== b);
         if (!fins.length || fins.some((f) => box(f) !== elimBox)) continue;
         if (elims.some((e) => e[key] !== a && e[key] !== b)) continue;
-        return fish(corners, elims, n, [frame("box", fins[0]!), ...rings(fins, n, "alt")]);
+        return fish(corners, elims, n, reach, [frame("box", fins[0]!), ...rings(fins, n, "alt")]);
       }
   }
-  return fish(t, elims, n);
+  return fish(t, elims, n, reach);
 }
 
 // Simple colouring: join cells that are the digit's only two spots in a shared unit; colour the
-// chain in two alternating tones.
+// chain in two alternating tones. A wrap clears a whole colour, which the grader leaves out of the
+// triggers, so the chain is rebuilt over both; the triggers start it, so they take the main tone.
 function coloring(move: PatternMove, n: number, has: HasMark): Mark[] {
-  const cells = uniq(move.triggers);
+  const triggers = uniq(move.triggers);
+  const cells = uniq([...triggers, ...move.eliminations]);
   const strong = (a: CellRC, b: CellRC) =>
     (["row", "col", "box"] as Kind[]).some(
       (k) =>
@@ -151,7 +160,12 @@ function coloring(move: PatternMove, n: number, has: HasMark): Mark[] {
       }
     }
   }
-  const ringed = cells.flatMap((p, i) => rings([p], n, tone.get(i)));
+  // A trap's removals sit off the chain: no links, so no ring.
+  const key = ({ x, y }: Pt) => `${x},${y}`;
+  const linked = new Set(marks.flatMap((m) => (m.kind === "line" ? [key(m.a), key(m.b)] : [])));
+  const ringed = cells.flatMap((p, i) =>
+    i < triggers.length || linked.has(key(anchor(p.r, p.c, n))) ? rings([p], n, tone.get(i)) : [],
+  );
   return [...marks, ...ringed, ...crosses(move.eliminations)];
 }
 
@@ -170,8 +184,16 @@ function link(has: HasMark, a: CellRC, b: CellRC, n: number | undefined, style: 
   };
 }
 
-/** The marks that draw `move`'s pattern; `has` tells which pencil marks the board shows. */
-export function patternMarks(move: PatternMove, has: HasMark): Mark[] {
+/**
+ * The marks that draw `move`'s pattern; `has` tells which pencil marks the board shows. Without
+ * `result`, only the pattern: no crosses or placement, and no line reaching the cells it changes.
+ */
+export function patternMarks(move: PatternMove, has: HasMark, result = true): Mark[] {
+  const marks = draw(move, has, result);
+  return result ? marks : marks.filter((m) => m.kind !== "cross" && m.kind !== "place");
+}
+
+function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
   const n = move.digits[0] ?? 0;
   const t = uniq(move.triggers);
   const elims = move.eliminations;
@@ -187,7 +209,7 @@ export function patternMarks(move: PatternMove, has: HasMark): Mark[] {
     case "pointing": {
       const s = sortBy(t, sharedUnit(t, ["row"]) ? "c" : "r");
       const line = sharedUnit(t, ["row"]) ? "r" : "c";
-      const reach = sortBy([...t, ...elims], line === "r" ? "c" : "r");
+      const reach = sortBy([...t, ...(result ? elims : [])], line === "r" ? "c" : "r");
       return [
         frame("box", t[0]!),
         ...chain([reach[0]!, reach.at(-1)!], n, "weak"),
@@ -222,9 +244,9 @@ export function patternMarks(move: PatternMove, has: HasMark): Mark[] {
     case "x-wing":
     case "swordfish":
     case "jellyfish":
-      return fish(t, elims, n);
+      return fish(t, elims, n, result);
     case "finned-x-wing":
-      return finned(move, n);
+      return finned(move, n, result);
     case "skyscraper":
     case "two-string-kite": {
       const [n1, f1, n2, f2] = t;

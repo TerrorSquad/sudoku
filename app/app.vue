@@ -813,7 +813,6 @@ function flashCompletedUnits(r: number, c: number) {
 // Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
 function runFlash(cells: FlashCell[]) {
   if (flashTimeout) clearTimeout(flashTimeout);
-  clearTimeout(appliedTimer);
   flashCells.value = cells;
   const longest = Math.max(...cells.map((c) => c.delay));
   flashTimeout = setTimeout(() => {
@@ -916,7 +915,9 @@ const appliedMarks = ref<Mark[]>([]);
 let appliedTimer: ReturnType<typeof setTimeout> | undefined;
 const hintMarks = computed<Mark[]>(() => {
   const move = engine.activeMove.value;
-  const showsResult = hintEliminations.value.length > 0 || !!activeHintCell.value;
+  const hint = activeComplexHint.value;
+  // The last step is the one that says what to remove or place.
+  const showsResult = !!hint && currentStepIndex.value === hint.steps.length - 1;
   if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
   const cands = getGridCandidates(currentBoard.value);
   const has = (r: number, c: number, n: number) => {
@@ -924,9 +925,14 @@ const hintMarks = computed<Mark[]>(() => {
     return notes.some(Boolean) ? !!notes[n] : cands[r]![c]!.includes(n);
   };
   const showsNotes = (r: number, c: number) => notesBoard.value[r]![c]!.some(Boolean);
-  const marks = withGhosts(patternMarks(move, has), showsNotes);
-  return showsResult ? marks : marks.filter((m) => m.kind !== "cross" && m.kind !== "place");
+  return withGhosts(patternMarks(move, has, showsResult), showsNotes);
 });
+function clearApplied() {
+  clearTimeout(appliedTimer);
+  appliedMarks.value = [];
+}
+// A new or resumed board, and undo/redo, start clean.
+watch(initialBoard, clearApplied);
 function showApplied(move: SolveMove | null) {
   if (!move) return;
   appliedMarks.value = move.placement ? [circled(move.placement)] : strikes(move.eliminations);
@@ -1254,10 +1260,12 @@ function moveSelection(dr: number, dc: number) {
 // check as a placement; and never act behind a modal (a second win would double-record).
 function undo() {
   if (showModal.value || practiceLoading.value) return;
+  clearApplied();
   undoMove();
 }
 function redo() {
   if (showModal.value || practiceLoading.value) return;
+  clearApplied();
   redoMove();
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), winMessage(), true);

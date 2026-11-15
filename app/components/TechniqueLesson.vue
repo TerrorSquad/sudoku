@@ -202,13 +202,19 @@ const nudge = computed(() => (step.value === "find" && reveal.value ? L.unit : n
 // The pattern in pen, as a book draws it: once it's found, then the whole move when it's done
 // (what was crossed out redrawn in red). Crossing a mark out strikes it through before it goes.
 const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
-const fullMarks = patternMarks(L.move, has);
 const marks = computed(() => {
   if (step.value === "find") return [];
   if (step.value === "done")
-    return [...fullMarks.filter((m) => m.kind !== "cross"), ...strikes(L.eliminations, false)];
+    return [
+      ...patternMarks(L.move, has).filter((m) => m.kind !== "cross"),
+      ...strikes(L.eliminations, false),
+    ];
+  // Applying: the pattern, reaching the cells to change only once Show me points at them; the
+  // crossing out is the player's.
   return [
-    ...fullMarks.filter((m) => m.kind !== "cross" && m.kind !== "place"),
+    ...patternMarks(L.move, has, reveal.value > 0).filter(
+      (m) => m.kind !== "cross" && m.kind !== "place",
+    ),
     ...strikes(removed.value),
   ];
 });

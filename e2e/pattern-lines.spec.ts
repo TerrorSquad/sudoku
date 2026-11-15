@@ -30,6 +30,35 @@ test("a hint draws its pattern in pen, and applying it strikes the marks through
   await expect(overlay(page)).toHaveCount(0, { timeout: 3000 });
 });
 
+test("a hint that wins the game leaves no pen marks on the next board", async ({ page }) => {
+  // A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page
+    .locator("textarea")
+    .fill("000008912672195348198342567859761423426853791713924856961537284287419635345286179");
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  for (const [c, d] of [
+    [0, "5"],
+    [1, "3"],
+    [2, "4"],
+    [3, "6"],
+  ] as const) {
+    await page.locator(`[data-cell="0-${c}"]`).click();
+    await page.keyboard.press(d);
+  }
+  await page.getByRole("button", { name: "Hint", exact: true }).click();
+  const next = page.getByRole("button", { name: /^(Next|Apply)$/ });
+  while (await next.count()) await next.first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await expect(page.locator("[data-cell]")).toHaveCount(81);
+  await expect(overlay(page)).toHaveCount(0);
+});
+
 test("a lesson draws the pattern once it's found, and Replay draws the move again", async ({
   page,
 }) => {

@@ -56,5 +56,62 @@ describe("patternMarks", () => {
       b: anchor(7, 2, 4),
       style: "weak",
     });
+
+    // Before the result is shown: no crosses, and the cover line stops at the corners.
+    const pattern = patternMarks(
+      {
+        technique: "x-wing",
+        triggers: corners,
+        eliminations: [{ r: 7, c: 2, num: 4 }],
+        digits: [4],
+      },
+      () => true,
+      false,
+    );
+    expect(pattern.some((m) => m.kind === "cross")).toBe(false);
+    expect(pattern).toContainEqual({
+      kind: "line",
+      a: anchor(1, 2, 4),
+      b: anchor(5, 2, 4),
+      style: "weak",
+    });
+  });
+
+  it("draws a colouring wrap's whole chain, the cleared colour in the second tone", () => {
+    // 4 sits only in these cells: A–B (row 1), B–C (column 5), C–D (row 5) are strong links.
+    const [A, B, C, D] = [
+      { r: 0, c: 0 },
+      { r: 0, c: 4 },
+      { r: 4, c: 4 },
+      { r: 4, c: 8 },
+    ];
+    const chain = [A, B, C, D];
+    const has = (r: number, c: number, n: number) =>
+      n === 4 && chain.some((p) => p.r === r && p.c === c);
+    // The grader keeps the surviving colour (B, D) as triggers and clears the other (A, C).
+    const marks = patternMarks(
+      {
+        technique: "simple-coloring",
+        triggers: [B!, D!],
+        eliminations: [A!, C!].map((p) => ({ ...p, num: 4 })),
+        digits: [4],
+      },
+      has,
+    );
+    expect(marks.filter((m) => m.kind === "line")).toHaveLength(3);
+    const tone = (p: { r: number; c: number }) =>
+      marks.find(
+        (m) =>
+          m.kind === "ring" && m.at.x === anchor(p.r, p.c, 4).x && m.at.y === anchor(p.r, p.c, 4).y,
+      );
+    expect([B, D].map((p) => tone(p!))).toEqual([
+      expect.objectContaining({ tone: "pattern" }),
+      expect.objectContaining({ tone: "pattern" }),
+    ]);
+    expect([A, C].map((p) => tone(p!))).toEqual([
+      expect.objectContaining({ tone: "alt" }),
+      expect.objectContaining({ tone: "alt" }),
+    ]);
+    expect(marks.filter((m) => m.kind === "cross")).toHaveLength(2);
   });
 });
