@@ -590,5 +590,7 @@
   "basics.done.scan": "Finding the one place a digit fits in a box is a Hidden Single. You're ready to play!",
   "basics.next": "Next: {name}",
   "basics.startPath": "Start the technique path",
-  "basics.learnMore": "Lesson: {name}"
+  "basics.learnMore": "Lesson: {name}",
+  "hint.learnIt": "New to this? Learn it step by step",
+  "hint.learnAgain": "Replay its lesson"
 }

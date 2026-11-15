@@ -62,7 +62,10 @@ test("the win modal lists what the givens needed, hardest first, and links to th
   const chips = page.getByTestId("needed-techniques").getByRole("button");
   await expect(chips).toHaveText(["XY-Wing", "Hidden Pair", "Pointing Pair"]);
 
+  // Straight into its step-by-step lesson; Back lands on the Academy card.
   await chips.first().click();
+  await expect(page.getByRole("heading", { name: "Lesson: XY-Wing" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to Academy" }).first().click();
   await expect(page.getByRole("heading", { name: "Sudoku Academy" })).toBeVisible();
   const lesson = page.locator("#lesson-xy-wing");
   await expect(lesson).toBeInViewport();

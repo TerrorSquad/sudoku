@@ -590,5 +590,7 @@
   "basics.done.scan": "Kad nađeš jedino mesto za cifru u kvadratu, to je skriveni singl. Spreman si za igru!",
   "basics.next": "Sledeće: {name}",
   "basics.startPath": "Kreni na put kroz tehnike",
-  "basics.learnMore": "Lekcija: {name}"
+  "basics.learnMore": "Lekcija: {name}",
+  "hint.learnIt": "Prvi put vidiš ovo? Nauči korak po korak",
+  "hint.learnAgain": "Ponovi lekciju"
 }
