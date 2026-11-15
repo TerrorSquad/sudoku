@@ -461,7 +461,7 @@ const bestTime = computed(() => {
 });
 const dailyStreak = computed(() => {
   void currentScreen.value;
-  return dailyPuzzle.getStreak();
+  return dailyPuzzle.getStreakState();
 });
 const pathDone = computed(() => {
   void currentScreen.value;
@@ -531,8 +531,12 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         if (progressNotes.value.length) cue("unlock");
       }
     } else {
-      if (isDailyMode.value)
+      if (isDailyMode.value) {
+        const freezesBefore = dailyPuzzle.getStreakState().freezes;
         dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
+        if (dailyPuzzle.getStreakState().freezes > freezesBefore)
+          progressNotes.value.push({ text: t("streak.freezeEarned"), ok: true });
+      }
       const breakdown = computeScore({
         difficulty: activeDifficulty.value,
         timeSeconds: timer.timerSeconds.value,
@@ -1509,8 +1513,13 @@ onUnmounted(() => {
                 <span class="block">{{
                   dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
                 }}</span>
-                <span v-if="dailyStreak > 0" class="block text-[0.6875rem] font-semibold opacity-80"
-                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}</span
+                <span
+                  v-if="dailyStreak.current > 0"
+                  class="block text-[0.6875rem] font-semibold opacity-80"
+                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak.current }) }}
+                  <template v-if="dailyStreak.freezes"
+                    >· ❄ {{ dailyStreak.freezes }}</template
+                  ></span
                 >
               </span>
             </button>

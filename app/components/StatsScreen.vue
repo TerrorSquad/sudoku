@@ -5,6 +5,7 @@ import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { useRecords } from "../composables/useRecords";
 import { useScore } from "../composables/useScore";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
+import { MAX_FREEZES } from "../utils/streak";
 import { hasWavedash } from "../utils/wavedash";
 
 const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "start-game"): void }>();
@@ -16,12 +17,13 @@ const daily = useDailyPuzzle();
 
 const stats = score.getStats();
 const onWavedash = hasWavedash();
-const streak = daily.getStreak();
+const streakState = daily.getStreakState();
+const streak = streakState.current;
 const records = useRecords().get();
 
 // Fastest times are the per-difficulty table's Best time column, not repeated here.
 const recordRows = [
-  { key: "streak", value: daily.getLongestStreak() },
+  { key: "streak", value: streakState.longest },
   { key: "mostInDay", value: records.mostInDay },
   { key: "cleanRun", value: records.bestCleanRun },
   {
@@ -152,6 +154,12 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
             </p>
             <p class="mt-1 text-[0.625rem] font-semibold text-zinc-500">
               {{ $t("stats.dailyStreak") }}
+            </p>
+            <p
+              class="mt-1 text-[0.625rem] font-semibold text-sky-700 dark:text-sky-300"
+              data-testid="freezes"
+            >
+              ❄ {{ $t("streak.freezes", { n: streakState.freezes, max: MAX_FREEZES }) }}
             </p>
           </div>
         </div>

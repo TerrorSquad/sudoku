@@ -513,5 +513,9 @@
   "modal.share": "Share result",
   "modal.copied": "Copied to clipboard",
   "modal.shareMistakes": "mistakes: {n}",
-  "modal.shareHints": "hints: {n}"
+  "modal.shareHints": "hints: {n}",
+  "streak.freezeEarned": "❄ Streak freeze earned: a missed day won't break your streak.",
+  "streak.freezes": "{n}/{max} streak freezes",
+  "streak.freezeHelp": "Every {n} Dailies earn a freeze (you can hold {max}). A missed day spends one and your streak carries on.",
+  "streak.frozenDay": "streak freeze"
 }
