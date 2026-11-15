@@ -1,11 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import {
-  localDateKey,
-  generateDailyBoard,
-  computeStreak,
-  fastestDaily,
-} from "../composables/useDailyPuzzle";
+import { localDateKey, generateDailyBoard, fastestDaily } from "../composables/useDailyPuzzle";
 import { hasUniqueSolution } from "../utils/sudokuCore";
 
 describe("daily puzzle", () => {
@@ -33,30 +28,6 @@ describe("daily puzzle", () => {
 
   it("daily board has a unique solution", () => {
     expect(hasUniqueSolution(generateDailyBoard("2026-06-11"))).toBe(true);
-  });
-
-  it("streak counts consecutive completed days ending today", () => {
-    const done = new Set(["2026-06-11", "2026-06-10", "2026-06-09"]);
-    expect(computeStreak((k) => done.has(k), new Date(2026, 5, 11))).toBe(3);
-  });
-
-  it("an unplayed today does not break the streak", () => {
-    const done = new Set(["2026-06-10", "2026-06-09"]);
-    expect(computeStreak((k) => done.has(k), new Date(2026, 5, 11))).toBe(2);
-  });
-
-  it("a gap breaks the streak", () => {
-    const done = new Set(["2026-06-11", "2026-06-09", "2026-06-08"]);
-    expect(computeStreak((k) => done.has(k), new Date(2026, 5, 11))).toBe(1);
-  });
-
-  it("no completions means no streak", () => {
-    expect(computeStreak(() => false, new Date(2026, 5, 11))).toBe(0);
-  });
-
-  it("streak crosses month boundaries correctly", () => {
-    const done = new Set(["2026-06-01", "2026-05-31", "2026-05-30"]);
-    expect(computeStreak((k) => done.has(k), new Date(2026, 5, 1))).toBe(3);
   });
 
   it("fastestDaily is the quickest completed Daily, ignoring other keys", () => {

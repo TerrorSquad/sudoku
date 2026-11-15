@@ -506,5 +506,16 @@
   "records.fastest": "Fastest times are in the table above.",
   "records.since": "All records but the Daily streak count from your next win.",
   "settings.clockRuns": "The clock keeps running while the board is in view.",
-  "settings.boardThemeHint": "Colors the whole app and the board."
+  "settings.boardThemeHint": "Colors the whole app and the board.",
+  "modal.nextPuzzle": "Next puzzle: {level}",
+  "sidebar.shortcutPause": "Pause / resume",
+  "sidebar.shortcutHelp": "All shortcuts",
+  "modal.share": "Share result",
+  "modal.copied": "Copied to clipboard",
+  "modal.shareMistakes": "mistakes: {n}",
+  "modal.shareHints": "hints: {n}",
+  "streak.freezeEarned": "❄ Streak freeze earned: a missed day won't break your streak.",
+  "streak.freezes": "{n}/{max} streak freezes",
+  "streak.freezeHelp": "Every {n} Dailies earn a freeze (you can hold {max}). A missed day spends one and your streak carries on.",
+  "streak.frozenDay": "streak freeze"
 }

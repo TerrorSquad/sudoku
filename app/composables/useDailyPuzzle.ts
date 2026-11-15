@@ -1,7 +1,7 @@
 import type { Grid } from "../types/sudoku";
 
-import { longestStreak } from "../utils/records";
 import { readJSON, writeJSON } from "../utils/safeJson";
+import { streakState } from "../utils/streak";
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
 const DAILY_REMOVE_TARGET = 45;
@@ -17,25 +17,6 @@ export function localDateKey(date: Date = new Date()): string {
 /** Deterministic per-date puzzle with a guaranteed unique solution. */
 export function generateDailyBoard(dateStr: string): Grid {
   return generatePuzzle(DAILY_REMOVE_TARGET, makeRng(seedFromString(dateStr))).puzzle;
-}
-
-/**
- * Consecutive completed days ending today, or ending yesterday when
- * today's puzzle hasn't been finished yet (an unplayed today doesn't
- * break the streak until the day is over).
- */
-export function computeStreak(
-  isCompleted: (key: string) => boolean,
-  today: Date = new Date(),
-): number {
-  const day = new Date(today);
-  if (!isCompleted(localDateKey(day))) day.setDate(day.getDate() - 1);
-  let streak = 0;
-  while (isCompleted(localDateKey(day))) {
-    streak++;
-    day.setDate(day.getDate() - 1);
-  }
-  return streak;
 }
 
 const SAVE_PREFIX = "sudoku_v1_daily_";
@@ -81,10 +62,6 @@ export function useDailyPuzzle() {
     writeJSON(SAVE_PREFIX + dateKey, { completed: true, time, mistakes });
   }
 
-  function getStreak(): number {
-    return computeStreak((k) => getRecordFor(k)?.completed === true);
-  }
-
   function storedKeys(): string[] {
     try {
       return Object.keys(localStorage);
@@ -97,14 +74,16 @@ export function useDailyPuzzle() {
     return fastestDaily(storedKeys(), getRecordFor);
   }
 
-  /** The longest streak ever, from every completed Daily on record (so it covers old ones too). */
-  function getLongestStreak(): number {
+  /** Current and longest streak, freezes held and the days they covered (utils/streak.ts). */
+  function getStreakState() {
     const dates = storedKeys()
       .filter((k) => k.startsWith(SAVE_PREFIX))
       .map((k) => k.slice(SAVE_PREFIX.length))
       .filter((d) => getRecordFor(d)?.completed);
-    return longestStreak(dates);
+    return streakState(dates, todayKey());
   }
+  const getStreak = () => getStreakState().current;
+  const getLongestStreak = () => getStreakState().longest;
 
   return {
     getBoard,
@@ -114,6 +93,7 @@ export function useDailyPuzzle() {
     getStreak,
     getBestTime,
     getLongestStreak,
+    getStreakState,
     todayKey,
   };
 }

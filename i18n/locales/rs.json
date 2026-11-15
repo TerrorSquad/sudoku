@@ -506,5 +506,16 @@
   "records.fastest": "Najbolja vremena su u tabeli iznad.",
   "records.since": "Svi rekordi osim niza u dnevnom izazovu broje se od tvoje sledeće pobede.",
   "settings.clockRuns": "Sat nastavlja da radi dok se tabla vidi.",
-  "settings.boardThemeHint": "Boji celu aplikaciju i tablu."
+  "settings.boardThemeHint": "Boji celu aplikaciju i tablu.",
+  "modal.nextPuzzle": "Sledeća tabla: {level}",
+  "sidebar.shortcutPause": "Pauza / nastavak",
+  "sidebar.shortcutHelp": "Sve prečice",
+  "modal.share": "Podeli rezultat",
+  "modal.copied": "Kopirano",
+  "modal.shareMistakes": "greške: {n}",
+  "modal.shareHints": "pomoć: {n}",
+  "streak.freezeEarned": "❄ Dobio si zamrzavanje niza: jedan propušten dan ti neće prekinuti niz.",
+  "streak.freezes": "zamrzavanja: {n}/{max}",
+  "streak.freezeHelp": "Na svakih {n} dnevnih zagonetki dobijaš jedno zamrzavanje (najviše {max}). Kad propustiš dan, jedno se potroši i niz se nastavlja.",
+  "streak.frozenDay": "zamrznut dan"
 }
