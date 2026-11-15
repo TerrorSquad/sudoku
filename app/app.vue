@@ -20,6 +20,7 @@ import SideExplanationPanel from "./components/SideExplanationPanel.vue";
 import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
+import TechniqueLesson from "./components/TechniqueLesson.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
@@ -31,6 +32,7 @@ import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { haptic } from "./utils/haptics";
+import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
 import {
@@ -179,14 +181,12 @@ const gameZen = ref(false);
 // Set while playing a technique-practice puzzle: no score, achievements or autosave slot.
 const practiceTechnique = ref<TechniqueId | null>(null);
 const practiceLoading = ref(false);
-// Whether the practice game is a real puzzle or the Academy drill, and its ISO week when it is
-// the technique of the week: both decide what a win counts for on the technique path.
-const practiceRun = ref<{ kind: "puzzle" | "drill"; week: string | null }>({
-  kind: "puzzle",
-  week: null,
-});
+// The ISO week when the practice game is the technique of the week, whose win it marks.
+const practiceWeek = ref<string | null>(null);
 const techniquePath = useTechniquePath();
-// Win-modal lines: progress the win made (ok), or why it made none (a drill that doesn't count).
+// The guided lesson on the lesson screen (TechniqueLesson keeps its own board).
+const activeLesson = ref<Lesson | null>(null);
+// Win-modal lines: progress the win made (ok), or why it made none (a practice win on the path).
 const progressNotes = ref<{ text: string; ok: boolean }[]>([]);
 
 const notesMode = ref<boolean>(false);
@@ -217,13 +217,15 @@ const currentScreen = ref<
   | "stats"
   | "achievements"
   | "settings"
+  | "lesson"
 >("menu");
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
 // the game, whose board already fills the height: there a bigger rem would only shrink it. Set
 // during setup, so the first paint is right, then as each screen enters (the screen Transition is
 // out-in), so the screen leaving never jumps.
 function applyUiScale() {
-  const scale = currentScreen.value === "game" ? 1 : uiScale.value;
+  const board = currentScreen.value === "game" || currentScreen.value === "lesson";
+  const scale = board ? 1 : uiScale.value;
   document.documentElement.style.setProperty("--ui-scale", String(scale));
 }
 applyUiScale();
@@ -232,7 +234,7 @@ const activeDifficulty = ref<Difficulty>("medium");
 // What the dashboard chip and the win modal call this game, in the player's language.
 const difficultyLabel = computed(() =>
   practiceTechnique.value
-    ? `${practiceRun.value.week ? t("weekly.title") : t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
+    ? `${practiceWeek.value ? t("weekly.title") : t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
     : isDailyMode.value
       ? t("difficulty.daily")
       : gameZen.value
@@ -277,7 +279,9 @@ const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
 const inGame = computed(
   () =>
-    currentScreen.value === "game" || (currentScreen.value === "academy" && academyFromGame.value),
+    currentScreen.value === "game" ||
+    ((currentScreen.value === "academy" || currentScreen.value === "lesson") &&
+      academyFromGame.value),
 );
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
@@ -606,15 +610,12 @@ function announceUnlocks(lockedBefore: Difficulty[]) {
     });
 }
 
-// A practice win can complete the technique path's current challenge and the week's puzzle.
+// A practice win can complete the week's puzzle. The path's challenges are its lessons.
 function recordPracticeWin(id: TechniqueId) {
   const name = t(`hint.move.${id}.name`);
-  const { kind, week } = practiceRun.value;
-  const wasNext = nextChallenge(techniquePath.getDone()) === id;
-  if (techniquePath.recordWin(id, kind))
-    progressNotes.value.push({ text: t("path.completed", { name }), ok: true });
-  // The current challenge, not completed: a drill where only a real puzzle counts.
-  else if (wasNext) progressNotes.value.push({ text: t("path.drillNoCount"), ok: false });
+  const week = practiceWeek.value;
+  if (!week && nextChallenge(techniquePath.getDone()) === id)
+    progressNotes.value.push({ text: t("path.lessonCounts"), ok: false });
   if (week && techniquePath.markWeekDone(week))
     progressNotes.value.push({ text: t("weekly.won", { name }), ok: true });
   if (progressNotes.value.some((n) => n.ok)) {
@@ -1124,7 +1125,7 @@ function handleLoadCustomPuzzle(
   practice: TechniqueId | null = null,
 ) {
   practiceTechnique.value = practice;
-  practiceRun.value = { kind: "puzzle", week: null };
+  practiceWeek.value = null;
   isDailyMode.value = false;
   gameZen.value = false;
   activeDifficulty.value = "custom";
@@ -1151,11 +1152,12 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
   const token = ++practiceToken;
   try {
     const rng = week ? makeRng(seedFromString(week.seed)) : Math.random;
+    const from = currentScreen.value; // the Academy, or a finished lesson's "Try a full puzzle"
     const p = await generatePracticePuzzle(technique, rng);
-    // The player may have left the Academy while the search ran; don't yank them into a game.
-    if (token !== practiceToken || currentScreen.value !== "academy") return;
+    // The player may have left while the search ran; don't yank them into a game.
+    if (token !== practiceToken || currentScreen.value !== from) return;
     handleLoadCustomPuzzle(p.board, technique);
-    practiceRun.value = { kind: p.kind, week: week?.key ?? null };
+    practiceWeek.value = week?.key ?? null;
     if (p.notes) {
       for (const [key, digits] of Object.entries(p.notes)) {
         const [r, c] = key.split("-").map(Number) as [number, number];
@@ -1165,6 +1167,21 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
     } else {
       hintStatus.value = t("practice.puzzle");
     }
+  } finally {
+    practiceLoading.value = false;
+  }
+}
+
+// A guided lesson: the same search as practice, then the solver's replay to where it applies.
+async function handleLesson(technique: TechniqueId) {
+  if (practiceLoading.value) return;
+  practiceLoading.value = true;
+  const token = ++practiceToken;
+  try {
+    const lesson = await generateLesson(technique);
+    if (token !== practiceToken || currentScreen.value !== "academy") return;
+    activeLesson.value = lesson;
+    currentScreen.value = "lesson";
   } finally {
     practiceLoading.value = false;
   }
@@ -1460,7 +1477,23 @@ onUnmounted(() => {
           :in-game="academyFromGame"
           @back-to-menu="currentScreen = academyFromGame ? 'game' : 'menu'"
           @practice="handlePractice"
+          @lesson="handleLesson"
           @weekly="(week) => handlePractice(week.technique, week)"
+        />
+
+        <!-- GUIDED LESSON -->
+        <TechniqueLesson
+          v-else-if="currentScreen === 'lesson' && activeLesson"
+          :key="activeLesson.technique + activeLesson.board.flat().join('')"
+          :lesson="activeLesson"
+          :color-mode="colorMode"
+          :theme="boardTheme"
+          @cue="cue"
+          @back="
+            academyFocus = activeLesson.technique;
+            currentScreen = 'academy';
+          "
+          @practice="handlePractice(activeLesson.technique)"
         />
 
         <!-- STATISTICS -->

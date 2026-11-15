@@ -330,7 +330,10 @@ export function useSudokuEngine(
       actionStep = {
         label: t("hint.move.eliminateLabel"),
         description: t("hint.move.eliminateStep", {
-          digits: digitsStr,
+          // The digits removed (for hidden subsets, the other candidates, not the subset).
+          digits: [...new Set(move.eliminations.map((e) => e.num))]
+            .map((d) => digitLabel(d, colorMode.value, t))
+            .join(", "),
           count: move.eliminations.length,
         }),
         highlightCoords: move.eliminations.map((e) => ({

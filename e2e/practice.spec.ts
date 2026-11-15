@@ -11,7 +11,7 @@ test("practising a technique starts a labelled game that doesn't touch progress"
   const card = page
     .locator("h3", { hasText: "Swordfish" })
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");
-  await card.getByRole("button", { name: "Practice this technique" }).click();
+  await card.getByRole("button", { name: "Practice a full puzzle" }).click();
 
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81, { timeout: 30_000 });
   await expect(page.getByText("Practice · Swordfish")).toBeVisible();
@@ -34,7 +34,7 @@ test("a searchable technique yields a real puzzle", async ({ page }) => {
   const card = page
     .locator("h3", { hasText: "Pointing Pair" })
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");
-  await card.getByRole("button", { name: "Practice this technique" }).click();
+  await card.getByRole("button", { name: "Practice a full puzzle" }).click();
   await expect(page.getByText("Practice · Pointing Pair")).toBeVisible({ timeout: 30_000 });
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 });
