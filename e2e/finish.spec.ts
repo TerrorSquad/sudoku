@@ -101,7 +101,10 @@ test("Finish fills the last singles one by one, wins normally and shows where th
   await expect(stuck).toContainText("Where you got stuck");
   await expect(stuck.getByRole("listitem")).toHaveCount(1);
   await expect(stuck).toContainText("00:50 · 01:30 to the next digit");
+  // Its technique opens the step-by-step lesson; Back lands on the Academy card.
   await stuck.getByRole("button").click();
+  await expect(page.getByRole("heading", { name: /^Lesson: / })).toBeVisible();
+  await page.getByRole("button", { name: "Back to Academy" }).first().click();
   await expect(page.getByRole("heading", { name: "Sudoku Academy" })).toBeVisible();
   await expect(page.locator('[id^="lesson-"]:focus')).toBeInViewport();
 });

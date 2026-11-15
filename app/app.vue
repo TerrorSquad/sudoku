@@ -464,11 +464,14 @@ const dailyStreak = computed(() => {
   void currentScreen.value;
   return dailyPuzzle.getStreakState();
 });
-const pathDone = computed(() => {
+// Lessons finished, read when the screen changes (a lesson ends on another screen), not per move.
+const lessonsDone = computed(() => {
   void currentScreen.value;
-  const done = techniquePath.getDone();
-  return ACADEMY_TECHNIQUES.filter((tech) => done.includes(tech.id)).length;
+  return techniquePath.getDone();
 });
+const pathDone = computed(
+  () => ACADEMY_TECHNIQUES.filter((tech) => lessonsDone.value.includes(tech.id)).length,
+);
 
 // Auto-save on every meaningful state change while a game is active.
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
@@ -718,11 +721,13 @@ function handleModalClose() {
   currentScreen.value = "menu";
 }
 
+// A win-modal chip: straight into the technique's lesson (its Back lands on the Academy card).
 function openLesson(id: TechniqueId) {
   handleModalClose();
   academyFromGame.value = false;
   academyFocus.value = id;
   currentScreen.value = "academy";
+  handleLesson(id);
 }
 
 function resumeSavedGame(s: GameSave) {
@@ -1083,15 +1088,16 @@ function chargeHint() {
   else hintsUsed.value++;
 }
 
-// The nudge's technique opens its lesson; the game waits, paused, until the Academy's Back.
-function openNudgeLesson() {
-  const id = nudge.value?.technique;
-  if (!id) return;
+// A technique named in a hint or nudge opens its step-by-step lesson; the game waits, paused,
+// and the lesson's Back returns to it.
+function openGameLesson(id: TechniqueId | null | undefined) {
+  if (!id || practiceLoading.value) return;
   if (!timer.isPaused.value) timer.togglePause();
   academyFromGame.value = true;
   academyFocus.value = id;
-  currentScreen.value = "academy";
+  handleLesson(id);
 }
+const openNudgeLesson = () => openGameLesson(nudge.value?.technique);
 
 function handleTriggerHint() {
   if (activeComplexHint.value) {
@@ -1397,7 +1403,13 @@ function handleKeyDown(e: KeyboardEvent) {
     return;
   }
   // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
-  if (currentScreen.value !== "game" || settingsOverGame.value || shortcutsSheet.value?.open)
+  // practiceLoading: a lesson opening over the paused game must keep it paused.
+  if (
+    currentScreen.value !== "game" ||
+    settingsOverGame.value ||
+    shortcutsSheet.value?.open ||
+    practiceLoading.value
+  )
     return;
   if (e.key === "?") {
     shortcutsOpen.value = true;
@@ -1666,9 +1678,10 @@ onUnmounted(() => {
           :color-mode="colorMode"
           :theme="boardTheme"
           @cue="cue"
+          :in-game="academyFromGame"
           @back="
             academyFocus = activeLesson.technique;
-            currentScreen = 'academy';
+            currentScreen = academyFromGame ? 'game' : 'academy';
           "
           @practice="handlePractice(activeLesson.technique)"
           @lesson="handleLesson"
@@ -1918,6 +1931,9 @@ onUnmounted(() => {
               @next-step="handleNextStep"
               @prev-step="prevHintStep"
               @cancel="cancelComplexHint"
+              :technique="engine.activeMove.value?.technique ?? null"
+              :learned="lessonsDone"
+              @learn="openGameLesson"
             />
           </div>
         </div>

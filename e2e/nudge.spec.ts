@@ -63,7 +63,7 @@ test("any board change dismisses the nudge", async ({ page }) => {
   await expect(page.getByText("Next step:")).toBeHidden();
 });
 
-test("the nudge's technique opens its lesson, and Back returns to the paused game", async ({
+test("the nudge's technique opens its guided lesson, and Back returns to the paused game", async ({
   page,
 }) => {
   await page.addInitScript(() => localStorage.setItem("sudoku_v1_pref_hint_style", '"nudge"'));
@@ -75,10 +75,11 @@ test("the nudge's technique opens its lesson, and Back returns to the paused gam
   const technique = banner.getByRole("button", { name: /Single|Pair|Wing|Triple|Quad/ });
   await technique.click();
 
-  await expect(page.getByRole("heading", { name: "Sudoku Academy" })).toBeVisible();
-  await expect(page.locator('[id^="lesson-"]:focus')).toBeInViewport();
-  await expect(page.getByRole("button", { name: "Back to Menu" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Back to game" }).last().click();
+  await expect(page.getByRole("heading", { name: /^Lesson: / })).toBeVisible();
+  // A full practice puzzle would replace the paused game, so it isn't offered here.
+  await page.keyboard.press("p");
+  await expect(page.getByRole("heading", { name: /^Lesson: / })).toBeVisible();
+  await page.getByRole("button", { name: "Back to game" }).first().click();
   await expect(page.getByText("Paused", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Resume" }).first().click();
   await expect(page.locator("[data-cell]")).toHaveCount(81);
@@ -102,4 +103,15 @@ test("a nudge about a wrong entry names its box, not a technique", async ({ page
 
   await page.getByRole("button", { name: "Hint", exact: true }).click();
   await expect(page.getByText("Look at box 5. One of your digits there is wrong.")).toBeVisible();
+});
+
+test("the full hint offers the technique's lesson and returns to the game", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "New Game" }).click();
+  await page.getByRole("button", { name: /Beginner/ }).click();
+  await page.getByRole("button", { name: "Hint", exact: true }).click();
+  await page.getByTestId("learn-technique").click();
+  await expect(page.getByRole("heading", { name: /^Lesson: / })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("Paused", { exact: true })).toBeVisible();
 });

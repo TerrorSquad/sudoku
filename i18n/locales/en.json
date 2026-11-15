@@ -545,5 +545,7 @@
   "streak.freezes": "{n}/{max} streak freezes",
   "streak.freezeHelp": "Every {n} Dailies earn a freeze (you can hold {max}). A missed day spends one and your streak carries on.",
   "streak.frozenDay": "streak freeze",
-  "lesson.replay": "Replay the move"
+  "lesson.replay": "Replay the move",
+  "hint.learnIt": "New to this? Learn it step by step",
+  "hint.learnAgain": "Replay its lesson"
 }

@@ -2,17 +2,22 @@
 import { computed } from "vue";
 
 import type { ComplexHint, ExplanationStep } from "../composables/useSudokuEngine";
+import type { TechniqueId } from "../utils/sudokuGrader";
 
 const props = defineProps<{
   activeComplexHint: ComplexHint | null;
   currentStepIndex: number;
   currentStep: ExplanationStep | null;
+  /** The hint's technique (none for a wrong entry), and the lessons done, for "Learn it". */
+  technique?: string | null;
+  learned?: string[];
 }>();
 
 const emit = defineEmits<{
   (e: "next-step"): void;
   (e: "prev-step"): void;
   (e: "cancel"): void;
+  (e: "learn", id: TechniqueId): void;
 }>();
 
 const isLastStep = computed(() => {
@@ -55,6 +60,14 @@ const isLastStep = computed(() => {
         >
           {{ activeComplexHint.title }}
         </h2>
+        <button
+          v-if="technique"
+          @click="emit('learn', technique as TechniqueId)"
+          class="mt-1.5 text-xs font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+          data-testid="learn-technique"
+        >
+          {{ learned?.includes(technique) ? $t("hint.learnAgain") : $t("hint.learnIt") }}
+        </button>
       </div>
 
       <!-- Step progress bar -->
