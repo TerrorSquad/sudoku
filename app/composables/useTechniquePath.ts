@@ -1,5 +1,6 @@
 import type { TechniqueId } from "../utils/sudokuGrader";
 
+import { BASICS_KEY, mergeBasics, readBasics, type BasicsId } from "../utils/basics";
 import {
   LESSON_STARS_KEY,
   completesChallenge,
@@ -53,5 +54,21 @@ export function useTechniquePath() {
     return readStars(stored)[id];
   }
 
-  return { getDone, recordLesson, getWeeksDone, markWeekDone, getStars, recordStars };
+  /** The "How to play" lessons finished (the path's step 0). */
+  const getBasics = () => readBasics(readJSON<unknown>(BASICS_KEY, []));
+  function recordBasics(id: BasicsId) {
+    // Merged into the raw entry, so a later version's lessons survive.
+    writeJSON(BASICS_KEY, mergeBasics(readJSON<unknown>(BASICS_KEY, []), [id]));
+  }
+
+  return {
+    getDone,
+    recordLesson,
+    getWeeksDone,
+    markWeekDone,
+    getStars,
+    recordStars,
+    getBasics,
+    recordBasics,
+  };
 }

@@ -161,6 +161,10 @@ describe("progress backup", () => {
     expect(bad(stars, [3])).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, 3)).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, null)).toEqual({ ok: false, error: "invalid" });
+    // The basics done: any array (a later version may add lessons), nothing else.
+    const basics = "sudoku_v1_basics_done";
+    expect(bad(basics, ["rule", "later-lesson"])).toMatchObject({ ok: true });
+    expect(bad(basics, { rule: true })).toEqual({ ok: false, error: "invalid" });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
       bad("sudoku_v1_save_hard", {
