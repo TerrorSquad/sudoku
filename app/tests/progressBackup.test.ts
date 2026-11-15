@@ -148,6 +148,10 @@ describe("progress backup", () => {
     expect(bad("sudoku_v1_score", 5)).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_score", { gamesWon: 1 })).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_pref_mistake_limit", 5)).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_pref_board_theme", "newsprint")).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_pref_board_theme", true)).toEqual({ ok: false, error: "invalid" });
+    expect(bad("sudoku_v1_pref_ui_scale", 1.5)).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_pref_ui_scale", 3)).toEqual({ ok: false, error: "invalid" });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
       bad("sudoku_v1_save_hard", {

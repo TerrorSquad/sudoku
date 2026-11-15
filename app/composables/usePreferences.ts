@@ -1,5 +1,7 @@
 import { ref, watch, type Ref } from "vue";
 
+import type { BoardTheme, UiScale } from "../utils/preferenceValues";
+
 import { readJSON, writeJSON } from "../utils/safeJson";
 
 // One place for every player preference, persisted per key under sudoku_v1_pref_*. The refs are
@@ -7,7 +9,7 @@ import { readJSON, writeJSON } from "../utils/safeJson";
 
 export type MistakeLimit = 0 | 3 | 5; // 0 = unlimited
 export type HintStyle = "full" | "nudge";
-export type BoardTheme = "tiles" | "newsprint" | "contrast";
+export type { BoardTheme, UiScale };
 
 function pref<T>(name: string, fallback: T): Ref<T> {
   const state = ref(readJSON<T>(`sudoku_v1_pref_${name}`, fallback)) as Ref<T>;
@@ -35,6 +37,7 @@ function create() {
     /** New games start in Zen: no timer, no mistake limit, no score. */
     zen: pref("zen", false),
     boardTheme: pref<BoardTheme>("board_theme", "tiles"),
+    uiScale: pref<UiScale>("ui_scale", 1),
   };
 }
 

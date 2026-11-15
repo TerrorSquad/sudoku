@@ -24,7 +24,7 @@ import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
-import { useScore } from "./composables/useScore";
+import { statsKey, useScore, winsAt } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
@@ -72,6 +72,19 @@ useHead(() => ({
   title: t("menu.title"),
   htmlAttrs: { lang: locales.value.find((l) => l.code === locale.value)?.language ?? locale.value },
 }));
+// The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
+// win, so both get the resolved colour (whichever media query matches, it is the right one).
+const uiColorMode = useColorMode();
+useHead(() => {
+  const content = uiColorMode.value === "dark" ? "#1c252f" : "#17294a";
+  return {
+    meta: ["light", "dark"].map((s) => ({
+      name: "theme-color",
+      media: `(prefers-color-scheme: ${s})`,
+      content,
+    })),
+  };
+});
 
 const {
   colorMode,
@@ -85,6 +98,7 @@ const {
   showCandidates,
   zen,
   boardTheme,
+  uiScale,
 } = usePreferences();
 
 // One call per game event: the sound and the vibration, each respecting its own setting.
@@ -168,7 +182,22 @@ const progressNotes = ref<{ text: string; ok: boolean }[]>([]);
 
 const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
-const hintStatus = ref<string>(t("game.ready"));
+// The game's status line ("Wrong digit here!", "Notes auto-filled!"), read out by the sr-only
+// aria-live region on the game screen. aria-live only speaks a change, so say() clears it first:
+// the same message twice in a row is read twice.
+const announcement = ref("");
+function say(message: string) {
+  announcement.value = "";
+  nextTick(() => (announcement.value = message));
+}
+const hintStatus = {
+  get value() {
+    return announcement.value;
+  },
+  set value(message: string) {
+    say(message);
+  },
+};
 const hintBody = ref<string>("");
 const currentScreen = ref<
   | "menu"
@@ -180,6 +209,16 @@ const currentScreen = ref<
   | "achievements"
   | "settings"
 >("menu");
+// Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
+// the game, whose board already fills the height: there a bigger rem would only shrink it. Set
+// during setup, so the first paint is right, then as each screen enters (the screen Transition is
+// out-in), so the screen leaving never jumps.
+function applyUiScale() {
+  const scale = currentScreen.value === "game" ? 1 : uiScale.value;
+  document.documentElement.style.setProperty("--ui-scale", String(scale));
+}
+applyUiScale();
+watch(uiScale, applyUiScale);
 const activeDifficulty = ref<Difficulty>("medium");
 // What the dashboard chip and the win modal call this game, in the player's language.
 const difficultyLabel = computed(() =>
@@ -203,6 +242,15 @@ const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
 // Settings opened from the pause screen go back to the paused game, not the menu.
 const settingsFromGame = ref(false);
+// Set when a nudge's technique opened the Academy: Back returns to the paused game.
+const academyFromGame = ref(false);
+// Still in the game, for state that should survive those detours (armed digit, nudge).
+const inGame = computed(
+  () =>
+    currentScreen.value === "game" ||
+    (currentScreen.value === "settings" && settingsFromGame.value) ||
+    (currentScreen.value === "academy" && academyFromGame.value),
+);
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
@@ -240,11 +288,13 @@ const newRecords = ref<NewRecord[]>([]);
 // Practice and custom boards don't count: a one-blank custom board could be won over and over.
 const countsForRecords = () => !practiceTechnique.value && activeDifficulty.value !== "custom";
 
-// What a win can break, read before and after recording it.
+// What a win can break, read before and after recording it. A Daily's time is compared with
+// earlier Dailies (its own score row), like its "New best" chip.
 function recordSnapshot(): Snapshot {
+  const key = statsKey(activeDifficulty.value, isDailyMode.value);
   return {
     ...records.get(),
-    fastest: score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0,
+    fastest: score.getStats().perDifficulty[key]?.bestTime ?? 0,
     streak: dailyPuzzle.getLongestStreak(),
   };
 }
@@ -257,7 +307,7 @@ function recordLine(r: NewRecord): string {
         ? t(`difficulty.${v}`)
         : v;
   return t(`records.new.${r.kind}`, {
-    difficulty: t(`difficulty.${activeDifficulty.value}`),
+    difficulty: t(`difficulty.${statsKey(activeDifficulty.value, isDailyMode.value)}`),
     value: show(r.value),
     was: show(r.was),
   });
@@ -457,11 +507,8 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         mistakes: mistakes.value,
         hintsUsed: hintsUsed.value,
       });
-      const result = score.record(
-        activeDifficulty.value,
-        breakdown.total,
-        timer.timerSeconds.value,
-      );
+      const key = statsKey(activeDifficulty.value, isDailyMode.value);
+      const result = score.record(key, breakdown.total, timer.timerSeconds.value);
       submitWin({
         difficulty: activeDifficulty.value,
         seconds: timer.timerSeconds.value,
@@ -485,7 +532,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         colorMode: colorMode.value,
         hour: new Date().getHours(),
         gamesWon: result.stats.gamesWon,
-        winsAtDifficulty: result.stats.perDifficulty[activeDifficulty.value]?.wins ?? 0,
+        winsAtDifficulty: winsAt(result.stats.perDifficulty, key),
         dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
         distinctTechniques: Object.keys(techStats.getAll()).length,
       });
@@ -566,9 +613,6 @@ function handleModalClose() {
   currentScreen.value = "menu";
   timer.resetTimer();
 }
-
-// Set when a nudge's technique opened the Academy: Back returns to the paused game.
-const academyFromGame = ref(false);
 
 function openLesson(id: TechniqueId) {
   handleModalClose();
@@ -676,8 +720,8 @@ function handleSelectCell(coord: CellCoord) {
 
 // An armed digit is meaningless once the player leaves the game, turns the mode off, or has
 // placed all nine of it.
-watch([currentScreen, digitFirst], () => {
-  if (currentScreen.value !== "game" || !digitFirst.value) activeDigit.value = null;
+watch([inGame, digitFirst], () => {
+  if (!inGame.value || !digitFirst.value) activeDigit.value = null;
 });
 watch(numberCounts, (counts) => {
   if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
@@ -884,10 +928,12 @@ watch(
   },
   { deep: true },
 );
-watch(currentScreen, () => {
+watch(currentScreen, () => (finishing.value = false));
+// The nudge survives the pause screen's Settings detour, not leaving the game.
+watch(inGame, (playing) => {
+  if (playing) return;
   nudge.value = null;
   nudgePaid = false;
-  finishing.value = false;
 });
 // Counts one hint per step, whether it ended at the nudge or went on to the explanation.
 function chargeHint() {
@@ -1209,7 +1255,7 @@ onUnmounted(() => {
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
-      <Transition name="screen" mode="out-in">
+      <Transition name="screen" mode="out-in" @before-enter="applyUiScale">
         <!-- MENU: the menu is itself a 3×3 box, New game filling four of its cells. -->
         <div
           v-if="currentScreen === 'menu'"
@@ -1240,7 +1286,7 @@ onUnmounted(() => {
               {{ $t("menu.subtitle") }}
             </p>
             <!-- Level / progress -->
-            <div class="mx-auto mt-5 w-full max-w-[240px]" data-testid="level-badge">
+            <div class="mx-auto mt-5 w-full max-w-[15rem]" data-testid="level-badge">
               <p class="text-xs font-bold text-violet-700 dark:text-violet-300">
                 {{ $t("level.label", { n: playerLevel.level }) }}
                 <span class="font-semibold text-zinc-500"
@@ -1321,7 +1367,7 @@ onUnmounted(() => {
                 <span class="block">{{
                   dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
                 }}</span>
-                <span v-if="dailyStreak > 0" class="block text-[11px] font-semibold opacity-80"
+                <span v-if="dailyStreak > 0" class="block text-[0.6875rem] font-semibold opacity-80"
                   >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak }) }}</span
                 >
               </span>
@@ -1341,7 +1387,7 @@ onUnmounted(() => {
               />
               <span>
                 <span class="block">{{ $t("menu.academy") }}</span>
-                <span class="block text-[11px] font-semibold opacity-80">{{
+                <span class="block text-[0.6875rem] font-semibold opacity-80">{{
                   $t("path.menu", { done: pathDone, total: ACADEMY_TECHNIQUES.length })
                 }}</span>
               </span>
@@ -1421,8 +1467,10 @@ onUnmounted(() => {
         <!-- GAME -->
         <div
           v-else-if="currentScreen === 'game'"
-          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[1900px] 3xl:grid-cols-[240px_minmax(0,1fr)_420px] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
+          class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-2 py-2 3xl:max-w-[118.75rem] 3xl:grid-cols-[15rem_minmax(0,1fr)_26.25rem] 3xl:gap-6 3xl:px-8 sm:px-5 sm:py-3 lg:grid lg:gap-6 lg:max-3xl:grid-cols-12"
         >
+          <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
+          <p class="sr-only" aria-live="polite">{{ announcement }}</p>
           <!-- 3xl left sidebar: shortcuts & branding -->
           <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
             <div>
@@ -1446,7 +1494,7 @@ onUnmounted(() => {
                   class="flex items-center gap-3"
                 >
                   <kbd
-                    class="min-w-[60px] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                    class="min-w-[3.75rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                     >{{ s.key }}</kbd
                   >
                   <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ s.desc }}</span>
@@ -1673,7 +1721,7 @@ onUnmounted(() => {
         @pointerdown="winStep && skipWinSteps()"
       >
         <div
-          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[6px] p-6 text-center shadow-2xl"
+          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
           :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -1744,7 +1792,7 @@ onUnmounted(() => {
 
           <!-- Score headline: the total counts up through the lines as they appear -->
           <div v-if="isWinState && lastScore" class="mb-5">
-            <p class="text-[11px] font-semibold text-zinc-500">
+            <p class="text-[0.6875rem] font-semibold text-zinc-500">
               {{ $t("modal.scoreTotal") }}
             </p>
             <p
@@ -1756,7 +1804,7 @@ onUnmounted(() => {
             <p
               v-if="isNewBest"
               :class="scoreLanded ? 'win-in' : 'opacity-0'"
-              class="mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:text-amber-300"
+              class="mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-800 dark:text-amber-300"
             >
               ★ {{ $t("modal.scoreNewBest") }}
             </p>
@@ -1835,7 +1883,7 @@ onUnmounted(() => {
                   :key="id"
                   @click="openLesson(id)"
                   :title="$t('modal.openLesson')"
-                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
                 >
                   {{ $t(`hint.move.${id}.name`) }}
                 </button>
@@ -1861,7 +1909,7 @@ onUnmounted(() => {
                     v-if="m.technique"
                     @click="openLesson(m.technique!)"
                     :title="$t('modal.openLesson')"
-                    class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+                    class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
                   >
                     {{ $t(`hint.move.${m.technique}.name`) }}
                   </button>
@@ -1877,7 +1925,7 @@ onUnmounted(() => {
                   v-for="id in techniqueLog"
                   :key="id"
                   :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
-                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
+                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-700 dark:text-amber-400"
                   >{{ $t(`hint.move.${id}.name`) }}
                   <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
                 >
@@ -1897,7 +1945,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div
-          class="modal-pop panel w-full max-w-sm !rounded-2xl border-t-[6px] !border-t-violet-500 p-6 text-center shadow-2xl"
+          class="modal-pop panel w-full max-w-sm !rounded-2xl border-t-[0.375rem] !border-t-violet-500 p-6 text-center shadow-2xl"
         >
           <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
             {{ $t("resume.title") }}

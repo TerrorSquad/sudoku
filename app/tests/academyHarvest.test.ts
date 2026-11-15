@@ -3,7 +3,6 @@
 // Each example is a real solver state where the technique is the next logical move. Existing
 // examples are kept as they are, so the Academy only changes where a technique is new.
 import { writeFileSync } from "node:fs";
-
 import { describe, expect, it } from "vitest";
 
 import type { TechniqueId } from "../utils/sudokuGrader";
@@ -65,7 +64,10 @@ function harvest(technique: TechniqueId): AcademyExample | null {
 // Leaf objects and arrays on one line, like the hand-formatted file; oxfmt wraps what's too long.
 const compact = (json: string) =>
   json
-    .replace(/\{\s*([^{}[\]]*?)\s*\}/g, (_, body: string) => `{ ${body.replace(/\s*\n\s*/g, " ")} }`)
+    .replace(
+      /\{\s*([^{}[\]]*?)\s*\}/g,
+      (_, body: string) => `{ ${body.replace(/\s*\n\s*/g, " ")} }`,
+    )
     .replace(/\[\s*([^{}[\]]*?)\s*\]/g, (_, body: string) => `[${body.replace(/\s*\n\s*/g, " ")}]`);
 
 describe.skipIf(!process.env.HARVEST)("academy harvest", () => {

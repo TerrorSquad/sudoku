@@ -7,7 +7,13 @@ import { migrateTechniqueStats } from "../composables/useTechniqueStats";
 describe("migrateTechniqueStats", () => {
   it("re-keys titles from both languages by technique id, summing them", () => {
     expect(
-      migrateTechniqueStats({ "Naked Single": 3, "Goli singl": 2, "X-Wing": 1, "pointing": 4, "Pokazujući par": 1 }),
+      migrateTechniqueStats({
+        "Naked Single": 3,
+        "Goli singl": 2,
+        "X-Wing": 1,
+        pointing: 4,
+        "Pokazujući par": 1,
+      }),
     ).toEqual({ "naked-single": 5, "x-wing": 1, pointing: 5 });
   });
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import type { BoardTheme } from "../composables/usePreferences";
 import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
+import type { BoardTheme } from "../utils/preferenceValues";
 import type { BoardUnit } from "../utils/sudokuGrader";
 
 import SudokuCell from "./SudokuCell.vue";
@@ -92,7 +92,7 @@ function hasConflict(r: number, c: number): boolean {
     role="grid"
     :aria-label="$t('a11y.board')"
     :data-theme="theme ?? 'tiles'"
-    class="board grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[3px] select-none lg:mx-auto lg:max-w-[calc(100vh-300px)]"
+    class="board @container grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[0.1875rem] select-none lg:mx-auto lg:max-w-[calc(100vh-18.75rem)]"
   >
     <!-- display: contents keeps the visual grid flat while giving screen readers real rows. -->
     <div v-for="(row, r) in 9" :key="r" role="row" class="contents">

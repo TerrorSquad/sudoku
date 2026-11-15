@@ -48,6 +48,17 @@ describe("readCloud", () => {
   it("recognises a file from a later version", () => {
     expect(readCloud(JSON.stringify({ ...file(A, 5), version: 2 })).kind).toBe("newer");
   });
+
+  it("holds a v1 file whose only unknown entries are preferences from a later version", () => {
+    const newPref = { ...A, sudoku_v1_pref_ui_scale: "3", sudoku_v1_pref_future: '"x"' };
+    expect(readCloud(JSON.stringify(file(newPref, 5))).kind).toBe("newer");
+    // A broken score or a non-JSON value is still corruption, not a newer version.
+    const broken = { ...newPref, sudoku_v1_score: "5" };
+    expect(readCloud(JSON.stringify(file(broken, 5))).kind).toBe("corrupt");
+    expect(readCloud(JSON.stringify(file({ ...A, sudoku_v1_pref_x: "{" }, 5))).kind).toBe(
+      "corrupt",
+    );
+  });
 });
 
 describe("decide", () => {
@@ -115,8 +126,8 @@ describe("decide", () => {
   });
 });
 
-describe("the Daily's save stays on the device", () => {
-  const daily = { sudoku_v1_save_daily: "{}" };
+describe("the Daily's save and the display size stay on the device", () => {
+  const daily = { sudoku_v1_save_daily: "{}", sudoku_v1_pref_ui_scale: "1.5" };
 
   it("is left out of what syncs (v1.2.0 would call the whole file corrupt)", () => {
     expect(cloudData({ ...A, ...daily })).toEqual(A);

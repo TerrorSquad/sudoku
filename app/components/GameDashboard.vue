@@ -37,7 +37,7 @@ defineEmits<{
 
       <!-- Difficulty label-->
       <span
-        class="rounded-full border border-violet-500/25 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-bold text-violet-700 dark:text-violet-300"
+        class="rounded-full border border-violet-500/25 bg-violet-500/10 px-2.5 py-0.5 text-[0.6875rem] font-bold text-violet-700 dark:text-violet-300"
       >
         {{ difficulty }}
       </span>
@@ -57,7 +57,7 @@ defineEmits<{
           v-if="bestTime"
           data-testid="best-time"
           :data-past="pastBest"
-          class="text-[10px] leading-none font-semibold text-zinc-500 tabular-nums sm:text-[11px]"
+          class="text-[0.625rem] leading-none font-semibold text-zinc-500 tabular-nums sm:text-[0.6875rem]"
           :class="{ 'line-through decoration-rose-500/70': pastBest }"
           >{{ $t("game.best", { time: bestTime })
           }}<span v-if="pastBest" class="sr-only"> {{ $t("game.bestPassed") }}</span></span
