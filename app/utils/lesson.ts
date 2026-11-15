@@ -1,0 +1,178 @@
+// Guided technique lessons: the moment in a real puzzle where a technique is the next logical
+// move, with what the player has to find and do there. Pure; unit-tested in tests/lesson.test.ts.
+//
+// The solver tries the easiest technique first, so at the lesson's position nothing simpler
+// applies: the technique is genuinely the way forward, not just one of several.
+
+import type { Grid } from "../types/sudoku";
+
+import { ACADEMY_EXAMPLES } from "./academyExamples";
+import { generatePracticePuzzle } from "./practice";
+import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
+import {
+  nextHint,
+  type BoardUnit,
+  type CellRC,
+  type DigitAt,
+  type SolveMove,
+  type TechniqueId,
+} from "./sudokuGrader";
+
+export interface Lesson {
+  technique: TechniqueId;
+  /** The position; every filled cell is fixed. */
+  board: Grid;
+  /** Pencil marks for every empty cell: its candidates, less what earlier steps ruled out. */
+  notes: number[][][];
+  /** Step 1: the cells to find (for a placement, the cell it fills). */
+  pattern: CellRC[];
+  /** Step 2: the digit to place, or else the pencil marks to remove. */
+  placement: DigitAt | null;
+  eliminations: DigitAt[];
+  digits: number[];
+  /** The one row, column or box to look in, when the pattern sits in one. */
+  unit: BoardUnit | null;
+  move: SolveMove;
+}
+
+type Kind = BoardUnit["kind"];
+const inUnit = (kind: Kind, a: CellRC, p: CellRC) =>
+  kind === "row"
+    ? a.r === p.r
+    : kind === "col"
+      ? a.c === p.c
+      : Math.floor(a.r / 3) === Math.floor(p.r / 3) && Math.floor(a.c / 3) === Math.floor(p.c / 3);
+const ALL_CELLS: CellRC[] = Array.from({ length: 81 }, (_, i) => ({
+  r: Math.floor(i / 9),
+  c: i % 9,
+}));
+
+/** Where to look, for the techniques whose pattern lives in one unit. */
+const UNIT_KINDS: Partial<Record<TechniqueId, Kind[]>> = {
+  "naked-single": ["box", "row", "col"],
+  pointing: ["box"],
+  "box-line": ["row", "col"],
+  "naked-pair": ["row", "col", "box"],
+  "naked-triple": ["row", "col", "box"],
+  "naked-quad": ["row", "col", "box"],
+  "hidden-pair": ["row", "col", "box"],
+  "hidden-triple": ["row", "col", "box"],
+  "hidden-quad": ["row", "col", "box"],
+};
+
+function unitOf(move: SolveMove, pattern: CellRC[], notes: number[][][]): BoardUnit | null {
+  const at = pattern[0]!;
+  if (move.technique === "hidden-single") return { kind: move.unit!, r: at.r, c: at.c };
+  const kinds = UNIT_KINDS[move.technique];
+  if (!kinds) return null;
+  const tech = move.technique;
+  const kind = kinds.find((k) => {
+    const cells = ALL_CELLS.filter((p) => inUnit(k, at, p));
+    const isPattern = (p: CellRC) => pattern.some((q) => q.r === p.r && q.c === p.c);
+    // A naked single: no other cell of the unit is down to one candidate, so "the cell" is clear.
+    if (tech === "naked-single")
+      return cells.every((p) => isPattern(p) || notes[p.r]![p.c]!.length !== 1);
+    if (!pattern.every((p) => inUnit(k, at, p))) return false;
+    // A naked subset clears the rest of this unit; a hidden one holds its digits only here.
+    if (tech.startsWith("naked")) return move.eliminations.every((p) => inUnit(k, at, p));
+    return cells.every(
+      (p) => isPattern(p) || !move.digits.some((d) => notes[p.r]![p.c]!.includes(d)),
+    );
+  });
+  return kind ? { kind, r: at.r, c: at.c } : null;
+}
+
+const uniqueCells = (cells: CellRC[]) =>
+  cells.filter((p, i) => cells.findIndex((q) => q.r === p.r && q.c === p.c) === i);
+
+/** The lesson for `move`, found on `board` after the removals in `elims`. */
+export function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
+  const notes = getGridCandidates(board).map((row, r) =>
+    row.map((cands, c) =>
+      cands.filter((n) => !elims.some((e) => e.r === r && e.c === c && e.num === n)),
+    ),
+  );
+  // A single's (or BUG+1's) "pattern" in the solver is every filled cell around it; the player
+  // finds the cell itself.
+  const p = move.placement;
+  const pattern = p
+    ? [{ r: p.r, c: p.c }]
+    : uniqueCells(move.triggers.map(({ r, c }) => ({ r, c })));
+  return {
+    technique: move.technique,
+    board: cloneGrid(board),
+    notes,
+    pattern,
+    placement: p ?? null,
+    eliminations: move.eliminations,
+    digits: move.digits,
+    unit: unitOf(move, pattern, notes),
+    move,
+  };
+}
+
+/**
+ * Replays the solver over `puzzle` to where `technique` is next. Prefers an occurrence that sits
+ * in one named unit, so "look in box 4" points at exactly one instance.
+ */
+export function lessonFromPuzzle(puzzle: Grid, technique: TechniqueId): Lesson | null {
+  const board = cloneGrid(puzzle);
+  const elims: DigitAt[] = [];
+  let first: Lesson | null = null;
+  for (let step = 0; step < 600; step++) {
+    const move = nextHint(board, elims);
+    if (!move) break;
+    if (move.technique === technique) {
+      const lesson = lessonAt(board, elims, move);
+      if (lesson.unit || !UNIT_KINDS[technique]) return lesson;
+      first ??= lesson;
+    }
+    if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
+    else elims.push(...move.eliminations);
+  }
+  return first;
+}
+
+/** The Academy's worked example as a lesson: its pencil marks are the removals made so far. */
+export function lessonFromExample(technique: TechniqueId): Lesson | null {
+  const ex = ACADEMY_EXAMPLES[technique];
+  if (!ex) return null;
+  const cands = getGridCandidates(ex.board);
+  const elims = Object.entries(ex.notes).flatMap(([key, kept]) => {
+    const [r, c] = key.split("-").map(Number) as [number, number];
+    return cands[r]![c]!.filter((n) => !kept.includes(n)).map((num) => ({ r, c, num }));
+  });
+  const replayed = nextHint(ex.board, elims);
+  if (replayed?.technique === technique) return lessonAt(ex.board, elims, replayed);
+  // The example only notes the pattern's cells, so elsewhere the solver may see something simpler
+  // first: take the move as harvested. A hidden subset clears the other digits from its cells;
+  // every other technique clears its digits from the cells it eliminates in.
+  const kept = (r: number, c: number) => ex.notes[`${r}-${c}`] ?? cands[r]![c]!;
+  const hidden = technique.startsWith("hidden");
+  const move: SolveMove = {
+    technique,
+    tier: 4,
+    placement: ex.placement ?? undefined,
+    eliminations: ex.elimination.flatMap(({ r, c }) =>
+      kept(r, c)
+        .filter((n) => ex.digits.includes(n) !== hidden)
+        .map((num) => ({ r, c, num })),
+    ),
+    triggers: ex.trigger,
+    digits: ex.digits,
+  };
+  return lessonAt(ex.board, elims, move);
+}
+
+/** A fresh position from a puzzle that needs the technique, else the Academy's example. */
+export async function generateLesson(
+  technique: TechniqueId,
+  rng: Rng = Math.random,
+): Promise<Lesson> {
+  const p = await generatePracticePuzzle(technique, rng);
+  const lesson =
+    (p.kind === "puzzle" ? lessonFromPuzzle(p.board, technique) : null) ??
+    lessonFromExample(technique);
+  if (!lesson) throw new Error(`No lesson for technique: ${technique}`);
+  return lesson;
+}

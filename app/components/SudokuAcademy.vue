@@ -22,6 +22,7 @@ const props = defineProps<{ focus?: TechniqueId | null; inGame?: boolean }>();
 const emit = defineEmits<{
   (e: "back-to-menu"): void;
   (e: "practice", id: TechniqueId): void;
+  (e: "lesson", id: TechniqueId): void;
   (e: "weekly", week: Week): void;
 }>();
 
@@ -236,7 +237,7 @@ const total = computed(() => techniques.length);
             </p>
             <button
               class="tile tile-primary mt-3 w-full px-3 py-2.5 text-sm font-bold"
-              @click="emit('practice', nextId)"
+              @click="emit('lesson', nextId)"
             >
               {{ $t("path.next") }}: {{ techName(nextId) }}
             </button>
@@ -390,12 +391,20 @@ const total = computed(() => techniques.length);
               </div>
             </div>
 
-            <button
-              class="tile mt-4 w-full py-2 text-xs font-bold text-violet-700 dark:text-violet-300"
-              @click.stop="emit('practice', tech.id)"
-            >
-              {{ $t("practice.button") }}
-            </button>
+            <div class="mt-4 flex gap-2">
+              <button
+                class="tile flex-1 px-2 py-2 text-xs font-bold text-violet-700 dark:text-violet-300"
+                @click.stop="emit('lesson', tech.id)"
+              >
+                {{ $t("lesson.button") }}
+              </button>
+              <button
+                class="tile flex-1 px-2 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400"
+                @click.stop="emit('practice', tech.id)"
+              >
+                {{ $t("practice.button") }}
+              </button>
+            </div>
 
             <div
               v-if="expanded.has(tech.id) && exampleFor(tech.id)"

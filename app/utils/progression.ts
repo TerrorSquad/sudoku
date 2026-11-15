@@ -92,12 +92,11 @@ export const ACADEMY_TECHNIQUES: { id: TechniqueId; tier: Tier }[] = [
 ];
 
 /**
- * Where practice.ts's search (600 digs) usually comes up empty and starts the Academy drill
- * instead, so winning the drill has to count. Measured over 40 seeds: hidden quad 1/40 real
- * puzzles, jellyfish 2/40, naked quad 12/40; everything else 25/40 or better (simple coloring
- * the lowest), so for those only a real puzzle completes the challenge.
+ * Where practice.ts's search (600 digs) usually comes up empty and falls back to the Academy's
+ * example. Measured over 40 seeds: hidden quad 1/40 real puzzles, jellyfish 2/40, naked quad
+ * 12/40; everything else 25/40 or better (simple coloring the lowest).
  */
-export const DRILL_COUNTS: ReadonlySet<TechniqueId> = new Set([
+export const RARE_IN_PUZZLES: ReadonlySet<TechniqueId> = new Set([
   "naked-quad",
   "hidden-quad",
   "jellyfish",
@@ -108,20 +107,19 @@ export function nextChallenge(done: readonly string[]): TechniqueId | null {
   return ACADEMY_TECHNIQUES.find((t) => !done.includes(t.id))?.id ?? null;
 }
 
-/** Whether winning a practice game of `id` completes the current challenge. */
-export function completesChallenge(
-  id: TechniqueId,
-  kind: "puzzle" | "drill",
-  done: readonly string[],
-): boolean {
-  return id === nextChallenge(done) && (kind === "puzzle" || DRILL_COUNTS.has(id));
+/**
+ * Whether finishing `id`'s lesson completes the current challenge (the path goes in order). Only
+ * the lesson checks that the technique was applied, so a practice win never does.
+ */
+export function completesChallenge(id: TechniqueId, done: readonly string[]): boolean {
+  return id === nextChallenge(done);
 }
 
 // ---- Technique of the week ----------------------------------------------------------------
 
 /** Techniques the generator reliably finds puzzles for, so the week's puzzle is a real one. */
 export const WEEKLY_TECHNIQUES = ACADEMY_TECHNIQUES.map((t) => t.id).filter(
-  (id) => !DRILL_COUNTS.has(id),
+  (id) => !RARE_IN_PUZZLES.has(id),
 );
 
 const DAY = 86_400_000;

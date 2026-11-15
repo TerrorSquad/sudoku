@@ -14,10 +14,10 @@ export function useTechniquePath() {
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
   }
 
-  /** Records a practice win; true when it completed the current challenge. */
-  function recordWin(id: TechniqueId, kind: "puzzle" | "drill"): boolean {
+  /** Records a finished lesson; true when it completed the current challenge. */
+  function recordLesson(id: TechniqueId): boolean {
     const done = getDone();
-    if (!completesChallenge(id, kind, done)) return false;
+    if (!completesChallenge(id, done)) return false;
     writeJSON(PATH_KEY, [...done, id]);
     return true;
   }
@@ -36,5 +36,5 @@ export function useTechniquePath() {
     return true;
   }
 
-  return { getDone, recordWin, getWeeksDone, markWeekDone };
+  return { getDone, recordLesson, getWeeksDone, markWeekDone };
 }

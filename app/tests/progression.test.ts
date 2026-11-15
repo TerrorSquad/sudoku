@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   ACADEMY_TECHNIQUES,
-  DRILL_COUNTS,
+  RARE_IN_PUZZLES,
   WEEKLY_TECHNIQUES,
   completesChallenge,
   lockOf,
@@ -73,14 +73,11 @@ describe("technique path", () => {
     expect(nextChallenge(ACADEMY_TECHNIQUES.map((t) => t.id))).toBeNull();
   });
 
-  it("completes only the current challenge, and a drill only where the search can't find puzzles", () => {
-    expect(completesChallenge("naked-single", "puzzle", [])).toBe(true);
-    expect(completesChallenge("hidden-single", "puzzle", [])).toBe(false);
-    expect(completesChallenge("naked-single", "drill", [])).toBe(false);
-    const upToQuads = ACADEMY_TECHNIQUES.slice(0, 9).map((t) => t.id);
-    expect(nextChallenge(upToQuads.slice(0, 8))).toBe("naked-quad");
-    expect(completesChallenge("naked-quad", "drill", upToQuads.slice(0, 8))).toBe(true);
-    expect([...DRILL_COUNTS].toSorted()).toEqual(["hidden-quad", "jellyfish", "naked-quad"]);
+  it("a lesson completes only the current challenge", () => {
+    expect(completesChallenge("naked-single", [])).toBe(true);
+    expect(completesChallenge("hidden-single", [])).toBe(false);
+    expect(completesChallenge("hidden-single", ["naked-single"])).toBe(true);
+    expect(completesChallenge("naked-single", ["naked-single"])).toBe(false);
   });
 });
 
@@ -109,6 +106,7 @@ describe("technique of the week", () => {
     for (let i = 0; i < WEEKLY_TECHNIQUES.length; i++)
       seen.add(weekOf(new Date(2026, 0, 5 + 7 * i)).technique);
     expect(seen.size).toBe(WEEKLY_TECHNIQUES.length);
-    expect(WEEKLY_TECHNIQUES.some((id) => DRILL_COUNTS.has(id))).toBe(false);
+    expect(WEEKLY_TECHNIQUES.some((id) => RARE_IN_PUZZLES.has(id))).toBe(false);
+    expect([...RARE_IN_PUZZLES].toSorted()).toEqual(["hidden-quad", "jellyfish", "naked-quad"]);
   });
 });
