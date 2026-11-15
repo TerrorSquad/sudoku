@@ -16,6 +16,7 @@ describe("streakState", () => {
       current: 0,
       longest: 0,
       freezes: 0,
+      earned: 0,
       frozen: [],
     });
   });
@@ -70,5 +71,15 @@ describe("streakState longest", () => {
     );
     expect(s.longest).toBe(5);
     expect(s.current).toBe(5);
+  });
+});
+
+describe("streakState earned", () => {
+  it("doesn't rise when finishing yesterday's Daily after midnight refunds a freeze", () => {
+    const before = streakState(run("2026-11-07", 7), "2026-11-15"); // the 14th is missed
+    const after = streakState([...run("2026-11-07", 7), "2026-11-14"], "2026-11-15");
+    expect(before.freezes).toBe(0); // spent on the 14th
+    expect(after.freezes).toBe(1); // refunded: the 14th is done
+    expect(after.earned).toBe(before.earned);
   });
 });

@@ -532,9 +532,9 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       }
     } else {
       if (isDailyMode.value) {
-        const freezesBefore = dailyPuzzle.getStreakState().freezes;
+        const earnedBefore = dailyPuzzle.getStreakState().earned;
         dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
-        if (dailyPuzzle.getStreakState().freezes > freezesBefore)
+        if (dailyPuzzle.getStreakState().earned > earnedBefore)
           progressNotes.value.push({ text: t("streak.freezeEarned"), ok: true });
       }
       const breakdown = computeScore({
@@ -642,24 +642,41 @@ async function shareWin() {
     GAME_URL,
   ];
   const text = lines.join("\n");
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    shared.value = true;
+    setTimeout(() => (shared.value = false), 2000);
+  };
   try {
-    if (navigator.share) await navigator.share({ text });
-    else {
-      await navigator.clipboard.writeText(text);
-      shared.value = true;
-      setTimeout(() => (shared.value = false), 2000);
+    if (!navigator.share) return await copy();
+    try {
+      await navigator.share({ text });
+    } catch (e) {
+      // A dismissed sheet is the player's choice; anything else (an iframe without web-share
+      // permission says NotAllowedError) falls back to the clipboard.
+      if ((e as Error).name !== "AbortError") await copy();
     }
   } catch {
-    // Dismissed share sheet or a blocked clipboard: nothing to do.
+    // A blocked clipboard: nothing more to try.
   }
 }
 
-function handleNextPuzzle() {
+// Starting: the modal stays up (its button busy) until the board is ready, so the won board is
+// never live again in between. A saved game at that level goes through the usual resume prompt.
+const nextLoading = ref(false);
+async function handleNextPuzzle() {
   const level = nextLevel.value;
-  if (!level) return;
-  // Straight to the next board: passing through the menu would cancel its start (startToken).
-  closeModal();
-  handleChooseDifficulty(level);
+  if (!level || nextLoading.value) return;
+  if (gameSave.loadDifficulty(level)) {
+    handleModalClose();
+    currentScreen.value = "difficulty";
+    handleChooseDifficulty(level);
+    return;
+  }
+  nextLoading.value = true;
+  // Straight to the next board (the menu would cancel its start), Zen if this game was.
+  await handleStartGame(level, { zen: gameZen.value, ready: closeModal });
+  nextLoading.value = false;
 }
 
 // A practice win can complete the week's puzzle. The path's challenges are its lessons.
@@ -689,6 +706,7 @@ function winMessage() {
 function closeModal() {
   stopWinSteps();
   showModal.value = false;
+  finishing.value = false; // a Finish-button win ends with it set
   justUnlocked.value = null;
   practiceTechnique.value = null;
   isDailyMode.value = false;
@@ -731,13 +749,17 @@ function resumeSavedGame(s: GameSave) {
 // A board still generating when the player picks again, or leaves the screen, is dropped.
 let startToken = 0;
 watch(currentScreen, () => startToken++);
-async function handleStartGame(level: Difficulty) {
+async function handleStartGame(
+  level: Difficulty,
+  { zen: zenGame = zen.value, ready = () => {} } = {},
+) {
   const token = ++startToken;
   const generated = await takePuzzle(level);
   if (token !== startToken) return;
+  ready();
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  gameZen.value = zen.value;
+  gameZen.value = zenGame;
   gameSave.clearDifficulty(level);
   activeDifficulty.value = level;
   mistakes.value = 0;
@@ -1313,8 +1335,12 @@ watch(shortcutsOpen, (open) => {
 // On a settled end screen (not over a button, whose own Enter wins): Enter plays the next
 // puzzle, Escape closes.
 function handleModalKey(e: KeyboardEvent) {
+  const target = e.target as HTMLElement;
+  if (target.closest?.("[data-end-modal] button")) return; // the modal's own buttons
+  // A button behind the overlay kept focus (the numpad, Finish): it mustn't press.
+  if (e.key === "Enter" || e.key === " ") e.preventDefault();
   const settled = !isWinState.value || winStep.value >= winStepCount.value;
-  if (!settled || e.repeat || (e.target as HTMLElement).closest?.("button")) return;
+  if (!settled || e.repeat) return;
   if (e.key === "Enter" && nextLevel.value) {
     e.preventDefault();
     handleNextPuzzle();
@@ -1330,7 +1356,9 @@ function handleKeyDown(e: KeyboardEvent) {
     if (!e.repeat && winStep.value) skipWinSteps();
     return;
   }
-  if (currentScreen.value !== "game" || settingsOverGame.value || shortcutsOpen.value) return;
+  // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
+  if (currentScreen.value !== "game" || settingsOverGame.value || shortcutsSheet.value?.open)
+    return;
   if (e.key === "?") {
     shortcutsOpen.value = true;
     return;
@@ -1913,6 +1941,7 @@ onUnmounted(() => {
       <!-- MODAL -->
       <div
         v-if="showModal"
+        data-end-modal
         :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
         @pointerdown="winStep && skipWinSteps()"
@@ -2142,6 +2171,8 @@ onUnmounted(() => {
               v-if="nextLevel"
               @click="handleNextPuzzle"
               data-testid="next-puzzle"
+              :aria-busy="nextLoading"
+              :disabled="nextLoading"
               class="tile tile-primary flex-1 py-3 text-sm font-bold"
             >
               {{ $t("modal.nextPuzzle", { level: $t(`difficulty.${nextLevel}`) }) }}

@@ -180,3 +180,17 @@ test("nothing touches the board mid-cascade, and the win is recorded once", asyn
   const stats = await page.evaluate(() => JSON.parse(localStorage.getItem("sudoku_v1_score")!));
   expect(stats.gamesWon).toBe(1);
 });
+
+test("after a Finish win, Next puzzle starts a board that takes input", async ({ page }) => {
+  await seed(page);
+  await finish(page).click();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await page.getByTestId("next-puzzle").click();
+  await expect(page.getByTestId("next-puzzle")).toHaveCount(0);
+  const cell = empties(page).first();
+  const at = await cell.getAttribute("data-cell");
+  await cell.click();
+  await page.keyboard.press("n"); // notes, so any digit is accepted
+  await page.keyboard.press("5");
+  await expect(page.locator(`[data-cell="${at}"]`)).toContainText("5");
+});

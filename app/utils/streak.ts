@@ -13,6 +13,8 @@ export interface StreakState {
   longest: number;
   /** Freezes held now. */
   freezes: number;
+  /** Freezes ever earned (what a win compares, as spending and refunds move `freezes`). */
+  earned: number;
   /** Missed days a freeze covered, as YYYY-MM-DD. */
   frozen: string[];
 }
@@ -30,7 +32,7 @@ export function streakState(completed: string[], todayKey: string): StreakState 
       .map(dayOf)
       .filter((d) => d <= today),
   );
-  const state: StreakState = { current: 0, longest: 0, freezes: 0, frozen: [] };
+  const state: StreakState = { current: 0, longest: 0, freezes: 0, earned: 0, frozen: [] };
   if (!done.size) return state;
   let count = 0;
   let streak = 0;
@@ -38,7 +40,10 @@ export function streakState(completed: string[], todayKey: string): StreakState 
   for (let d = Math.min(...done); d <= today; d++) {
     if (done.has(d)) {
       streak++;
-      if (++count % FREEZE_EVERY === 0) state.freezes = Math.min(MAX_FREEZES, state.freezes + 1);
+      if (++count % FREEZE_EVERY === 0) {
+        state.earned++;
+        state.freezes = Math.min(MAX_FREEZES, state.freezes + 1);
+      }
     } else if (d === today) {
       break; // today isn't over: it can't break or freeze anything yet
     } else if (streak > 0 && state.freezes > 0) {
