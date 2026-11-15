@@ -22,17 +22,13 @@ const isLastStep = computed(() => {
 </script>
 
 <template>
-  <div
-    class="panel flex w-full flex-col p-4 select-none 3xl:mt-12"
-  >
+  <div class="panel flex w-full flex-col p-4 select-none 3xl:mt-12">
     <!-- Empty state -->
     <div
       v-if="!activeComplexHint"
       class="flex flex-col items-center justify-center p-6 py-10 text-center"
     >
-      <div
-        class="tray mb-4 p-3 text-amber-600 dark:text-amber-400"
-      >
+      <div class="tray mb-4 p-3 text-amber-600 dark:text-amber-400">
         <AppIcon
           class="h-8 w-8"
           :stroke-width="1.5"
@@ -51,7 +47,7 @@ const isLastStep = computed(() => {
     <div v-else class="flex flex-col gap-4">
       <!-- Technique title -->
       <div class="border-b border-zinc-200 pb-3 dark:border-zinc-800">
-        <span class="mb-1 block text-[10px] font-bold text-amber-700 dark:text-amber-400">
+        <span class="mb-1 block text-[0.625rem] font-bold text-amber-700 dark:text-amber-400">
           {{ $t("hint.detectedTechnique") }}
         </span>
         <h2
@@ -122,11 +118,7 @@ const isLastStep = computed(() => {
 
           <button
             @click="emit('next-step')"
-            :class="
-              isLastStep
-                ? 'tile-apply'
-                : 'tile-amber'
-            "
+            :class="isLastStep ? 'tile-apply' : 'tile-amber'"
             class="tile py-2.5 text-xs font-black 3xl:py-3 3xl:text-sm"
           >
             {{ isLastStep ? $t("hint.apply") : $t("hint.next") }}

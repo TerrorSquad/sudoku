@@ -12,8 +12,20 @@ export default defineNuxtConfig({
     families: [
       // Upright only, Latin + Latin Extended (Serbian Latin's č ć š ž đ): every style and
       // script Google offers added 96 @font-face rules and 23 KB of CSS.
-      { name: "Fraunces", provider: "google", weights: [500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
-      { name: "Inter Tight", provider: "google", weights: [400, 500, 600, 700, 800], styles: ["normal"], subsets: ["latin", "latin-ext"] },
+      {
+        name: "Fraunces",
+        provider: "google",
+        weights: [500, 600, 700, 800],
+        styles: ["normal"],
+        subsets: ["latin", "latin-ext"],
+      },
+      {
+        name: "Inter Tight",
+        provider: "google",
+        weights: [400, 500, 600, 700, 800],
+        styles: ["normal"],
+        subsets: ["latin", "latin-ext"],
+      },
     ],
   },
   pwa: {
@@ -64,7 +76,10 @@ export default defineNuxtConfig({
     baseURL: process.env.NUXT_APP_BASE_URL ?? "/",
     head: {
       meta: [
-        { name: "theme-color", content: "#17294a" },
+        // Navy ink on paper, the slate ground (--ground in main.css) in dark mode. app.vue
+        // repaints both when Settings forces a theme the system doesn't use.
+        { name: "theme-color", media: "(prefers-color-scheme: light)", content: "#17294a" },
+        { name: "theme-color", media: "(prefers-color-scheme: dark)", content: "#1c252f" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
         { name: "apple-mobile-web-app-title", content: "Sudoku Pro" },

@@ -2,6 +2,8 @@
 // saves, Daily history and preferences. Pure over a Storage-like object; unit-tested in
 // tests/progressBackup.test.ts.
 
+import { BOARD_THEMES, UI_SCALES } from "./preferenceValues";
+
 export const BACKUP_PREFIX = "sudoku_v1_";
 export const MAX_BACKUP_BYTES = 5_000_000;
 
@@ -36,7 +38,7 @@ const isGrid = (v: unknown) =>
   Array.isArray(v) && v.length === 9 && v.every((row) => Array.isArray(row) && row.length === 9);
 
 /** Parses a stored value and checks the few keys whose shape would crash or mislead the app. */
-function validEntry(key: string, value: string): boolean {
+export function validEntry(key: string, value: string): boolean {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -58,6 +60,9 @@ function validEntry(key: string, value: string): boolean {
   }
   if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);
   if (key === "sudoku_v1_pref_hint_style") return parsed === "full" || parsed === "nudge";
+  if (key === "sudoku_v1_pref_board_theme")
+    return (BOARD_THEMES as readonly unknown[]).includes(parsed);
+  if (key === "sudoku_v1_pref_ui_scale") return (UI_SCALES as readonly unknown[]).includes(parsed);
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
   if (key === "sudoku_v1_score") {
     return (

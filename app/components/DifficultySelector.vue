@@ -129,7 +129,7 @@ function pick(d: Difficulty) {
             </span>
             <span
               v-if="lockFor(d.key)"
-              class="flex items-center gap-1 text-[10px] font-bold text-zinc-600 dark:text-zinc-400"
+              class="flex items-center gap-1 text-[0.625rem] font-bold text-zinc-600 dark:text-zinc-400"
             >
               <AppIcon
                 class="h-3.5 w-3.5"
@@ -139,7 +139,7 @@ function pick(d: Difficulty) {
             </span>
             <span
               v-else-if="inProgress.has(d.key)"
-              class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[9px] font-bold text-violet-600 dark:text-violet-300"
+              class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[0.5625rem] font-bold text-violet-600 dark:text-violet-300"
               >{{ $t("difficulty.inProgress") }}</span
             >
           </span>
