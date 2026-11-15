@@ -544,5 +544,6 @@
   "streak.freezeEarned": "❄ Dobio si zamrzavanje niza: jedan propušten dan ti neće prekinuti niz.",
   "streak.freezes": "zamrzavanja: {n}/{max}",
   "streak.freezeHelp": "Na svakih {n} dnevnih zagonetki dobijaš jedno zamrzavanje (najviše {max}). Kad propustiš dan, jedno se potroši i niz se nastavlja.",
-  "streak.frozenDay": "zamrznut dan"
+  "streak.frozenDay": "zamrznut dan",
+  "lesson.replay": "Pusti potez ponovo"
 }

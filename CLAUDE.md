@@ -78,6 +78,8 @@ Progress features are all derived from a win, with the rules in **pure, unit-tes
 
 `app/utils/academyExamples.ts` is auto-generated (per its own header comment) from real harvested solver states — one genuine example board per technique, not hand-written. Don't hand-edit it.
 
+Patterns are drawn in pen over the board, the way puzzle books print them: `utils/patternMarks.ts` turns a `SolveMove` into lines (strong links solid, weak links and cover lines dashed) joining the actual pencil-mark slots, rings, unit frames, red-pen crosses and placement circles; `PatternOverlay.vue` is one SVG over the board (`SudokuGrid`'s `marks` prop, or `ExampleGrid`). Lessons, in-game hints and the Academy examples all use it. A new technique needs a case in `patternMarks` (its test draws every Academy example).
+
 ### i18n
 
 Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` because i18n-ally was resolving the bare language code to the Suriname flag instead of Serbia's; `language: "sr-Latn-RS"`, the actual BCP-47 tag, is unaffected). Locale files use **flat dot-keys** (e.g. `"menu.title"`, not nested `{ "menu": { "title" } }`) per `.vscode/settings.json`'s `i18n-ally.keystyle: "flat"`. This works because vue-i18n checks for an exact literal-string key match before falling back to nested path resolution — it is not a bug. Keep `en.json` and `rs.json` in exact key parity; nothing currently enforces this automatically.

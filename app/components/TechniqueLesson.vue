@@ -10,6 +10,7 @@ import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { instancesOf, lessonUnits, missReason, type Lesson } from "../utils/lesson";
+import { patternMarks, strikes } from "../utils/patternMarks";
 import { nextLesson, starsFor, type Stars } from "../utils/progression";
 import { digitLabel } from "../utils/sudokuColors";
 import { solveBoard } from "../utils/sudokuCore";
@@ -259,6 +260,33 @@ const keys = computed(() =>
       ],
 );
 
+// The pattern in pen, as a book draws it, from the instance the player found (a second fish
+// counts): once it's found, then the whole move when it's done (what was crossed out redrawn in
+// red). Crossing a mark out strikes it through before it goes.
+const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
+const drawn = computed(() => ({
+  ...L.move,
+  triggers: active.value.pattern,
+  eliminations: active.value.eliminations,
+}));
+const marks = computed(() => {
+  if (step.value === "find") return [];
+  if (step.value === "done")
+    return [
+      ...patternMarks(drawn.value, has).filter((m) => m.kind !== "cross"),
+      ...strikes(elims.value, false),
+    ];
+  // Applying: the pattern, reaching the cells to change only once Show me points at them; the
+  // crossing out is the player's.
+  return [
+    ...patternMarks(drawn.value, has, reveal.value > 0).filter(
+      (m) => m.kind !== "cross" && m.kind !== "place",
+    ),
+    ...strikes(removed.value),
+  ];
+});
+const replays = ref(0);
+
 const lookable = id !== "naked-single";
 const lookDigit = computed(() =>
   step.value === "find" && reveal.value && lookable ? (L.digits[0] ?? null) : null,
@@ -479,8 +507,21 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
           :show-candidates="!!lookDigit"
           :nudge="nudge"
           :theme="theme"
+          :marks="marks"
+          :marks-key="replays"
           @select-cell="tap"
         />
+        <button
+          v-if="step === 'done'"
+          @click="replays++"
+          class="tile flex items-center gap-2 self-center px-4 py-2 text-sm font-bold text-violet-700 dark:text-violet-300"
+        >
+          <AppIcon
+            class="h-4 w-4"
+            path="M16.023 9.348h4.992V4.356M2.985 19.644v-4.992h4.992m0 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"
+          />
+          {{ $t("lesson.replay") }}
+        </button>
         <Numpad
           v-if="step === 'apply'"
           :counts="counts"

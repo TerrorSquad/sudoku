@@ -2,9 +2,11 @@
 import { computed } from "vue";
 
 import type { Grid, NotesGrid, CellCoord, FlashCell } from "../types/sudoku";
+import type { Mark } from "../utils/patternMarks";
 import type { BoardTheme } from "../utils/preferenceValues";
 import type { BoardUnit } from "../utils/sudokuGrader";
 
+import PatternOverlay from "./PatternOverlay.vue";
 import SudokuCell from "./SudokuCell.vue";
 
 const props = defineProps<{
@@ -29,6 +31,9 @@ const props = defineProps<{
   nudge?: BoardUnit | BoardUnit[] | null;
   /** Board style from Settings: colours and digit face, see the styles below. */
   theme?: BoardTheme;
+  /** A technique's pattern drawn in pen over the board; a new `marksKey` draws it again. */
+  marks?: Mark[];
+  marksKey?: number;
 }>();
 
 const emit = defineEmits<{
@@ -95,7 +100,7 @@ function hasConflict(r: number, c: number): boolean {
     role="grid"
     :aria-label="$t('a11y.board')"
     :data-theme="theme ?? 'tiles'"
-    class="board @container grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[0.1875rem] select-none lg:mx-auto lg:max-w-[calc(100vh-18.75rem)]"
+    class="board @container relative grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[0.1875rem] select-none lg:mx-auto lg:max-w-[calc(100vh-18.75rem)]"
   >
     <!-- display: contents keeps the visual grid flat while giving screen readers real rows. -->
     <div v-for="(row, r) in 9" :key="r" role="row" class="contents">
@@ -125,6 +130,7 @@ function hasConflict(r: number, c: number): boolean {
         @click="emit('select-cell', { r, c })"
       />
     </div>
+    <PatternOverlay v-if="marks?.length" :key="marksKey ?? 0" :marks="marks" />
   </div>
 </template>
 
