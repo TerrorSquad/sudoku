@@ -11,9 +11,9 @@ import {
   type Backup,
 } from "../utils/progressBackup";
 
-// Opened from the pause screen: back returns to the game, and the settings a game is started
-// with (colour mode, the mistake limit) stay locked until it ends.
-defineProps<{ inGame?: boolean }>();
+// Opened over the game (app.vue's sheet): back returns to it, and the settings a game is started
+// with (colour mode, the mistake limit) stay locked until it ends. `timed`: its clock is running.
+defineProps<{ inGame?: boolean; timed?: boolean }>();
 const emit = defineEmits<{ (e: "back-to-menu"): void }>();
 
 const {
@@ -94,7 +94,7 @@ const style = computed({
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full flex-col">
+  <div :class="inGame ? 'min-h-full' : 'min-h-screen'" class="flex w-full flex-col">
     <!-- Header -->
     <div
       class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
@@ -118,7 +118,8 @@ const style = computed({
         >
           {{ $t("settings.title") }}
         </h1>
-        <p class="hidden text-xs text-zinc-500 sm:block">{{ $t("settings.subtitle") }}</p>
+        <p v-if="inGame && timed" class="text-xs text-zinc-500">{{ $t("settings.clockRuns") }}</p>
+        <p v-else class="hidden text-xs text-zinc-500 sm:block">{{ $t("settings.subtitle") }}</p>
       </div>
     </div>
 
@@ -139,7 +140,10 @@ const style = computed({
         </label>
 
         <label class="s-row">
-          <span class="s-label">{{ $t("settings.boardTheme") }}</span>
+          <span>
+            <span class="s-label">{{ $t("settings.boardTheme") }}</span>
+            <span class="s-hint">{{ $t("settings.boardThemeHint") }}</span>
+          </span>
           <select v-model="boardTheme" class="s-select">
             <option value="tiles">{{ $t("settings.boardTiles") }}</option>
             <option value="newsprint">{{ $t("settings.boardNewsprint") }}</option>

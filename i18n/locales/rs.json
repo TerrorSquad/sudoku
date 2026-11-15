@@ -257,7 +257,7 @@
   "settings.title": "Podešavanja",
   "settings.subtitle": "Jezik, tema i podešavanja igre",
   "settings.language": "Jezik",
-  "settings.theme": "Tema",
+  "settings.theme": "Svetlo ili tamno",
   "settings.colorMode": "Režim boja",
   "settings.sound": "Zvuk",
   "settings.back": "Nazad na meni",
@@ -406,12 +406,12 @@
   "academy.caption.uniqueRectangle": "Tri ugla (indigo) imaju samo {digits}. Kad bi četvrti ugao bio jedna od njih, slagalica bi imala dva rešenja, pa se {digits} uklanjaju iz njega, u roze ({elimList}).",
   "academy.caption.coloring": "{num} je ulančan kroz polja gde ima samo dva mesta (indigo). Jedna od dve naizmenične boje mora biti {num}, pa ga gubi {nElim} polja, u roze ({elimList}).",
   "menu.startHint": "Šest nivoa i opušteni Zen režim",
-  "settings.boardTheme": "Izgled table",
+  "settings.boardTheme": "Tema",
   "settings.boardTiles": "Papir na kockice",
   "settings.boardNewsprint": "Novine",
   "settings.boardContrast": "Visok kontrast",
   "settings.uiScale": "Veličina prikaza",
-  "settings.uiScaleHint": "Uvećava menije, Akademiju i Statistiku, recimo kad igraš na televizoru. Tabla za igru već zauzima ceo ekran.",
+  "settings.uiScaleHint": "Uvećava menije, Akademiju i Statistiku, recimo kad igraš na televizoru. Ekran igre ostaje iste veličine jer tabla već zauzima ceo ekran.",
   "settings.uiScale0": "Obična",
   "settings.uiScale1": "Velika",
   "settings.uiScale2": "Vrlo velika",
@@ -476,5 +476,7 @@
   "records.cleanRun": "Najviše pobeda zaredom bez greške",
   "records.noHint": "Najteži nivo bez nagoveštaja",
   "records.fastest": "Najbolja vremena su u tabeli iznad.",
-  "records.since": "Svi rekordi osim niza u dnevnom izazovu broje se od tvoje sledeće pobede."
+  "records.since": "Svi rekordi osim niza u dnevnom izazovu broje se od tvoje sledeće pobede.",
+  "settings.clockRuns": "Sat nastavlja da radi dok se tabla vidi.",
+  "settings.boardThemeHint": "Boji celu aplikaciju i tablu."
 }
