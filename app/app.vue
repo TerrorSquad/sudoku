@@ -1256,8 +1256,9 @@ async function handleLesson(technique: TechniqueId) {
   practiceLoading.value = true;
   const token = ++practiceToken;
   try {
+    const from = currentScreen.value; // the Academy, or a finished lesson's next one
     const lesson = await generateLesson(technique);
-    if (token !== practiceToken || currentScreen.value !== "academy") return;
+    if (token !== practiceToken || currentScreen.value !== from) return;
     activeLesson.value = lesson;
     currentScreen.value = "lesson";
   } finally {
@@ -1630,6 +1631,7 @@ onUnmounted(() => {
             currentScreen = 'academy';
           "
           @practice="handlePractice(activeLesson.technique)"
+          @lesson="handleLesson"
         />
 
         <!-- STATISTICS -->

@@ -4,6 +4,7 @@ import {
   cloudData,
   decide,
   hashData,
+  mergedBests,
   mergedRecords,
   readCloud,
   withLocalOnly,
@@ -158,6 +159,18 @@ describe("personal records on restore", () => {
       cleanRun: 1,
       bestCleanRun: 9,
     });
+  });
+
+  it("max-merges lesson stars both ways: on restore and when a conflict uploads", () => {
+    const local = { ...A, sudoku_v1_lesson_stars: rec({ "x-wing": 3, pointing: 1 }) };
+    const cloud = { ...B, sudoku_v1_lesson_stars: rec({ pointing: 2, "xy-wing": 1 }) };
+    const best = { "x-wing": 3, pointing: 2, "xy-wing": 1 };
+    expect(JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_lesson_stars!)).toEqual(
+      best,
+    );
+    expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_lesson_stars!)).toEqual(best);
+    // Nothing to bring in from a copy without stars.
+    expect(mergedBests(local, B)).toEqual({});
   });
 
   it("keeps local records the cloud copy doesn't have yet", () => {

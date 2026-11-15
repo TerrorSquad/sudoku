@@ -5,11 +5,12 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
-import type { Lesson } from "../utils/lesson";
 import type { BoardTheme } from "../utils/preferenceValues";
-import type { DigitAt } from "../utils/sudokuGrader";
+import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
+import { instancesOf, lessonUnits, missReason, type Lesson } from "../utils/lesson";
+import { nextLesson, starsFor, type Stars } from "../utils/progression";
 import { digitLabel } from "../utils/sudokuColors";
 import { solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
@@ -21,6 +22,8 @@ const props = defineProps<{ lesson: Lesson; colorMode: boolean; theme: BoardThem
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "practice"): void;
+  /** Another lesson: the next technique, or a fresh position for this one. */
+  (e: "lesson", id: TechniqueId): void;
   (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
 }>();
 const { t } = useI18n();
@@ -30,8 +33,14 @@ const id = L.technique;
 const name = t(`hint.move.${id}.name`);
 const digit = (n: number) => digitLabel(n, props.colorMode, t);
 const digits = L.digits.map(digit).join(", ");
+// The patterns step 1 accepts (a fish may have a twin); the one found sets step 2's marks.
+const instances = instancesOf(L);
+const active = ref(instances[0]!);
+const elims = computed(() => active.value.eliminations);
 // What step 2 removes: for hidden subsets that's the other candidates, not the subset's digits.
-const removedDigits = [...new Set(L.eliminations.map((e) => e.num))].map(digit).join(", ");
+const removedDigits = computed(() =>
+  [...new Set(elims.value.map((e) => e.num))].map(digit).join(", "),
+);
 
 const board = ref(L.board.map((row) => [...row]));
 const solved = solveBoard(L.board)!;
@@ -42,11 +51,17 @@ const step = ref<"find" | "apply" | "done">("find");
 const found = ref<CellCoord[]>([]);
 const removed = ref<DigitAt[]>([]);
 const selected = ref<CellCoord | null>(null);
-// Show me: 1 points at where to look, 2 shows the answer to the current step.
+// Show me while finding: 1 the digit, 2 the lines or box it works in, 3 the pattern itself.
+// While applying: 1 shows the cells to change.
 const reveal = ref(0);
 const feedback = ref<{ text: string; ok: boolean } | null>(null);
 const credited = ref(false);
 const flash = ref<FlashCell[]>([]);
+// Show me presses and rejected moves; they decide the stars.
+const slips = ref(0);
+const stars = ref<Stars>(3);
+const bestBefore = ref<Stars | undefined>();
+const next = ref<TechniqueId | null>(null);
 
 const same = (a: CellCoord, b: CellCoord) => a.r === b.r && a.c === b.c;
 const where = L.unit
@@ -70,20 +85,20 @@ const prompt = computed(() => {
   if (step.value === "apply")
     return L.placement
       ? t("lesson.apply.place", { num: digit(L.placement.num) })
-      : t("lesson.apply.eliminate", { count: L.eliminations.length });
+      : t("lesson.apply.eliminate", { count: elims.value.length });
   return "";
 });
 
 // What the hint engine says about this move, as the recap.
 const recap = computed(() => [
-  t(`hint.move.${id}.desc`, { num: digit(L.digits[0] ?? 0), digits, count: L.eliminations.length }),
+  t(`hint.move.${id}.desc`, { num: digit(L.digits[0] ?? 0), digits, count: elims.value.length }),
   L.placement
     ? t("hint.move.placeStep", {
         num: digit(L.placement.num),
         row: L.placement.r + 1,
         col: L.placement.c + 1,
       })
-    : t("hint.move.eliminateStep", { digits: removedDigits, count: L.eliminations.length }),
+    : t("hint.move.eliminateStep", { digits: removedDigits.value, count: elims.value.length }),
 ]);
 
 const counts = computed(() => {
@@ -107,23 +122,28 @@ function tap(cell: CellCoord) {
   selected.value = cell;
   if (step.value !== "find") return;
   if (found.value.some((f) => same(f, cell))) return;
-  if (!L.pattern.some((p) => same(p, cell))) {
-    shake(cell);
-    emit("cue", "mistake");
-    say("lesson.miss", false);
+  const sofar = [...found.value, cell];
+  const live = instances.filter((i) => sofar.every((f) => i.pattern.some((p) => same(p, f))));
+  if (!live.length) {
+    const miss = missReason(L, cell);
+    const d = miss.params?.d;
+    return reject(cell, miss.key, { ...miss.params, ...(d && { d: digit(d) }), where, digits });
+  }
+  found.value = sofar;
+  const complete = live.find((i) => i.pattern.length === sofar.length);
+  if (!complete) {
+    say("lesson.found", true, { n: sofar.length, total: L.pattern.length });
     return;
   }
-  found.value.push(cell);
-  if (found.value.length < L.pattern.length) {
-    say("lesson.found", true, { n: found.value.length, total: L.pattern.length });
-  } else {
-    feedback.value = null;
-    startApply();
-  }
+  active.value = complete;
+  startApply();
+  // A fish other than the one the lesson picked: just as real, so it's the one to use.
+  if (complete !== instances[0]) say("lesson.twin", true, { technique: name });
+  else feedback.value = null;
 }
 
 function startApply() {
-  found.value = [...L.pattern];
+  found.value = [...active.value.pattern];
   step.value = "apply";
   reveal.value = 0;
   emit("cue", "hint");
@@ -144,19 +164,35 @@ function input(num: number) {
     return finish();
   }
   if (!notes.value[r]![c]![num]) return reject(cell, "lesson.noMark", { num: digit(num) });
-  if (!L.eliminations.some((e) => same(e, cell) && e.num === num)) {
-    const inStep = L.eliminations.some((e) => same(e, cell));
+  if (!elims.value.some((e) => same(e, cell) && e.num === num)) {
+    const inStep = elims.value.some((e) => same(e, cell));
     return reject(cell, inStep ? "lesson.keepMark" : "lesson.notThisCell", { num: digit(num) });
   }
   notes.value[r]![c]![num] = false;
   removed.value.push({ r, c, num });
   emit("cue", "place");
-  if (removed.value.length < L.eliminations.length)
-    say("lesson.crossed", true, { n: removed.value.length, total: L.eliminations.length });
+  if (removed.value.length < elims.value.length)
+    say("lesson.crossed", true, { n: removed.value.length, total: elims.value.length });
   else finish();
 }
 
+// Backspace / Delete / X: crosses out the selected cell's mark when only one is left to go there.
+function crossOut() {
+  if (step.value !== "apply" || L.placement || !selected.value) return;
+  const cell = selected.value;
+  const left = elims.value.filter(
+    (e) => same(e, cell) && !removed.value.some((x) => same(x, e) && x.num === e.num),
+  );
+  if (left.length === 1) return input(left[0]!.num);
+  if (left.length)
+    return say("lesson.whichDigit", false, { digits: left.map((e) => digit(e.num)).join(", ") });
+  // Everything this cell loses is gone already: nothing wrong was tried, so no slip.
+  if (elims.value.some((e) => same(e, cell))) return say("lesson.cellDone", true);
+  reject(cell, "lesson.notThisCell");
+}
+
 function reject(cell: CellCoord, key: string, params: Record<string, unknown> = {}) {
+  slips.value++;
   shake(cell);
   emit("cue", "mistake");
   say(key, false, params);
@@ -165,27 +201,36 @@ function reject(cell: CellCoord, key: string, params: Record<string, unknown> = 
 function finish() {
   step.value = "done";
   selected.value = null;
-  credited.value = useTechniquePath().recordLesson(id);
+  const path = useTechniquePath();
+  credited.value = path.recordLesson(id);
+  stars.value = starsFor(slips.value);
+  bestBefore.value = path.recordStars(id, stars.value);
+  next.value = nextLesson(id, path.getDone(), credited.value);
   feedback.value = null;
   emit("cue", credited.value ? "unlock" : "place");
-  if (credited.value) saveToCloud();
+  saveToCloud();
 }
 
-// Finding: the first press points at where to look, the second shows the pattern and moves on.
-// Applying: shows the cells to change.
+// Finding: the digit, then the lines or box it works in, then the pattern itself (and on to
+// step 2). A naked single has no one digit, so it starts at the box. Applying: the cells to change.
 function showMe() {
-  reveal.value++;
-  if (step.value === "find" && reveal.value >= 2) {
+  if (step.value === "done") return;
+  // Applying, only the first press shows anything new, so only it costs a star.
+  if (step.value === "find" || reveal.value === 0) slips.value++;
+  reveal.value += step.value === "find" && reveal.value === 0 && !lookable ? 2 : 1;
+  if (step.value === "find" && reveal.value >= 3) {
     startApply();
     say("lesson.revealed", true);
+  } else if (step.value === "find") {
+    say(reveal.value === 1 ? "lesson.look.digit" : "lesson.look.units", true, { d: digits });
   }
 }
 
 // What the board highlights: the pattern found so far, and whatever Show me revealed.
-const triggers = computed(() => (step.value === "done" ? L.pattern : found.value));
+const triggers = computed(() => (step.value === "done" ? active.value.pattern : found.value));
 const eliminationCells = computed(() =>
   (step.value === "apply" && reveal.value) || step.value === "done"
-    ? L.eliminations.map(({ r, c }) => ({ r, c }))
+    ? elims.value.map(({ r, c }) => ({ r, c }))
     : [],
 );
 const target = computed(() =>
@@ -193,21 +238,61 @@ const target = computed(() =>
     ? { r: L.placement.r, c: L.placement.c }
     : null,
 );
-const lookDigit = computed(() =>
-  step.value === "find" && reveal.value && id !== "naked-single" ? (L.digits[0] ?? null) : null,
+// The legend under the coach: the keys that do something on this step.
+const keys = computed(() =>
+  step.value === "done"
+    ? [
+        ...(next.value ? [{ key: "N", desc: t("lesson.key.next") }] : []),
+        { key: "R", desc: t("lesson.key.again") },
+        { key: "P", desc: t("lesson.key.practice") },
+        { key: "Esc", desc: t("lesson.key.back") },
+      ]
+    : [
+        { key: "↑←↓→", desc: t("lesson.key.move") },
+        step.value === "find"
+          ? { key: "Enter", desc: t("lesson.key.tap") }
+          : L.placement
+            ? { key: "1–9", desc: t("lesson.key.place") }
+            : { key: "1–9 / ⌫", desc: t("lesson.key.cross") },
+        { key: "H", desc: t("lesson.showMe") },
+        { key: "Esc", desc: t("lesson.key.back") },
+      ],
 );
-const nudge = computed(() => (step.value === "find" && reveal.value ? L.unit : null));
 
-// Arrows walk the grid, Enter or Space taps, 1–9 enters.
+const lookable = id !== "naked-single";
+const lookDigit = computed(() =>
+  step.value === "find" && reveal.value && lookable ? (L.digits[0] ?? null) : null,
+);
+const units = lessonUnits(L);
+const nudge = computed(() => (step.value === "find" && reveal.value >= 2 ? units : null));
+
+// Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
+// Esc leaves. Once done: Enter or N for the next lesson, R another example, P a full puzzle.
 const STEPS: Record<string, [number, number]> = {
   ArrowUp: [-1, 0],
   ArrowDown: [1, 0],
   ArrowLeft: [0, -1],
   ArrowRight: [0, 1],
+  w: [-1, 0],
+  s: [1, 0],
+  a: [0, -1],
+  d: [0, 1],
 };
+const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const move = STEPS[e.key];
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (key === "Escape") return emit("back");
+  if (step.value === "done") {
+    // Enter on a focused button is that button's own click.
+    if ((key === "Enter" && !onButton(e)) || key === "n") {
+      e.preventDefault();
+      if (next.value) emit("lesson", next.value);
+    } else if (key === "r") emit("lesson", id);
+    else if (key === "p") emit("practice");
+    return;
+  }
+  const move = STEPS[key];
   if (move) {
     e.preventDefault();
     const cur = selected.value;
@@ -215,12 +300,18 @@ function onKey(e: KeyboardEvent) {
     const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
     selected.value = { r, c };
     nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
-  } else if ((e.key === "Enter" || e.key === " ") && selected.value) {
+  } else if ((key === "Enter" || key === " ") && selected.value) {
     if (!(e.target as HTMLElement).closest?.("[data-cell]")) return; // a focused button's own key
     e.preventDefault();
     tap(selected.value);
-  } else if (e.key >= "1" && e.key <= "9") {
-    input(Number(e.key));
+  } else if (key >= "1" && key <= "9") {
+    input(Number(key));
+  } else if (key === "Backspace" || key === "Delete" || key === "x") {
+    e.preventDefault();
+    crossOut();
+  } else if (key === "h" && !e.repeat) {
+    // Not on key repeat: holding H would race through every stage.
+    showMe();
   }
 }
 onMounted(() => window.addEventListener("keydown", onKey));
@@ -289,6 +380,23 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
           <p class="font-display text-2xl font-bold text-emerald-700 dark:text-emerald-400">
             {{ $t("lesson.doneTitle") }}
           </p>
+          <p data-testid="lesson-stars" class="flex items-center gap-2">
+            <span
+              class="text-2xl tracking-widest text-amber-700 dark:text-amber-400"
+              role="img"
+              :aria-label="$t('lesson.starsLabel', { n: stars })"
+              >{{ "★".repeat(stars) + "☆".repeat(3 - stars) }}</span
+            >
+            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{{
+              $t(`lesson.stars${stars}`)
+            }}</span>
+          </p>
+          <p
+            v-if="bestBefore && stars > bestBefore"
+            class="text-xs font-bold text-amber-700 dark:text-amber-300"
+          >
+            {{ $t("lesson.newBest", { was: bestBefore }) }}
+          </p>
           <p v-if="credited" class="text-sm font-bold text-emerald-700 dark:text-emerald-400">
             {{ $t("path.completed", { name }) }}
           </p>
@@ -300,10 +408,29 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
             {{ line }}
           </p>
           <div class="flex flex-wrap gap-2">
-            <button @click="emit('practice')" class="tile tile-primary px-4 py-2 text-sm font-bold">
+            <button
+              v-if="next"
+              @click="emit('lesson', next)"
+              class="tile tile-primary w-full px-4 py-2.5 text-sm font-bold"
+            >
+              {{ $t("lesson.next", { name: $t(`hint.move.${next}.name`) }) }}
+            </button>
+            <button
+              @click="emit('lesson', id)"
+              class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
+            >
+              {{ $t("lesson.again") }}
+            </button>
+            <button
+              @click="emit('practice')"
+              class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
+            >
               {{ $t("lesson.fullPuzzle") }}
             </button>
-            <button @click="emit('back')" class="tile px-4 py-2 text-sm font-bold">
+            <button
+              @click="emit('back')"
+              class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
+            >
               {{ $t("lesson.back") }}
             </button>
           </div>
@@ -319,6 +446,19 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
         >
           {{ feedback?.text }}
         </p>
+        <!-- Keys, for a keyboard (hidden where the only pointer is a finger). -->
+        <ul
+          data-testid="lesson-keys"
+          class="lesson-keys flex flex-wrap gap-x-3 gap-y-1 border-t border-zinc-200 pt-2 text-[0.6875rem] text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
+        >
+          <li v-for="k in keys" :key="k.key">
+            <kbd
+              class="border border-zinc-300 bg-zinc-100 px-1 font-game font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              >{{ k.key }}</kbd
+            >
+            {{ k.desc }}
+          </li>
+        </ul>
       </section>
 
       <div class="flex flex-col gap-3 lg:col-span-7">
@@ -351,3 +491,12 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
     </div>
   </div>
 </template>
+
+<style scoped>
+/* A touch-only device has no keys to list. */
+@media not (any-pointer: fine) {
+  .lesson-keys {
+    display: none;
+  }
+}
+</style>
