@@ -565,5 +565,7 @@
   "spot.skips": "skipped: {n}",
   "spot.learn": "Lesson",
   "spot.again": "Play again",
-  "spot.key.skip": "skip"
+  "spot.key.skip": "skip",
+  "hint.learnIt": "New to this? Learn it step by step",
+  "hint.learnAgain": "Replay its lesson"
 }

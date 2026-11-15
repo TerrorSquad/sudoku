@@ -26,7 +26,14 @@ import AppIcon from "./AppIcon.vue";
 import Numpad from "./Numpad.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
-const props = defineProps<{ lesson: Lesson; colorMode: boolean; theme: BoardTheme }>();
+// inGame: opened from a paused game, so Back returns to it and there's no "full puzzle" (it
+// would replace that game).
+const props = defineProps<{
+  lesson: Lesson;
+  colorMode: boolean;
+  theme: BoardTheme;
+  inGame?: boolean;
+}>();
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "practice"): void;
@@ -307,7 +314,7 @@ function onKey(e: KeyboardEvent) {
       e.preventDefault();
       if (next.value) emit("lesson", next.value);
     } else if (key === "r") emit("lesson", id);
-    else if (key === "p") emit("practice");
+    else if (key === "p" && !props.inGame) emit("practice");
     return;
   }
   const move = STEPS[key];
@@ -342,7 +349,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
       class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
     >
       <button
-        :aria-label="$t('lesson.back')"
+        :aria-label="inGame ? $t('settings.backToGame') : $t('lesson.back')"
         @click="emit('back')"
         class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
       >
@@ -350,7 +357,9 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
           class="h-4 w-4"
           path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
         />
-        <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
+        <span class="hidden sm:inline">{{
+          inGame ? $t("settings.backToGame") : $t("lesson.back")
+        }}</span>
       </button>
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         {{ $t("lesson.title", { name }) }}
@@ -440,6 +449,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
               {{ $t("lesson.again") }}
             </button>
             <button
+              v-if="!inGame"
               @click="emit('practice')"
               class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
             >
@@ -449,7 +459,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
               @click="emit('back')"
               class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
             >
-              {{ $t("lesson.back") }}
+              {{ inGame ? $t("settings.backToGame") : $t("lesson.back") }}
             </button>
           </div>
         </template>

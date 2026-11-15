@@ -565,5 +565,7 @@
   "spot.skips": "preskočeno: {n}",
   "spot.learn": "Lekcija",
   "spot.again": "Igraj ponovo",
-  "spot.key.skip": "preskoči"
+  "spot.key.skip": "preskoči",
+  "hint.learnIt": "Prvi put vidiš ovo? Nauči korak po korak",
+  "hint.learnAgain": "Ponovi lekciju"
 }
