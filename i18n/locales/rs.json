@@ -506,5 +506,6 @@
   "records.fastest": "Najbolja vremena su u tabeli iznad.",
   "records.since": "Svi rekordi osim niza u dnevnom izazovu broje se od tvoje sledeće pobede.",
   "settings.clockRuns": "Sat nastavlja da radi dok se tabla vidi.",
-  "settings.boardThemeHint": "Boji celu aplikaciju i tablu."
+  "settings.boardThemeHint": "Boji celu aplikaciju i tablu.",
+  "lesson.replay": "Pusti potez ponovo"
 }

@@ -6,7 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { BoardTheme } from "./utils/preferenceValues";
-import type { BoardUnit, DigitAt, TechniqueId } from "./utils/sudokuGrader";
+import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
 import AchievementToast from "./components/AchievementToast.vue";
@@ -34,6 +34,7 @@ import { useTimer } from "./composables/useTimer";
 import { haptic } from "./utils/haptics";
 import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
+import { circled, patternMarks, strikes, withGhosts, type Mark } from "./utils/patternMarks";
 import { generatePracticePuzzle } from "./utils/practice";
 import {
   ACADEMY_TECHNIQUES,
@@ -65,7 +66,7 @@ import {
   type StuckMoment,
 } from "./utils/stuckMoments";
 import { digitLabel } from "./utils/sudokuColors";
-import { makeRng, seedFromString } from "./utils/sudokuCore";
+import { getGridCandidates, makeRng, seedFromString } from "./utils/sudokuCore";
 import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
@@ -812,6 +813,7 @@ function flashCompletedUnits(r: number, c: number) {
 // Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
 function runFlash(cells: FlashCell[]) {
   if (flashTimeout) clearTimeout(flashTimeout);
+  clearTimeout(appliedTimer);
   flashCells.value = cells;
   const longest = Math.max(...cells.map((c) => c.delay));
   flashTimeout = setTimeout(() => {
@@ -907,11 +909,38 @@ function handleInputNumber(num: number) {
   }
 }
 
+// The hint's pattern in pen on the board once a step shows it (what it removes or places only on
+// the step that says so). Applying a hint strikes the removed marks through, or circles the placed
+// digit, for a moment.
+const appliedMarks = ref<Mark[]>([]);
+let appliedTimer: ReturnType<typeof setTimeout> | undefined;
+const hintMarks = computed<Mark[]>(() => {
+  const move = engine.activeMove.value;
+  const showsResult = hintEliminations.value.length > 0 || !!activeHintCell.value;
+  if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
+  const cands = getGridCandidates(currentBoard.value);
+  const has = (r: number, c: number, n: number) => {
+    const notes = notesBoard.value[r]![c]!;
+    return notes.some(Boolean) ? !!notes[n] : cands[r]![c]!.includes(n);
+  };
+  const showsNotes = (r: number, c: number) => notesBoard.value[r]![c]!.some(Boolean);
+  const marks = withGhosts(patternMarks(move, has), showsNotes);
+  return showsResult ? marks : marks.filter((m) => m.kind !== "cross" && m.kind !== "place");
+});
+function showApplied(move: SolveMove | null) {
+  if (!move) return;
+  appliedMarks.value = move.placement ? [circled(move.placement)] : strikes(move.eliminations);
+  clearTimeout(appliedTimer);
+  appliedTimer = setTimeout(() => (appliedMarks.value = []), 1400);
+}
+
 function handleNextStep() {
+  const move = engine.activeMove.value;
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placement = engine.activeMove.value?.placement;
   const placed = placement?.num;
   nextHintStep(() => {
+    showApplied(move);
     if (placement) logPlacement(placement);
     if (tech) {
       if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
@@ -1004,6 +1033,7 @@ function handleTriggerHint() {
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
+  const move = engine.activeMove.value;
   const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
   const placement = engine.activeMove.value?.placement;
   const placed = placement?.num;
@@ -1014,6 +1044,7 @@ function handleInstantApplyHint() {
     techStats.record(tech);
   }
   engine.applyComplexHint();
+  showApplied(move);
   if (placed) cue("place", placed);
   if (checkWinCondition()) {
     triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
@@ -1292,6 +1323,7 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
   document.removeEventListener("visibilitychange", handlePageHidden);
   if (flashTimeout) clearTimeout(flashTimeout);
+  clearTimeout(appliedTimer);
   stopWinSteps();
 });
 </script>
@@ -1677,6 +1709,7 @@ onUnmounted(() => {
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
+                :marks="hintMarks"
                 @select-cell="handleSelectCell"
               />
               <div class="flex flex-col gap-2.5">

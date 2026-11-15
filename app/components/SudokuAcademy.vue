@@ -6,7 +6,9 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+import { lessonFromExample } from "../utils/lesson";
 import { masteryFor } from "../utils/mastery";
+import { patternMarks, type Mark } from "../utils/patternMarks";
 import {
   ACADEMY_TECHNIQUES,
   nextChallenge,
@@ -98,6 +100,19 @@ const RC = (p: { r: number; c: number }) => `R${p.r + 1}C${p.c + 1}`;
 
 // For hidden subsets the eliminations fall inside the pattern cells themselves;
 // keep those as indigo pattern cells rather than double-marking them rose.
+// The worked example's pattern drawn in pen; built when a card first opens.
+const marksCache = new Map<TechniqueId, Mark[]>();
+function marksFor(id: TechniqueId): Mark[] {
+  let marks = marksCache.get(id);
+  if (!marks) {
+    const lesson = lessonFromExample(id);
+    const has = (r: number, c: number, n: number) => !!lesson?.notes[r]?.[c]?.includes(n);
+    marks = lesson ? patternMarks(lesson.move, has) : [];
+    marksCache.set(id, marks);
+  }
+  return marks;
+}
+
 function elimDisplay(ex: AcademyExample): { r: number; c: number }[] {
   return ex.elimination.filter((e) => !ex.trigger.some((pos) => pos.r === e.r && pos.c === e.c));
 }
@@ -420,6 +435,7 @@ const total = computed(() => techniques.length);
                 :target="exampleFor(tech.id)!.target"
                 :trigger="exampleFor(tech.id)!.trigger"
                 :elimination="elimDisplay(exampleFor(tech.id)!)"
+                :marks="marksFor(tech.id)"
               />
               <p
                 class="mx-auto mt-3 max-w-sm text-center text-xs leading-relaxed text-zinc-600 dark:text-zinc-400"

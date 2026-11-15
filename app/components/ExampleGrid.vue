@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { Mark } from "../utils/patternMarks";
+
+import PatternOverlay from "./PatternOverlay.vue";
+
 interface Cell {
   r: number;
   c: number;
@@ -12,6 +16,8 @@ const props = defineProps<{
   elimination?: Cell[];
   /** Thumbnail for card previews: tiny digits, no pencil notes. */
   mini?: boolean;
+  /** The pattern drawn in pen over the board. */
+  marks?: Mark[];
 }>();
 
 function noteKey(r: number, c: number) {
@@ -39,7 +45,7 @@ function cellClass(r: number, c: number) {
 <template>
   <div
     :class="mini ? 'max-w-[6.5rem]' : 'max-w-[17.5rem]'"
-    class="mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-zinc-900"
+    class="relative mx-auto grid w-full grid-cols-9 border-2 border-zinc-400 bg-zinc-100 select-none dark:border-zinc-600 dark:bg-zinc-900"
   >
     <template v-for="(row, r) in board" :key="r">
       <div
@@ -59,5 +65,6 @@ function cellClass(r: number, c: number) {
         </div>
       </div>
     </template>
+    <PatternOverlay v-if="marks?.length" :marks="marks" />
   </div>
 </template>
