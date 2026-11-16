@@ -98,6 +98,10 @@ for (const scheme of ["light", "dark"] as const) {
       await expect(page.getByTestId("perfect-stamp")).toHaveClass(/stamp-in/);
       await expect(page.getByTestId("new-record")).toHaveCount(1);
       await scan(page, "win modal");
+      await page.getByTestId("watch-solve").click();
+      await expect(page.getByTestId("solve-replay")).toBeVisible();
+      await scan(page, "solve replay");
+      await page.keyboard.press("Escape");
       await page.getByRole("button", { name: "Close" }).click();
       await page.getByRole("button", { name: "Statistics" }).click();
       await expect(page.getByTestId("records")).toBeVisible();

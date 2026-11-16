@@ -187,6 +187,7 @@ const currentScreen = ref<
 const spotTier = ref<Tier>("Basic");
 // Set when the spot screen plays the Daily review (these techniques) instead of a tier.
 const spotReview = ref<TechniqueId[] | undefined>();
+const spotRush = ref(false); // Puzzle rush rather than a timed round
 // The screens with a board, which keep the normal size (see applyUiScale).
 const BOARD_SCREENS = new Set(["game", "lesson", "spot", "basics"]);
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
@@ -841,12 +842,31 @@ function exitToMenu() {
 // check as a placement; and never act behind a modal (a second win would double-record).
 function undo() {
   if (showModal.value || practiceLoading.value) return;
+  const before = currentBoard.value.map((row) => [...row]);
   undoMove();
+  logRestored(before);
 }
 function redo() {
   if (showModal.value || practiceLoading.value) return;
+  const before = currentBoard.value.map((row) => [...row]);
   redoMove();
+  logRestored(before);
   checkWin();
+}
+// Undo and redo swap in a whole board: a correct digit they bring back goes in the log too, or the
+// replay would end on an empty cell.
+function logRestored(before: Grid) {
+  currentBoard.value.forEach((row, r) =>
+    row.forEach((num, c) => {
+      if (
+        num &&
+        num !== before[r]![c] &&
+        !initialBoard.value[r]![c] &&
+        num === solvedBoard.value[r]![c]
+      )
+        logPlacement({ r, c, num });
+    }),
+  );
 }
 
 const shortcutsOpen = ref(false);
@@ -1012,8 +1032,9 @@ onUnmounted(() => {
           @basics="openBasics"
           @weekly="(week) => handlePractice(week.technique, week)"
           @spot="
-            (tier) => {
+            (tier, rush) => {
               spotTier = tier;
+              spotRush = rush;
               spotReview = undefined;
               currentScreen = 'spot';
             }
@@ -1031,6 +1052,7 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'spot'"
           :tier="spotTier"
           :review="spotReview"
+          :rush="spotRush"
           @cue="academyCue"
           @back="currentScreen = 'academy'"
           @lesson="handleLesson"
@@ -1284,6 +1306,7 @@ onUnmounted(() => {
         :hints-used="hintsUsed"
         :seconds="timer.timerSeconds.value"
         :board="initialBoard"
+        :placements="placements"
         :result="winResult"
         :technique-log="techniqueLog"
         :next-level="nextLevel"
