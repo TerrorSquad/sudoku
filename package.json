@@ -19,9 +19,9 @@
     "test:all": "pnpm check && pnpm test:e2e && pnpm visual",
     "test:e2e": "playwright test",
     "typecheck": "nuxt typecheck",
-    "visual": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile",
-    "visual:report": "playwright show-report",
-    "visual:update": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile --update-snapshots=changed",
+    "visual": "docker run --rm --init -v \"$PWD\":/work -v sudoku-visual-node-modules:/work/node_modules -w /work -e HOST_UID=\"$(id -u)\" -e HOST_GID=\"$(id -g)\" mcr.microsoft.com/playwright:v1.64.1-noble bash scripts/visual-docker.sh",
+    "visual:update": "pnpm visual --update-snapshots=changed",
+    "visual:run": "VISUAL_REGRESSION=1 playwright test --project=visual --project=visual-mobile",
     "wavedash": "WAVEDASH=1 NUXT_APP_BASE_URL=./ nuxt generate && node scripts/budget.mjs && wavedash build push",
     "wavedash:release": "node scripts/release.mjs"
   },

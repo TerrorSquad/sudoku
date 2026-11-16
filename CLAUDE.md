@@ -92,12 +92,12 @@ Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` becau
 `e2e/visual.spec.ts` captures every screen in light + dark against pixel baselines in `e2e/visual-regression-snapshots/<project>/`, at 1920×1080 (`visual`) and Pixel 7 (`visual-mobile`). It is opt-in (`VISUAL_REGRESSION=1`, so plain `pnpm test:e2e` skips it) and seeds a fixed saved game so nothing is random.
 
 ```bash
-pnpm visual          # compare against baselines
+pnpm visual          # compare against baselines (in Docker)
 pnpm visual:update   # accept intentional UI changes, then commit the PNGs
-pnpm visual:report   # open the expected/actual/diff report
+pnpm visual:run      # the bare Playwright run, used inside the container and by CI
 ```
 
-Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers. Baselines are rendered on macOS and are not run in CI (font rasterization differs on Linux), so regenerate them locally.
+Baselines are Linux renders from the official Playwright image (`mcr.microsoft.com/playwright`, tag = the installed `@playwright/test`; `app/tests/visualImage.test.ts` fails if they drift). `pnpm visual` runs the suite in that image via `scripts/visual-docker.sh` (Docker required; works the same on a Linux or macOS host, node_modules in a named volume), and `.github/workflows/visual.yml` runs `pnpm visual:run` in the same image on every PR, uploading `test-results/` (expected/actual/diff PNGs) when it fails. Never run `pnpm visual:run` on the host to update baselines: host font rendering differs. Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers.
 
 ### Performance
 
