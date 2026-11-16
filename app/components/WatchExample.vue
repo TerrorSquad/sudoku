@@ -1,26 +1,29 @@
 <script lang="ts">
+import type { Lesson } from "../utils/lesson";
 import type { Beat } from "../utils/patternMarks";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 // The steps of each example, built once (lessonFromExample replays the solver).
-const cache = new Map<TechniqueId, Beat[]>();
-function stepsOf(id: TechniqueId): Beat[] {
-  let steps = cache.get(id);
-  if (!steps) {
+const cache = new Map<TechniqueId, { lesson: Lesson | null; steps: Beat[] }>();
+function stepsOf(id: TechniqueId) {
+  let entry = cache.get(id);
+  if (!entry) {
     const lesson = lessonFromExample(id);
-    steps = lesson
+    const steps: Beat[] = lesson
       ? beats(lesson.move, (r, c, n) => !!lesson.notes[r]?.[c]?.includes(n))
       : [{ step: "result", marks: [] }];
-    cache.set(id, steps);
+    cache.set(id, (entry = { lesson, steps }));
   }
-  return steps;
+  return entry;
 }
 </script>
 
 <script setup lang="ts">
 // A worked example that can play its move out in narrated steps (utils/patternMarks.ts `beats`):
 // where to look, the pattern's cells, its links, then what it removes or places. It rests on the
-// last step, the full drawing, so the card reads as before until someone presses Watch it.
+// last step, the full drawing, so the card reads as before until someone presses Watch it. The words
+// are the move told with the example's real rows and columns (explain.ts), each beat saying what
+// it draws: all of it at rest.
 
 import type { AcademyExample } from "../utils/academyExamples";
 
@@ -28,12 +31,26 @@ const props = defineProps<{
   id: TechniqueId;
   example: AcademyExample;
   elimination: { r: number; c: number }[];
-  /** The board-accurate caption of the whole move: the last step's line. */
-  caption: string;
 }>();
 const { t } = useI18n();
 
-const steps = stepsOf(props.id);
+const { lesson, steps } = stepsOf(props.id);
+// The Academy's boards show digits, so the words do too (no colour mode here).
+const story = computed(() =>
+  lesson ? narrate(lesson.move, (r, c, n) => !!lesson.notes[r]?.[c]?.includes(n), t, String) : [],
+);
+const caption = computed(() => story.value.map((s) => s.text).join(" "));
+// A beat tells the sentences since the last beat shown: a step with nothing to draw is skipped,
+// so its words go with the next one.
+const ORDER = ["look", "cells", "links", "result"];
+function told(i: number): string {
+  const from = i ? ORDER.indexOf(steps[i - 1]!.step) : -1;
+  const to = ORDER.indexOf(steps[i]!.step);
+  return story.value
+    .filter((s) => ORDER.indexOf(s.step) > from && ORDER.indexOf(s.step) <= to)
+    .map((s) => s.text)
+    .join(" ");
+}
 const last = steps.length - 1;
 const i = ref(last);
 const watching = ref(false); // stepped away from the resting full drawing at least once
@@ -54,17 +71,10 @@ const shown = computed(() => {
   };
 });
 const line = computed(() => {
-  if (!watching.value) return props.caption;
-  switch (beat.value.step) {
-    case "look":
-      return t(`academy.tech.${props.id}.lookFor`);
-    case "cells":
-      return t("academy.watch.cells");
-    case "links":
-      return t("academy.watch.links");
-    default:
-      return props.caption;
-  }
+  if (!watching.value) return caption.value;
+  const step = beat.value.step;
+  if (step === "look") return t(`academy.tech.${props.id}.lookFor`);
+  return told(i.value) || (step === "result" ? caption.value : t(`academy.watch.${step}`));
 });
 
 const PACE_MS = 1800;

@@ -59,71 +59,10 @@ function exampleFor(id: TechniqueId): AcademyExample | undefined {
   return ACADEMY_EXAMPLES[id];
 }
 
-const RC = (p: { r: number; c: number }) => `R${p.r + 1}C${p.c + 1}`;
-
 // For hidden subsets the eliminations fall inside the pattern cells themselves;
 // keep those as indigo pattern cells rather than double-marking them rose.
 function elimDisplay(ex: AcademyExample): { r: number; c: number }[] {
   return ex.elimination.filter((e) => !ex.trigger.some((pos) => pos.r === e.r && pos.c === e.c));
-}
-
-// A specific, board-accurate caption generated from the real move data + i18n.
-function caption(id: TechniqueId, ex: AcademyExample): string {
-  const digits = ex.digits.join(" & ");
-  const num = ex.digits[0] ?? 0;
-  const elim = elimDisplay(ex);
-  const nElim = elim.length;
-  const elimList = elim.slice(0, 2).map(RC).join(", ");
-  const cells = ex.trigger.map(RC).join(", ");
-  const k = ex.trigger.length;
-  switch (id) {
-    case "naked-single":
-      return t("academy.caption.nakedSingle", { cell: RC(ex.placement!), num: ex.placement!.num });
-    case "hidden-single":
-      return t("academy.caption.hiddenSingle", { cell: RC(ex.placement!), num: ex.placement!.num });
-    case "pointing":
-      return t("academy.caption.pointing", { digits, cells, nElim, elimList });
-    case "box-line":
-      return t("academy.caption.boxLine", { digits, cells, nElim, elimList });
-    case "naked-pair":
-    case "naked-triple":
-    case "naked-quad":
-      return t("academy.caption.nakedSubset", { k, digits, nElim, elimList });
-    case "hidden-pair":
-    case "hidden-triple":
-    case "hidden-quad":
-      return t("academy.caption.hiddenSubset", { k, digits });
-    case "x-wing":
-    case "swordfish":
-    case "jellyfish": {
-      const lines = t(
-        `academy.lines.${id === "x-wing" ? "two" : id === "swordfish" ? "three" : "four"}`,
-      );
-      return t("academy.caption.fish", { num, lines, nElim, elimList });
-    }
-    case "xy-wing":
-      return t("academy.caption.xyWing", { num, nElim, elimList });
-    case "xyz-wing":
-      return t("academy.caption.xyzWing", { num, nElim, elimList });
-    case "skyscraper":
-      return t("academy.caption.skyscraper", { num, nElim, elimList });
-    case "two-string-kite":
-      return t("academy.caption.kite", { num, nElim, elimList });
-    case "empty-rectangle":
-      return t("academy.caption.emptyRectangle", { num, nElim, elimList });
-    case "unique-rectangle":
-      return t("academy.caption.uniqueRectangle", { digits, nElim, elimList });
-    case "simple-coloring":
-      return t("academy.caption.coloring", { num, nElim, elimList });
-    case "finned-x-wing":
-      return t("academy.caption.finnedXWing", { num, nElim, elimList });
-    case "w-wing":
-      return t("academy.caption.wWing", { num, nElim, elimList });
-    case "bug-plus-one":
-      return t("academy.caption.bug", { cell: RC(ex.placement!), num: ex.placement!.num });
-    default:
-      return "";
-  }
 }
 
 const expanded = ref<Set<string>>(new Set(props.focus ? [props.focus] : []));
@@ -451,7 +390,6 @@ const total = computed(() => techniques.length);
                   :id="tech.id"
                   :example="exampleFor(tech.id)!"
                   :elimination="elimDisplay(exampleFor(tech.id)!)"
-                  :caption="caption(tech.id, exampleFor(tech.id)!)"
                 />
               </div>
             </div>

@@ -3,6 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
 
+import { narrate } from "../utils/explain";
 import { emptyNotes } from "../utils/gridNav";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "../utils/patternMarks";
 import { digitLabel } from "../utils/sudokuColors";
@@ -22,6 +23,8 @@ import {
 export interface ExplanationStep {
   label: string;
   description: string;
+  /** This move told with its real rows, columns and boxes, under the general description. */
+  detail?: string[];
   highlightCoords: HintCoordinate[];
 }
 
@@ -350,7 +353,16 @@ export function useSudokuEngine(
   // hint can never place a digit its own explanation didn't justify.
   function buildHintFromMove(move: SolveMove): ComplexHint {
     const tech = move.technique;
-    const digitsStr = move.digits.map((d) => digitLabel(d, colorMode.value, t)).join(", ");
+    const digit = (n: number) => digitLabel(n, colorMode.value, t);
+    const digitsStr = move.digits.map(digit).join(", ");
+    // Told against the solver's own marks: the board's candidates less the removals made so far.
+    const cands = getGridCandidates(currentBoard.value);
+    const has = (r: number, c: number, n: number) =>
+      cands[r]![c]!.includes(n) &&
+      !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
+    const story = narrate(move, has, t, digit);
+    const told = (result: boolean) =>
+      story.filter((s) => (s.step === "result") === result).map((s) => s.text);
     const findDesc = t(`hint.move.${tech}.desc`, {
       num: digitLabel(move.digits[0] ?? 0, colorMode.value, t),
       digits: digitsStr,
@@ -373,6 +385,7 @@ export function useSudokuEngine(
           row: move.placement.r + 1,
           col: move.placement.c + 1,
         }),
+        detail: told(true),
         highlightCoords: [], // the target is drawn on its own, in the legend's green
       };
     } else {
@@ -385,6 +398,7 @@ export function useSudokuEngine(
             .join(", "),
           count: move.eliminations.length,
         }),
+        detail: told(true),
         highlightCoords: move.eliminations.map((e) => ({
           r: e.r,
           c: e.c,
@@ -397,7 +411,12 @@ export function useSudokuEngine(
       title: t(`hint.move.${tech}.name`),
       targetCell,
       steps: [
-        { label: t("hint.move.findLabel"), description: findDesc, highlightCoords: triggerCoords },
+        {
+          label: t("hint.move.findLabel"),
+          description: findDesc,
+          detail: told(false),
+          highlightCoords: triggerCoords,
+        },
         actionStep,
       ],
     };

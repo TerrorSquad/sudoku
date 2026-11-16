@@ -7,6 +7,16 @@
 import type { Grid, NotesGrid } from "../types/sudoku";
 
 import { ACADEMY_EXAMPLES } from "./academyExamples";
+import {
+  boxOf,
+  colorSets,
+  finnedSides,
+  fishSides,
+  lineKind,
+  wordList,
+  sees,
+  spotsIn,
+} from "./explain";
 import { generatePracticePuzzle } from "./practice";
 import { RARE_IN_PUZZLES } from "./progression";
 import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
@@ -322,18 +332,24 @@ const ON_DIGIT = new Set<TechniqueId>([
   "simple-coloring",
 ]);
 
-interface Miss {
+export interface Miss {
   /** An i18n key under lesson.why.*, or lesson.miss when no quick check explains it. */
   key: string;
-  params?: Record<string, number>;
+  /** d, x, y, z are digits and marks a list of them; other lists are line numbers. */
+  params?: Record<string, number | number[]>;
 }
 
 /**
  * Why a tapped cell isn't part of the pattern, from the cheapest checks that can tell. Each check
- * only fires on a cell that no pattern of this kind could use, so the reason is never wrong.
+ * only fires on a cell that no pattern of this kind could use, or (where the lesson has only one
+ * instance to find) that this one doesn't, so the reason is never wrong.
  */
 export function missReason(L: Lesson, { r, c }: CellRC): Miss {
   if (L.board[r]![c]) return { key: "lesson.why.filled" };
+  // A cell of some instance (missed only for not going with the cells found so far): no reason.
+  const instances = instancesOf(L);
+  if (instances.some((i) => i.pattern.some((p) => p.r === r && p.c === c)))
+    return { key: "lesson.miss" };
   const marks = L.notes[r]![c]!;
   const d = L.digits[0]!;
   const t = L.technique;
@@ -347,14 +363,210 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
   if (subset && t.startsWith("naked-") && other)
     return { key: "lesson.why.otherDigit", params: { d: other } };
   if (L.unit && !inUnit(L.unit.kind, L.unit, { r, c })) return { key: "lesson.why.outside" };
+  const cell = { r, c };
+  const R = { r: r + 1, c: c + 1, b: boxOf(cell) + 1 };
+  const count = (kind: Kind, n = d) => spotsIn(has(L), kind, cell, n).length;
+  // The digit's spots along the cell's row (as columns) or column (as rows).
+  const along = (kind: "row" | "col") =>
+    spotsIn(has(L), kind, cell, d).map((p) => (kind === "row" ? p.c : p.r) + 1);
+  // A cell the pattern clears, not one that makes it.
+  if (instances.some((i) => i.eliminations.some((e) => e.r === r && e.c === c)))
+    return { key: "lesson.why.target" };
   const k = FISH_SIZE[t];
   if (k) {
-    const row = L.notes[r]!.filter((ns) => ns.includes(d)).length;
-    const col = L.notes.filter((line) => line[c]!.includes(d)).length;
+    const row = count("row");
+    const col = count("col");
     if (row > k && col > k) return { key: "lesson.why.fishLines", params: { d, row, col, k } };
+    // instancesOf lists every fish of this size on the digit that clears something.
+    return {
+      key: "lesson.why.fishNone",
+      params: { ...R, d, cols: along("row"), rows: along("col") },
+    };
+  }
+  const row = count("row");
+  const col = count("col");
+  const box = count("box");
+  switch (t) {
+    case "skyscraper":
+    case "two-string-kite": {
+      if (row !== 2 && col !== 2)
+        return { key: "lesson.why.noLink", params: { ...R, d, row, col } };
+      // This skyscraper's links are rows (or columns): one with more spots can't be one of them.
+      const kind = lineKind(L.move);
+      if (t === "skyscraper" && kind && (kind === "row" ? row : col) !== 2)
+        return {
+          key: `lesson.why.skyLine.${kind}`,
+          params: { ...R, d, n: kind === "row" ? row : col, at: along(kind) },
+        };
+      break;
+    }
+    case "simple-coloring":
+      if (row !== 2 && col !== 2 && box !== 2)
+        return { key: "lesson.why.noLink3", params: { ...R, d, row, col, box } };
+      break;
+    case "empty-rectangle":
+      if (row !== 2 && col !== 2 && !emptyRectangleBox(L, cell))
+        return { key: "lesson.why.erNone", params: { ...R, d } };
+      break;
+    case "finned-x-wing": {
+      const fits = (kind: "row" | "col") => {
+        const ps = along(kind).map((n) => n - 1);
+        return [0, 3, 6].some((s) => ps.filter((p) => p < s || p > s + 2).length <= 2);
+      };
+      if (!fits("row") && !fits("col"))
+        return {
+          key: "lesson.why.finLines",
+          params: { ...R, d, k: 2, cols: along("row"), rows: along("col") },
+        };
+      // Every spot of the digit in a base line is part of the pattern, so this line isn't one.
+      const kind = lineKind(L.move);
+      if (kind)
+        return {
+          key: `lesson.why.notBase.${kind}`,
+          params: { ...R, d, at: along(kind) },
+        };
+      break;
+    }
+    case "xy-wing":
+    case "xyz-wing": {
+      const xyz = t === "xyz-wing";
+      if (marks.length !== 2 && !(xyz && marks.length === 3))
+        return {
+          key: xyz ? "lesson.why.xyzMarks" : "lesson.why.wingMarks",
+          params: { n: marks.length },
+        };
+      const pivot = L.move.triggers[0]!;
+      const P = { pr: pivot.r + 1, pc: pivot.c + 1 };
+      if (marks.length === 3) {
+        // A pivot needs two two-candidate cells it sees, sharing one digit, holding its three.
+        const pincers = ALL_CELLS.filter(
+          (q) =>
+            sees(cell, q) &&
+            L.notes[q.r]![q.c]!.length === 2 &&
+            L.notes[q.r]![q.c]!.every((n) => marks.includes(n)),
+        ).map((q) => L.notes[q.r]![q.c]!);
+        const pair = pincers.some((a) =>
+          pincers.some((b) => a.filter((n) => b.includes(n)).length === 1),
+        );
+        if (!pair) return { key: "lesson.why.noPincers", params: { marks } };
+        break;
+      }
+      if (!sees(cell, pivot)) return { key: "lesson.why.notPivot", params: P };
+      const pm = L.notes[pivot.r]![pivot.c]!;
+      if (xyz && !marks.every((n) => pm.includes(n)))
+        return { key: "lesson.why.notAmong", params: { ...P, marks: pm } };
+      if (!xyz && !marks.some((n) => pm.includes(n)))
+        return { key: "lesson.why.noShare", params: P };
+      if (!xyz && marks.every((n) => pm.includes(n)))
+        return { key: "lesson.why.samePair", params: P };
+      break;
+    }
+    case "w-wing": {
+      const pair = L.notes[L.move.triggers[0]!.r]![L.move.triggers[0]!.c]!;
+      const x = pair.find((n) => n !== d)!;
+      if (!marks.includes(x)) return { key: "lesson.why.wNoX", params: { x } };
+      const isPair = marks.length === 2 && marks.includes(d);
+      if (!isPair && count("row", x) !== 2 && count("col", x) !== 2 && count("box", x) !== 2)
+        return { key: "lesson.why.wNoLink", params: { x, y: d } };
+      break;
+    }
+    case "unique-rectangle":
+      if (marks.length !== 2 || !marks.every((n) => L.digits.includes(n)))
+        return { key: "lesson.why.urMarks", params: { marks, x: L.digits[0]!, y: L.digits[1]! } };
+      break;
+    case "bug-plus-one":
+      if (marks.length === 2) return { key: "lesson.why.bugTwo" };
+      break;
   }
   return { key: "lesson.miss" };
 }
+
+const has = (L: Lesson) => (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
+
+/** The box's spots for the lesson's digit sit on one row and one column, and not just one line. */
+function emptyRectangleBox(L: Lesson, p: CellRC): boolean {
+  const spots = spotsIn(has(L), "box", p, L.digits[0]!);
+  if (new Set(spots.map((q) => q.r)).size < 2 || new Set(spots.map((q) => q.c)).size < 2)
+    return false;
+  return spots.some((h) => spots.every((q) => q.r === h.r || q.c === h.c));
+}
+
+/**
+ * Step 2: why crossing out `num` in `cell` isn't part of the move (the mark is there, but the
+ * instance doesn't remove it), naming the lines that decide it where a quick check can.
+ */
+export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: number): Miss {
+  const at = (p: CellRC) => ({ r: p.r + 1, c: p.c + 1 });
+  if (inst.pattern.some((p) => p.r === cell.r && p.c === cell.c))
+    return { key: "lesson.why.inPattern" };
+  const removed = [...new Set(inst.eliminations.map((e) => e.num))].toSorted((a, b) => a - b);
+  if (!removed.includes(num))
+    return { key: "lesson.why.onlyRemoves", params: { num, marks: removed } };
+  const d = num;
+  const t = L.technique;
+  const tr = inst.pattern;
+  // Patterns whose removals see two (or three) of its cells: name one this cell doesn't see.
+  const ends: CellRC[] | null =
+    t === "skyscraper" || t === "two-string-kite"
+      ? [tr[1]!, tr[3]!]
+      : t === "xy-wing"
+        ? [tr[1]!, tr[2]!]
+        : t === "xyz-wing"
+          ? [tr[0]!, tr[1]!, tr[2]!]
+          : t === "w-wing"
+            ? [tr[0]!, tr[1]!]
+            : null;
+  if (ends) {
+    const seen = ends.filter((e) => sees(cell, e));
+    const missed = ends.find((e) => !sees(cell, e));
+    if (!missed) return { key: "lesson.notThisCell" };
+    if (seen.length)
+      return {
+        key: "lesson.why.seesOne",
+        params: { d, ...at(seen[0]!), mr: missed.r + 1, mc: missed.c + 1 },
+      };
+    return {
+      key: "lesson.why.seesNone",
+      params: { d, ...at(ends[0]!), mr: ends[1]!.r + 1, mc: ends[1]!.c + 1 },
+    };
+  }
+  const k = FISH_SIZE[t];
+  if (k) {
+    const { kind, cover } = fishSides(tr, inst.eliminations);
+    const line = kind === "row" ? cell.c : cell.r;
+    if (!cover.includes(line))
+      return { key: `lesson.why.offCover.${kind}`, params: { d, cover: cover.map((u) => u + 1) } };
+  }
+  if (t === "finned-x-wing") {
+    const f = finnedSides({ ...L.move, triggers: tr, eliminations: inst.eliminations }, 2);
+    if (f)
+      return {
+        key: `lesson.why.offFin.${f.kind}`,
+        params: { d, cover: f.cover.map((u) => u + 1), b: f.box + 1 },
+      };
+  }
+  if (t === "simple-coloring") {
+    const { sets, wrap } = colorSets({ ...L.move, triggers: tr, eliminations: inst.eliminations });
+    if (!wrap && !sets.every((s) => s.some((q) => sees(cell, q))))
+      return { key: "lesson.why.seesOneSet", params: { d } };
+  }
+  // A line or a box the move clears: a cell outside it keeps its mark.
+  const unit =
+    t === "pointing"
+      ? lineOf(tr)
+      : t === "box-line"
+        ? "box"
+        : t.startsWith("naked-")
+          ? L.unit?.kind
+          : null;
+  if (unit && !inUnit(unit, tr[0]!, cell)) {
+    const n = unit === "row" ? tr[0]!.r + 1 : unit === "col" ? tr[0]!.c + 1 : boxOf(tr[0]!) + 1;
+    return { key: `lesson.why.offUnit.${unit}`, params: { n, marks: removed } };
+  }
+  return { key: "lesson.notThisCell" };
+}
+
+const lineOf = (cells: CellRC[]): Kind => (cells.every((p) => p.r === cells[0]!.r) ? "row" : "col");
 
 /** What step 1 makes of a tap: a miss, or the cells found so far and the instance they complete. */
 type TapResult = { miss: true } | { miss: false; found: CellRC[]; complete: Instance | null };
@@ -408,13 +620,32 @@ export function missText(
   t: Translate,
   digit: (n: number) => string,
 ): string {
-  const miss = missReason(L, cell);
-  const d = miss.params?.d;
+  return reasonText(L, missReason(L, cell), t, digit);
+}
+
+const DIGIT_PARAMS = new Set(["d", "x", "y", "z", "num"]);
+/** A Miss as text: its digits rendered (colour mode may turn them into words), lists joined. */
+export function reasonText(
+  L: Lesson,
+  miss: Miss,
+  t: Translate,
+  digit: (n: number) => string,
+): string {
+  const params = Object.fromEntries(
+    Object.entries(miss.params ?? {}).map(([k, v]) => [
+      k,
+      Array.isArray(v)
+        ? wordList(k === "marks" ? v.map(digit) : v, t)
+        : DIGIT_PARAMS.has(k)
+          ? digit(v)
+          : v,
+    ]),
+  );
   return t(miss.key, {
-    ...miss.params,
-    ...(d && { d: digit(d) }),
     where: unitLabel(L, t),
+    technique: t(`hint.move.${L.technique}.name`),
     digits: L.digits.map(digit).join(", "),
+    ...params,
   });
 }
 

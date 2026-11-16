@@ -16,4 +16,6 @@ test("a placement hint marks its target green, not as the yellow selection", asy
   await expect(page.locator('[data-cell][aria-selected="true"]')).toHaveCount(0);
   await expect(page.getByText("Target cell")).toBeVisible();
   await expect(page.getByText("Candidates to remove")).toBeHidden();
+  // Below the general description, this move on this board, by its real row and column.
+  await expect(page.getByTestId("hint-detail")).toContainText(/row 1, column [1-5]\b/);
 });

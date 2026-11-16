@@ -89,6 +89,14 @@ const isLastStep = computed(() => {
         <p class="text-sm leading-relaxed text-zinc-700 3xl:text-base dark:text-zinc-300">
           {{ currentStep.description }}
         </p>
+        <!-- This move on this board: its real rows, columns and boxes. -->
+        <ul
+          v-if="currentStep.detail?.length"
+          class="space-y-1 border-t border-zinc-200 pt-2 text-sm leading-relaxed text-zinc-800 3xl:text-base dark:border-zinc-800 dark:text-zinc-200"
+          data-testid="hint-detail"
+        >
+          <li v-for="(line, i) in currentStep.detail" :key="i">{{ line }}</li>
+        </ul>
       </div>
 
       <!-- Legend -->
