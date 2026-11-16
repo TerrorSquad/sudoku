@@ -613,5 +613,17 @@
   "spot.key.skip": "skip",
   "hint.learnIt": "New to this? Learn it step by step",
   "hint.learnAgain": "Replay its lesson",
-  "spot.failed": "This position couldn’t be set up. Go back and try again."
+  "spot.failed": "This position couldn’t be set up. Go back and try again.",
+  "achievements.basics-done.name": "Ready to play",
+  "achievements.basics-done.desc": "Finish all of How to play.",
+  "achievements.first-lesson.name": "First lesson",
+  "achievements.first-lesson.desc": "Finish a step-by-step technique lesson.",
+  "achievements.half-path.name": "Halfway there",
+  "achievements.half-path.desc": "Complete half of the technique path.",
+  "achievements.graduate.name": "Graduate",
+  "achievements.graduate.desc": "Complete the whole technique path.",
+  "achievements.star-pupil.name": "Star pupil",
+  "achievements.star-pupil.desc": "Earn 3 stars on 10 lessons.",
+  "achievements.eagle-eye.name": "Eagle eye",
+  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less."
 }

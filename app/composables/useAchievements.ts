@@ -1,6 +1,6 @@
-import type { WinSummary } from "../utils/achievements";
+import type { AcademySummary, WinSummary } from "../utils/achievements";
 
-import { newlyUnlocked } from "../utils/achievements";
+import { newlyUnlocked, newlyUnlockedAcademy } from "../utils/achievements";
 import { readJSON, writeJSON } from "../utils/safeJson";
 import { reportAchievements } from "../utils/wavedash";
 
@@ -14,17 +14,24 @@ export function useAchievements() {
     return readJSON<UnlockedMap>(KEY, {});
   }
 
-  /** Evaluate a won game, persist any new unlocks and return their ids. */
-  function evaluate(summary: WinSummary, now: number = Date.now()): string[] {
+  function unlock(fresh: string[], now: number): string[] {
+    if (!fresh.length) return fresh;
     const unlocked = getUnlocked();
-    const fresh = newlyUnlocked(unlocked, summary);
-    if (fresh.length) {
-      for (const id of fresh) unlocked[id] = now;
-      writeJSON(KEY, unlocked);
-      reportAchievements(fresh);
-    }
+    for (const id of fresh) unlocked[id] = now;
+    writeJSON(KEY, unlocked);
+    reportAchievements(fresh);
     return fresh;
   }
 
-  return { getUnlocked, evaluate };
+  /** Evaluate a won game, persist any new unlocks and return their ids. */
+  function evaluate(summary: WinSummary, now: number = Date.now()): string[] {
+    return unlock(newlyUnlocked(getUnlocked(), summary), now);
+  }
+
+  /** The same for the Academy's progress (lessons, stars, How to play, Spot it). */
+  function evaluateAcademy(summary: AcademySummary, now: number = Date.now()): string[] {
+    return unlock(newlyUnlockedAcademy(getUnlocked(), summary), now);
+  }
+
+  return { getUnlocked, evaluate, evaluateAcademy };
 }

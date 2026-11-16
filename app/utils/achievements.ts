@@ -26,13 +26,32 @@ export interface WinSummary {
   distinctTechniques: number;
 }
 
+/** The Academy's progress, read whenever it may have changed (a lesson, a drill, a course). */
+export interface AcademySummary {
+  /** Technique-path lessons completed, and how many there are. */
+  lessons: number;
+  pathTotal: number;
+  /** Lessons with a 3-star best. */
+  threeStars: number;
+  /** How to play lessons completed, and how many there are. */
+  basics: number;
+  basicsTotal: number;
+  /** Best Spot it round per tier, in seconds. */
+  spotBest: Partial<Record<string, number>>;
+}
+
+/** Earned by a won game (`check`) or by Academy progress (`academy`). */
 export interface Achievement {
   id: string;
   tier: AchievementTier;
   /** Shown as "???" until unlocked. */
   hidden?: boolean;
-  check: (s: WinSummary) => boolean;
+  check?: (s: WinSummary) => boolean;
+  academy?: (a: AcademySummary) => boolean;
 }
+
+/** An Advanced or Expert Spot it round at or under this many seconds earns Eagle eye. */
+export const EAGLE_EYE_SECONDS = 240;
 
 const HARD_PLUS = new Set(["hard", "expert", "master"]);
 
@@ -66,9 +85,28 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "colourful", tier: "common", check: (s) => s.colorMode },
   { id: "scholar", tier: "rare", check: (s) => s.distinctTechniques >= 5 },
   { id: "specialist", tier: "common", check: (s) => s.winsAtDifficulty >= 10 },
+  { id: "basics-done", tier: "common", academy: (a) => a.basics >= a.basicsTotal },
+  { id: "first-lesson", tier: "common", academy: (a) => a.lessons >= 1 },
+  { id: "half-path", tier: "rare", academy: (a) => a.lessons * 2 >= a.pathTotal },
+  { id: "graduate", tier: "epic", academy: (a) => a.lessons >= a.pathTotal },
+  { id: "star-pupil", tier: "rare", academy: (a) => a.threeStars >= 10 },
+  {
+    id: "eagle-eye",
+    tier: "rare",
+    academy: (a) =>
+      ["Advanced", "Expert"].some((tier) => (a.spotBest[tier] ?? Infinity) <= EAGLE_EYE_SECONDS),
+  },
 ];
 
 /** Ids that this win unlocks and that were not already unlocked. */
 export function newlyUnlocked(unlocked: Record<string, number>, s: WinSummary): string[] {
-  return ACHIEVEMENTS.filter((a) => !(a.id in unlocked) && a.check(s)).map((a) => a.id);
+  return ACHIEVEMENTS.filter((a) => !(a.id in unlocked) && a.check?.(s)).map((a) => a.id);
+}
+
+/** Ids the Academy's progress unlocks that were not already unlocked. */
+export function newlyUnlockedAcademy(
+  unlocked: Record<string, number>,
+  a: AcademySummary,
+): string[] {
+  return ACHIEVEMENTS.filter((x) => !(x.id in unlocked) && x.academy?.(a)).map((x) => x.id);
 }
