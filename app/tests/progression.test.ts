@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 
 import {
   ACADEMY_TECHNIQUES,
+  BUILDS_ON,
+  MAP_COLUMN,
   RARE_IN_PUZZLES,
   WEEKLY_TECHNIQUES,
   completesChallenge,
@@ -144,5 +146,22 @@ describe("technique of the week", () => {
     expect(seen.size).toBe(WEEKLY_TECHNIQUES.length);
     expect(WEEKLY_TECHNIQUES.some((id) => RARE_IN_PUZZLES.has(id))).toBe(false);
     expect([...RARE_IN_PUZZLES].toSorted()).toEqual(["hidden-quad", "jellyfish", "naked-quad"]);
+  });
+});
+
+describe("BUILDS_ON (the technique map)", () => {
+  const ids = ACADEMY_TECHNIQUES.map((t) => t.id);
+  it("links every technique but the first to earlier Academy techniques", () => {
+    for (const id of ids.slice(1)) expect(BUILDS_ON[id]?.length).toBeGreaterThan(0);
+    for (const [id, pre] of Object.entries(BUILDS_ON)) {
+      expect(ids).toContain(id);
+      // Always earlier on the path: so the graph is acyclic and its lines never point back.
+      for (const p of pre) expect(ids.indexOf(p)).toBeLessThan(ids.indexOf(id as never));
+    }
+  });
+
+  it("places every technique in its own map cell", () => {
+    const cells = ACADEMY_TECHNIQUES.map((t) => `${t.tier}:${MAP_COLUMN[t.id]}`);
+    expect(new Set(cells).size).toBe(cells.length);
   });
 });

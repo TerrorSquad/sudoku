@@ -80,7 +80,7 @@ Progress features are all derived from a win, with the rules in **pure, unit-tes
 
 `app/utils/academyExamples.ts` is auto-generated (per its own header comment) from real harvested solver states — one genuine example board per technique, not hand-written. Don't hand-edit it.
 
-Patterns are drawn in pen over the board, the way puzzle books print them: `utils/patternMarks.ts` turns a `SolveMove` into lines (strong links solid, weak links and cover lines dashed) joining the actual pencil-mark slots, rings, unit frames, red-pen crosses and placement circles; `PatternOverlay.vue` is one SVG over the board (`SudokuGrid`'s `marks` prop, or `ExampleGrid`). Lessons, in-game hints and the Academy examples all use it. A new technique needs a case in `patternMarks` (its test draws every Academy example).
+Patterns are drawn in pen over the board, the way puzzle books print them: `utils/patternMarks.ts` turns a `SolveMove` into lines (strong links solid, weak links and cover lines dashed) joining the actual pencil-mark slots, rings, unit frames, red-pen crosses and placement circles; `PatternOverlay.vue` is one SVG over the board (`SudokuGrid`'s `marks` prop, or `ExampleGrid`). Lessons, in-game hints and the Academy examples all use it. A new technique needs a case in `patternMarks` (its test draws every Academy example). The Academy cards' **Watch it** (`WatchExample.vue`) plays that drawing in steps (`beats`: frames, rings, links, result). The Academy's **map** view lays the techniques out by tier (`MAP_COLUMN`) with a line for each `BUILDS_ON` link in `utils/progression.ts`; a new technique needs both.
 
 ### i18n
 

@@ -128,6 +128,68 @@ export function nextLesson(
   return (credited ? nextChallenge(done) : null) ?? after ?? null;
 }
 
+// ---- Technique map ------------------------------------------------------------------------
+
+/**
+ * What each technique builds on, for the Academy's map: the idea it extends (a pair → a triple
+ * → a quad, X-Wing → Swordfish → Jellyfish), or the reasoning it needs first (single-digit links
+ * for the kite and colouring, bivalue cells for the wings). Every technique but the first has
+ * one or two; the map draws a line from each. Acyclic (tests/progression.test.ts).
+ */
+export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
+  "hidden-single": ["naked-single"],
+  pointing: ["hidden-single"],
+  "box-line": ["pointing"],
+  "naked-pair": ["naked-single"],
+  "hidden-pair": ["hidden-single", "naked-pair"],
+  "naked-triple": ["naked-pair"],
+  "hidden-triple": ["hidden-pair"],
+  "naked-quad": ["naked-triple"],
+  "hidden-quad": ["hidden-triple"],
+  "x-wing": ["box-line"],
+  swordfish: ["x-wing"],
+  skyscraper: ["x-wing"],
+  "two-string-kite": ["skyscraper"],
+  "finned-x-wing": ["x-wing"],
+  jellyfish: ["swordfish"],
+  "unique-rectangle": ["naked-pair"],
+  "xy-wing": ["naked-pair"],
+  "w-wing": ["xy-wing"],
+  "xyz-wing": ["xy-wing"],
+  "simple-coloring": ["two-string-kite"],
+  "bug-plus-one": ["unique-rectangle"],
+};
+
+/**
+ * Each technique's column on the map (its row is its tier). Laid out by hand so most links are
+ * a step down or across: the subsets on the left, the fish on the right, column 1–2 of the
+ * Advanced row kept free for the naked pair's lines down to the uniqueness and wing techniques.
+ */
+export const MAP_COLUMN: Record<TechniqueId, number> = {
+  "naked-single": 1,
+  "hidden-single": 3,
+  "naked-triple": 0,
+  "naked-pair": 1,
+  "hidden-pair": 3,
+  "hidden-triple": 4,
+  pointing: 6,
+  "box-line": 7,
+  "naked-quad": 0,
+  "two-string-kite": 3,
+  "hidden-quad": 4,
+  skyscraper: 5,
+  "finned-x-wing": 6,
+  "x-wing": 7,
+  swordfish: 8,
+  jellyfish: 9,
+  "bug-plus-one": 0,
+  "unique-rectangle": 1,
+  "xy-wing": 2,
+  "simple-coloring": 3,
+  "w-wing": 4,
+  "xyz-wing": 5,
+};
+
 // ---- Lesson stars --------------------------------------------------------------------------
 
 /** Best stars per technique's lesson: 3 with no help and no wrong move, 2 with one, else 1. */

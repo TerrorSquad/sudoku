@@ -613,5 +613,18 @@
   "spot.key.skip": "skip",
   "hint.learnIt": "New to this? Learn it step by step",
   "hint.learnAgain": "Replay its lesson",
-  "spot.failed": "This position couldn’t be set up. Go back and try again."
+  "spot.failed": "This position couldn’t be set up. Go back and try again.",
+  "academy.watch.region": "Worked example, step by step",
+  "academy.watch.cells": "These cells form the pattern.",
+  "academy.watch.links": "Solid lines are sure links; dashed lines join cells that see each other.",
+  "academy.watch.play": "Watch it",
+  "academy.watch.pause": "Pause",
+  "academy.watch.back": "Step back",
+  "academy.watch.forward": "Step forward",
+  "academy.watch.restart": "From the start",
+  "academy.watch.step": "Step {n} of {total}",
+  "academy.view.label": "Show techniques as",
+  "academy.view.list": "Cards",
+  "academy.view.map": "Map",
+  "academy.map.hint": "Lines lead from each technique to the ones that build on it. Tap a technique to open it."
 }

@@ -613,5 +613,18 @@
   "spot.key.skip": "preskoči",
   "hint.learnIt": "Prvi put vidiš ovo? Nauči korak po korak",
   "hint.learnAgain": "Ponovi lekciju",
-  "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo."
+  "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo.",
+  "academy.watch.region": "Primer korak po korak",
+  "academy.watch.cells": "Ova polja čine obrazac.",
+  "academy.watch.links": "Pune linije su sigurne veze, a isprekidane spajaju polja koja se vide.",
+  "academy.watch.play": "Pogledaj",
+  "academy.watch.pause": "Pauza",
+  "academy.watch.back": "Korak nazad",
+  "academy.watch.forward": "Korak napred",
+  "academy.watch.restart": "Od početka",
+  "academy.watch.step": "Korak {n} od {total}",
+  "academy.view.label": "Prikaži tehnike kao",
+  "academy.view.list": "Kartice",
+  "academy.view.map": "Mapa",
+  "academy.map.hint": "Linije vode od svake tehnike do onih koje se na nju nadovezuju. Dodirni tehniku da je otvoriš."
 }
