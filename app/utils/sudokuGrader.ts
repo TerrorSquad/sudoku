@@ -1156,6 +1156,14 @@ export function patternUnit(move: SolveMove): BoardUnit {
   return { kind, r: act.r, c: act.c };
 }
 
+/** A unit's 1-based number: its row, column or box (boxes count across, then down). */
+export const unitNumber = (u: BoardUnit): number =>
+  u.kind === "row"
+    ? u.r + 1
+    : u.kind === "col"
+      ? u.c + 1
+      : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
+
 interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;

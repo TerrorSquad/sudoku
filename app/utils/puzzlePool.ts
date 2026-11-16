@@ -1,37 +1,31 @@
-// New-game puzzles are generated in a Web Worker, and one per difficulty is kept ready, so
-// starting a game never blocks the main thread on the generator (Master can dig 150 boards).
-// Spot it positions (lessons) are made in the same worker. Without workers (tests, or a host that
-// blocks them) it generates in place, on demand, as before.
-import type { Grid } from "../types/sudoku";
+// Puzzles are generated in a Web Worker, so the main thread never blocks on the generator (Master
+// can dig 150 boards): new games, with one per difficulty kept ready, the Dailies, practice puzzles
+// and lessons (Spot it's too). Without workers (tests, or a host that blocks them) it generates in
+// place, on demand, as before; both paths run utils/puzzleJobs.ts, so a seed gives the same board.
+import type { Difficulty, Grid } from "../types/sudoku";
+import type { Lesson } from "./lesson";
+import type { generatePracticePuzzle } from "./practice";
+import type { PuzzleJob } from "./puzzleJobs";
 import type { TechniqueId } from "./sudokuGrader";
-
-import { quickLesson, type Lesson } from "./lesson";
-import { makeRng } from "./sudokuCore";
-import { generateGradedPuzzle } from "./sudokuGrader";
 
 interface NewPuzzle {
   puzzle: Grid;
   solution: Grid;
 }
 
-type Job = { difficulty: string } | { technique: TechniqueId; seed: number };
-
 let worker: Worker | null | undefined; // undefined: not tried yet; null: unavailable
 let nextId = 0;
 interface Waiting {
-  job: Job;
+  job: PuzzleJob;
   resolve: (result: unknown) => void;
   reject: (err: unknown) => void;
 }
 const waiting = new Map<number, Waiting>();
 const ready = new Map<string, Promise<NewPuzzle>>();
 
-// Async, so a generator that throws rejects instead of throwing at the caller.
-async function inPlace(job: Job): Promise<NewPuzzle | Lesson> {
-  if ("technique" in job) return quickLesson(job.technique, makeRng(job.seed));
-  const { puzzle, solution } = generateGradedPuzzle(job.difficulty);
-  return { puzzle, solution };
-}
+// Async (a generator that throws rejects instead of throwing at the caller) and loaded on first
+// use, which keeps the lesson and practice generators out of the page's first load.
+const inPlace = async (job: PuzzleJob) => (await import("./puzzleJobs")).runPuzzleJob(job);
 const retryInPlace = ({ job, resolve, reject }: Waiting) => void inPlace(job).then(resolve, reject);
 
 function getWorker(): Worker | null {
@@ -41,16 +35,14 @@ function getWorker(): Worker | null {
   } catch {
     return (worker = null);
   }
-  worker.onmessage = (
-    e: MessageEvent<{ id: number; lesson?: Lesson; error?: string } & Partial<NewPuzzle>>,
-  ) => {
-    const { id, lesson, puzzle, solution, error } = e.data;
+  worker.onmessage = (e: MessageEvent<{ id: number; result?: unknown; error?: string }>) => {
+    const { id, result, error } = e.data;
     const w = waiting.get(id);
     waiting.delete(id);
     if (!w) return;
     // The worker's generator threw: one more try here, which rejects if it fails again.
     if (error) retryInPlace(w);
-    else w.resolve(lesson ?? { puzzle, solution });
+    else w.resolve(result);
   };
   // A worker that fails to load (e.g. a CSP) must not strand the player: finish here instead.
   worker.onerror = () => {
@@ -62,7 +54,7 @@ function getWorker(): Worker | null {
   return worker;
 }
 
-function run<T>(job: Job): Promise<T> {
+function run<T>(job: PuzzleJob): Promise<T> {
   const w = typeof Worker === "undefined" ? null : getWorker();
   if (!w) return inPlace(job) as Promise<T>;
   return new Promise((resolve, reject) => {
@@ -95,6 +87,18 @@ export function takePuzzle(difficulty: string): Promise<NewPuzzle> {
   return next;
 }
 
-/** A Spot it position for `technique`, the same for the same seed. */
+/** The `level` Daily of the date key `daily` (generateDailyBoard). */
+export const makeDailyBoard = (daily: string, level: Difficulty) =>
+  run<{ puzzle: Grid }>({ daily, level }).then((r) => r.puzzle);
+
+/** A practice puzzle for `technique` (generatePracticePuzzle), the same for the same seed. */
+export const practicePuzzle = (technique: TechniqueId, seed: number) =>
+  run<Awaited<ReturnType<typeof generatePracticePuzzle>>>({ practice: technique, seed });
+
+/** A guided lesson for `technique` (generateLesson), the same for the same seed. */
+export const guidedLesson = (technique: TechniqueId, seed: number) =>
+  run<Lesson>({ lesson: technique, seed });
+
+/** A Spot it position for `technique` (quickLesson), the same for the same seed. */
 export const makeLesson = (technique: TechniqueId, seed: number) =>
-  run<Lesson>({ technique, seed });
+  run<Lesson>({ lesson: technique, seed, quick: true });

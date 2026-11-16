@@ -12,6 +12,7 @@ import { RARE_IN_PUZZLES } from "./progression";
 import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
 import {
   nextHint,
+  unitNumber,
   type BoardUnit,
   type CellRC,
   type DigitAt,
@@ -374,14 +375,6 @@ export function tapPattern(instances: Instance[], found: CellRC[], cell: CellRC)
 }
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
-
-/** A unit's 1-based number: its row, column or box (boxes count across, then down). */
-export const unitNumber = (u: BoardUnit): number =>
-  u.kind === "row"
-    ? u.r + 1
-    : u.kind === "col"
-      ? u.c + 1
-      : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
 
 /** "in row 4", "in box 2", or "on this board" when the pattern has no one unit. */
 function unitLabel(L: Lesson, t: Translate): string {
