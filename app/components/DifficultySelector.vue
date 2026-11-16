@@ -2,7 +2,12 @@
 import type { Difficulty, Variant } from "../types/sudoku";
 
 // `daily`: the same tiles pick one of today's Dailies (one per level, a locked level's locked too).
-const props = defineProps<{ activeDifficulty: Difficulty; daily?: boolean }>();
+// `busy`: the level whose board is still generating; no other pick meanwhile.
+const props = defineProps<{
+  activeDifficulty: Difficulty;
+  daily?: boolean;
+  busy?: Difficulty | null;
+}>();
 
 const { zen, diagonal } = usePreferences();
 const variant = computed<Variant>(() => (diagonal.value ? "x" : "classic"));
@@ -89,7 +94,7 @@ const TILES: {
 ];
 
 function pick(d: Difficulty) {
-  if (!lockFor(d) && !isDone(d)) emit("select-difficulty", d);
+  if (!lockFor(d) && !isDone(d) && !props.busy) emit("select-difficulty", d);
 }
 </script>
 
@@ -148,9 +153,11 @@ function pick(d: Difficulty) {
           :aria-describedby="lockFor(d.key) ? `unlock-${d.key}` : undefined"
           :data-locked="lockFor(d.key) ? '' : undefined"
           :data-done="isDone(d.key) ? '' : undefined"
-          :class="
-            lockFor(d.key) ? 'cursor-not-allowed' : isDone(d.key) ? 'cursor-default' : d.hoverClass
-          "
+          :aria-busy="busy === d.key || undefined"
+          :class="[
+            lockFor(d.key) ? 'cursor-not-allowed' : isDone(d.key) ? 'cursor-default' : d.hoverClass,
+            { 'animate-pulse cursor-wait': busy === d.key },
+          ]"
           class="tile group p-5 text-left"
         >
           <span class="mb-2 flex h-5 items-center justify-between">

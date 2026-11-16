@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Component } from "vue";
+
 // Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
 import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
@@ -233,7 +235,14 @@ const techniqueLog = ref<TechniqueId[]>([]);
 // Settings opened from the game slide over it, so a new theme shows on the real board. The board is
 // in view, so the clock runs while it's open (a paused clock would be a free look at the board).
 const settingsOverGame = ref(false);
-function openGameSettings() {
+// Loaded before the sheet opens: showModal() focuses its first button, so that must be there.
+const SettingsSheet = shallowRef<Component>();
+async function openGameSettings() {
+  // A dynamic import, not an auto-import's duplicate: the same lazy chunk as the Settings screen.
+  // oxlint-disable-next-line eslint/no-restricted-imports
+  SettingsSheet.value ??= (await import("./components/SettingsScreen.vue")).default;
+  // The player may have left the game (or the tab) while it loaded: don't open it or restart the clock.
+  if (currentScreen.value !== "game" || document.hidden) return;
   if (timer.isPaused.value) timer.togglePause();
   settingsOverGame.value = true;
 }
@@ -822,11 +831,23 @@ function handleStartDaily(level: Difficulty) {
   else startDaily(level);
 }
 
-function startDaily(level: Difficulty) {
-  gameSave.clearDifficulty(dailySlot(level));
-  beginGame(level, () => loadCustomBoard(dailyPuzzle.getBoard(level)), {
-    daily: dailyPuzzle.todayKey(),
-  });
+// Generated (in the worker) only when that level's Daily starts, so the menu never builds six
+// boards; its tile shows busy meanwhile. Dropped, like a new game, if the player leaves first.
+const dailyLoading = ref<Difficulty | null>(null);
+watch(currentScreen, () => (dailyLoading.value = null));
+async function startDaily(level: Difficulty) {
+  const date = dailyPuzzle.todayKey();
+  const token = ++startToken;
+  dailyLoading.value = level;
+  try {
+    const board = await makeDailyBoard(date, level);
+    if (token !== startToken) return;
+    gameSave.clearDifficulty(dailySlot(level));
+    beginGame(level, () => loadCustomBoard(board), { daily: date });
+  } finally {
+    // Not a newer start's: that one is still generating.
+    if (token === startToken) dailyLoading.value = null;
+  }
 }
 
 // A friend's time from a challenge code (Your puzzle), shown as the time to beat; 0 = none.
@@ -842,15 +863,16 @@ function handleLoadCustomPuzzle(
 }
 
 let practiceToken = 0;
+// The worker takes a seed, not an rng: a random one is as random as Math.random was.
+const randomSeed = () => Math.floor(Math.random() * 2 ** 32);
 // `week` set: the technique of the week, seeded so everyone gets the same board that week.
 async function handlePractice(technique: TechniqueId, week: Week | null = null) {
   if (practiceLoading.value) return; // a double-click must not start two searches
   practiceLoading.value = true;
   const token = ++practiceToken;
   try {
-    const rng = week ? makeRng(seedFromString(week.seed)) : Math.random;
     const from = currentScreen.value; // the Academy, or a finished lesson's "Try a full puzzle"
-    const p = await generatePracticePuzzle(technique, rng);
+    const p = await practicePuzzle(technique, week ? seedFromString(week.seed) : randomSeed());
     // The player may have left while the search ran; don't yank them into a game.
     if (token !== practiceToken || currentScreen.value !== from) return;
     handleLoadCustomPuzzle(p.board, technique);
@@ -876,7 +898,7 @@ async function handleLesson(technique: TechniqueId) {
   const token = ++practiceToken;
   try {
     const from = currentScreen.value; // the Academy, or a finished lesson's next one
-    const lesson = await generateLesson(technique);
+    const lesson = await guidedLesson(technique, randomSeed());
     if (token !== practiceToken || currentScreen.value !== from) return;
     activeLesson.value = lesson;
     currentScreen.value = "lesson";
@@ -1150,12 +1172,13 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'daily'"
           daily
           :active-difficulty="activeDifficulty"
+          :busy="dailyLoading"
           @select-difficulty="handleStartDaily"
           @back-to-menu="currentScreen = 'menu'"
         />
 
         <!-- ACADEMY -->
-        <SudokuAcademy
+        <LazySudokuAcademy
           v-else-if="currentScreen === 'academy'"
           :focus="academyFocus"
           :in-game="academyFromGame"
@@ -1181,7 +1204,7 @@ onUnmounted(() => {
         />
 
         <!-- SPOT IT (and the Daily review, which plays the same way) -->
-        <SpotIt
+        <LazySpotIt
           v-else-if="currentScreen === 'spot'"
           :tier="spotTier"
           :review="spotReview"
@@ -1192,7 +1215,7 @@ onUnmounted(() => {
         />
 
         <!-- HOW TO PLAY -->
-        <BasicsLesson
+        <LazyBasicsLesson
           v-else-if="currentScreen === 'basics'"
           :key="activeBasics"
           :id="activeBasics"
@@ -1206,7 +1229,7 @@ onUnmounted(() => {
         />
 
         <!-- GUIDED LESSON -->
-        <TechniqueLesson
+        <LazyTechniqueLesson
           v-else-if="currentScreen === 'lesson' && activeLesson"
           :key="activeLesson.technique + activeLesson.board.flat().join('')"
           :lesson="activeLesson"
@@ -1221,26 +1244,26 @@ onUnmounted(() => {
         />
 
         <!-- STATISTICS -->
-        <StatsScreen
+        <LazyStatsScreen
           v-else-if="currentScreen === 'stats'"
           @back-to-menu="currentScreen = 'menu'"
           @start-game="currentScreen = 'difficulty'"
         />
 
         <!-- ACHIEVEMENTS -->
-        <AchievementsScreen
+        <LazyAchievementsScreen
           v-else-if="currentScreen === 'achievements'"
           @back-to-menu="currentScreen = 'menu'"
         />
 
         <!-- SETTINGS -->
-        <SettingsScreen
+        <LazySettingsScreen
           v-else-if="currentScreen === 'settings'"
           @back-to-menu="currentScreen = 'menu'"
         />
 
         <!-- CUSTOM IMPORT -->
-        <CustomImport
+        <LazyCustomImport
           v-else-if="currentScreen === 'custom-import'"
           @load-puzzle="(board, seconds) => handleLoadCustomPuzzle(board, null, seconds)"
           @back-to-menu="currentScreen = 'menu'"
@@ -1381,7 +1404,8 @@ onUnmounted(() => {
         class="settings-sheet"
         :aria-label="$t('settings.title')"
       >
-        <SettingsScreen
+        <component
+          :is="SettingsSheet"
           v-if="settingsOverGame"
           in-game
           :timed="!gameZen"
@@ -1462,7 +1486,7 @@ onUnmounted(() => {
       />
 
       <!-- MODAL -->
-      <EndModal
+      <LazyEndModal
         v-if="showModal"
         :title="modalTitle"
         :message="modalMessage"

@@ -3,8 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { useSudokuEngine } from "./useSudokuEngine";
 
-import { unitNumber } from "../utils/lesson";
-import { patternUnit, type BoardUnit, type TechniqueId } from "../utils/sudokuGrader";
+import { patternUnit, unitNumber, type BoardUnit, type TechniqueId } from "../utils/sudokuGrader";
 
 // "Nudge first" hint style: the first press names the technique and the row, column or box its
 // pattern sits in (or the box holding a wrong entry); pressing again (or the banner's Explain

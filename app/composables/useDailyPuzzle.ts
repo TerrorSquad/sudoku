@@ -68,11 +68,6 @@ export function useDailyPuzzle() {
   // Evaluated per call, not once: a tab left open past midnight must roll over.
   const todayKey = () => localDateKey();
 
-  // Generated only when that level's Daily starts, so the menu never builds six boards.
-  function getBoard(level: Difficulty = "medium"): Grid {
-    return generateDailyBoard(todayKey(), level);
-  }
-
   function getRecordFor(dateKey: string, level: Difficulty = "medium"): DailyRecord | null {
     return readJSON<DailyRecord | null>(dailyKey(dateKey, level), null);
   }
@@ -111,7 +106,6 @@ export function useDailyPuzzle() {
   const getLongestStreak = () => getStreakState().longest;
 
   return {
-    getBoard,
     getRecord,
     getRecordFor,
     markComplete,
