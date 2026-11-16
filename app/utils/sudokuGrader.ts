@@ -11,7 +11,7 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sud
 //   3 — naked/hidden triple, X-Wing
 //   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Empty Rectangle,
 //       Finned X-Wing, Unique Rectangle, XY-Wing, W-Wing
-//   5 — Jellyfish, XYZ-Wing, Simple Coloring, BUG+1
+//   5 — Jellyfish, XYZ-Wing, Simple Coloring, BUG+1, XY-Chain
 
 // 1..5 = hardest technique tier required to fully solve.
 // STUCK = no implemented technique makes progress (needs guessing / a technique
@@ -387,7 +387,8 @@ export type TechniqueId =
   | "simple-coloring"
   | "finned-x-wing"
   | "w-wing"
-  | "bug-plus-one";
+  | "bug-plus-one"
+  | "xy-chain";
 
 export interface CellRC {
   r: number;
@@ -1068,6 +1069,58 @@ function findBugPlusOneMove(s: SolveState): SolveMove | null {
   return null;
 }
 
+// --- XY-Chain ---
+// Cells holding exactly two candidates, each seeing the next and sharing a digit with it. The
+// first cell holds z: if it isn't z it's its other digit, so the next cell isn't that digit and is
+// its own other one, and so on down the chain. If the last cell's other digit is z, one of the two
+// ends is z, and any cell seeing both loses it. Breadth-first from every start, so the shortest
+// chain wins; capped at 8 cells for speed. Three cells is an XY-Wing, which is tried first.
+const XY_CHAIN_MAX = 8;
+function findXYChainMove(s: SolveState): SolveMove | null {
+  const bivalue: number[] = [];
+  for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
+  const next = new Map(bivalue.map((i) => [i, bivalue.filter((j) => sees(i, j))]));
+  const other = (i: number, d: number) => maskDigits(s.cands[i]! & ~bit(d))[0]!;
+  let best: SolveMove | null = null;
+  for (const start of bivalue) {
+    for (const z of maskDigits(s.cands[start]!)) {
+      // Each path: its cells, and the digit its last cell must be when the first isn't z.
+      let paths = [{ cells: [start], d: other(start, z) }];
+      const seen = new Set([`${start}-${paths[0]!.d}`]);
+      for (let len = 2; len <= XY_CHAIN_MAX && paths.length; len++) {
+        if (best && len >= best.triggers.length) break;
+        const grown: typeof paths = [];
+        for (const { cells, d } of paths) {
+          for (const i of next.get(cells.at(-1)!)!) {
+            if (!(s.cands[i]! & bit(d)) || cells.includes(i)) continue;
+            const e = other(i, d);
+            if (seen.has(`${i}-${e}`)) continue;
+            seen.add(`${i}-${e}`);
+            const chain = [...cells, i];
+            if (e === z && len >= 3) {
+              const elims = PEERS[start]!.filter(
+                (p) => p !== i && s.board[p] === 0 && s.cands[p]! & bit(z) && sees(p, i),
+              );
+              if (elims.length && (!best || len < best.triggers.length))
+                best = {
+                  technique: "xy-chain",
+                  tier: 5,
+                  eliminations: elims.map((p) => ({ ...rc(p), num: z })),
+                  // The chain's cells in order, from one z end to the other: patternMarks reads them so.
+                  triggers: chain.map(rc),
+                  digits: [z],
+                };
+            }
+            grown.push({ cells: chain, d: e });
+          }
+        }
+        paths = grown;
+      }
+    }
+  }
+  return best;
+}
+
 // Easiest-first dispatch — mirrors the grading tier order.
 function findNextMove(s: SolveState): SolveMove | null {
   return (
@@ -1092,7 +1145,8 @@ function findNextMove(s: SolveState): SolveMove | null {
     findFishMove(s, 4) ??
     findXYZWingMove(s) ??
     findSimpleColoringMove(s) ??
-    findBugPlusOneMove(s)
+    findBugPlusOneMove(s) ??
+    findXYChainMove(s)
   );
 }
 
@@ -1197,7 +1251,8 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         eliminateFish(s, 4) ||
         eliminateXYZWing(s) ||
         applyMove(s, findSimpleColoringMove(s)) ||
-        applyMove(s, findBugPlusOneMove(s)),
+        applyMove(s, findBugPlusOneMove(s)) ||
+        applyMove(s, findXYChainMove(s)),
     },
   ];
 
@@ -1243,7 +1298,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
   expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  // Only ~1.5% of digs grade 5, so Master digs longer to find one (~90% of the time).
+  // Only ~8% of digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
   master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
 };
 
@@ -1345,6 +1400,7 @@ const SOLVER_RANK = {
   "xyz-wing": 20,
   "simple-coloring": 21,
   "bug-plus-one": 22,
+  "xy-chain": 23,
 } satisfies Record<TechniqueId, number>;
 
 /**

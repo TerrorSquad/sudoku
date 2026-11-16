@@ -121,6 +121,49 @@ describe("patternMarks", () => {
     expect(patternMarks(move, () => true, false).filter((m) => m.kind === "line")).toHaveLength(2);
   });
 
+  it("draws an XY-Chain: each cell's two digits joined solid, each next cell dashed on the shared one", () => {
+    // 1 or 3, 3 or 8, 8 or 7, 7 or 1: one end is 1, so the cells in line with both lose it.
+    const notes: Record<string, number[]> = {
+      "0-4": [1, 3],
+      "1-5": [3, 8],
+      "6-5": [7, 8],
+      "7-3": [1, 7],
+    };
+    const has = (r: number, c: number, n: number) => notes[`${r}-${c}`]?.includes(n) ?? false;
+    const [A, B, C, D] = [
+      { r: 0, c: 4 },
+      { r: 1, c: 5 },
+      { r: 6, c: 5 },
+      { r: 7, c: 3 },
+    ];
+    const at = (p: { r: number; c: number }, n: number) => anchor(p.r, p.c, n);
+    const marks = patternMarks(
+      {
+        technique: "xy-chain",
+        triggers: [A!, B!, C!, D!],
+        eliminations: [
+          { r: 0, c: 3, num: 1 },
+          { r: 7, c: 4, num: 1 },
+        ],
+        digits: [1],
+      },
+      has,
+    );
+    expect(marks.filter((m) => m.kind === "line")).toEqual([
+      { kind: "line", a: at(A!, 1), b: at(A!, 3), style: "strong" },
+      { kind: "line", a: at(A!, 3), b: at(B!, 3), style: "weak" },
+      { kind: "line", a: at(B!, 3), b: at(B!, 8), style: "strong" },
+      { kind: "line", a: at(B!, 8), b: at(C!, 8), style: "weak" },
+      { kind: "line", a: at(C!, 8), b: at(C!, 7), style: "strong" },
+      { kind: "line", a: at(C!, 7), b: at(D!, 7), style: "weak" },
+      { kind: "line", a: at(D!, 7), b: at(D!, 1), style: "strong" },
+    ]);
+    // The ends' 1 in the main tone, the link digits in the second.
+    const rings = marks.filter((m) => m.kind === "ring");
+    expect(rings.filter((m) => m.tone === "pattern")).toHaveLength(2);
+    expect(rings.filter((m) => m.tone === "alt")).toHaveLength(6);
+  });
+
   it("draws a colouring wrap's whole chain, the cleared colour in the second tone", () => {
     // 4 sits only in these cells: A–B (row 1), B–C (column 5), C–D (row 5) are strong links.
     const [A, B, C, D] = [

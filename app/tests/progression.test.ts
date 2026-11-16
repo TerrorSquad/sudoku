@@ -73,7 +73,7 @@ describe("difficulty unlocks", () => {
 
 describe("technique path", () => {
   it("walks the Academy order", () => {
-    expect(ACADEMY_TECHNIQUES).toHaveLength(23);
+    expect(ACADEMY_TECHNIQUES).toHaveLength(24);
     expect(nextChallenge([])).toBe("naked-single");
     expect(nextChallenge(["naked-single"])).toBe("hidden-single");
     expect(nextChallenge(ACADEMY_TECHNIQUES.map((t) => t.id))).toBeNull();
@@ -96,8 +96,8 @@ describe("lesson flow", () => {
     expect(nextLesson("pointing", ["naked-single"], false)).toBe("box-line");
     expect(nextLesson("x-wing", ["naked-single"], false)).toBe("swordfish");
     expect(nextLesson("hidden-single", ["naked-single", "hidden-single"], true)).toBe("pointing");
-    expect(nextLesson("bug-plus-one", all, true)).toBeNull();
-    expect(nextLesson("bug-plus-one", [], false)).toBeNull();
+    expect(nextLesson("xy-chain", all, true)).toBeNull();
+    expect(nextLesson("xy-chain", [], false)).toBeNull();
   });
 
   it("gives 3 stars for no slips, 2 for one, else 1", () => {
@@ -133,8 +133,8 @@ describe("technique of the week", () => {
   it("pins one week's technique and seed, so a rotation change shows up here", () => {
     expect(weekOf(new Date(2026, 10, 14))).toEqual({
       key: "2026-W46",
-      technique: "pointing",
-      seed: "2026-W46:pointing",
+      technique: "naked-triple",
+      seed: "2026-W46:naked-triple",
     });
   });
 

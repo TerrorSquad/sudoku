@@ -340,6 +340,9 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
   if (t === "naked-single" && marks.length > 1)
     return { key: "lesson.why.manyMarks", params: { n: marks.length } };
   if (ON_DIGIT.has(t) && !marks.includes(d)) return { key: "lesson.why.noDigit", params: { d } };
+  // Every cell of an XY-Chain holds exactly two candidates.
+  if (t === "xy-chain" && marks.length > 2)
+    return { key: "lesson.why.manyMarks", params: { n: marks.length } };
   const subset = t !== "naked-single" && t !== "hidden-single";
   if (subset && t.startsWith("hidden-") && !marks.some((n) => L.digits.includes(n)))
     return { key: "lesson.why.noneOfDigits" };

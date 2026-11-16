@@ -18,8 +18,8 @@ describe("migrateTechniqueStats", () => {
   });
 
   it("keeps a key it can't map instead of dropping it", () => {
-    expect(migrateTechniqueStats({ "XY-Chain": 2, "Naked Pair": 1 })).toEqual({
-      "XY-Chain": 2,
+    expect(migrateTechniqueStats({ "Sue de Coq": 2, "Naked Pair": 1 })).toEqual({
+      "Sue de Coq": 2,
       "naked-pair": 1,
     });
   });
@@ -40,6 +40,8 @@ describe("migrateTechniqueStats", () => {
       "Pointing Pair — Column": "pointing",
       "Empty Rectangle": "empty-rectangle",
       "Prazan Pravougaonik": "empty-rectangle",
+      "XY-Chain (length 5)": "xy-chain",
+      "XY-Chain (Lanac dužine 4)": "xy-chain",
       "Pokazujući Par — Kolona": "pointing",
       "Box-Line Reduction — Row": "box-line",
       "Redukcija Kvadrant-Linija — Kolona": "box-line",
