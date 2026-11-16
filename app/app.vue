@@ -76,7 +76,7 @@ import {
   type Placement,
   type StuckMoment,
 } from "./utils/stuckMoments";
-import { digitLabel, dotClass } from "./utils/sudokuColors";
+import { digitLabel } from "./utils/sudokuColors";
 import { getGridCandidates, makeRng, seedFromString } from "./utils/sudokuCore";
 import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
@@ -292,25 +292,9 @@ const techniqueLog = ref<TechniqueId[]>([]);
 // Settings opened from the game slide over it, so a new theme shows on the real board. The board is
 // in view, so the clock runs while it's open (a paused clock would be a free look at the board).
 const settingsOverGame = ref(false);
-const settingsSheet = ref<HTMLDialogElement | null>(null);
 function openGameSettings() {
   if (timer.isPaused.value) timer.togglePause();
   settingsOverGame.value = true;
-}
-// Post-flush, so the sheet's content exists and showModal() focuses its Back button.
-watch(
-  settingsOverGame,
-  (open) => {
-    if (open) settingsSheet.value?.showModal();
-    else settingsSheet.value?.close();
-  },
-  { flush: "post" },
-);
-// A click outside the sheet closes it, but not a drag that started inside (selecting text).
-let pressedOutside = false;
-function onSheetClick(e: MouseEvent) {
-  if (pressedOutside && e.target === settingsSheet.value) settingsOverGame.value = false;
-  pressedOutside = false;
 }
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
@@ -1122,20 +1106,15 @@ function redo() {
 }
 
 const shortcutsOpen = ref(false);
-const shortcutsSheet = ref<HTMLDialogElement | null>(null);
-watch(shortcutsOpen, (open) => {
-  if (open) shortcutsSheet.value?.showModal();
-  else shortcutsSheet.value?.close();
-});
 
 function handleKeyDown(e: KeyboardEvent) {
   if (showModal.value) return; // EndModal's own keys
-  // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
+  // A sheet over the game takes the keys; Esc closes it natively.
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
     currentScreen.value !== "game" ||
     settingsOverGame.value ||
-    shortcutsSheet.value?.open ||
+    shortcutsOpen.value ||
     practiceLoading.value
   )
     return;
@@ -1375,51 +1354,7 @@ onUnmounted(() => {
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
           <p class="sr-only" aria-live="polite">{{ announcement }}</p>
-          <!-- 3xl left sidebar: shortcuts & branding -->
-          <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
-            <div>
-              <p class="mb-4 text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                {{ $t("sidebar.keyboard") }}
-              </p>
-              <ShortcutList />
-            </div>
-
-            <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
-              <p class="mb-4 text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                {{ $t("sidebar.legend") }}
-              </p>
-              <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
-                <li class="flex items-center gap-3">
-                  <span
-                    class="h-4 w-4 shrink-0 border border-zinc-400 bg-zinc-900 dark:border-zinc-600 dark:bg-zinc-100"
-                  />
-                  {{ $t("sidebar.legendGiven") }}
-                </li>
-                <li class="flex items-center gap-3">
-                  <span
-                    class="h-4 w-4 shrink-0 border border-violet-500 bg-violet-600/30 dark:border-violet-400 dark:bg-violet-300/30"
-                  />
-                  {{ $t("sidebar.legendEntry") }}
-                </li>
-                <li class="flex items-center gap-3">
-                  <span class="h-4 w-4 shrink-0 border border-rose-400 bg-rose-500/20" />
-                  {{ $t("sidebar.legendConflict") }}
-                </li>
-                <li class="flex items-center gap-3">
-                  <span
-                    class="h-4 w-4 shrink-0 border border-violet-300 bg-violet-200 dark:border-violet-400/70 dark:bg-violet-500/35"
-                  />
-                  {{ $t("sidebar.legendSame") }}
-                </li>
-                <li class="flex items-center gap-3">
-                  <span
-                    class="h-4 w-4 shrink-0 border-2 border-amber-500 bg-amber-200 dark:border-amber-300 dark:bg-amber-400/30"
-                  />
-                  {{ $t("sidebar.legendSelected") }}
-                </li>
-              </ul>
-            </div>
-          </div>
+          <GameLegend />
 
           <!-- Center / main game column -->
           <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
@@ -1438,32 +1373,13 @@ onUnmounted(() => {
               @exit-game="exitToMenu"
             />
 
-            <!-- Nudge: names the technique and where to look before the full explanation -->
-            <div
+            <NudgeBanner
               v-if="nudge"
-              role="status"
-              class="flex items-center justify-between gap-3 border border-amber-500/40 bg-amber-300/25 px-3 py-2 text-xs text-amber-950 dark:bg-amber-400/10 dark:text-amber-200"
-            >
-              <i18n-t v-if="nudge.technique" keypath="hint.nudge.body" tag="p" scope="global">
-                <template #unit>{{ nudgeUnit }}</template>
-                <template #technique>
-                  <button
-                    @click="openNudgeLesson"
-                    :title="$t('modal.openLesson')"
-                    class="font-bold underline decoration-amber-600/60 underline-offset-2 hover:decoration-2"
-                  >
-                    {{ $t(`hint.move.${nudge.technique}.name`) }}
-                  </button>
-                </template>
-              </i18n-t>
-              <p v-else>{{ $t("hint.nudge.wrong", { unit: nudgeUnit }) }}</p>
-              <button
-                @click="handleTriggerHint"
-                class="shrink-0 border border-amber-600/50 px-2 py-1 font-bold transition-colors hover:bg-amber-400/30"
-              >
-                {{ $t("hint.nudge.explain") }}
-              </button>
-            </div>
+              :technique="nudge.technique"
+              :unit="nudgeUnit"
+              @lesson="openNudgeLesson"
+              @explain="handleTriggerHint"
+            />
 
             <!-- Announces the Finish tile (in the controls) when it appears -->
             <p role="status" class="sr-only">{{ finishPath ? $t("game.finishBody") : "" }}</p>
@@ -1529,42 +1445,12 @@ onUnmounted(() => {
                 />
               </div>
 
-              <!-- PAUSE OVERLAY -->
-              <div
+              <PauseOverlay
                 v-if="timer.isPaused.value"
-                data-pad-scope
-                class="pause-overlay absolute top-0 -right-1 -bottom-1 left-0 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
-              >
-                <AppIcon
-                  class="h-12 w-12 text-zinc-500"
-                  path="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-                <p class="font-display text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                  {{ $t("game.pausedTitle") }}
-                </p>
-                <button
-                  @click="timer.togglePause()"
-                  class="tile tile-apply px-10 py-4 text-base font-black"
-                >
-                  {{ $t("game.resume") }}
-                </button>
-                <button
-                  @click="openGameSettings"
-                  class="flex items-center gap-2 text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
-                >
-                  <AppIcon
-                    class="h-4 w-4"
-                    path="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  {{ $t("menu.settings") }}
-                </button>
-                <button
-                  @click="shortcutsOpen = true"
-                  class="text-sm font-semibold text-zinc-700 underline-offset-4 hover:underline dark:text-zinc-300"
-                >
-                  {{ $t("sidebar.keyboard") }} (?)
-                </button>
-              </div>
+                @resume="timer.togglePause()"
+                @settings="openGameSettings"
+                @shortcuts="shortcutsOpen = true"
+              />
             </div>
           </div>
 
@@ -1589,13 +1475,10 @@ onUnmounted(() => {
       </Transition>
 
       <!-- Settings over the game: a sheet at the side (the bottom on phones), the board in view. -->
-      <dialog
-        ref="settingsSheet"
+      <SheetDialog
+        v-model:open="settingsOverGame"
         class="settings-sheet"
         :aria-label="$t('settings.title')"
-        @close="settingsOverGame = false"
-        @pointerdown="pressedOutside = $event.target === settingsSheet"
-        @click="onSheetClick"
       >
         <SettingsScreen
           v-if="settingsOverGame"
@@ -1603,15 +1486,13 @@ onUnmounted(() => {
           :timed="!gameZen"
           @back-to-menu="settingsOverGame = false"
         />
-      </dialog>
+      </SheetDialog>
 
       <!-- Every game key, opened with ? (the wide-screen sidebar shows the same list). -->
-      <dialog
-        ref="shortcutsSheet"
+      <SheetDialog
+        v-model:open="shortcutsOpen"
         class="panel m-auto w-[min(22rem,calc(100vw-2rem))] p-5 text-inherit backdrop:bg-black/50"
         :aria-label="$t('sidebar.keyboard')"
-        @close="shortcutsOpen = false"
-        @click.self="shortcutsOpen = false"
       >
         <h2 class="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-50">
           {{ $t("sidebar.keyboard") }}
@@ -1620,7 +1501,7 @@ onUnmounted(() => {
         <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
           {{ $t("modal.close") }}
         </button>
-      </dialog>
+      </SheetDialog>
 
       <div
         v-if="practiceLoading"
@@ -1633,21 +1514,12 @@ onUnmounted(() => {
         <p class="text-sm font-semibold text-zinc-100">{{ $t("practice.generating") }}</p>
       </div>
 
-      <!-- Controller: the digit A or X enters, and the buttons for this screen. -->
-      <div
+      <PadHud
         v-if="padConnected && BOARD_SCREENS.has(currentScreen)"
-        data-testid="pad-hud"
-        aria-hidden="true"
-        class="panel fixed bottom-3 left-3 z-40 flex items-center gap-3 px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
-      >
-        <span v-if="colorMode" :class="dotClass(padDigit)" class="h-6 w-6" />
-        <span
-          :class="colorMode ? 'text-sm' : 'font-game text-2xl'"
-          class="font-black text-violet-700 dark:text-violet-300"
-          >{{ digitLabel(padDigit, colorMode, t) }}</span
-        >
-        <span>{{ $t(currentScreen === "game" ? "pad.game" : "pad.academy") }}</span>
-      </div>
+        :digit="padDigit"
+        :color-mode="colorMode"
+        :game="currentScreen === 'game'"
+      />
 
       <AchievementToast
         :ids="toastIds"
@@ -1726,22 +1598,5 @@ onUnmounted(() => {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-@keyframes modal-pop {
-  0% {
-    transform: scale(0.85) translateY(8px);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.02);
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-.modal-pop {
-  animation: modal-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 </style>
