@@ -15,7 +15,8 @@
   "overrides": [
     {
       // Storage goes through utils/safeJson.ts (SSR-safe, and a sandboxed iframe can throw on any
-      // access): a bare localStorage.removeItem once sat inside the win path.
+      // access): a bare localStorage.removeItem once sat inside the win path. Only catches the bare
+      // globals, not window.localStorage.
       "files": ["app/**"],
       "rules": {
         "eslint/no-restricted-globals": [
@@ -29,10 +30,10 @@
       }
     },
     {
-      // The storage layer itself, and code that hands the whole Storage over (backup, cloud sync).
+      // The storage layer itself, and code that hands the whole Storage over (backup export/import,
+      // cloud sync, listing the Daily keys).
       "files": [
         "app/utils/safeJson.ts",
-        "app/utils/progressBackup.ts",
         "app/utils/wavedash.ts",
         "app/components/SettingsScreen.vue",
         "app/composables/useDailyPuzzle.ts",
