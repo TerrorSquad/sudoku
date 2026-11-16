@@ -1617,8 +1617,10 @@ function onPad(action: PadAction) {
         focused.dispatchEvent(new Event("change", { bubbles: true }));
       }
     } else if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
-    else if (action === "press") onControl ? focused!.click() : moveFocus(1);
-    else if (action === "back") padBack();
+    else if (action === "press") {
+      if (onControl) focused!.click();
+      else moveFocus(1);
+    } else if (action === "back") padBack();
     else if (action === "pause" && currentScreen.value === "game") sendKey("p");
     return;
   }

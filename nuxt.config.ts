@@ -80,8 +80,8 @@ export default defineNuxtConfig({
         // repaints both when Settings forces a theme the system doesn't use.
         { name: "theme-color", media: "(prefers-color-scheme: light)", content: "#17294a" },
         { name: "theme-color", media: "(prefers-color-scheme: dark)", content: "#1c252f" },
-        // The app has its own dark mode: keep Dark Reader off it (main.css sets color-scheme to
-        // "only", which stops Chrome's auto dark mode, for the same reason).
+        // The app has its own dark mode: keep Dark Reader from repainting it (it hid the board's
+        // lines). main.css declares color-scheme for the same reason.
         { name: "darkreader-lock", content: "lock" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
