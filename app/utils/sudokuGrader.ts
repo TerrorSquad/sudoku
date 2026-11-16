@@ -1298,7 +1298,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
   expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  // Only ~8% of digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
+  // Only ~8% of 60-cell digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
   master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
 };
 
