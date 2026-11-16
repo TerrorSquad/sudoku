@@ -1701,56 +1701,6 @@ onUnmounted(() => {
 
 <!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
-/* A small menu tile: icon at the top, label at the bottom, like a cell's corner marks. */
-.menu-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.75rem;
-  text-align: left;
-  font-family: var(--font-display);
-  font-size: 0.8125rem;
-  line-height: 1.15;
-  font-weight: 700;
-  color: var(--color-zinc-800);
-}
-.dark .menu-cell {
-  color: var(--color-zinc-100);
-}
-.menu-cell.tile-amber {
-  color: #422006;
-}
-.dark .menu-cell.tile-amber {
-  color: #fde68a;
-}
-
-/* The one loud thing: a highlighter stroke under the wordmark. */
-.wordmark::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: -0.12em;
-  right: -0.12em;
-  bottom: 0.04em;
-  height: 0.36em;
-  background: rgba(252, 211, 77, 0.75);
-  transform: skewX(-8deg) rotate(-0.8deg);
-  transform-origin: left center;
-  animation: swipe 0.7s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.dark .wordmark::after {
-  background: rgba(251, 191, 36, 0.38);
-}
-@keyframes swipe {
-  from {
-    transform: skewX(-8deg) rotate(-0.8deg) scaleX(0);
-  }
-  to {
-    transform: skewX(-8deg) rotate(-0.8deg) scaleX(1);
-  }
-}
-
 /* Screen changes: a short fade with a small settle, not a slide. */
 .screen-enter-active,
 .screen-leave-active {
