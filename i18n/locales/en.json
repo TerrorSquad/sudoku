@@ -636,5 +636,19 @@
   "achievements.star-pupil.name": "Star pupil",
   "achievements.star-pupil.desc": "Earn 3 stars on 10 lessons.",
   "achievements.eagle-eye.name": "Eagle eye",
-  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less."
+  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less.",
+  "academy.watch.region": "Worked example, step by step",
+  "academy.watch.cells": "These cells form the pattern.",
+  "academy.watch.links": "Solid lines are sure links; dashed lines join cells that see each other.",
+  "academy.watch.play": "Watch it",
+  "academy.watch.pause": "Pause",
+  "academy.watch.back": "Step back",
+  "academy.watch.forward": "Step forward",
+  "academy.watch.restart": "From the start",
+  "academy.watch.step": "Step {n} of {total}",
+  "academy.view.label": "Show techniques as",
+  "academy.view.list": "Cards",
+  "academy.view.map": "Map",
+  "academy.map.hint": "Lines lead from each technique to the ones that build on it. Tap a technique to open it.",
+  "academy.map.buildsOn": "Builds on {names}"
 }

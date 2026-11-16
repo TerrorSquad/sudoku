@@ -18,6 +18,8 @@ const props = defineProps<{
   mini?: boolean;
   /** The pattern drawn in pen over the board. */
   marks?: Mark[];
+  /** Pencil marks of these digits stand out (Watch it: the digits to look at). */
+  digits?: number[];
 }>();
 
 function noteKey(r: number, c: number) {
@@ -59,7 +61,15 @@ function cellClass(r: number, c: number) {
           v-else-if="!mini && candidates(r, c).length"
           class="absolute inset-0.5 grid grid-cols-3 grid-rows-3 font-game text-[0.4375rem] leading-none font-semibold text-amber-700 sm:text-[0.5rem] dark:text-amber-400"
         >
-          <div v-for="n in 9" :key="n" class="flex items-center justify-center">
+          <div
+            v-for="n in 9"
+            :key="n"
+            :class="
+              digits?.includes(n) &&
+              'font-black text-violet-700 underline decoration-2 dark:text-violet-300'
+            "
+            class="flex items-center justify-center"
+          >
             {{ candidates(r, c).includes(n) ? n : "" }}
           </div>
         </div>

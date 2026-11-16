@@ -636,5 +636,19 @@
   "achievements.star-pupil.name": "Odlikaš",
   "achievements.star-pupil.desc": "Osvoji 3 zvezdice na 10 lekcija.",
   "achievements.eagle-eye.name": "Orlovsko oko",
-  "achievements.eagle-eye.desc": "Završi rundu Uoči obrazac na nivou Napredno ili Ekspert za najviše 4 minuta."
+  "achievements.eagle-eye.desc": "Završi rundu Uoči obrazac na nivou Napredno ili Ekspert za najviše 4 minuta.",
+  "academy.watch.region": "Primer korak po korak",
+  "academy.watch.cells": "Ova polja čine obrazac.",
+  "academy.watch.links": "Pune linije su sigurne veze, a isprekidane spajaju polja koja se vide.",
+  "academy.watch.play": "Pogledaj",
+  "academy.watch.pause": "Pauza",
+  "academy.watch.back": "Korak nazad",
+  "academy.watch.forward": "Korak napred",
+  "academy.watch.restart": "Od početka",
+  "academy.watch.step": "Korak {n} od {total}",
+  "academy.view.label": "Prikaži tehnike kao",
+  "academy.view.list": "Kartice",
+  "academy.view.map": "Mapa",
+  "academy.map.hint": "Linije vode od svake tehnike do onih koje se na nju nadovezuju. Dodirni tehniku da je otvoriš.",
+  "academy.map.buildsOn": "Oslanja se na: {names}"
 }
