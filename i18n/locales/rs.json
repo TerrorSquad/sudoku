@@ -624,5 +624,17 @@
   "review.up": "Ide gore: korak {box} od 5",
   "review.reset": "Vraća se na korak 1",
   "review.next": "sledeće ponavljanje: {day}",
-  "review.tomorrow": "sutra"
+  "review.tomorrow": "sutra",
+  "achievements.basics-done.name": "Spreman za igru",
+  "achievements.basics-done.desc": "Pređi sve lekcije iz odeljka Kako se igra.",
+  "achievements.first-lesson.name": "Prvi čas",
+  "achievements.first-lesson.desc": "Završi jednu lekciju o tehnici, korak po korak.",
+  "achievements.half-path.name": "Na pola puta",
+  "achievements.half-path.desc": "Pređi polovinu puta tehnika.",
+  "achievements.graduate.name": "Diplomac",
+  "achievements.graduate.desc": "Pređi ceo put tehnika.",
+  "achievements.star-pupil.name": "Odlikaš",
+  "achievements.star-pupil.desc": "Osvoji 3 zvezdice na 10 lekcija.",
+  "achievements.eagle-eye.name": "Orlovsko oko",
+  "achievements.eagle-eye.desc": "Završi rundu Uoči obrazac na nivou Napredno ili Ekspert za najviše 4 minuta."
 }

@@ -26,7 +26,7 @@ test("winning pops an unlock toast and the trophy case records it", async ({ pag
 
   await page.getByRole("button", { name: "Close" }).click();
   await page.getByRole("button", { name: "Achievements" }).click();
-  await expect(page.getByText("3 of 19 unlocked")).toBeVisible();
+  await expect(page.getByText("3 of 25 unlocked")).toBeVisible();
   await expect(page.locator('[data-unlocked="true"]')).toHaveCount(3);
   await expect(page.locator('[data-unlocked="true"]', { hasText: "First Win" })).toBeVisible();
 });
@@ -34,7 +34,7 @@ test("winning pops an unlock toast and the trophy case records it", async ({ pag
 test("hidden achievements stay masked until unlocked", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Achievements" }).click();
-  await expect(page.getByText("0 of 19 unlocked")).toBeVisible();
+  await expect(page.getByText("0 of 25 unlocked")).toBeVisible();
   await expect(page.getByText("Comeback")).toBeHidden();
   await expect(page.getByText("???").first()).toBeVisible();
 });

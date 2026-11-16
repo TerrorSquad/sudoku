@@ -624,5 +624,17 @@
   "review.up": "Moved up: step {box} of 5",
   "review.reset": "Back to step 1",
   "review.next": "next review: {day}",
-  "review.tomorrow": "tomorrow"
+  "review.tomorrow": "tomorrow",
+  "achievements.basics-done.name": "Ready to play",
+  "achievements.basics-done.desc": "Finish all of How to play.",
+  "achievements.first-lesson.name": "First lesson",
+  "achievements.first-lesson.desc": "Finish a step-by-step technique lesson.",
+  "achievements.half-path.name": "Halfway there",
+  "achievements.half-path.desc": "Complete half of the technique path.",
+  "achievements.graduate.name": "Graduate",
+  "achievements.graduate.desc": "Complete the whole technique path.",
+  "achievements.star-pupil.name": "Star pupil",
+  "achievements.star-pupil.desc": "Earn 3 stars on 10 lessons.",
+  "achievements.eagle-eye.name": "Eagle eye",
+  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less."
 }

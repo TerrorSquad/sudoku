@@ -132,6 +132,48 @@
       "description": "Win 10 puzzles on the same difficulty.",
       "secret": false,
       "stat_requirement": null
+    },
+    {
+      "identifier": "BASICS_DONE",
+      "display_name": "Ready to play",
+      "description": "Finish all of How to play.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "FIRST_LESSON",
+      "display_name": "First lesson",
+      "description": "Finish a step-by-step technique lesson.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "HALF_PATH",
+      "display_name": "Halfway there",
+      "description": "Complete half of the technique path.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "GRADUATE",
+      "display_name": "Graduate",
+      "description": "Complete the whole technique path.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "STAR_PUPIL",
+      "display_name": "Star pupil",
+      "description": "Earn 3 stars on 10 lessons.",
+      "secret": false,
+      "stat_requirement": null
+    },
+    {
+      "identifier": "EAGLE_EYE",
+      "display_name": "Eagle eye",
+      "description": "Finish an Advanced or Expert Spot it round in 4 minutes or less.",
+      "secret": false,
+      "stat_requirement": null
     }
   ],
   "stats": []
