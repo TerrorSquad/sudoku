@@ -5,6 +5,8 @@ export interface WavedashLog {
   inits: number;
   stores: number;
   unlocked: string[];
+  /** Stats as stored by setStat. */
+  stats: Record<string, number>;
   /** Each upload as [board name, score, keepBest, metadata]. */
   uploads: [string, number, boolean, unknown][];
   /** The cloud's files, path → text. */
@@ -13,7 +15,7 @@ export interface WavedashLog {
 }
 
 // A fake of the SDK Wavedash injects. Like the real one, it rejects the first write to each
-// achievement, standing in for the second half of the stats load not having arrived yet. Every
+// achievement and stat, standing in for the second half of the stats load not having arrived yet. Every
 // leaderboard lists the same entries: three players globally, one with friendsOnly. `remote`
 // seeds the cloud's files (path → text); downloads copy into the SDK's local store, as the real
 // one does.
@@ -30,6 +32,7 @@ export async function fakeWavedash(
       inits: 0,
       stores: 0,
       unlocked,
+      stats: {} as Record<string, number>,
       uploads: [] as unknown[],
       remote: { ...seed },
       fileUploads: 0,
@@ -52,6 +55,12 @@ export async function fakeWavedash(
         setAchievement: (id: string) => {
           if (!tried.has(id)) return (tried.add(id), false);
           unlocked.add(id);
+          return true;
+        },
+        getStat: (id: string) => log.stats[id] ?? 0,
+        setStat: (id: string, value: number) => {
+          if (!tried.has(`stat:${id}`)) return (tried.add(`stat:${id}`), false);
+          log.stats[id] = value;
           return true;
         },
         storeStats: () => (log.stores++, true),

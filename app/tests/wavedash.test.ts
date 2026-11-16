@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 
 import en from "../../i18n/locales/en.json";
 import { ACHIEVEMENTS } from "../utils/achievements";
-import { flush, scoresFor, wavedashId } from "../utils/wavedash";
+import { STAT_NAMES, flush, flushStats, scoresFor, wavedashId } from "../utils/wavedash";
 
 const IMPORT_FILE = new URL("../../wavedash-achievements.json", import.meta.url);
 
@@ -17,7 +17,11 @@ function importJson() {
     secret: !!a.hidden,
     stat_requirement: null,
   }));
-  return `${JSON.stringify({ achievements, stats: [] }, null, 2)}\n`;
+  const stats = Object.entries(STAT_NAMES).map(([identifier, display_name]) => ({
+    identifier,
+    display_name,
+  }));
+  return `${JSON.stringify({ achievements, stats }, null, 2)}\n`;
 }
 
 describe("wavedash", () => {
@@ -40,6 +44,27 @@ describe("wavedash", () => {
   it("flush reports no write when everything is rejected", () => {
     const sdk = { getAchievement: () => false, setAchievement: () => false };
     expect(flush(["first-win"], sdk)).toEqual({ left: ["first-win"], wrote: false });
+  });
+
+  it("flushStats sends only changed values and keeps rejected ones pending", () => {
+    const set: [string, number][] = [];
+    const { left, wrote } = flushStats(
+      new Map([
+        ["GAMES_WON", 3],
+        ["LEVEL", 2],
+        ["LIFETIME_SCORE", 900],
+      ]),
+      {
+        getStat: (id) => (id === "LEVEL" ? 2 : 0),
+        setStat: (id, value) => (set.push([id, value]), id !== "LIFETIME_SCORE"),
+      },
+    );
+    expect(set).toEqual([
+      ["GAMES_WON", 3],
+      ["LIFETIME_SCORE", 900],
+    ]);
+    expect([...left]).toEqual([["LIFETIME_SCORE", 900]]);
+    expect(wrote).toBe(true);
   });
 
   it("wavedash-achievements.json matches the rules (UPDATE_WAVEDASH=1 pnpm test wavedash to regenerate)", () => {
