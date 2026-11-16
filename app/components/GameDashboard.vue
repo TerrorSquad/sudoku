@@ -23,7 +23,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="panel flex items-center justify-between gap-3 px-3.5 py-2.5">
+  <div data-tour="pause" class="panel flex items-center justify-between gap-3 px-3.5 py-2.5">
     <div class="flex items-center gap-3">
       <!-- Exit button-->
       <button

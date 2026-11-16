@@ -128,8 +128,11 @@ export function useWinResult(t: Translate) {
       const name = t(`hint.move.${practised}.name`);
       if (!game.week && nextChallenge(techniquePath.getDone()) === practised)
         notes.push({ text: t("path.lessonCounts"), ok: false });
-      if (game.week && techniquePath.markWeekDone(game.week))
+      // Only the first win posts, like the Daily's one try: a replay knows the board.
+      if (game.week && techniquePath.markWeekDone(game.week)) {
         notes.push({ text: t("weekly.won", { name }), ok: true });
+        submitWin({ difficulty, seconds, mistakes, hints, daily: null, week: game.week });
+      }
       if (notes.some((n) => n.ok)) {
         unlock = true;
         saveToCloud();
@@ -141,7 +144,7 @@ export function useWinResult(t: Translate) {
     } else {
       if (daily) {
         const earnedBefore = dailyPuzzle.getStreakState().earned;
-        dailyPuzzle.markComplete(seconds, mistakes, game.dailyDate);
+        dailyPuzzle.markComplete(seconds, mistakes, game.dailyDate, difficulty);
         if (dailyPuzzle.getStreakState().earned > earnedBefore)
           notes.push({ text: t("streak.freezeEarned"), ok: true });
       }

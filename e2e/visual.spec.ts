@@ -116,6 +116,11 @@ for (const theme of ["light", "dark"] as const) {
       await shot(page, "difficulty");
     });
 
+    test("daily picker", async ({ page }) => {
+      await page.getByRole("button", { name: "Daily puzzle" }).click();
+      await shot(page, "daily");
+    });
+
     test("resume prompt", async ({ page }) => {
       await page.getByRole("button", { name: "New Game" }).click();
       await page.getByRole("button", { name: /Medium/ }).click();
@@ -146,6 +151,29 @@ for (const theme of ["light", "dark"] as const) {
       await openSavedGame(page);
       await page.locator(`${BOARD} [data-cell]`).nth(2).click(); // r1c3 = 9, conflicting
       await shot(page, "game-select-conflict");
+    });
+
+    test("game, candidate picked", async ({ page }) => {
+      await openSavedGame(page);
+      await page
+        .locator(`${BOARD} [data-cell]`)
+        .nth(4 * 9 + 1)
+        .locator('[data-note="9"]')
+        .click(); // r5c2's pencilled 9: its chip and every placed 9 light up
+      await shot(page, "game-candidate-picked");
+    });
+
+    test("game, move history", async ({ page }) => {
+      await openSavedGame(page);
+      await page
+        .locator(`${BOARD} [data-cell]`)
+        .nth(4 * 9 + 4)
+        .click(); // r5c5, empty
+      await page.keyboard.press("n");
+      await page.keyboard.press("7");
+      await page.keyboard.press("Shift+Z");
+      await expect(page.getByRole("dialog", { name: "Move history" })).toBeVisible();
+      await shot(page, "game-move-history");
     });
 
     test("game, paused", async ({ page }) => {

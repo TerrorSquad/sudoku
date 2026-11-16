@@ -1,11 +1,17 @@
 import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
 import type { Placement } from "../utils/stuckMoments";
 
+import { saveSlotOf } from "../utils/progressBackup";
 import { readJSON, removeJSON, writeJSON } from "../utils/safeJson";
 
-/** One slot per difficulty, plus the Daily's own (it plays as medium but must not overwrite it). */
-export type SaveSlot = Difficulty | "daily";
+/**
+ * One slot per difficulty, plus one per level's Daily (it must not overwrite that level's game):
+ * "daily" for Medium's, as it always was, daily_<level> for the rest.
+ */
+export type SaveSlot = Difficulty | "daily" | `daily_${Difficulty}`;
 const saveKey = (slot: SaveSlot) => `sudoku_v1_save_${slot}`;
+export const dailySlot = (level: Difficulty) =>
+  saveSlotOf({ daily: true, difficulty: level }) as SaveSlot;
 
 export interface GameSave {
   currentBoard: Grid;
@@ -28,7 +34,7 @@ export interface GameSave {
 
 export function useGameSave() {
   function save(state: Omit<GameSave, "savedAt">): void {
-    writeJSON(saveKey(state.daily ? "daily" : state.difficulty), { ...state, savedAt: Date.now() });
+    writeJSON(saveKey(saveSlotOf(state) as SaveSlot), { ...state, savedAt: Date.now() });
   }
 
   function loadDifficulty(d: SaveSlot): GameSave | null {

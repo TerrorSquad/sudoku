@@ -11,7 +11,10 @@ export function readPlayerStats(): PlayerStats {
   const score = useScore().getStats();
   return {
     GAMES_WON: score.gamesWon,
-    DAILIES_WON: score.perDifficulty.daily?.wins ?? 0,
+    // Every level's Daily: Medium's "daily" row and the daily_<level> ones (statsKey).
+    DAILIES_WON: Object.entries(score.perDifficulty)
+      .filter(([k]) => k === "daily" || k.startsWith("daily_"))
+      .reduce((n, [, row]) => n + row.wins, 0),
     LONGEST_DAILY_STREAK: useDailyPuzzle().getLongestStreak(),
     LIFETIME_SCORE: score.total,
     LEVEL: levelFor(score.total).level,

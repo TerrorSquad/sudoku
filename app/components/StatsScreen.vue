@@ -31,6 +31,7 @@ const DIFFICULTY_ORDER = [
   "expert",
   "master",
   "daily",
+  ...LADDER.filter((d) => d !== "medium").map((d) => statsKey(d, true)),
   "custom",
 ];
 

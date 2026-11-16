@@ -124,6 +124,7 @@ test("Stats shows the leaderboards, with Global and Friends tabs and your rank",
   page,
 }) => {
   await fakeWavedash(page);
+  await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
   await page.getByRole("button", { name: "Statistics" }).click();
   const panel = page.getByRole("region", { name: "Leaderboards" });
@@ -140,6 +141,23 @@ test("Stats shows the leaderboards, with Global and Friends tabs and your rank",
   await panel
     .getByRole("combobox", { name: "Leaderboard" })
     .selectOption({ label: "Best time: Hard" });
+  await expect(panel.getByRole("listitem").first()).toContainText("30:00");
+
+  // Every level's Daily has a board for today, and the technique of the week has its own.
+  const picker = panel.getByRole("combobox", { name: "Leaderboard" });
+  await expect(picker.locator("option")).toContainText([
+    "Today's Daily: Beginner",
+    "Today's Daily: Easy",
+    "Today's Daily: Medium",
+    "Today's Daily: Hard",
+    "Today's Daily: Expert",
+    "Today's Daily: Master",
+    /^Technique of the week: /,
+    "Best time: Beginner",
+  ]);
+  await picker.selectOption("daily-hard-2026-01-15");
+  await expect(panel.getByRole("listitem").first()).toContainText("30:00");
+  await picker.selectOption("week-2026-W03");
   await expect(panel.getByRole("listitem").first()).toContainText("30:00");
 });
 
@@ -169,20 +187,6 @@ const seedLocal = (page: Page, items: Record<string, string>) =>
     for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v);
   }, items);
 
-test("a fresh device restores its progress from the cloud", async ({ page }) => {
-  await fakeWavedash(page, {
-    remote: { "progress.json": cloudFile({ sudoku_v1_score: scoreJson(4321) }, 1000) },
-  });
-  await page.goto("/");
-  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
-  expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(4321);
-  expect(JSON.parse((await stored(page, "sudoku_cloud_meta"))!).syncedAt).toBe(1000);
-  expect((await sdkLog(page)).fileUploads).toBe(0);
-  // Restored before the app mounted, so the screens read it without a reload.
-  await page.getByRole("button", { name: "Statistics" }).click();
-  await expect(page.getByText("4,321").first()).toBeVisible();
-});
-
 test("local progress newer than the last sync is uploaded", async ({ page }) => {
   const old = cloudFile({ sudoku_v1_score: scoreJson(100) }, 1000);
   await fakeWavedash(page, { remote: { "progress.json": old } });
@@ -208,17 +212,38 @@ test("a corrupt cloud file never touches local progress", async ({ page }) => {
   expect(JSON.parse(remote.data.sudoku_v1_score).total).toBe(700);
 });
 
-test("a win uploads progress to the cloud", async ({ page }) => {
-  await fakeWavedash(page);
-  await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ALMOST_SOLVED);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
-  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
-  await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
-  const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
-  expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);
-  expect(typeof remote.updatedAt).toBe("number");
+test.describe("an empty profile", () => {
+  // A fresh device, without the tour pref playwright.config.ts seeds: nothing to upload on boot.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("a fresh device restores its progress from the cloud", async ({ page }) => {
+    await fakeWavedash(page, {
+      remote: { "progress.json": cloudFile({ sudoku_v1_score: scoreJson(4321) }, 1000) },
+    });
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+    expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(4321);
+    expect(JSON.parse((await stored(page, "sudoku_cloud_meta"))!).syncedAt).toBe(1000);
+    expect((await sdkLog(page)).fileUploads).toBe(0);
+    // Restored before the app mounted, so the screens read it without a reload.
+    await page.getByRole("button", { name: "Statistics" }).click();
+    await expect(page.getByText("4,321").first()).toBeVisible();
+  });
+
+  test("a win uploads progress to the cloud", async ({ page }) => {
+    await fakeWavedash(page);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Your puzzle" }).click();
+    await page.locator("textarea").fill(ALMOST_SOLVED);
+    await page.getByRole("button", { name: "Play Puzzle" }).click();
+    await expect(page.locator(".driver-popover")).toBeVisible(); // a first game: the tour
+    await page.keyboard.press("Escape");
+    await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+    await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+    await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+    await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
+    const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
+    expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);
+    expect(typeof remote.updatedAt).toBe("number");
+  });
 });

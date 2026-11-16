@@ -7,7 +7,7 @@ defineProps<{
   canFinish?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "undo"): void;
   (e: "redo"): void;
   (e: "erase"): void;
@@ -15,15 +15,42 @@ defineEmits<{
   (e: "trigger-hint"): void;
   (e: "auto-notes"): void;
   (e: "finish"): void;
+  (e: "history"): void;
 }>();
+
+// Holding Undo or Redo opens the move history instead; the click that ends the hold is eaten.
+let holdTimer = 0;
+let held = false;
+function hold() {
+  held = false;
+  holdTimer = window.setTimeout(() => {
+    held = true;
+    emit("history");
+  }, 500);
+}
+onUnmounted(() => clearTimeout(holdTimer));
+function release() {
+  clearTimeout(holdTimer);
+  setTimeout(() => (held = false)); // after this press's click, wherever it landed
+}
+function tap(action: "undo" | "redo") {
+  if (held) held = false;
+  else if (action === "undo") emit("undo");
+  else emit("redo");
+}
 </script>
 
 <template>
   <div class="grid grid-cols-6 gap-1.5 sm:gap-2">
     <!-- Undo -->
     <button
-      @click="$emit('undo')"
-      :title="`${$t('controls.undo')} (Ctrl+Z)`"
+      data-tour="undo"
+      @click="tap('undo')"
+      @pointerdown="hold"
+      @pointerup="release"
+      @pointerleave="release"
+      @contextmenu.prevent
+      :title="`${$t('controls.undo')} (Ctrl+Z) · ${$t('controls.historyHold')} (Shift+Z)`"
       :disabled="!canUndo"
       :aria-label="$t('controls.undo')"
       class="tile flex flex-col items-center justify-center gap-1 py-4 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3"
@@ -40,8 +67,12 @@ defineEmits<{
 
     <!-- Redo -->
     <button
-      @click="$emit('redo')"
-      :title="`${$t('controls.redo')} (Ctrl+Y)`"
+      @click="tap('redo')"
+      @pointerdown="hold"
+      @pointerup="release"
+      @pointerleave="release"
+      @contextmenu.prevent
+      :title="`${$t('controls.redo')} (Ctrl+Y) · ${$t('controls.historyHold')} (Shift+Z)`"
       :disabled="!canRedo"
       :aria-label="$t('controls.redo')"
       class="tile flex flex-col items-center justify-center gap-1 py-4 disabled:pointer-events-none disabled:opacity-40 3xl:gap-2 3xl:py-4 lg:py-3"
@@ -74,6 +105,7 @@ defineEmits<{
 
     <!-- Notes -->
     <button
+      data-tour="notes"
       @click="$emit('toggle-notes')"
       :title="`${$t('controls.notes')} (N)`"
       class="tile relative flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
@@ -98,6 +130,7 @@ defineEmits<{
 
     <!-- Hint -->
     <button
+      data-tour="hint"
       @click="$emit('trigger-hint')"
       :title="`${$t('controls.hint')} (H)`"
       class="tile tile-amber flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"

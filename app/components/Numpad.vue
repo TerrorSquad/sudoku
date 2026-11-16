@@ -16,7 +16,7 @@ defineEmits<{
 
 <template>
   <!-- One row of nine from lg up: gives the board the height the second row used. -->
-  <div data-testid="numpad" class="grid grid-cols-5 gap-2 lg:grid-cols-9">
+  <div data-testid="numpad" data-tour="digits" class="grid grid-cols-5 gap-2 lg:grid-cols-9">
     <button
       v-for="n in 9"
       :key="n"

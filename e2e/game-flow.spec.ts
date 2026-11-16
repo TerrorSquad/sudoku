@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { BOARD, blank, playCustom } from "./seed";
+import { BOARD, blank, openDaily, playCustom } from "./seed";
 
 // A valid solved grid with one cell (row-index 5, col-index 4) blanked out.
 const ALMOST_SOLVED = blank(49);
@@ -25,7 +25,7 @@ test("filling the last correct digit wins the puzzle", async ({ page }) => {
 
 test("leaving the Daily doesn't carry it into the next game", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await openDaily(page);
   await expect(page.getByText("Daily", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Exit" }).click();
   await page.getByRole("button", { name: "New Game" }).click();
