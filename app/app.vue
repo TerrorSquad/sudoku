@@ -17,6 +17,7 @@ import GameDashboard from "./components/GameDashboard.vue";
 import Numpad from "./components/Numpad.vue";
 import SettingsScreen from "./components/SettingsScreen.vue";
 import SideExplanationPanel from "./components/SideExplanationPanel.vue";
+import SpotIt from "./components/SpotIt.vue";
 import StatsScreen from "./components/StatsScreen.vue";
 import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
@@ -41,6 +42,7 @@ import {
   lockOf,
   lockedLevels,
   nextChallenge,
+  type Tier,
   type Week,
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
@@ -219,14 +221,18 @@ const currentScreen = ref<
   | "achievements"
   | "settings"
   | "lesson"
+  | "spot"
 >("menu");
+// The Spot it tier being played (the spot screen).
+const spotTier = ref<Tier>("Basic");
+// The screens with a board, which keep the normal size (see applyUiScale).
+const BOARD_SCREENS = new Set(["game", "lesson", "spot"]);
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
 // the game, whose board already fills the height: there a bigger rem would only shrink it. Set
 // during setup, so the first paint is right, then as each screen enters (the screen Transition is
 // out-in), so the screen leaving never jumps.
 function applyUiScale() {
-  const board = currentScreen.value === "game" || currentScreen.value === "lesson";
-  const scale = board ? 1 : uiScale.value;
+  const scale = BOARD_SCREENS.has(currentScreen.value) ? 1 : uiScale.value;
   document.documentElement.style.setProperty("--ui-scale", String(scale));
 }
 applyUiScale();
@@ -281,8 +287,7 @@ const academyFromGame = ref(false);
 const inGame = computed(
   () =>
     currentScreen.value === "game" ||
-    ((currentScreen.value === "academy" || currentScreen.value === "lesson") &&
-      academyFromGame.value),
+    (["academy", "lesson", "spot"].includes(currentScreen.value) && academyFromGame.value),
 );
 // What the won puzzle's givens required (not what the player used), for the win modal.
 const neededTechs = ref<TechniqueId[]>([]);
@@ -1668,6 +1673,23 @@ onUnmounted(() => {
           @practice="handlePractice"
           @lesson="handleLesson"
           @weekly="(week) => handlePractice(week.technique, week)"
+          @spot="
+            (tier) => {
+              spotTier = tier;
+              currentScreen = 'spot';
+            }
+          "
+        />
+
+        <!-- SPOT IT -->
+        <SpotIt
+          v-else-if="currentScreen === 'spot'"
+          :tier="spotTier"
+          :color-mode="colorMode"
+          :theme="boardTheme"
+          @cue="cue"
+          @back="currentScreen = 'academy'"
+          @lesson="handleLesson"
         />
 
         <!-- GUIDED LESSON -->

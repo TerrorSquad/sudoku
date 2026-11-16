@@ -9,7 +9,14 @@ import type { BoardTheme } from "../utils/preferenceValues";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
-import { instancesOf, lessonUnits, missReason, type Lesson } from "../utils/lesson";
+import {
+  findPrompt,
+  instancesOf,
+  lessonUnits,
+  missText,
+  tapPattern,
+  type Lesson,
+} from "../utils/lesson";
 import { patternMarks, strikes } from "../utils/patternMarks";
 import { nextLesson, starsFor, type Stars } from "../utils/progression";
 import { digitLabel } from "../utils/sudokuColors";
@@ -72,24 +79,9 @@ const bestBefore = ref<Stars | undefined>();
 const next = ref<TechniqueId | null>(null);
 
 const same = (a: CellCoord, b: CellCoord) => a.r === b.r && a.c === b.c;
-const where = L.unit
-  ? t(`lesson.where.${L.unit.kind}`, {
-      n:
-        L.unit.kind === "row"
-          ? L.unit.r + 1
-          : L.unit.kind === "col"
-            ? L.unit.c + 1
-            : Math.floor(L.unit.r / 3) * 3 + Math.floor(L.unit.c / 3) + 1,
-    })
-  : t("lesson.where.here");
 
 const prompt = computed(() => {
-  if (step.value === "find") {
-    if (id === "naked-single") return t("lesson.find.nakedSingle", { where });
-    if (id === "hidden-single") return t("lesson.find.hiddenSingle", { num: digits, where });
-    if (L.placement) return t("lesson.find.cell", { technique: name, where });
-    return t("lesson.find.pattern", { technique: name, digits, where, count: L.pattern.length });
-  }
+  if (step.value === "find") return findPrompt(L, t, digit);
   if (step.value === "apply")
     return L.placement
       ? t("lesson.apply.place", { num: digit(L.placement.num) })
@@ -130,17 +122,12 @@ function tap(cell: CellCoord) {
   selected.value = cell;
   if (step.value !== "find") return;
   if (found.value.some((f) => same(f, cell))) return;
-  const sofar = [...found.value, cell];
-  const live = instances.filter((i) => sofar.every((f) => i.pattern.some((p) => same(p, f))));
-  if (!live.length) {
-    const miss = missReason(L, cell);
-    const d = miss.params?.d;
-    return reject(cell, miss.key, { ...miss.params, ...(d && { d: digit(d) }), where, digits });
-  }
-  found.value = sofar;
-  const complete = live.find((i) => i.pattern.length === sofar.length);
+  const res = tapPattern(instances, found.value, cell);
+  if (res.miss) return slip(cell, missText(L, cell, t, digit));
+  found.value = res.found;
+  const complete = res.complete;
   if (!complete) {
-    say("lesson.found", true, { n: sofar.length, total: L.pattern.length });
+    say("lesson.found", true, { n: res.found.length, total: L.pattern.length });
     return;
   }
   active.value = complete;
@@ -200,10 +187,13 @@ function crossOut() {
 }
 
 function reject(cell: CellCoord, key: string, params: Record<string, unknown> = {}) {
+  slip(cell, t(key, params));
+}
+function slip(cell: CellCoord, text: string) {
   slips.value++;
   shake(cell);
   emit("cue", "mistake");
-  say(key, false, params);
+  feedback.value = { text, ok: false };
 }
 
 function finish() {

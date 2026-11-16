@@ -161,6 +161,9 @@ describe("progress backup", () => {
     expect(bad(stars, [3])).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, 3)).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, null)).toEqual({ ok: false, error: "invalid" });
+    // Spot it bests: shape only too, for the same reason.
+    expect(bad("sudoku_v1_spot_best", { Basic: 31.4, Master: 99 })).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_spot_best", [31.4])).toEqual({ ok: false, error: "invalid" });
     const grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(
       bad("sudoku_v1_save_hard", {

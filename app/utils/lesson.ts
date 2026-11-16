@@ -8,6 +8,7 @@ import type { Grid } from "../types/sudoku";
 
 import { ACADEMY_EXAMPLES } from "./academyExamples";
 import { generatePracticePuzzle } from "./practice";
+import { RARE_IN_PUZZLES } from "./progression";
 import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
 import {
   nextHint,
@@ -178,6 +179,15 @@ export async function generateLesson(
   return p.kind === "puzzle" ? lesson : shuffleLesson(lesson, rng);
 }
 
+/**
+ * A position for the Spot it drill: as generateLesson, but the techniques a puzzle search almost
+ * never finds go straight to a shuffle of the Academy example instead of searching first.
+ */
+export async function quickLesson(technique: TechniqueId, rng: Rng = Math.random): Promise<Lesson> {
+  const example = RARE_IN_PUZZLES.has(technique) ? lessonFromExample(technique) : null;
+  return example ? shuffleLesson(example, rng) : generateLesson(technique, rng);
+}
+
 // ---- Variations ----------------------------------------------------------------------------
 
 /**
@@ -339,6 +349,68 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
     if (row > k && col > k) return { key: "lesson.why.fishLines", params: { d, row, col, k } };
   }
   return { key: "lesson.miss" };
+}
+
+/** What step 1 makes of a tap: a miss, or the cells found so far and the instance they complete. */
+export type TapResult =
+  | { miss: true }
+  | { miss: false; found: CellRC[]; complete: Instance | null };
+
+/** Step 1's verdict on tapping `cell` with `found` already marked. */
+export function tapPattern(instances: Instance[], found: CellRC[], cell: CellRC): TapResult {
+  const sofar = [...found, cell];
+  const live = instances.filter((i) =>
+    sofar.every((f) => i.pattern.some((p) => p.r === f.r && p.c === f.c)),
+  );
+  if (!live.length) return { miss: true };
+  return {
+    miss: false,
+    found: sofar,
+    complete: live.find((i) => i.pattern.length === sofar.length) ?? null,
+  };
+}
+
+type Translate = (key: string, params?: Record<string, unknown>) => string;
+
+/** "in row 4", "in box 2", or "on this board" when the pattern has no one unit. */
+export function unitLabel(L: Lesson, t: Translate): string {
+  const u = L.unit;
+  if (!u) return t("lesson.where.here");
+  const n =
+    u.kind === "row"
+      ? u.r + 1
+      : u.kind === "col"
+        ? u.c + 1
+        : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
+  return t(`lesson.where.${u.kind}`, { n });
+}
+
+/** Step 1's prompt: what to look for and where. `digit` renders a digit (or its colour). */
+export function findPrompt(L: Lesson, t: Translate, digit: (n: number) => string): string {
+  const where = unitLabel(L, t);
+  const digits = L.digits.map(digit).join(", ");
+  const technique = t(`hint.move.${L.technique}.name`);
+  if (L.technique === "naked-single") return t("lesson.find.nakedSingle", { where });
+  if (L.technique === "hidden-single") return t("lesson.find.hiddenSingle", { num: digits, where });
+  if (L.placement) return t("lesson.find.cell", { technique, where });
+  return t("lesson.find.pattern", { technique, digits, where, count: L.pattern.length });
+}
+
+/** Why a tap missed, as text: missReason's key with its digits rendered. */
+export function missText(
+  L: Lesson,
+  cell: CellRC,
+  t: Translate,
+  digit: (n: number) => string,
+): string {
+  const miss = missReason(L, cell);
+  const d = miss.params?.d;
+  return t(miss.key, {
+    ...miss.params,
+    ...(d && { d: digit(d) }),
+    where: unitLabel(L, t),
+    digits: L.digits.map(digit).join(", "),
+  });
 }
 
 /**
