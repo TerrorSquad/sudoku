@@ -50,7 +50,7 @@ export default defineNuxtConfig({
         { src: "maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       ],
     },
-    workbox: {
+    generateSW: {
       // Cache the SPA shell + assets for full offline play. The game is
       // entirely client-side (ssr: false), so no network is needed once loaded.
       globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2}"],

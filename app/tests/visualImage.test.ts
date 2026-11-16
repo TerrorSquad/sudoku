@@ -9,8 +9,11 @@ describe("visual regression image", () => {
   ).version;
   const image = `mcr.microsoft.com/playwright:v${installed}-noble`;
 
-  it.each(["package.json", ".github/workflows/visual.yml"])("%s uses the installed version", (file) => {
-    const tags = readFileSync(file, "utf8").match(/mcr\.microsoft\.com\/playwright:v[\w.-]+/g);
-    expect(tags).toEqual([image]);
-  });
+  it.each(["package.json", ".github/workflows/visual.yml"])(
+    "%s uses the installed version",
+    (file) => {
+      const tags = readFileSync(file, "utf8").match(/mcr\.microsoft\.com\/playwright:v[\w.-]+/g);
+      expect(tags).toEqual([image]);
+    },
+  );
 });

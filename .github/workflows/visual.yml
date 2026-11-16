@@ -18,13 +18,13 @@ jobs:
   visual:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    container: mcr.microsoft.com/playwright:v1.64.1-noble
+    container: mcr.microsoft.com/playwright:v1.65.1-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install pnpm and dependencies
         run: |
-          npm install --global --silent pnpm@11
+          npm install --global --silent pnpm@12
           pnpm install --frozen-lockfile
 
       - name: Compare screens
@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-diffs
           path: test-results/
