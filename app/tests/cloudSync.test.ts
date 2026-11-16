@@ -184,9 +184,10 @@ describe("personal records on restore", () => {
   });
 
   it("keeps each technique's last-reviewed card both ways", () => {
+    // Local passed it on Nov 10 (box 4, 14 days); the cloud copy missed it on Nov 15.
     const local = {
       ...A,
-      sudoku_v1_review: rec({ "x-wing": { box: 3, next: "2026-11-22" } }),
+      sudoku_v1_review: rec({ "x-wing": { box: 4, next: "2026-11-24" } }),
     };
     const cloud = {
       ...B,
@@ -196,7 +197,7 @@ describe("personal records on restore", () => {
       }),
     };
     const merged = {
-      "x-wing": { box: 3, next: "2026-11-22" },
+      "x-wing": { box: 1, next: "2026-11-16" },
       "later-technique": { box: 2, next: "2026-11-20" },
     };
     expect(JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_review!)).toEqual(merged);

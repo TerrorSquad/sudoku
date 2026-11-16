@@ -100,10 +100,14 @@ export function reviewCard(card: Card | undefined, passed: boolean, today: strin
 export const lessonCard = (card: Card | undefined, today: string): Card =>
   card ?? { box: 1, next: addDays(today, INTERVALS[0]) };
 
+/** The day a card was last set: its due date less its box's interval. */
+const setOn = (c: Card) => addDays(c.next, -INTERVALS[Math.min(c.box, INTERVALS.length) - 1]!);
+
 /**
- * Two schedules as one: per technique the card reviewed last (the later due date; on a tie the
- * higher box). Cards this version doesn't know pass through as long as they're well formed, so an
- * older client never strips them.
+ * Two schedules as one: per technique the card set last (the later review day, so a miss after a
+ * pass wins even though it's due sooner; on the same day the lower box, so a miss is never undone).
+ * Cards this version doesn't know pass through as long as they're well formed, so an older client
+ * never strips them.
  */
 export function mergeReview(a: unknown, b: unknown): Record<string, Card> {
   const out: Record<string, Card> = {};
@@ -112,7 +116,8 @@ export function mergeReview(a: unknown, b: unknown): Record<string, Card> {
     for (const [id, card] of Object.entries(raw)) {
       if (!isCard(card)) continue;
       const have = out[id];
-      if (!have || card.next > have.next || (card.next === have.next && card.box > have.box))
+      const [mine, theirs] = have ? [setOn(card), setOn(have)] : ["", ""];
+      if (!have || mine > theirs || (mine === theirs && card.box < have.box))
         out[id] = { box: card.box, next: card.next };
     }
   }

@@ -109,23 +109,38 @@ describe("readReview and mergeReview", () => {
     expect(readReview(null)).toEqual({});
   });
 
-  it("keeps each technique's last-reviewed card, and a later version's techniques", () => {
+  // Each card is set on its due date less its box's interval: box 1 → 1 day, 2 → 3, 3 → 7, 4 → 14.
+  it("a miss after an older pass wins, though it's due sooner", () => {
+    const pass = { box: 4, next: "2026-11-24" }; // passed on Nov 10 (14 days)
+    const miss = { box: 1, next: "2026-11-16" }; // missed on Nov 15
+    expect(mergeReview({ "x-wing": pass }, { "x-wing": miss })).toEqual({ "x-wing": miss });
+    expect(mergeReview({ "x-wing": miss }, { "x-wing": pass })).toEqual({ "x-wing": miss });
+  });
+
+  it("a pass after an older miss wins", () => {
+    const miss = { box: 1, next: "2026-11-11" }; // missed on Nov 10
+    const pass = { box: 2, next: "2026-11-18" }; // passed on Nov 15
+    expect(mergeReview({ "x-wing": miss }, { "x-wing": pass })).toEqual({ "x-wing": pass });
+    expect(mergeReview({ "x-wing": pass }, { "x-wing": miss })).toEqual({ "x-wing": pass });
+  });
+
+  it("on the same day a miss beats a pass, either way round", () => {
+    const pass = { box: 2, next: "2026-11-18" }; // both set on Nov 15
+    const miss = { box: 1, next: "2026-11-16" };
+    expect(mergeReview({ "x-wing": pass }, { "x-wing": miss })).toEqual({ "x-wing": miss });
+    expect(mergeReview({ "x-wing": miss }, { "x-wing": pass })).toEqual({ "x-wing": miss });
+  });
+
+  it("keeps techniques from either side, including a later version's, and drops junk", () => {
     const merged = mergeReview(
       {
-        "x-wing": { box: 2, next: "2026-11-18" },
         pointing: { box: 3, next: "2026-11-20" },
         "future-technique": { box: 2, next: "2026-11-30" },
       },
-      {
-        "x-wing": { box: 1, next: "2026-11-16" },
-        pointing: { box: 4, next: "2026-11-20" },
-        swordfish: { box: 1, next: "2026-11-16" },
-        broken: { box: "two" },
-      },
+      { swordfish: { box: 1, next: "2026-11-16" }, broken: { box: "two" } },
     );
     expect(merged).toEqual({
-      "x-wing": { box: 2, next: "2026-11-18" },
-      pointing: { box: 4, next: "2026-11-20" },
+      pointing: { box: 3, next: "2026-11-20" },
       "future-technique": { box: 2, next: "2026-11-30" },
       swordfish: { box: 1, next: "2026-11-16" },
     });
