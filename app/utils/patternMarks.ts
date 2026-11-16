@@ -262,6 +262,27 @@ function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
         ...crosses(elims),
       ];
     }
+    case "empty-rectangle": {
+      // The grader lists the link's ends first (the near one on the box's line), then the box.
+      const [near, far, ...cells] = t;
+      if (!near || !far || !cells.length) return [];
+      const byCol = near.c === far.c;
+      const key = byCol ? "c" : "r";
+      const arm = cells.filter((q) => (byCol ? q.r === near.r : q.c === near.c));
+      // The near end sees the box's arm on its line: a dashed line to its nearest cell.
+      const end = arm.reduce<CellRC | null>(
+        (a, q) => (!a || Math.abs(q[key] - near[key]) < Math.abs(a[key] - near[key]) ? q : a),
+        null,
+      );
+      return [
+        frame("box", cells[0]!),
+        ...chain([near, far], n, "strong"),
+        ...(end ? chain([near, end], n, "weak") : []),
+        ...(result ? elims.flatMap((e) => chain([far, e], n, "weak")) : []),
+        ...rings(t, n),
+        ...crosses(elims),
+      ];
+    }
     case "w-wing": {
       const [a, b, e1, e2] = t;
       if (!a || !b || !e1 || !e2) return [];

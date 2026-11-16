@@ -121,6 +121,8 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
       return t("academy.caption.skyscraper", { num, nElim, elimList });
     case "two-string-kite":
       return t("academy.caption.kite", { num, nElim, elimList });
+    case "empty-rectangle":
+      return t("academy.caption.emptyRectangle", { num, nElim, elimList });
     case "unique-rectangle":
       return t("academy.caption.uniqueRectangle", { digits, nElim, elimList });
     case "simple-coloring":

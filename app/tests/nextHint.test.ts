@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 
 import type { Grid } from "../types/sudoku";
 
-import { makeRng, generatePuzzle, isValidPlacement, getGridCandidates } from "../utils/sudokuCore";
+import {
+  makeRng,
+  generatePuzzle,
+  isValidPlacement,
+  getGridCandidates,
+  solveBoard,
+} from "../utils/sudokuCore";
 import { nextHint, solveLogically, type SolveMove } from "../utils/sudokuGrader";
 
 // Apply a move to a board the way the engine will, returning a fresh board.
@@ -42,8 +48,54 @@ describe("nextHint — soundness", () => {
       "finned-x-wing",
       "w-wing",
       "bug-plus-one",
+      "empty-rectangle",
     ])
       expect(seen).toContain(t);
+  });
+
+  // Replays the hint chain over a dug board, handing each Empty Rectangle to `check`.
+  function eachEmptyRectangle(seed: number, check: (move: SolveMove, solved: Grid) => void) {
+    const { puzzle } = generatePuzzle(62, makeRng(seed));
+    const solved = solveBoard(puzzle)!;
+    const board = puzzle.map((r) => r.concat());
+    const elims: { r: number; c: number; num: number }[] = [];
+    for (let step = 0; step < 600; step++) {
+      const move = nextHint(board, elims);
+      if (!move) break;
+      if (move.technique === "empty-rectangle") check(move, solved);
+      if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
+      else elims.push(...move.eliminations);
+    }
+  }
+
+  it("finds an Empty Rectangle: 3 in box 9 on row 8 and column 7, and the link in row 1", () => {
+    const found: SolveMove[] = [];
+    eachEmptyRectangle(114, (move) => found.push(move));
+    expect(found[0]).toEqual({
+      technique: "empty-rectangle",
+      tier: 4,
+      // The link's ends (the one on the box's column first), then the box's cells.
+      triggers: [
+        { r: 0, c: 6 },
+        { r: 0, c: 4 },
+        { r: 6, c: 6 },
+        { r: 7, c: 7 },
+        { r: 8, c: 6 },
+      ],
+      // Row 8 (the box's row) meets the far end's column 5.
+      eliminations: [{ r: 7, c: 4, num: 3 }],
+      digits: [3],
+    });
+  });
+
+  it("an Empty Rectangle never removes the solution digit (checked by brute force)", () => {
+    let count = 0;
+    for (let seed = 1; seed <= 1500; seed++)
+      eachEmptyRectangle(seed, (move, solved) => {
+        count++;
+        for (const e of move.eliminations) expect(e.num).not.toBe(solved[e.r]![e.c]);
+      });
+    expect(count).toBeGreaterThan(5);
   });
 
   it("a placement is always the value that actually solves the cell", () => {

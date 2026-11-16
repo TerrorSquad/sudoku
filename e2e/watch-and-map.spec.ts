@@ -88,10 +88,10 @@ test("the technique map marks the next step and opens a technique's card", async
   await page.getByRole("button", { name: "Academy" }).click();
   await page.getByRole("button", { name: "Map" }).click();
   const map = page.getByTestId("technique-map");
-  await expect(map.getByRole("button")).toHaveCount(22);
+  await expect(map.getByRole("button")).toHaveCount(23);
   await expect(map.getByTestId("map-naked-single")).toHaveAttribute("data-path", "done");
   await expect(map.getByTestId("map-hidden-single")).toHaveAttribute("data-path", "next");
-  await expect(map.locator("path")).toHaveCount(22); // one line per BUILDS_ON link
+  await expect(map.locator("path")).toHaveCount(24); // one line per BUILDS_ON link
 
   // Nodes are buttons in the order they're drawn, so Tab walks each tier left to right.
   await map.getByTestId("map-hidden-single").focus();

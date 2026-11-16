@@ -81,6 +81,7 @@ export const ACADEMY_TECHNIQUES: { id: TechniqueId; tier: Tier }[] = [
   { id: "swordfish", tier: "Advanced" },
   { id: "skyscraper", tier: "Advanced" },
   { id: "two-string-kite", tier: "Advanced" },
+  { id: "empty-rectangle", tier: "Advanced" },
   { id: "finned-x-wing", tier: "Advanced" },
   { id: "jellyfish", tier: "Advanced" },
   { id: "unique-rectangle", tier: "Expert" },
@@ -150,6 +151,8 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
   swordfish: ["x-wing"],
   skyscraper: ["x-wing"],
   "two-string-kite": ["skyscraper"],
+  // A pointing pair on two lines at once, joined to a strong link the way the kite's box joins two.
+  "empty-rectangle": ["pointing", "two-string-kite"],
   "finned-x-wing": ["x-wing"],
   jellyfish: ["swordfish"],
   "unique-rectangle": ["naked-pair"],
@@ -164,6 +167,7 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
  * Each technique's column on the map (its row is its tier). Laid out by hand so most links are
  * a step down or across: the subsets on the left, the fish on the right, columns 1–2 of the
  * Advanced row kept free for the naked pair's lines down to the uniqueness and wing techniques,
+ * the Empty Rectangle beside the kite and under pointing's reach,
  * the XY-Wing between the W- and XYZ-Wing, and the fish in a chain off the X-Wing, so only the
  * X-Wing → Swordfish link has to arc over a tile.
  */
@@ -177,7 +181,8 @@ export const MAP_COLUMN: Record<TechniqueId, number> = {
   pointing: 6,
   "box-line": 7,
   "naked-quad": 0,
-  "hidden-quad": 4,
+  "hidden-quad": 3,
+  "empty-rectangle": 4,
   "two-string-kite": 5,
   skyscraper: 6,
   "x-wing": 7,

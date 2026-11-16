@@ -19,6 +19,7 @@ const WANTED: TechniqueId[] = [
   "finned-x-wing",
   "w-wing",
   "bug-plus-one",
+  "empty-rectangle",
 ];
 
 function harvest(technique: TechniqueId): AcademyExample | null {
