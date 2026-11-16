@@ -16,6 +16,9 @@ test("the production build loads and its main screens open", async ({ page }) =>
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Easy/ }).click();
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
+  // A first game: the controls tour, a lazy chunk (driver.js and its CSS) that must load too.
+  await expect(page.locator(".driver-popover.controls-tour")).toContainText("Placing digits");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Exit" }).click();
 
   await page.getByRole("button", { name: "Academy" }).click();
