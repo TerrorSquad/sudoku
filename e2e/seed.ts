@@ -60,6 +60,12 @@ export async function seedMediumSave(page: Page, blanks: number[], timerSeconds 
   );
 }
 
+/** Opens today's Daily at `level` from the menu's Daily picker (Medium is the original Daily). */
+export async function openDaily(page: Page, level = "Medium") {
+  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await page.getByRole("button", { name: new RegExp(`\\b${level}\\b`) }).click();
+}
+
 export async function resumeMedium(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();
@@ -85,4 +91,23 @@ export async function unlockAllLevels(page: Page) {
       }),
     );
   });
+}
+
+/**
+ * A Medium save of SOLVED with its first two columns to fill, all played but the last (r8c1, a 4:
+ * cell 73), one every 5 s but for a 90 s wait before the eleventh (from 0:50): a stuck moment.
+ */
+export function stuckSave() {
+  const solved = grid(SOLVED);
+  const initialBoard = solved.map((row) => row.map((v, c) => (c < 2 ? 0 : v)));
+  const currentBoard = solved.map((row, r) => row.map((v, c) => (r === 8 && c === 1 ? 0 : v)));
+  const placements: { r: number; c: number; num: number; t: number }[] = [];
+  let t = 0;
+  for (let r = 0; r < 9; r++)
+    for (let c = 0; c < 2; c++) {
+      if (!currentBoard[r]![c] || initialBoard[r]![c]) continue;
+      t += placements.length === 10 ? 90 : 5;
+      placements.push({ r, c, num: solved[r]![c]!, t });
+    }
+  return savedGame({ currentBoard, initialBoard, timerSeconds: t + 5, placements, hintsUsed: 0 });
 }

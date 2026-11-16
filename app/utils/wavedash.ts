@@ -186,7 +186,12 @@ export const hasWavedash = () => !!sdk();
 export interface Board {
   name: string;
 }
-export const dailyBoard = (dateKey: string): Board => ({ name: `daily-${dateKey}` });
+/** Medium's Daily keeps the original daily-<date> board; the other levels' are daily-<level>-<date>. */
+export const dailyBoard = (dateKey: string, level = "medium"): Board => ({
+  name: level === "medium" ? `daily-${dateKey}` : `daily-${level}-${dateKey}`,
+});
+/** The technique of the week's puzzle, by ISO week (progression's weekOf().key). */
+export const weekBoard = (week: string): Board => ({ name: `week-${week}` });
 export const timeBoard = (difficulty: string): Board => ({ name: `best-time-${difficulty}` });
 
 export interface Win {
@@ -196,16 +201,21 @@ export interface Win {
   hints: number;
   /** The Daily's date key (`localDateKey`), or null for a regular game. */
   daily: string | null;
+  /** The ISO week when this is the technique of the week's puzzle (a practice board). */
+  week?: string | null;
 }
 
 /**
- * The scores a win posts: its time on the Daily's board, or else on its difficulty's. Custom
- * puzzles (and anything outside the six difficulties) post nothing.
+ * The scores a win posts: the week's puzzle on its week's board, a Daily on its level's Daily
+ * board, anything else on its difficulty's. Other custom puzzles (and anything outside the six
+ * difficulties) post nothing.
  */
 export function scoresFor(win: Win): { board: Board; score: number }[] {
+  if (win.seconds <= 0) return [];
+  if (win.week) return [{ board: weekBoard(win.week), score: win.seconds }];
   if (!(LADDER as string[]).includes(win.difficulty)) return [];
-  const timed = win.daily ? dailyBoard(win.daily) : timeBoard(win.difficulty);
-  return win.seconds > 0 ? [{ board: timed, score: win.seconds }] : [];
+  const timed = win.daily ? dailyBoard(win.daily, win.difficulty) : timeBoard(win.difficulty);
+  return [{ board: timed, score: win.seconds }];
 }
 
 const boardIds = new Map<string, Promise<string | null>>();
