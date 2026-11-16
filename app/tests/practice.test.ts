@@ -28,6 +28,7 @@ const ALL: TechniqueId[] = [
   "finned-x-wing",
   "w-wing",
   "bug-plus-one",
+  "empty-rectangle",
 ];
 
 describe("practice puzzles", () => {

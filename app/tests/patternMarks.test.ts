@@ -92,6 +92,35 @@ describe("patternMarks", () => {
     });
   });
 
+  it("draws an Empty Rectangle: its box, the link solid, and dashed lines to the box and the removal", () => {
+    // 3 in box 9 sits on row 8 and column 7; row 1 holds it only at columns 5 and 7.
+    const move = {
+      technique: "empty-rectangle" as const,
+      triggers: [
+        { r: 0, c: 6 },
+        { r: 0, c: 4 },
+        { r: 6, c: 6 },
+        { r: 7, c: 7 },
+        { r: 8, c: 6 },
+      ],
+      eliminations: [{ r: 7, c: 4, num: 3 }],
+      digits: [3],
+    };
+    const marks = patternMarks(move, () => true);
+    expect(marks).toContainEqual({ kind: "frame", x: 6, y: 6, w: 3, h: 3 });
+    const lines = marks.filter((m) => m.kind === "line");
+    expect(lines).toEqual([
+      { kind: "line", a: anchor(0, 6, 3), b: anchor(0, 4, 3), style: "strong" },
+      // The near end down its column to the box's nearest cell on it.
+      { kind: "line", a: anchor(0, 6, 3), b: anchor(6, 6, 3), style: "weak" },
+      // The far end down to the cell it loses 3 from.
+      { kind: "line", a: anchor(0, 4, 3), b: anchor(7, 4, 3), style: "weak" },
+    ]);
+    expect(marks.filter((m) => m.kind === "ring")).toHaveLength(5);
+    // Before the result: no line reaching the removal.
+    expect(patternMarks(move, () => true, false).filter((m) => m.kind === "line")).toHaveLength(2);
+  });
+
   it("draws a colouring wrap's whole chain, the cleared colour in the second tone", () => {
     // 4 sits only in these cells: A–B (row 1), B–C (column 5), C–D (row 5) are strong links.
     const [A, B, C, D] = [

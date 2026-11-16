@@ -9,8 +9,8 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sud
 //   1 — singles only (naked/hidden single)
 //   2 — pairs: naked/hidden pair, pointing, claiming
 //   3 — naked/hidden triple, X-Wing
-//   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Finned X-Wing,
-//       Unique Rectangle, XY-Wing, W-Wing
+//   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Empty Rectangle,
+//       Finned X-Wing, Unique Rectangle, XY-Wing, W-Wing
 //   5 — Jellyfish, XYZ-Wing, Simple Coloring, BUG+1
 
 // 1..5 = hardest technique tier required to fully solve.
@@ -382,6 +382,7 @@ export type TechniqueId =
   | "xyz-wing"
   | "skyscraper"
   | "two-string-kite"
+  | "empty-rectangle"
   | "unique-rectangle"
   | "simple-coloring"
   | "finned-x-wing"
@@ -802,6 +803,55 @@ function findTurbotMove(s: SolveState, kite: boolean): SolveMove | null {
   return null;
 }
 
+// --- Empty Rectangle ---
+// In a box, v's spots all lie on one row r and one column c of it (an L or a cross, not a single
+// line). Take a strong link on v in a column outside the box with one end on row r: if the cell
+// where the link's other end's row meets column c were v, the link's row-r end would be v too, and
+// between them they'd leave the box no spot for v. So that cell loses v. Likewise with a row link
+// and one end on column c.
+function findEmptyRectangleMove(s: SolveState): SolveMove | null {
+  const row = (i: number) => Math.floor(i / 9);
+  const col = (i: number) => i % 9;
+  const band = (n: number) => Math.floor(n / 3);
+  for (let v = 1; v <= 9; v++) {
+    const links = strongLinks(s, v).filter((l) => l.kind !== "box");
+    for (const [bx, box] of BOXES.entries()) {
+      const cells = box.filter((i) => s.board[i] === 0 && s.cands[i]! & bit(v));
+      if (cells.length < 2) continue;
+      for (const hinge of box) {
+        const r = row(hinge);
+        const c = col(hinge);
+        if (!cells.every((i) => row(i) === r || col(i) === c)) continue;
+        if (cells.every((i) => row(i) === r) || cells.every((i) => col(i) === c)) continue;
+        for (const l of links) {
+          const byCol = l.kind === "col";
+          for (const [near, far] of [
+            [l.a, l.b],
+            [l.b, l.a],
+          ] as const) {
+            // The near end on the box's row (column), outside the box; the far end off its band.
+            const fits = byCol
+              ? row(near) === r && band(row(far)) !== band(r)
+              : col(near) === c && band(col(far)) !== band(c);
+            if (!fits || boxOf(near) === bx) continue;
+            const target = byCol ? idx(row(far), c) : idx(r, col(far));
+            if (s.board[target] !== 0 || !(s.cands[target]! & bit(v))) continue;
+            return {
+              technique: "empty-rectangle",
+              tier: 4,
+              eliminations: [{ ...rc(target), num: v }],
+              // The link's ends first (near, far), then the box's cells: patternMarks reads them so.
+              triggers: [near, far, ...cells].map(rc),
+              digits: [v],
+            };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // --- Unique Rectangle (type 1) ---
 // Four cells on two rows, two columns and two boxes. If three hold exactly {x, y}, the fourth
 // can't be x or y: that would leave a rectangle that swaps freely, i.e. two solutions.
@@ -1038,6 +1088,7 @@ function findNextMove(s: SolveState): SolveMove | null {
     findUniqueRectangleMove(s) ??
     findXYWingMove(s) ??
     findWWingMove(s) ??
+    findEmptyRectangleMove(s) ??
     findFishMove(s, 4) ??
     findXYZWingMove(s) ??
     findSimpleColoringMove(s) ??
@@ -1137,7 +1188,8 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         applyMove(s, findFinnedXWingMove(s)) ||
         applyMove(s, findUniqueRectangleMove(s)) ||
         eliminateXYWing(s) ||
-        applyMove(s, findWWingMove(s)),
+        applyMove(s, findWWingMove(s)) ||
+        applyMove(s, findEmptyRectangleMove(s)),
     },
     {
       tier: 5,
@@ -1288,10 +1340,11 @@ const SOLVER_RANK = {
   "unique-rectangle": 15,
   "xy-wing": 16,
   "w-wing": 17,
-  jellyfish: 18,
-  "xyz-wing": 19,
-  "simple-coloring": 20,
-  "bug-plus-one": 21,
+  "empty-rectangle": 18,
+  jellyfish: 19,
+  "xyz-wing": 20,
+  "simple-coloring": 21,
+  "bug-plus-one": 22,
 } satisfies Record<TechniqueId, number>;
 
 /**

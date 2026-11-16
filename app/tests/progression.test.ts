@@ -73,7 +73,7 @@ describe("difficulty unlocks", () => {
 
 describe("technique path", () => {
   it("walks the Academy order", () => {
-    expect(ACADEMY_TECHNIQUES).toHaveLength(22);
+    expect(ACADEMY_TECHNIQUES).toHaveLength(23);
     expect(nextChallenge([])).toBe("naked-single");
     expect(nextChallenge(["naked-single"])).toBe("hidden-single");
     expect(nextChallenge(ACADEMY_TECHNIQUES.map((t) => t.id))).toBeNull();
@@ -145,7 +145,12 @@ describe("technique of the week", () => {
       seen.add(weekOf(new Date(2026, 0, 5 + 7 * i)).technique);
     expect(seen.size).toBe(WEEKLY_TECHNIQUES.length);
     expect(WEEKLY_TECHNIQUES.some((id) => RARE_IN_PUZZLES.has(id))).toBe(false);
-    expect([...RARE_IN_PUZZLES].toSorted()).toEqual(["hidden-quad", "jellyfish", "naked-quad"]);
+    expect([...RARE_IN_PUZZLES].toSorted()).toEqual([
+      "hidden-quad",
+      "jellyfish",
+      "naked-quad",
+      "simple-coloring",
+    ]);
   });
 });
 
