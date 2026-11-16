@@ -1,8 +1,6 @@
 <script lang="ts">
+import type { Beat } from "../utils/patternMarks";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { lessonFromExample } from "../utils/lesson";
-import { beats, type Beat } from "../utils/patternMarks";
 
 // The steps of each example, built once (lessonFromExample replays the solver).
 const cache = new Map<TechniqueId, Beat[]>();
@@ -23,12 +21,8 @@ function stepsOf(id: TechniqueId): Beat[] {
 // A worked example that can play its move out in narrated steps (utils/patternMarks.ts `beats`):
 // where to look, the pattern's cells, its links, then what it removes or places. It rests on the
 // last step, the full drawing, so the card reads as before until someone presses Watch it.
-import { computed, onUnmounted, ref } from "vue";
 
 import type { AcademyExample } from "../utils/academyExamples";
-
-import { onButton } from "../utils/gridNav";
-import ExampleGrid from "./ExampleGrid.vue";
 
 const props = defineProps<{
   id: TechniqueId;

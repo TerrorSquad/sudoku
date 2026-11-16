@@ -35,6 +35,8 @@ The e2e suite spins up its own dev server on port 3110 (`E2E_PORT` overrides it,
 
 This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generated and shipped to Wavedash (`pnpm wavedash`). There is no `pages/` directory — `app/app.vue` is the entire app. It's a single root component that owns all game state (board, timer, modals, preferences) and switches between screens itself via a `currentScreen` ref (`"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats"`), not Nuxt routing.
 
+Imports: `.vue` files rely on Nuxt auto-imports (vue APIs, components, `composables/`, top-level `utils/` exports) and import only types and external packages; oxlint's `no-restricted-imports` enforces it. `.ts` files (utils, composables, plugins, tests) keep explicit imports, because vitest runs them without Nuxt.
+
 ### Two separate Sudoku solvers, for different jobs
 
 - **`app/utils/sudokuCore.ts`** — array-based backtracking solver (`solveBoard`, `isValidPlacement`, `countSolutions`/`hasUniqueSolution`) used for puzzle generation and uniqueness checks. This is the "can this board be solved at all / does it have exactly one solution" layer.

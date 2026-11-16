@@ -4,46 +4,12 @@
 // SKIP_PENALTY. The clock only runs while a position is up, not while the next one loads.
 // With `review` set it's the Daily review instead: one position per due technique, no clock or
 // penalties (it's about remembering, not speed), and each result moves its card (utils/review.ts).
-import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord } from "../types/sudoku";
+import type { Instance, Lesson } from "../utils/lesson";
 import type { Tier } from "../utils/progression";
+import type { SpotResult } from "../utils/spotIt";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { useTechniquePath } from "../composables/useTechniquePath";
-import { boardKey, focusCell, onButton, shakeCell, stepCell } from "../utils/gridNav";
-import {
-  findPrompt,
-  instancesOf,
-  missText,
-  notesGrid,
-  tapPattern,
-  type Instance,
-  type Lesson,
-} from "../utils/lesson";
-import { patternMarks } from "../utils/patternMarks";
-import { makeLesson } from "../utils/puzzlePool";
-import { reviewPassed } from "../utils/review";
-import { readJSON, writeJSON } from "../utils/safeJson";
-import {
-  MISS_PENALTY,
-  ROUND_SIZE,
-  SKIP_PENALTY,
-  SPOT_BEST_KEY,
-  buildRound,
-  formatSpotTime,
-  mergeSpotBest,
-  readSpotBest,
-  totalTime,
-  type SpotResult,
-} from "../utils/spotIt";
-import { localDateKey } from "../utils/streak";
-import { digitLabel } from "../utils/sudokuColors";
-import { makeRng, solveBoard } from "../utils/sudokuCore";
-import { saveToCloud } from "../utils/wavedash";
-import ScreenHeader from "./ScreenHeader.vue";
-import SpotResults from "./SpotResults.vue";
-import SudokuGrid from "./SudokuGrid.vue";
 
 const props = defineProps<{
   tier: Tier;

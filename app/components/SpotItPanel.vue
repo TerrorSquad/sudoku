@@ -2,16 +2,6 @@
 // The Academy's way into Spot it: a tier to play, with its best time.
 import type { Tier } from "../utils/progression";
 
-import { readJSON } from "../utils/safeJson";
-import {
-  MISS_PENALTY,
-  SKIP_PENALTY,
-  SPOT_BEST_KEY,
-  SPOT_TIERS,
-  formatSpotTime,
-  readSpotBest,
-} from "../utils/spotIt";
-
 const emit = defineEmits<{ (e: "spot", tier: Tier): void }>();
 const best = readSpotBest(readJSON<unknown>(SPOT_BEST_KEY, {}));
 </script>

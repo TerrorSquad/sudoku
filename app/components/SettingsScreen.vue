@@ -1,15 +1,6 @@
 <script setup lang="ts">
-import { usePreferences, type HintStyle, type MistakeLimit } from "../composables/usePreferences";
-import { canVibrate } from "../utils/haptics";
-import { UI_SCALES } from "../utils/preferenceValues";
-import {
-  applyBackup,
-  backupFilename,
-  createBackup,
-  parseBackup,
-  MAX_BACKUP_BYTES,
-  type Backup,
-} from "../utils/progressBackup";
+import type { HintStyle, MistakeLimit } from "../composables/usePreferences";
+import type { Backup } from "../utils/progressBackup";
 
 // Opened over the game (app.vue's sheet): back returns to it, and the settings a game is started
 // with (colour mode, the mistake limit) stay locked until it ends. `timed`: its clock is running.

@@ -2,75 +2,17 @@
 // Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
 import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
-import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
+import type { PadKeys } from "./composables/useGamepad";
+import type { GameSave, SaveSlot } from "./composables/useGameSave";
+import type { WinResult } from "./composables/useWinResult";
+import type { CellCoord, Difficulty, FlashCell, Grid } from "./types/sudoku";
+import type { BasicsId } from "./utils/basics";
+import type { Lesson } from "./utils/lesson";
 import type { BoardTheme } from "./utils/preferenceValues";
+import type { Tier, Week } from "./utils/progression";
+import type { Placement } from "./utils/stuckMoments";
 import type { DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
-
-import AchievementsScreen from "./components/AchievementsScreen.vue";
-import AchievementToast from "./components/AchievementToast.vue";
-import BasicsLesson from "./components/BasicsLesson.vue";
-import ControlPanel from "./components/ControlPanel.vue";
-import CustomImport from "./components/CustomImport.vue";
-import DifficultySelector from "./components/DifficultySelector.vue";
-import EndModal from "./components/EndModal.vue";
-import GameDashboard from "./components/GameDashboard.vue";
-import MainMenu from "./components/MainMenu.vue";
-import Numpad from "./components/Numpad.vue";
-import ResumePrompt from "./components/ResumePrompt.vue";
-import SettingsScreen from "./components/SettingsScreen.vue";
-import ShortcutList from "./components/ShortcutList.vue";
-import SideExplanationPanel from "./components/SideExplanationPanel.vue";
-import SpotIt from "./components/SpotIt.vue";
-import StatsScreen from "./components/StatsScreen.vue";
-import SudokuAcademy from "./components/SudokuAcademy.vue";
-import SudokuGrid from "./components/SudokuGrid.vue";
-import TechniqueLesson from "./components/TechniqueLesson.vue";
-import { useAchievements } from "./composables/useAchievements";
-import { useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { padScope, sendKey, usePad, type PadKeys } from "./composables/useGamepad";
-import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
-import { useNudge } from "./composables/useNudge";
-import { usePreferences } from "./composables/usePreferences";
-import { useRecords } from "./composables/useRecords";
-import { statsKey, useScore } from "./composables/useScore";
-import { useSudokuEngine } from "./composables/useSudokuEngine";
-import { useTechniquePath } from "./composables/useTechniquePath";
-import { useTechniqueStats } from "./composables/useTechniqueStats";
-import { useTimer } from "./composables/useTimer";
-import { useWinResult, type WinResult } from "./composables/useWinResult";
-import { BASICS_IDS, type BasicsId } from "./utils/basics";
-import { focusCell, stepCell } from "./utils/gridNav";
-import { haptic } from "./utils/haptics";
-import { generateLesson, type Lesson } from "./utils/lesson";
-import { generatePracticePuzzle } from "./utils/practice";
-import {
-  ACADEMY_TECHNIQUES,
-  lockOf,
-  lockedLevels,
-  type Tier,
-  type Week,
-} from "./utils/progression";
-import { takePuzzle } from "./utils/puzzlePool";
-import { readJSON } from "./utils/safeJson";
-import {
-  playComplete,
-  playDigitDone,
-  playHint,
-  playMistake,
-  playPlace,
-  playStamp,
-  playTick,
-  playUnlock,
-  playWin,
-} from "./utils/sound";
-import { SPOT_BEST_KEY, readSpotBest } from "./utils/spotIt";
-import { onBoard, restorePlacements, type Placement } from "./utils/stuckMoments";
-import { digitLabel } from "./utils/sudokuColors";
-import { makeRng, seedFromString } from "./utils/sudokuCore";
-import { singlesPath } from "./utils/sudokuGrader";
-import { saveToCloud } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
 
@@ -833,7 +775,7 @@ function startDaily() {
 // A friend's time from a challenge code (Your puzzle), shown as the time to beat; 0 = none.
 const challengeTarget = ref(0);
 function handleLoadCustomPuzzle(
-  board: import("./types/sudoku").Grid,
+  board: Grid,
   practice: TechniqueId | null = null,
   challengeSeconds = 0,
 ) {

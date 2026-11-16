@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { MASTERY_STYLE, TIER_STYLES as tierStyles } from "../utils/academyStyles";
-import { ACADEMY_TECHNIQUES as techniques, BUILDS_ON, MAP_COLUMN } from "../utils/progression";
-
 // The technique map: tiers as rows, each technique in its MAP_COLUMN, and a line from each
 // technique to what builds on it (BUILDS_ON). Lines sit in the grid's own units (a cell is 1×1),
 // so they meet the nodes' centres at any width.
@@ -17,6 +14,7 @@ const emit = defineEmits<{ (e: "open", id: TechniqueId): void }>();
 const { t } = useI18n();
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
+const techniques = ACADEMY_TECHNIQUES;
 const tiers = [...new Set(techniques.map((tech) => tech.tier))];
 const MAP_COLS = Math.max(...Object.values(MAP_COLUMN)) + 1;
 const mapPos = new Map(
@@ -104,7 +102,7 @@ const mapEdges = Object.entries(BUILDS_ON).flatMap(([id, pre]) =>
         >
           <button
             :class="[
-              tierStyles[tech.tier].border,
+              TIER_STYLES[tech.tier].border,
               pathState(tech.id) === 'next' && 'ring-2 ring-violet-500',
             ]"
             :data-path="pathState(tech.id)"

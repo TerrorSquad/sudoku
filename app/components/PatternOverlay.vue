@@ -2,7 +2,6 @@
 // The pattern drawn over the board in pen, as a puzzle book prints it (utils/patternMarks.ts).
 // One SVG over the whole board, in board units; each mark draws itself on once when it appears,
 // frames first, then links, rings, and the red-pen strokes last.
-import { computed } from "vue";
 
 import type { Mark } from "../utils/patternMarks";
 

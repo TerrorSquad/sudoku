@@ -1,8 +1,6 @@
 <script setup lang="ts">
+import type { Week } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { useTechniquePath } from "../composables/useTechniquePath";
-import { ACADEMY_TECHNIQUES, nextChallenge, weekOf, type Week } from "../utils/progression";
 
 // The technique path and the technique of the week, side by side in the Academy.
 const emit = defineEmits<{
