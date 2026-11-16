@@ -1,13 +1,4 @@
 <script setup lang="ts">
-import { computed } from "vue";
-
-import { useDailyPuzzle } from "../composables/useDailyPuzzle";
-import { useRecords } from "../composables/useRecords";
-import { useScore } from "../composables/useScore";
-import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { MAX_FREEZES } from "../utils/streak";
-import { hasWavedash } from "../utils/wavedash";
-
 const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "start-game"): void }>();
 
 const { t } = useI18n();

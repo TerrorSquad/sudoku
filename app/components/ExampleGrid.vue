@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import type { Mark } from "../utils/patternMarks";
 
-import PatternOverlay from "./PatternOverlay.vue";
-
 interface Cell {
   r: number;
   c: number;

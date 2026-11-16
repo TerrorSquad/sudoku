@@ -1,22 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from "vue";
-
+import type { AcademyExample } from "../utils/academyExamples";
+import type { BasicsId } from "../utils/basics";
+import type { Tier, Week } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { useTechniquePath } from "../composables/useTechniquePath";
-import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
-import { MASTERY_STYLE, TIER_STYLES as tierStyles } from "../utils/academyStyles";
-import { BASICS_IDS, type BasicsId } from "../utils/basics";
-import { masteryFor } from "../utils/mastery";
-import { ACADEMY_TECHNIQUES, nextChallenge, type Tier, type Week } from "../utils/progression";
-import AcademyMap from "./AcademyMap.vue";
-import ExampleGrid from "./ExampleGrid.vue";
-import PathPanels from "./PathPanels.vue";
-import ReviewPanel from "./ReviewPanel.vue";
-import ScreenHeader from "./ScreenHeader.vue";
-import SpotItPanel from "./SpotItPanel.vue";
-import WatchExample from "./WatchExample.vue";
 
 // Opens on this technique's lesson, expanded and scrolled to (the win screen links here).
 const props = defineProps<{ focus?: TechniqueId | null; inGame?: boolean }>();
@@ -278,11 +264,11 @@ const total = computed(() => techniques.length);
         <div v-for="tier in tiers" :key="tier" class="mb-10 sm:mb-12">
           <!-- Tier heading -->
           <div class="mb-2 flex items-center gap-3">
-            <h2 :class="tierStyles[tier].heading" class="text-lg font-black sm:text-xl">
+            <h2 :class="TIER_STYLES[tier].heading" class="text-lg font-black sm:text-xl">
               {{ $t(`academy.tier.${tier}`) }}
             </h2>
             <span
-              :class="tierStyles[tier].badge"
+              :class="TIER_STYLES[tier].badge"
               class="border px-2 py-0.5 text-[0.625rem] font-bold"
             >
               {{ byTier(tier).length }}
@@ -299,7 +285,7 @@ const total = computed(() => techniques.length);
               :id="`lesson-${tech.id}`"
               tabindex="-1"
               :class="[
-                tierStyles[tier].border,
+                TIER_STYLES[tier].border,
                 pathState(tech.id) === 'next' && 'ring-2 ring-violet-500/60',
               ]"
               :data-path="pathState(tech.id)"

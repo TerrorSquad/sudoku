@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { digitLabel, dotClass } from "../utils/sudokuColors";
-
 // Controller: the digit A or X enters, and the buttons for this screen.
 defineProps<{ digit: number; colorMode: boolean; game: boolean }>();
 const { t } = useI18n();

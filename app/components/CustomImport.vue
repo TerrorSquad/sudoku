@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-
 import type { Grid } from "../types/sudoku";
-
-import { parseChallenge } from "../utils/challenge";
-import { countSolutions } from "../utils/sudokuCore";
 
 const emit = defineEmits<{
   (e: "load-puzzle", board: Grid, challengeSeconds: number): void;

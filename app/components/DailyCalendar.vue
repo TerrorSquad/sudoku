@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useDailyPuzzle } from "../composables/useDailyPuzzle";
-import { calendarDays } from "../utils/calendar";
-import { FREEZE_EVERY, MAX_FREEZES } from "../utils/streak";
-
 const WEEKS = 12;
 const daily = useDailyPuzzle();
 

@@ -14,6 +14,28 @@
   },
   "overrides": [
     {
+      // .vue files use Nuxt auto-imports (vue, components, composables, utils); type imports stay.
+      // .ts files keep explicit imports: vitest runs them without Nuxt.
+      "files": ["**/*.vue"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "vue", "message": "Auto-imported in .vue files.", "allowTypeImports": true }
+            ],
+            "patterns": [
+              {
+                "group": ["**/composables/*", "**/utils/*", "*.vue"],
+                "message": "Auto-imported in .vue files (type imports are fine).",
+                "allowTypeImports": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       // Storage goes through utils/safeJson.ts (SSR-safe, and a sandboxed iframe can throw on any
       // access): a bare localStorage.removeItem once sat inside the win path. Only catches the bare
       // globals, not window.localStorage.

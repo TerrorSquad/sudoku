@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-
 import type { WinResult } from "../composables/useWinResult";
 import type { Difficulty, Grid } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { formatTime } from "../composables/useTimer";
-import { useWinSteps } from "../composables/useWinSteps";
-import { encodeChallenge } from "../utils/challenge";
-import { starsFor } from "../utils/stars";
-import WinSummary from "./WinSummary.vue";
 
 // The end of a game: the win (stars, score, what it took) or the game over. Mounted per showing.
 const props = defineProps<{

@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-
 import type { CellCoord } from "../types/sudoku";
-
-import { digitLabel, dotClass } from "../utils/sudokuColors";
 
 const props = defineProps<{
   row: number;

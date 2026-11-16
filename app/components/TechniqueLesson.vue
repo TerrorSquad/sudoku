@@ -2,31 +2,11 @@
 // A guided technique lesson: find the pattern, then make the move it allows. Only those moves are
 // accepted, so finishing the lesson shows the technique was applied (it completes the path step).
 // No clock, score or save: its own board state, not the game's.
-import { computed, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
+import type { Lesson } from "../utils/lesson";
+import type { Stars } from "../utils/progression";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
-
-import { useTechniquePath } from "../composables/useTechniquePath";
-import { boardKey, focusCell, onButton, sameCell, shakeCell, stepCell } from "../utils/gridNav";
-import {
-  findPrompt,
-  instancesOf,
-  lessonUnits,
-  missText,
-  notesGrid,
-  tapPattern,
-  type Lesson,
-} from "../utils/lesson";
-import { patternMarks, strikes } from "../utils/patternMarks";
-import { lessonStarsFor, nextLesson, type Stars } from "../utils/progression";
-import { digitLabel } from "../utils/sudokuColors";
-import { solveBoard } from "../utils/sudokuCore";
-import { saveToCloud } from "../utils/wavedash";
-import AppIcon from "./AppIcon.vue";
-import Numpad from "./Numpad.vue";
-import ScreenHeader from "./ScreenHeader.vue";
-import SudokuGrid from "./SudokuGrid.vue";
 
 // inGame: opened from a paused game, so Back returns to it and there's no "full puzzle" (it
 // would replace that game).

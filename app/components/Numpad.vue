@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { digitLabel, dotClass } from "../utils/sudokuColors";
-
 interface Props {
   counts: number[];
   colorMode: boolean;

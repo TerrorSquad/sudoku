@@ -2,10 +2,6 @@
 import type { WinResult } from "../composables/useWinResult";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { usePreferences } from "../composables/usePreferences";
-import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { formatTime } from "../composables/useTimer";
-
 // The win modal's summary: the level, mistakes and hints, and the techniques the game took.
 defineProps<{
   difficultyLabel: string;

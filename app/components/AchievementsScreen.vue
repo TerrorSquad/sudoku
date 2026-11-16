@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useAchievements } from "../composables/useAchievements";
-import { ACHIEVEMENTS, type AchievementTier } from "../utils/achievements";
+import type { AchievementTier } from "../utils/achievements";
 
 const emit = defineEmits<{ (e: "back-to-menu"): void }>();
 

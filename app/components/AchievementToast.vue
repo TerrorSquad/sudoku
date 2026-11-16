@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
-
-import { ACHIEVEMENTS, type AchievementTier } from "../utils/achievements";
+import type { AchievementTier } from "../utils/achievements";
 
 const props = defineProps<{ ids: string[] }>();
 const emit = defineEmits<{ (e: "dismiss", id: string): void }>();

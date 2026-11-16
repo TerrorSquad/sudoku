@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // The bar atop a full screen: Back, then the title (default slot). A lesson's bar is slimmer
 // and scrolls away with the page.
-import AppIcon from "./AppIcon.vue";
 
 defineProps<{ backLabel: string; lesson?: boolean }>();
 const emit = defineEmits<{ (e: "back"): void }>();

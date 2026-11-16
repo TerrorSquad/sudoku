@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
-import { LADDER, lockOf } from "../utils/progression";
-import { prefetchPuzzle } from "../utils/puzzlePool";
-
 defineProps<{ activeDifficulty: Difficulty }>();
 
 const { zen } = usePreferences();

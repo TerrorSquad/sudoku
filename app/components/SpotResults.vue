@@ -1,12 +1,8 @@
 <script setup lang="ts">
 // The end of a Spot it round (each position's time, a best) or of a Daily review (each card's move).
-import { computed } from "vue";
 
+import type { SpotResult } from "../utils/spotIt";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { dayLabel } from "../utils/review";
-import { breakdown, formatSpotTime, totalTime, type SpotResult } from "../utils/spotIt";
-import { localDateKey } from "../utils/streak";
 
 const props = defineProps<{
   review: boolean;

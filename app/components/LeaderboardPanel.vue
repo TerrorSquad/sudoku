@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-
-import { LADDER } from "../utils/progression";
-import { localDateKey } from "../utils/streak";
-import { dailyBoard, loadBoard, timeBoard, type Board, type BoardView } from "../utils/wavedash";
+import type { Board, BoardView } from "../utils/wavedash";
 
 const { t } = useI18n();
 

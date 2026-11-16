@@ -2,36 +2,11 @@
 // "How to play": one of the four basics lessons (utils/basics.ts), task by task. Same look and
 // keys as a technique lesson, but its own small engine: the moves are the beginner's (place the
 // missing digit, pencil in the maybes), not a technique's pattern. No clock, score or save.
-import { computed, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
+import type { BasicsId } from "../utils/basics";
 import type { Mark } from "../utils/patternMarks";
 import type { TechniqueId } from "../utils/sudokuGrader";
-
-import { useTechniquePath } from "../composables/useTechniquePath";
-import {
-  BASICS,
-  BASICS_IDS,
-  SOLUTION,
-  blockedBy,
-  candidatesAt,
-  hatchedBy,
-  type BasicsId,
-} from "../utils/basics";
-import {
-  boardKey,
-  emptyNotes,
-  focusCell,
-  onButton,
-  sameCell,
-  shakeCell,
-  stepCell,
-} from "../utils/gridNav";
-import { digitLabel } from "../utils/sudokuColors";
-import { saveToCloud } from "../utils/wavedash";
-import Numpad from "./Numpad.vue";
-import ScreenHeader from "./ScreenHeader.vue";
-import SudokuGrid from "./SudokuGrid.vue";
 
 const props = defineProps<{ id: BasicsId }>();
 const emit = defineEmits<{
