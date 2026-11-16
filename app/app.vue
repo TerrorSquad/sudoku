@@ -923,56 +923,21 @@ watch(numberCounts, (counts) => {
 });
 
 // A correct placement may finish a row, column, and/or box, or the last of a digit — flash every
-// cell of each newly-completed unit. "Complete" means every cell already
-// matches the solution, not just non-empty (a wrong-but-unconflicting digit
-// can sit in a cell without being flagged, so equality is the real check).
+// cell of each newly-completed unit (engine.completedAt decides what is complete).
 function flashCompletedUnits(r: number, c: number) {
   // Cells ripple outward from the digit just placed: 45 ms per step of distance.
   const RIPPLE_MS = 45;
-  const cells: FlashCell[] = [];
-  let units = 0;
-  const add = (cr: number, cc: number) =>
-    cells.push({ r: cr, c: cc, delay: Math.max(Math.abs(cr - r), Math.abs(cc - c)) * RIPPLE_MS });
-
-  if ([...Array(9).keys()].every((i) => currentBoard.value[r]![i] === solvedBoard.value[r]![i])) {
-    units++;
-    for (let i = 0; i < 9; i++) add(r, i);
-  }
-  if ([...Array(9).keys()].every((i) => currentBoard.value[i]![c] === solvedBoard.value[i]![c])) {
-    units++;
-    for (let i = 0; i < 9; i++) add(i, c);
-  }
-  const boxR = r - (r % 3);
-  const boxC = c - (c % 3);
-  let boxComplete = true;
-  for (let i = 0; i < 3 && boxComplete; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (currentBoard.value[boxR + i]![boxC + j] !== solvedBoard.value[boxR + i]![boxC + j]) {
-        boxComplete = false;
-        break;
-      }
-    }
-  }
-  if (boxComplete) {
-    units++;
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) add(boxR + i, boxC + j);
-    }
-  }
-
-  // All nine of the placed digit are in, and right: its cells light up with the units (a cell in
-  // both is listed twice, at the same delay, which the grid shows once).
-  const num = currentBoard.value[r]![c]!;
-  const solvedCells = solvedBoard.value.flatMap((row, sr) =>
-    row.flatMap((v, sc) => (v === num ? [[sr, sc] as const] : [])),
-  );
-  const digitDone = solvedCells.every(([sr, sc]) => currentBoard.value[sr]![sc] === num);
-  if (digitDone) for (const [sr, sc] of solvedCells) add(sr, sc);
-
+  const { units, digitDone, cells } = engine.completedAt(r, c);
   if (!cells.length) return;
+  const num = currentBoard.value[r]![c]!;
   if (units) cue("complete", units, num);
   if (digitDone) cue("digit", num);
-  runFlash(cells);
+  runFlash(
+    cells.map((p) => ({
+      ...p,
+      delay: Math.max(Math.abs(p.r - r), Math.abs(p.c - c)) * RIPPLE_MS,
+    })),
+  );
 }
 
 // Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
@@ -1277,19 +1242,7 @@ async function handleFinish() {
 }
 
 function handleAutoFillNotes() {
-  saveHistory();
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      if (currentBoard.value[r]![c] === 0) {
-        notesBoard.value[r]![c] = Array(10).fill(false);
-        for (let val = 1; val <= 9; val++) {
-          if (engine.isValid(currentBoard.value, r, c, val)) {
-            notesBoard.value[r]![c]![val] = true;
-          }
-        }
-      }
-    }
-  }
+  engine.autoFillNotes();
   hintStatus.value = t("game.notesFilled");
 }
 
