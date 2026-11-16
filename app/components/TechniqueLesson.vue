@@ -2,13 +2,14 @@
 // A guided technique lesson: find the pattern, then make the move it allows. Only those moves are
 // accepted, so finishing the lesson shows the technique was applied (it completes the path step).
 // No clock, score or save: its own board state, not the game's.
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { BoardTheme } from "../utils/preferenceValues";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
+import { focusCell, stepCell } from "../utils/gridNav";
 import {
   findPrompt,
   instancesOf,
@@ -294,16 +295,6 @@ const nudge = computed(() => (step.value === "find" && reveal.value >= 2 ? units
 
 // Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
 // Esc leaves. Once done: Enter or N for the next lesson, R another example, P a full puzzle.
-const STEPS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  w: [-1, 0],
-  s: [1, 0],
-  a: [0, -1],
-  d: [0, 1],
-};
 const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -318,14 +309,10 @@ function onKey(e: KeyboardEvent) {
     else if (key === "p" && !props.inGame) emit("practice");
     return;
   }
-  const move = STEPS[key];
+  const move = stepCell(selected.value, key);
   if (move) {
     e.preventDefault();
-    const cur = selected.value;
-    const r = Math.min(8, Math.max(0, (cur?.r ?? 0) + (cur ? move[0] : 0)));
-    const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
-    selected.value = { r, c };
-    nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+    focusCell((selected.value = move));
   } else if ((key === "Enter" || key === " ") && selected.value) {
     if (!(e.target as HTMLElement).closest?.("[data-cell]")) return; // a focused button's own key
     e.preventDefault();

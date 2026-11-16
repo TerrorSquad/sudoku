@@ -1,6 +1,7 @@
 // Controller input, for playing on a TV: the standard-mapping buttons and the left stick as
 // actions, with key-repeat for the D-pad. Pure; unit-tested in tests/gamepad.test.ts.
-// useGamepad (composables) polls the pads; app.vue turns actions into the keys each screen knows.
+// useGamepad (composables) polls the pads and turns actions into keys; app.vue supplies each
+// screen's key map.
 
 export type PadAction =
   | "up"

@@ -2,7 +2,7 @@
 // "How to play": one of the four basics lessons (utils/basics.ts), task by task. Same look and
 // keys as a technique lesson, but its own small engine: the moves are the beginner's (place the
 // missing digit, pencil in the maybes), not a technique's pattern. No clock, score or save.
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { Mark } from "../utils/patternMarks";
@@ -19,6 +19,7 @@ import {
   hatchedBy,
   type BasicsId,
 } from "../utils/basics";
+import { focusCell, stepCell } from "../utils/gridNav";
 import { digitLabel } from "../utils/sudokuColors";
 import { saveToCloud } from "../utils/wavedash";
 import AppIcon from "./AppIcon.vue";
@@ -246,16 +247,6 @@ function next() {
   else emit("lesson", "naked-single");
 }
 
-const STEPS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  w: [-1, 0],
-  s: [1, 0],
-  a: [0, -1],
-  d: [0, 1],
-};
 const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -268,14 +259,10 @@ function onKey(e: KeyboardEvent) {
     }
     return;
   }
-  const move = STEPS[key];
+  const move = stepCell(selected.value, key);
   if (move) {
     e.preventDefault();
-    const cur = selected.value;
-    const r = Math.min(8, Math.max(0, (cur?.r ?? 0) + (cur ? move[0] : 0)));
-    const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
-    selected.value = { r, c };
-    nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+    focusCell((selected.value = move));
   } else if (key >= "1" && key <= "9") {
     input(Number(key));
   } else if (key === "n") {
