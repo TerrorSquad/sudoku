@@ -308,6 +308,27 @@ function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
         ...crosses(elims),
       ];
     }
+    case "xy-chain": {
+      // The grader lists the chain in order, z at both ends. Each cell is one of its two digits (a
+      // strong link inside it); each next cell sees it and shares a digit (a weak link between).
+      if (t.length < 2) return [];
+      const out: Mark[] = [...rings([t[0]!, t.at(-1)!], n)];
+      let d: number | undefined = n;
+      for (const [i, a] of t.entries()) {
+        const q = t[i + 1];
+        const e: number | undefined = q ? sharedDigit(has, a, q, d) : n;
+        if (d && e)
+          out.push({
+            kind: "line",
+            a: anchor(a.r, a.c, d),
+            b: anchor(a.r, a.c, e),
+            style: "strong",
+          });
+        if (q) out.push(link(has, a, q, e, "weak"), ...(e ? rings([a, q], e, "alt") : []));
+        d = e;
+      }
+      return [...out, ...crosses(elims)];
+    }
     case "unique-rectangle": {
       const all = uniq([...t, ...elims]);
       const rs = [...new Set(all.map((q) => q.r))].toSorted((x, y) => x - y);

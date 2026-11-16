@@ -7,8 +7,9 @@ const KEY = "sudoku_v1_technique_stats";
 // Counts used to be keyed by the hint title in the player's language at the time, so switching
 // language split them. Every title ever stored (per git history) is one of these base names, in
 // any case, optionally followed by " — <unit or type>" ("Hidden Single — Row", "Goli Triplet —
-// Red 3", "Unique Rectangle — Type 1"). Frozen: new counts use ids. Titles of techniques the
-// solver no longer has (XY-Chain, Sue de Coq…) have no id and are kept as they are.
+// Red 3", "Unique Rectangle — Type 1") or " (<length>)" ("XY-Chain (length 5)"). Frozen: new
+// counts use ids. Titles of techniques the solver no longer has (Sue de Coq…) have no id and are
+// kept as they are.
 const LEGACY_TITLES: Record<string, TechniqueId> = {
   "naked single": "naked-single",
   "goli singl": "naked-single",
@@ -55,11 +56,13 @@ const LEGACY_TITLES: Record<string, TechniqueId> = {
   "bug+1": "bug-plus-one",
   "empty rectangle": "empty-rectangle",
   "prazan pravougaonik": "empty-rectangle",
+  "xy-chain": "xy-chain",
+  "xy-lanac": "xy-chain",
 };
 
 /** The id a stored key stands for: itself unless it's a legacy title. */
 function idOf(key: string): string {
-  const base = key.split(" — ")[0]!.toLowerCase();
+  const base = key.split(" — ")[0]!.split(" (")[0]!.toLowerCase();
   return Object.hasOwn(LEGACY_TITLES, base) ? LEGACY_TITLES[base]! : key;
 }
 

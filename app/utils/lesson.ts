@@ -274,12 +274,13 @@ function choose<T>(items: T[], k: number): T[][] {
 }
 
 /**
- * Every pattern step 1 accepts: the lesson's own, plus for a fish any other fish on the same digit
- * with as many cells (the prompt names the digit and the count) that also clears something. A
- * player who spots that one first has found a real one, so it counts.
+ * Every pattern step 1 accepts: the lesson's own, plus for a fish (or an XY-Chain) any other one on
+ * the same digit with as many cells (the prompt names the digit and the count) that also clears
+ * something. A player who spots that one first has found a real one, so it counts.
  */
 export function instancesOf(L: Lesson): Instance[] {
   const main = { pattern: L.pattern, eliminations: L.eliminations };
+  if (L.technique === "xy-chain") return [main, ...otherXYChains(L)];
   const k = FISH_SIZE[L.technique];
   if (!k) return [main];
   const d = L.digits[0]!;
@@ -305,6 +306,50 @@ export function instancesOf(L: Lesson): Instance[] {
     }
   }
   return [main, ...others];
+}
+
+/**
+ * The other XY-Chains on the lesson's z with as many cells: from a two-mark cell holding z, step to
+ * a two-mark cell that sees the last one and holds its other digit, ending on a cell whose other
+ * digit is z. Each removes z from the cells (off the chain) that see both ends.
+ */
+function otherXYChains(L: Lesson): Instance[] {
+  const z = L.digits[0]!;
+  const marks = ({ r, c }: CellRC) => L.notes[r]![c]!;
+  const same = (a: CellRC, b: CellRC) => a.r === b.r && a.c === b.c;
+  const sees = (a: CellRC, b: CellRC) =>
+    !same(a, b) && (a.r === b.r || a.c === b.c || inUnit("box", a, b));
+  const bivalue = ALL_CELLS.filter((p) => marks(p).length === 2);
+  const out: Instance[] = [];
+  const walk = (chain: CellRC[], d: number) => {
+    const last = chain.at(-1)!;
+    if (chain.length === L.pattern.length) {
+      if (d !== z || sameCells(chain, L.pattern) || out.some((i) => sameCells(i.pattern, chain)))
+        return;
+      const eliminations = ALL_CELLS.filter(
+        (p) =>
+          marks(p).includes(z) &&
+          !chain.some((q) => same(p, q)) &&
+          sees(p, chain[0]!) &&
+          sees(p, last),
+      ).map((p) => ({ ...p, num: z }));
+      if (eliminations.length) out.push({ pattern: chain, eliminations });
+      return;
+    }
+    for (const p of bivalue)
+      if (sees(last, p) && marks(p).includes(d) && !chain.some((q) => same(p, q)))
+        walk(
+          [...chain, p],
+          marks(p).find((n) => n !== d)!,
+        );
+  };
+  for (const p of bivalue)
+    if (marks(p).includes(z))
+      walk(
+        [p],
+        marks(p).find((n) => n !== z)!,
+      );
+  return out;
 }
 
 /** Techniques whose every pattern cell holds the lesson's (first) digit as a pencil mark. */
@@ -340,6 +385,9 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
   if (t === "naked-single" && marks.length > 1)
     return { key: "lesson.why.manyMarks", params: { n: marks.length } };
   if (ON_DIGIT.has(t) && !marks.includes(d)) return { key: "lesson.why.noDigit", params: { d } };
+  // Every cell of an XY-Chain holds exactly two candidates.
+  if (t === "xy-chain" && marks.length > 2)
+    return { key: "lesson.why.manyMarks", params: { n: marks.length } };
   const subset = t !== "naked-single" && t !== "hidden-single";
   if (subset && t.startsWith("hidden-") && !marks.some((n) => L.digits.includes(n)))
     return { key: "lesson.why.noneOfDigits" };

@@ -9,7 +9,7 @@ import {
   getGridCandidates,
   solveBoard,
 } from "../utils/sudokuCore";
-import { nextHint, solveLogically, type SolveMove } from "../utils/sudokuGrader";
+import { nextHint, solveLogically, type SolveMove, type TechniqueId } from "../utils/sudokuGrader";
 
 // Apply a move to a board the way the engine will, returning a fresh board.
 function applyPlacement(board: Grid, move: SolveMove): Grid {
@@ -49,12 +49,17 @@ describe("nextHint — soundness", () => {
       "w-wing",
       "bug-plus-one",
       "empty-rectangle",
+      "xy-chain",
     ])
       expect(seen).toContain(t);
   });
 
-  // Replays the hint chain over a dug board, handing each Empty Rectangle to `check`.
-  function eachEmptyRectangle(seed: number, check: (move: SolveMove, solved: Grid) => void) {
+  // Replays the hint chain over a dug board, handing each move of `technique` to `check`.
+  function eachMove(
+    technique: TechniqueId,
+    seed: number,
+    check: (move: SolveMove, solved: Grid) => void,
+  ) {
     const { puzzle } = generatePuzzle(62, makeRng(seed));
     const solved = solveBoard(puzzle)!;
     const board = puzzle.map((r) => r.concat());
@@ -62,7 +67,7 @@ describe("nextHint — soundness", () => {
     for (let step = 0; step < 600; step++) {
       const move = nextHint(board, elims);
       if (!move) break;
-      if (move.technique === "empty-rectangle") check(move, solved);
+      if (move.technique === technique) check(move, solved);
       if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
       else elims.push(...move.eliminations);
     }
@@ -70,7 +75,7 @@ describe("nextHint — soundness", () => {
 
   it("finds an Empty Rectangle: 3 in box 9 on row 8 and column 7, and the link in row 1", () => {
     const found: SolveMove[] = [];
-    eachEmptyRectangle(114, (move) => found.push(move));
+    eachMove("empty-rectangle", 114, (move) => found.push(move));
     expect(found[0]).toEqual({
       technique: "empty-rectangle",
       tier: 4,
@@ -91,13 +96,46 @@ describe("nextHint — soundness", () => {
   it("an Empty Rectangle never removes the solution digit (checked by brute force)", () => {
     let count = 0;
     for (let seed = 1; seed <= 1500; seed++)
-      eachEmptyRectangle(seed, (move, solved) => {
+      eachMove("empty-rectangle", seed, (move, solved) => {
         count++;
         for (const e of move.eliminations) expect(e.num).not.toBe(solved[e.r]![e.c]);
       });
     // 27 over these seeds: a sharp drop means detection regressed.
     expect(count).toBeGreaterThan(20);
+    // ~5 s alone: room for a busy machine.
+  }, 20_000);
+
+  it("finds the shortest XY-Chain: four cells from 1 to 1, each end in line with both removals", () => {
+    const found: SolveMove[] = [];
+    eachMove("xy-chain", 27, (move) => found.push(move));
+    expect(found[0]).toEqual({
+      technique: "xy-chain",
+      tier: 5,
+      // In chain order: 1 or 3, 3 or 8, 8 or 7, 7 or 1.
+      triggers: [
+        { r: 0, c: 4 },
+        { r: 1, c: 5 },
+        { r: 6, c: 5 },
+        { r: 7, c: 3 },
+      ],
+      eliminations: [
+        { r: 0, c: 3, num: 1 },
+        { r: 7, c: 4, num: 1 },
+      ],
+      digits: [1],
+    });
   });
+
+  it("an XY-Chain never removes the solution digit (checked by brute force)", () => {
+    let count = 0;
+    for (let seed = 1; seed <= 600; seed++)
+      eachMove("xy-chain", seed, (move, solved) => {
+        count++;
+        for (const e of move.eliminations) expect(e.num).not.toBe(solved[e.r]![e.c]);
+      });
+    // 82 over these seeds: a sharp drop means detection regressed.
+    expect(count).toBeGreaterThan(60);
+  }, 20_000);
 
   it("a placement is always the value that actually solves the cell", () => {
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
