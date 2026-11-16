@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { BOARD, blank, playCustom } from "./seed";
+import { BOARD, blank, cell as at, playCustom } from "./seed";
 
 test("undo and redo step a placement via buttons and keyboard", async ({ page }) => {
   await page.goto("/");
@@ -81,4 +81,48 @@ test("the grid has exactly one Tab stop, following the selection", async ({ page
   await page.locator('[data-cell="4-4"]').click();
   await expect(page.locator('[data-cell][tabindex="0"]')).toHaveCount(1);
   await expect(page.locator('[data-cell="4-4"]')).toHaveAttribute("tabindex", "0");
+});
+
+test("the move history scrubs to any kept state, and play goes on from there", async ({ page }) => {
+  await page.goto("/");
+  await playCustom(page, blank(1, 2, 3, 49));
+  await page.keyboard.press("n"); // pencil marks: no mistakes to count
+  await at(page, 1).click();
+  await page.keyboard.press("1");
+  await at(page, 2).click();
+  await page.keyboard.press("2");
+  await at(page, 3).click();
+  await page.keyboard.press("3");
+  const history = page.getByRole("dialog", { name: "Move history" });
+  const slider = history.getByRole("slider", { name: "Move history" });
+
+  // Holding Undo opens it, and the press doesn't also undo.
+  await page.getByRole("button", { name: "Undo" }).hover();
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(history).toBeVisible();
+  await expect(at(page, 3)).toHaveText("3");
+  await expect(slider).toHaveValue("3");
+  await page.keyboard.press("Escape");
+  await expect(history).toBeHidden();
+
+  await page.keyboard.press("Shift+Z");
+  await expect(history).toBeVisible();
+  await slider.press("Home");
+  await expect(slider).toHaveValue("0");
+  await expect(at(page, 1)).toHaveText("");
+  await expect(at(page, 3)).toHaveText("");
+  await slider.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Move 1 of 3");
+  await expect(at(page, 1)).toHaveText("1");
+  await expect(at(page, 2)).toHaveText("");
+  await history.getByRole("button", { name: "Close" }).click();
+
+  // Like many undos: redo can step forward, and a fresh edit drops what was undone.
+  const redo = page.getByRole("button", { name: "Redo" });
+  await expect(redo).toBeEnabled();
+  await at(page, 49).click();
+  await page.keyboard.press("9");
+  await expect(redo).toBeDisabled();
 });

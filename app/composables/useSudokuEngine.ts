@@ -289,6 +289,12 @@ export function useSudokuEngine(
     resetHintChain();
   }
 
+  // The history scrubber: undo or redo until `step` states lie behind (0 = the oldest kept).
+  function jumpTo(step: number) {
+    while (boardHistory.value.length > step) undoMove();
+    while (boardHistory.value.length < step && redoHistory.value.length) redoMove();
+  }
+
   // Every empty cell's notes become exactly its candidates; filled cells keep theirs.
   function autoFillNotes() {
     saveHistory();
@@ -540,6 +546,7 @@ export function useSudokuEngine(
     saveHistory,
     undoMove,
     redoMove,
+    jumpTo,
     redoHistory,
     boardHistory,
     checkWinCondition,

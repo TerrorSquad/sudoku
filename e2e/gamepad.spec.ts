@@ -31,7 +31,7 @@ async function press(page: Page, button: number, times = 1) {
     await page.waitForTimeout(60);
   }
 }
-const [A, B, RB, DOWN, RIGHT] = [0, 1, 5, 13, 15];
+const [A, B, RB, LT, DOWN, LEFT, RIGHT] = [0, 1, 5, 6, 13, 14, 15];
 
 test("a controller walks the board, picks a digit with RB and places it with A", async ({
   page,
@@ -76,4 +76,27 @@ test("off the board: the D-pad moves focus, left/right change a select, B goes b
   await expect(page.locator("html")).toHaveAttribute("data-theme", "newsprint");
   await press(page, B);
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+});
+
+test("LT opens the move history: left/right scrub, B closes it", async ({ page }) => {
+  await plugIn(page);
+  await seedMediumSave(page, [49]);
+  await resumeMedium(page);
+  await page.evaluate(() => window.dispatchEvent(new Event("gamepadconnected")));
+  const target = page.locator('[data-cell="5-4"]');
+  await target.click();
+  await page.keyboard.press("n");
+  await page.keyboard.press("7");
+  await expect(target).toHaveText("7");
+
+  await press(page, LT);
+  const slider = page.getByRole("slider", { name: "Move history" });
+  await expect(slider).toBeFocused();
+  await press(page, LEFT);
+  await expect(slider).toHaveValue("0");
+  await expect(target).toHaveText("");
+  await press(page, RIGHT);
+  await expect(target).toHaveText("7");
+  await press(page, B);
+  await expect(page.getByRole("dialog", { name: "Move history" })).toBeHidden();
 });

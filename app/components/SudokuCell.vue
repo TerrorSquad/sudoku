@@ -22,15 +22,23 @@ const props = defineProps<{
   showErrors: boolean;
   /** Digit-first input: the armed digit could still go here. */
   isCandidate?: boolean;
+  /** The focused digit, when it's one of this empty cell's pencil marks: drawn as a chip. */
+  noteDigit?: number;
   /** "Nudge first" hint: this cell is in the box being pointed at. */
   isNudged?: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
 }>();
 
-defineEmits<{
-  (e: "click"): void;
+const emit = defineEmits<{
+  (e: "click", note?: number): void;
 }>();
+
+// Tapping a pencil mark also names its digit, so the board can light that digit up everywhere.
+function tap(e: MouseEvent) {
+  const note = (e.target as HTMLElement).closest<HTMLElement>("[data-note]")?.dataset.note;
+  emit("click", note ? Number(note) : undefined);
+}
 
 // A player entry that's wrong (conflict or not matching the solution) shakes
 // instead of popping, for immediate tactile feedback on a mistake.
@@ -124,7 +132,7 @@ const cellClasses = computed(() => {
           : undefined
     "
     @animationend="onAnimationEnd"
-    @click="$emit('click')"
+    @click="tap"
     :class="cellClasses"
     class="cell relative flex cursor-pointer items-center justify-center p-0.5 text-3xl font-bold select-none 3xl:text-[length:max(2.25rem,4.6cqw)] 3xl:leading-[calc(2.5/2.25)]"
   >
@@ -146,8 +154,20 @@ const cellClasses = computed(() => {
       v-else
       class="cell-note absolute inset-0.5 grid grid-cols-3 grid-rows-3 gap-px font-game text-[0.625rem] font-black 3xl:text-[length:max(0.8125rem,1.6cqw)]"
     >
-      <div v-for="n in 9" :key="n" class="flex items-center justify-center leading-none">
-        <span>{{ notes[n] ? n : "" }}</span>
+      <div
+        v-for="n in 9"
+        :key="n"
+        :data-note="notes[n] ? n : undefined"
+        class="flex items-center justify-center leading-none"
+      >
+        <span
+          :class="
+            n === noteDigit
+              ? 'rounded-sm bg-violet-600 px-px text-white dark:bg-violet-400 dark:text-zinc-950'
+              : ''
+          "
+          >{{ notes[n] ? n : "" }}</span
+        >
       </div>
     </div>
   </div>

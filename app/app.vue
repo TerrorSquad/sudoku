@@ -312,7 +312,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   isWinState.value = win;
   winResult.value = null;
   showModal.value = true;
-  activeDigit.value = null;
+  activeDigit.value = pickedDigit.value = null;
   timer.stopTimer();
   const practised = practiceTechnique.value;
   // Read before this game's save is cleared: a level open only through it isn't news.
@@ -497,17 +497,23 @@ function handleResumeDecline() {
 // Digit-first input: the numpad arms a digit, and tapping a cell places it. Tapping a given
 // does nothing but select; tapping a cell that already holds the armed digit removes it.
 const activeDigit = ref<number | null>(null);
+// A digit lit up everywhere, its pencil marks too: picked by tapping a pencil mark, or on the
+// numpad or keys outside digit-first. Selecting a cell any other way drops it.
+const pickedDigit = ref<number | null>(null);
 
 function handleNumpad(num: number) {
   if (digitFirst.value) {
     activeDigit.value = activeDigit.value === num ? null : num;
+    pickedDigit.value = null;
     return;
   }
+  pickedDigit.value = num;
   handleInputNumber(num);
 }
 
-function handleSelectCell(coord: CellCoord) {
+function handleSelectCell(coord: CellCoord, note?: number) {
   selectedCell.value = coord;
+  pickedDigit.value = note ?? null;
   if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
     return;
   // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
@@ -520,6 +526,7 @@ function handleSelectCell(coord: CellCoord) {
 // placed all nine of it.
 watch([inGame, digitFirst], () => {
   if (!inGame.value || !digitFirst.value) activeDigit.value = null;
+  if (!inGame.value) pickedDigit.value = null;
 });
 watch(numberCounts, (counts) => {
   if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
@@ -730,7 +737,7 @@ async function handleFinish() {
   cancelComplexHint();
   engine.resetHintChain();
   nudge.value = null;
-  activeDigit.value = null;
+  activeDigit.value = pickedDigit.value = null;
   selectedCell.value = null;
   const token = startToken; // bumped if the player exits mid-cascade
   const instant = reducedMotion.value;
@@ -849,6 +856,18 @@ function redo() {
   checkWin();
 }
 
+// The move history (hold Undo/Redo, Shift+Z, LT): a slider over every kept state.
+const historyOpen = ref(false);
+const historyLength = computed(() => boardHistory.value.length + redoHistory.value.length);
+function openHistory() {
+  if (historyLength.value && !showModal.value && !practiceLoading.value) historyOpen.value = true;
+}
+function jumpHistory(step: number) {
+  if (showModal.value || practiceLoading.value) return;
+  engine.jumpTo(step);
+  checkWin();
+}
+
 const shortcutsOpen = ref(false);
 
 function handleKeyDown(e: KeyboardEvent) {
@@ -883,8 +902,8 @@ function handleKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     return;
   }
-  if (e.key === "Escape" && activeDigit.value) {
-    activeDigit.value = null;
+  if (e.key === "Escape" && (activeDigit.value || pickedDigit.value)) {
+    activeDigit.value = pickedDigit.value = null;
     return;
   }
   // Arrows and WASD walk the grid (so auto-fill notes lives on F, not A).
@@ -892,9 +911,11 @@ function handleKeyDown(e: KeyboardEvent) {
   if (to) {
     e.preventDefault();
     focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
+    pickedDigit.value = null;
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
+    pickedDigit.value = parseInt(e.key);
     handleInputNumber(parseInt(e.key));
   } else if (e.key === "Backspace" || e.key === "Delete") {
     eraseCell(selectedCell.value);
@@ -904,6 +925,8 @@ function handleKeyDown(e: KeyboardEvent) {
     handleTriggerHint();
   } else if (e.key.toLowerCase() === "f") {
     handleAutoFillNotes();
+  } else if (e.key === "Z") {
+    openHistory();
   }
 }
 
@@ -941,7 +964,15 @@ function padBack() {
 // LB/RB pick the digit that A (game) or X (Academy boards) enters.
 function padKeys(digit: number): PadKeys {
   if (currentScreen.value === "game")
-    return { press: String(digit), alt: "n", back: "Backspace", hint: "h", pause: "p", help: "?" };
+    return {
+      press: String(digit),
+      alt: "n",
+      back: "Backspace",
+      hint: "h",
+      pause: "p",
+      help: "?",
+      history: "Z",
+    };
   // A presses a focused button; How to play has no cells to tap, so there A enters the digit too.
   return {
     press: currentScreen.value === "basics" ? String(digit) : "Enter",
@@ -1158,7 +1189,7 @@ onUnmounted(() => {
                 :color-mode="colorMode"
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
-                :active-digit="activeDigit"
+                :active-digit="activeDigit ?? pickedDigit"
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
@@ -1172,6 +1203,7 @@ onUnmounted(() => {
                   :can-redo="redoHistory.length > 0"
                   @undo="undo"
                   @redo="redo"
+                  @history="openHistory"
                   @erase="eraseCell(selectedCell)"
                   @toggle-notes="notesMode = !notesMode"
                   @trigger-hint="handleTriggerHint"
@@ -1243,6 +1275,34 @@ onUnmounted(() => {
         </h2>
         <ShortcutList sheet />
         <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
+          {{ $t("modal.close") }}
+        </button>
+      </SheetDialog>
+
+      <!-- The move history, docked low so the board stays in view while scrubbing. -->
+      <SheetDialog
+        v-model:open="historyOpen"
+        class="panel mx-auto mt-auto mb-4 w-[min(26rem,calc(100vw-2rem))] p-4 text-inherit backdrop:bg-transparent"
+        :aria-label="$t('controls.history')"
+      >
+        <label class="flex flex-col gap-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          {{ $t("controls.history") }}
+          <input
+            type="range"
+            min="0"
+            :max="historyLength"
+            :value="boardHistory.length"
+            :aria-valuetext="
+              $t('controls.historyStep', { n: boardHistory.length, total: historyLength })
+            "
+            class="w-full accent-violet-600 dark:accent-violet-400"
+            @input="jumpHistory(Number(($event.target as HTMLInputElement).value))"
+          />
+        </label>
+        <p class="mt-1 text-xs text-zinc-600 tabular-nums dark:text-zinc-400">
+          {{ $t("controls.historyStep", { n: boardHistory.length, total: historyLength }) }}
+        </p>
+        <button @click="historyOpen = false" class="tile mt-3 w-full py-2 text-sm font-bold">
           {{ $t("modal.close") }}
         </button>
       </SheetDialog>
