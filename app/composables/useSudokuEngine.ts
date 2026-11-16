@@ -1,9 +1,10 @@
-import { ref, computed, type Ref } from "vue";
+import { ref, computed, onScopeDispose, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
 
 import { emptyNotes } from "../utils/gridNav";
+import { circled, patternMarks, strikes, withGhosts, type Mark } from "../utils/patternMarks";
 import { digitLabel } from "../utils/sudokuColors";
 import {
   solveBoard,
@@ -65,6 +66,39 @@ export function useSudokuEngine(
   // the player makes (new game, load, undo, erase, manual entry).
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
+
+  // The hint's pattern in pen on the board once a step shows it (what it removes or places only on
+  // the step that says so). Applying a hint strikes the removed marks through, or circles the placed
+  // digit, for a moment.
+  const appliedMarks = ref<Mark[]>([]);
+  let appliedTimer: ReturnType<typeof setTimeout> | undefined;
+  const hintMarks = computed<Mark[]>(() => {
+    const move = activeMove.value;
+    const hint = activeComplexHint.value;
+    // The last step is the one that says what to remove or place.
+    const showsResult = !!hint && currentStepIndex.value === hint.steps.length - 1;
+    if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
+    const cands = getGridCandidates(currentBoard.value);
+    const has = (r: number, c: number, n: number) => {
+      const notes = notesBoard.value[r]![c]!;
+      return notes.some(Boolean) ? !!notes[n] : cands[r]![c]!.includes(n);
+    };
+    const showsNotes = (r: number, c: number) => notesBoard.value[r]![c]!.some(Boolean);
+    return withGhosts(patternMarks(move, has, showsResult), showsNotes);
+  });
+  // A new or resumed board, and undo/redo, start clean.
+  function clearApplied() {
+    clearTimeout(appliedTimer);
+    appliedMarks.value = [];
+  }
+  function showApplied(move: SolveMove | null) {
+    if (!move) return;
+    appliedMarks.value = move.placement ? [circled(move.placement)] : strikes(move.eliminations);
+    clearTimeout(appliedTimer);
+    appliedTimer = setTimeout(() => (appliedMarks.value = []), 1400);
+  }
+  // Silently: unit tests run the engine outside any component.
+  onScopeDispose(() => clearTimeout(appliedTimer), true);
 
   // The next hint worth showing. A gap in the player's notes is never fed to the solver as a
   // deduction (it may be a guess, or just unfinished notes, and reading it could smuggle in the
@@ -165,6 +199,7 @@ export function useSudokuEngine(
     selectedCell.value = null;
     cancelComplexHint();
     resetHintChain();
+    clearApplied();
   }
 
   /** `generated` comes from utils/puzzlePool in the app; tests let it generate in place. */
@@ -233,6 +268,7 @@ export function useSudokuEngine(
   }
 
   function undoMove() {
+    clearApplied();
     const prevState = boardHistory.value.pop();
     if (!prevState) return;
     redoHistory.value.push(snapshot());
@@ -243,6 +279,7 @@ export function useSudokuEngine(
   }
 
   function redoMove() {
+    clearApplied();
     const nextState = redoHistory.value.pop();
     if (!nextState) return;
     boardHistory.value.push(snapshot());
@@ -517,5 +554,7 @@ export function useSudokuEngine(
     cancelComplexHint,
     resetHintChain,
     activeMove,
+    hintMarks,
+    showApplied,
   };
 }
