@@ -8,6 +8,7 @@ vi.mock("vue-i18n", () => ({
 import type { Grid } from "../types/sudoku";
 
 import { useSudokuEngine } from "../composables/useSudokuEngine";
+import { circled } from "../utils/patternMarks";
 import { solveBoard } from "../utils/sudokuCore";
 import { nextHint } from "../utils/sudokuGrader";
 
@@ -305,5 +306,26 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     expect(done.digitDone).toBe(true);
     expect(done.cells).toHaveLength(9 * 2 + 9);
     expect(done.cells.slice(0, 9)).toEqual(Array.from({ length: 9 }, (_, i) => ({ r: i, c: 8 })));
+  });
+
+  it("an applied hint circles its placement for a moment; undo clears it at once", () => {
+    vi.useFakeTimers();
+    const placement = { r: 0, c: 0, num: 5 };
+    const move = {
+      technique: "nakedSingle",
+      digits: [5],
+      triggers: [],
+      eliminations: [],
+      placement,
+    };
+    engine.showApplied(move as unknown as Parameters<typeof engine.showApplied>[0]);
+    expect(engine.hintMarks.value).toEqual([circled(placement)]);
+    vi.advanceTimersByTime(1400);
+    expect(engine.hintMarks.value).toEqual([]);
+
+    engine.showApplied(move as unknown as Parameters<typeof engine.showApplied>[0]);
+    engine.undoMove(); // nothing to undo still starts clean
+    expect(engine.hintMarks.value).toEqual([]);
+    vi.useRealTimers();
   });
 });
