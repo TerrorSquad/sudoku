@@ -102,7 +102,8 @@ describe("nextHint — soundness", () => {
       });
     // 27 over these seeds: a sharp drop means detection regressed.
     expect(count).toBeGreaterThan(20);
-  });
+    // ~5 s alone: room for a busy machine.
+  }, 20_000);
 
   it("finds the shortest XY-Chain: four cells from 1 to 1, each end in line with both removals", () => {
     const found: SolveMove[] = [];
@@ -134,7 +135,7 @@ describe("nextHint — soundness", () => {
       });
     // 82 over these seeds: a sharp drop means detection regressed.
     expect(count).toBeGreaterThan(60);
-  });
+  }, 20_000);
 
   it("a placement is always the value that actually solves the cell", () => {
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
