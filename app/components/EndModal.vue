@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
+import type { WinResult } from "../composables/useWinResult";
 import type { Difficulty, Grid } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
-import type { ScoreBreakdown } from "../utils/score";
-import type { StuckMoment } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { formatTime } from "../composables/useTimer";
@@ -26,14 +25,7 @@ const props = defineProps<{
   hintsUsed: number;
   seconds: number;
   board: Grid; // the givens, for a challenge code
-  lastScore: ScoreBreakdown | null;
-  isNewBest: boolean;
-  lifetimeTotal: number;
-  reachedLevel: number | null;
-  progressNotes: { text: string; ok: boolean }[];
-  newRecords: NewRecord[];
-  neededTechs: TechniqueId[];
-  stuck: StuckMoment[];
+  result: WinResult | null; // null for a game over
   techniqueLog: TechniqueId[];
   nextLevel: Difficulty | null;
   nextLoading: boolean;
@@ -61,7 +53,7 @@ function recordLine(r: NewRecord): string {
 const perfect = computed(() => props.win && props.mistakes === 0 && props.hintsUsed === 0);
 const winStars = computed(() => starsFor(props.mistakes, props.hintsUsed));
 const scoreRows = computed(() => {
-  const s = props.lastScore;
+  const s = props.result?.score;
   if (!s) return [];
   const good = "text-emerald-700 dark:text-emerald-400";
   return [
@@ -90,7 +82,7 @@ const {
   stars: winStars,
   rows: scoreRows,
   perfect,
-  total: () => props.lastScore?.total,
+  total: () => props.result?.score?.total,
   cue: (kind, ...n) => emit("cue", kind, ...n),
 });
 
@@ -218,13 +210,13 @@ onMounted(() => {
       </div>
 
       <p
-        v-if="win && reachedLevel"
+        v-if="result?.reachedLevel"
         class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-700 dark:text-violet-300"
       >
-        ▲ {{ $t("level.up", { n: reachedLevel }) }}
+        ▲ {{ $t("level.up", { n: result.reachedLevel }) }}
       </p>
       <p
-        v-for="note in win ? progressNotes : []"
+        v-for="note in result?.notes ?? []"
         :key="note.text"
         :class="
           note.ok
@@ -236,7 +228,7 @@ onMounted(() => {
         {{ note.text }}
       </p>
       <p
-        v-for="r in win ? newRecords : []"
+        v-for="r in result?.records ?? []"
         :key="r.kind"
         data-testid="new-record"
         :class="scoreLanded ? 'win-in' : 'opacity-0'"
@@ -246,16 +238,16 @@ onMounted(() => {
       </p>
 
       <!-- Score headline: the total counts up through the lines as they appear -->
-      <div v-if="win && lastScore" class="mb-5">
+      <div v-if="result?.score" class="mb-5">
         <p class="text-[0.6875rem] font-semibold text-zinc-500">
           {{ $t("modal.scoreTotal") }}
         </p>
         <p class="text-5xl leading-tight font-black text-zinc-900 tabular-nums dark:text-zinc-50">
           <span aria-hidden="true">{{ displayedScore }}</span>
-          <span class="sr-only">{{ lastScore.total }}</span>
+          <span class="sr-only">{{ result.score.total }}</span>
         </p>
         <p
-          v-if="isNewBest"
+          v-if="result.isNewBest"
           :class="scoreLanded ? 'win-in' : 'opacity-0'"
           class="mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-800 dark:text-amber-300"
         >
@@ -285,7 +277,7 @@ onMounted(() => {
               $t("modal.scoreLifetime")
             }}</span>
             <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
-              lifetimeTotal
+              result.lifetimeTotal
             }}</span>
           </div>
         </div>
@@ -293,13 +285,12 @@ onMounted(() => {
 
       <!-- Win summary -->
       <WinSummary
-        v-if="win"
+        v-if="result"
         :difficulty-label="difficultyLabel"
         :zen="zen"
         :mistakes="mistakes"
         :hints-used="hintsUsed"
-        :needed-techs="neededTechs"
-        :stuck="stuck"
+        :result="result"
         :technique-log="techniqueLog"
         @lesson="(id) => emit('lesson', id)"
       />
