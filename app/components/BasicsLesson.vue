@@ -6,7 +6,6 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { Mark } from "../utils/patternMarks";
-import type { BoardTheme } from "../utils/preferenceValues";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
@@ -22,11 +21,11 @@ import {
 import { focusCell, stepCell } from "../utils/gridNav";
 import { digitLabel } from "../utils/sudokuColors";
 import { saveToCloud } from "../utils/wavedash";
-import AppIcon from "./AppIcon.vue";
 import Numpad from "./Numpad.vue";
+import ScreenHeader from "./ScreenHeader.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
-const props = defineProps<{ id: BasicsId; colorMode: boolean; theme: BoardTheme }>();
+const props = defineProps<{ id: BasicsId }>();
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "basics", id: BasicsId): void;
@@ -39,7 +38,8 @@ const tasks = BASICS[props.id];
 const index = ref(0);
 const task = computed(() => tasks[index.value]!);
 const answer = computed(() => SOLUTION[task.value.cell.r]![task.value.cell.c]!);
-const digit = (n: number) => digitLabel(n, props.colorMode, t);
+const { colorMode, boardTheme: theme } = usePreferences();
+const digit = (n: number) => digitLabel(n, colorMode.value, t);
 
 const board = ref(task.value.board.map((row) => [...row]));
 const emptyNotes = (): NotesGrid =>
@@ -277,24 +277,11 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 
 <template>
   <div class="flex min-h-screen w-full flex-col">
-    <div
-      class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
-    >
-      <button
-        :aria-label="$t('lesson.back')"
-        @click="emit('back')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
-      </button>
+    <ScreenHeader lesson :back-label="$t('lesson.back')" @back="emit('back')">
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         {{ $t("basics.title") }}: {{ $t(`basics.lesson.${id}`) }}
       </h1>
-    </div>
+    </ScreenHeader>
 
     <div
       class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 py-3 sm:px-5 lg:grid lg:grid-cols-12 lg:gap-6"

@@ -19,6 +19,7 @@ import {
 } from "../utils/progression";
 import ExampleGrid from "./ExampleGrid.vue";
 import ReviewPanel from "./ReviewPanel.vue";
+import ScreenHeader from "./ScreenHeader.vue";
 import SpotItPanel from "./SpotItPanel.vue";
 import WatchExample from "./WatchExample.vue";
 
@@ -46,7 +47,7 @@ const techniques = ACADEMY_TECHNIQUES;
 const path = useTechniquePath();
 const done = path.getDone();
 const nextId = nextChallenge(done);
-const doneCount = techniques.filter((tech) => done.includes(tech.id)).length;
+const doneCount = path.pathDone();
 const pathState = (id: TechniqueId) =>
   done.includes(id) ? "done" : id === nextId ? "next" : "locked";
 // Key, technique and seed all from one date, so a click after midnight Sunday can't mix weeks.
@@ -238,20 +239,10 @@ const total = computed(() => techniques.length);
 <template>
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
+    <ScreenHeader
+      :back-label="$t(inGame ? 'settings.backToGame' : 'menu.back')"
+      @back="emit('back-to-menu')"
     >
-      <button
-        :aria-label="$t(inGame ? 'settings.backToGame' : 'menu.back')"
-        @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{ $t(inGame ? "settings.backToGame" : "menu.back") }}</span>
-      </button>
       <div class="min-w-0 flex-1">
         <h1
           class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
@@ -266,7 +257,7 @@ const total = computed(() => techniques.length);
         class="hidden shrink-0 text-xs font-semibold text-zinc-600 sm:inline dark:text-zinc-400"
         >{{ $t("academy.count", { n: total }) }}</span
       >
-    </div>
+    </ScreenHeader>
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">

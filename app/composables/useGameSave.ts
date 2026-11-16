@@ -1,7 +1,7 @@
 import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
 import type { Placement } from "../utils/stuckMoments";
 
-import { readJSON, writeJSON } from "../utils/safeJson";
+import { readJSON, removeJSON, writeJSON } from "../utils/safeJson";
 
 /** One slot per difficulty, plus the Daily's own (it plays as medium but must not overwrite it). */
 export type SaveSlot = Difficulty | "daily";
@@ -36,7 +36,7 @@ export function useGameSave() {
   }
 
   function clearDifficulty(d: SaveSlot): void {
-    localStorage.removeItem(saveKey(d));
+    removeJSON(saveKey(d));
   }
 
   return { save, loadDifficulty, clearDifficulty };
