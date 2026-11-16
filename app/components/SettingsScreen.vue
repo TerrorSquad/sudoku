@@ -5,7 +5,7 @@ import type { Backup } from "../utils/progressBackup";
 // Opened over the game (app.vue's sheet): back returns to it, and the settings a game is started
 // with (colour mode, the mistake limit) stay locked until it ends. `timed`: its clock is running.
 defineProps<{ inGame?: boolean; timed?: boolean }>();
-const emit = defineEmits<{ (e: "back-to-menu"): void }>();
+const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "tour"): void }>();
 
 const {
   colorMode,
@@ -19,6 +19,7 @@ const {
   showCandidates,
   boardTheme,
   uiScale,
+  controlsTour,
 } = usePreferences();
 
 const vibrationSupported = canVibrate();
@@ -205,6 +206,27 @@ const style = computed({
             <option value="nudge">{{ $t("settings.hintNudge") }}</option>
           </select>
         </label>
+
+        <!-- Over a game it plays now (app.vue); from the menu it waits for the next game. -->
+        <div class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.tour") }}</span>
+            <span class="s-hint">{{
+              $t(controlsTour && !inGame ? "settings.tourQueued" : "settings.tourHint")
+            }}</span>
+          </span>
+          <button
+            type="button"
+            class="s-action disabled:opacity-50"
+            :disabled="controlsTour && !inGame"
+            @click="
+              controlsTour = true;
+              emit('tour');
+            "
+          >
+            {{ $t("settings.tourButton") }}
+          </button>
+        </div>
 
         <h2 class="mt-3 text-[0.8125rem] font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("settings.groupFeedback") }}
