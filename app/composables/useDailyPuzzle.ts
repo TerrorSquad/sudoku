@@ -42,7 +42,7 @@ export function fastestDaily(
 }
 
 export function useDailyPuzzle() {
-  // Evaluated per call, not once: a tab or PWA left open past midnight must roll over.
+  // Evaluated per call, not once: a tab left open past midnight must roll over.
   const todayKey = () => localDateKey();
 
   function getBoard(): Grid {

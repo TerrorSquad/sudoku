@@ -1,5 +1,5 @@
 // The only code that touches the Wavedash SDK (https://docs.wavedash.com/sdk). On Wavedash the
-// platform injects `Wavedash` before the app starts; everywhere else (Vercel, the PWA, dev) it is
+// platform injects `Wavedash` before the app starts; everywhere else (dev, tests) it is
 // absent and every export here is a no-op. Design: docs/specs/2026-10-27-wavedash-platform-design.md.
 
 import {

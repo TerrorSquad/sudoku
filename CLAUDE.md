@@ -11,7 +11,7 @@ This repo uses **pnpm** (`pnpm-lock.yaml`), not npm or yarn. Running `npm instal
 ```bash
 pnpm dev              # dev server at http://localhost:3000
 pnpm build            # production build
-pnpm generate         # static generate (used for the GitHub Pages deploy)
+pnpm generate         # static generate (`pnpm wavedash` builds on it)
 pnpm preview          # preview a static build locally
 
 pnpm test             # vitest, all unit tests (app/tests/*.test.ts)
@@ -31,7 +31,7 @@ The e2e suite spins up its own dev server on port 3110 (`E2E_PORT` overrides it,
 
 ## Architecture
 
-This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generated and deployed to GitHub Pages. There is no `pages/` directory — `app/app.vue` is the entire app. It's a single root component that owns all game state (board, timer, modals, preferences) and switches between screens itself via a `currentScreen` ref (`"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats"`), not Nuxt routing.
+This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generated and shipped to Wavedash (`pnpm wavedash`). There is no `pages/` directory — `app/app.vue` is the entire app. It's a single root component that owns all game state (board, timer, modals, preferences) and switches between screens itself via a `currentScreen` ref (`"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats"`), not Nuxt routing.
 
 ### Two separate Sudoku solvers, for different jobs
 
