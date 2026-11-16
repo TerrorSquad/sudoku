@@ -3,9 +3,9 @@
 // Hidden until there's a finished lesson to review.
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { localDateKey } from "../composables/useDailyPuzzle";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { SESSION_SIZE, dayLabel, dueToday, nextReviewDay } from "../utils/review";
+import { localDateKey } from "../utils/streak";
 
 const emit = defineEmits<{ (e: "review", ids: TechniqueId[]): void }>();
 const { t, locale, locales } = useI18n();

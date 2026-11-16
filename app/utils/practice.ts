@@ -13,7 +13,7 @@ import { ACADEMY_EXAMPLES } from "./academyExamples";
 import { generatePuzzle } from "./sudokuCore";
 import { techniquesRequired } from "./sudokuGrader";
 
-export interface PracticePuzzle {
+interface PracticePuzzle {
   board: Grid;
   /** Pre-filled pencil marks (drills only), keyed "r-c" → digits. */
   notes?: Record<string, number[]>;

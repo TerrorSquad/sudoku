@@ -1,6 +1,6 @@
 import { ref } from "vue";
 
-function formatTime(seconds: number): string {
+export function formatTime(seconds: number): string {
   const min = Math.floor(seconds / 60)
     .toString()
     .padStart(2, "0");
@@ -11,11 +11,11 @@ function formatTime(seconds: number): string {
 export function useTimer() {
   const timerSeconds = ref<number>(0);
   const isPaused = ref<boolean>(false);
-  const { pause: stopTimer, resume, isActive } = useIntervalFn(
-    () => timerSeconds.value++,
-    1000,
-    { immediate: false },
-  );
+  const {
+    pause: stopTimer,
+    resume,
+    isActive,
+  } = useIntervalFn(() => timerSeconds.value++, 1000, { immediate: false });
 
   function startTimer() {
     if (isActive.value) return; // resume() would restart the second under way

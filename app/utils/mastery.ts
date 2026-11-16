@@ -1,7 +1,7 @@
 // Pure technique-mastery tiers over how often a hint has taught that technique, and its lesson.
 // Unit-tested in tests/mastery.test.ts.
 
-export type Mastery = 0 | 1 | 2 | 3;
+type Mastery = 0 | 1 | 2 | 3;
 
 /**
  * 0 = never seen, 1 = familiar (1+), 2 = practised (5+), 3 = fluent (15+). A finished lesson

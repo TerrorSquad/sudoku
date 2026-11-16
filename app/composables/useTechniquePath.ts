@@ -18,7 +18,7 @@ import {
   type Card,
 } from "../utils/review";
 import { readJSON, writeJSON } from "../utils/safeJson";
-import { localDateKey } from "./useDailyPuzzle";
+import { localDateKey } from "../utils/streak";
 
 // All under sudoku_v1_, so they back up and cloud-sync with the rest of the progress.
 const PATH_KEY = "sudoku_v1_technique_path";

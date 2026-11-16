@@ -4,9 +4,9 @@ import { computed } from "vue";
 
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { localDateKey } from "../composables/useDailyPuzzle";
 import { dayLabel } from "../utils/review";
 import { breakdown, formatSpotTime, totalTime, type SpotResult } from "../utils/spotIt";
+import { localDateKey } from "../utils/streak";
 
 const props = defineProps<{
   review: boolean;

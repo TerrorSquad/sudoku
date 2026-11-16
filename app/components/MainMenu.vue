@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import { localDateKey, useDailyPuzzle } from "../composables/useDailyPuzzle";
+import { useDailyPuzzle } from "../composables/useDailyPuzzle";
 import { usePreferences } from "../composables/usePreferences";
 import { useScore } from "../composables/useScore";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { levelBand, levelFor } from "../utils/level";
 import { ACADEMY_TECHNIQUES } from "../utils/progression";
 import { dueToday } from "../utils/review";
+import { localDateKey } from "../utils/streak";
 
 // The menu is itself a 3×3 box, New game filling four of its cells.
 const emit = defineEmits<{

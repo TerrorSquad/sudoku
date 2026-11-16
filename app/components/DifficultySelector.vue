@@ -16,7 +16,7 @@ const wins = useScore().unlockWins();
 const lockFor = (d: Difficulty) => lockOf(d, wins, inProgress.has(d));
 onMounted(() => {
   // Have a board ready for every open level by the time one is picked.
-  for (const d of DIFFICULTIES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
+  for (const d of TILES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
 });
 
 const emit = defineEmits<{
@@ -24,51 +24,44 @@ const emit = defineEmits<{
   (e: "back-to-menu"): void;
 }>();
 
-const DIFFICULTIES: {
+const TILES: {
   key: Difficulty;
-  level: number;
   bar: string;
   hoverClass: string;
   groupHoverText: string;
 }[] = [
   {
     key: "beginner",
-    level: 1,
     bar: "bg-teal-500",
     hoverClass: "hover:border-teal-500/40 hover:bg-teal-50 dark:hover:bg-teal-950/20",
     groupHoverText: "group-hover:text-teal-700 dark:group-hover:text-teal-300",
   },
   {
     key: "easy",
-    level: 2,
     bar: "bg-emerald-500",
     hoverClass: "hover:border-emerald-500/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/20",
     groupHoverText: "group-hover:text-emerald-700 dark:group-hover:text-emerald-300",
   },
   {
     key: "medium",
-    level: 3,
     bar: "bg-amber-500",
     hoverClass: "hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-950/20",
     groupHoverText: "group-hover:text-amber-700 dark:group-hover:text-amber-300",
   },
   {
     key: "hard",
-    level: 4,
     bar: "bg-rose-500",
     hoverClass: "hover:border-rose-500/40 hover:bg-rose-50 dark:hover:bg-rose-950/20",
     groupHoverText: "group-hover:text-rose-700 dark:group-hover:text-rose-300",
   },
   {
     key: "expert",
-    level: 5,
     bar: "bg-purple-500",
     hoverClass: "hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-950/20",
     groupHoverText: "group-hover:text-purple-700 dark:group-hover:text-purple-300",
   },
   {
     key: "master",
-    level: 6,
     bar: "bg-fuchsia-500",
     hoverClass: "hover:border-fuchsia-500/40 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20",
     groupHoverText: "group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-300",
@@ -108,7 +101,7 @@ function pick(d: Difficulty) {
         <!-- A locked level stays visible and focusable, saying what opens it. The requirement is
              its description, not part of its name, so "Medium" names only the Medium tile. -->
         <button
-          v-for="d in DIFFICULTIES"
+          v-for="d in TILES"
           :key="d.key"
           @click="pick(d.key)"
           :aria-disabled="lockFor(d.key) ? 'true' : undefined"
@@ -123,7 +116,7 @@ function pick(d: Difficulty) {
               <span
                 v-for="n in 6"
                 :key="n"
-                :class="n <= d.level ? d.bar : 'bg-zinc-300 dark:bg-zinc-700'"
+                :class="n <= LADDER.indexOf(d.key) + 1 ? d.bar : 'bg-zinc-300 dark:bg-zinc-700'"
                 class="h-3 w-1.5 rounded-full"
               />
             </span>

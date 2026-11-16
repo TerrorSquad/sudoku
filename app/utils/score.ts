@@ -7,7 +7,7 @@
 //       - hint penalty (5% of base each)
 // floored at 10% of base so a win is always worth something.
 
-export interface ScoreInput {
+interface ScoreInput {
   difficulty: string;
   timeSeconds: number;
   mistakes: number;

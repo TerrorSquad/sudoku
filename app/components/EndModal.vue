@@ -7,7 +7,7 @@ import type { ScoreBreakdown } from "../utils/score";
 import type { StuckMoment } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { useTimer } from "../composables/useTimer";
+import { formatTime } from "../composables/useTimer";
 import { useWinSteps } from "../composables/useWinSteps";
 import { encodeChallenge } from "../utils/challenge";
 import { starsFor } from "../utils/stars";
@@ -46,7 +46,6 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { formatTime } = useTimer();
 
 function recordLine(r: NewRecord): string {
   const show = (v: number | string) =>

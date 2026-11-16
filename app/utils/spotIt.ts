@@ -14,7 +14,7 @@ export const SKIP_PENALTY = 15;
 /** Best round time per tier, in seconds: {Basic: 31.4, …}. */
 export const SPOT_BEST_KEY = "sudoku_v1_spot_best";
 
-export interface Slot {
+interface Slot {
   technique: TechniqueId;
   /** Seeds the position, so a round (and a test) can be replayed exactly. */
   seed: number;
@@ -56,7 +56,7 @@ export interface SpotResult {
 
 export const totalTime = (results: SpotResult[]) => results.reduce((s, r) => s + r.seconds, 0);
 
-export interface TechniqueRow {
+interface TechniqueRow {
   technique: TechniqueId;
   /** Average seconds per position, penalties included. */
   average: number;

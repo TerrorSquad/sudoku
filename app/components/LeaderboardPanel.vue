@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 
-import { localDateKey } from "../composables/useDailyPuzzle";
-import {
-  DIFFICULTIES,
-  dailyBoard,
-  loadBoard,
-  timeBoard,
-  type Board,
-  type BoardView,
-} from "../utils/wavedash";
+import { LADDER } from "../utils/progression";
+import { localDateKey } from "../utils/streak";
+import { dailyBoard, loadBoard, timeBoard, type Board, type BoardView } from "../utils/wavedash";
 
 const { t } = useI18n();
 
 // Shown only on Wavedash (StatsScreen checks hasWavedash()).
 const boards = computed<{ board: Board; label: string }[]>(() => [
   { board: dailyBoard(localDateKey()), label: t("leaderboard.dailyToday") },
-  ...DIFFICULTIES.map((d) => ({
+  ...LADDER.map((d) => ({
     board: timeBoard(d),
     label: t("leaderboard.bestTime", { difficulty: t(`difficulty.${d}`) }),
   })),

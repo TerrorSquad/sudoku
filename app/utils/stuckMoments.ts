@@ -21,7 +21,7 @@ export interface StuckMoment {
 }
 
 /** A wait shorter than this is just playing. */
-export const STUCK_MIN_GAP = 40;
+const STUCK_MIN_GAP = 40;
 
 /**
  * The longest waits before a placement (at least `minGap` s), at most `max`, in game order. Each

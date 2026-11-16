@@ -11,7 +11,7 @@ import { ACADEMY_TECHNIQUES } from "./progression";
 
 export const REVIEW_KEY = "sudoku_v1_review";
 /** Days until the next review, by box (1–5). */
-export const INTERVALS = [1, 3, 7, 14, 30] as const;
+const INTERVALS = [1, 3, 7, 14, 30] as const;
 /** Techniques per review session. */
 export const SESSION_SIZE = 5;
 
@@ -20,7 +20,7 @@ export interface Card {
   /** The day it's due, YYYY-MM-DD. */
   next: string;
 }
-export type Schedule = Partial<Record<TechniqueId, Card>>;
+type Schedule = Partial<Record<TechniqueId, Card>>;
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const KNOWN = new Set<string>(ACADEMY_TECHNIQUES.map((t) => t.id));

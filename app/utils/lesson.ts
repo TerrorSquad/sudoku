@@ -91,7 +91,7 @@ const uniqueCells = (cells: CellRC[]) =>
   cells.filter((p, i) => cells.findIndex((q) => q.r === p.r && q.c === p.c) === i);
 
 /** The lesson for `move`, found on `board` after the removals in `elims`. */
-export function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
+function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
   const notes = getGridCandidates(board).map((row, r) =>
     row.map((cands, c) =>
       cands.filter((n) => !elims.some((e) => e.r === r && e.c === c && e.num === n)),
@@ -321,7 +321,7 @@ const ON_DIGIT = new Set<TechniqueId>([
   "simple-coloring",
 ]);
 
-export interface Miss {
+interface Miss {
   /** An i18n key under lesson.why.*, or lesson.miss when no quick check explains it. */
   key: string;
   params?: Record<string, number>;
@@ -356,9 +356,7 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
 }
 
 /** What step 1 makes of a tap: a miss, or the cells found so far and the instance they complete. */
-export type TapResult =
-  | { miss: true }
-  | { miss: false; found: CellRC[]; complete: Instance | null };
+type TapResult = { miss: true } | { miss: false; found: CellRC[]; complete: Instance | null };
 
 /** Step 1's verdict on tapping `cell` with `found` already marked. */
 export function tapPattern(instances: Instance[], found: CellRC[], cell: CellRC): TapResult {
@@ -385,7 +383,7 @@ export const unitNumber = (u: BoardUnit): number =>
       : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
 
 /** "in row 4", "in box 2", or "on this board" when the pattern has no one unit. */
-export function unitLabel(L: Lesson, t: Translate): string {
+function unitLabel(L: Lesson, t: Translate): string {
   const u = L.unit;
   if (!u) return t("lesson.where.here");
   return t(`lesson.where.${u.kind}`, { n: unitNumber(u) });

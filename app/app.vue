@@ -28,8 +28,8 @@ import SudokuAcademy from "./components/SudokuAcademy.vue";
 import SudokuGrid from "./components/SudokuGrid.vue";
 import TechniqueLesson from "./components/TechniqueLesson.vue";
 import { useAchievements } from "./composables/useAchievements";
-import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { padScope, sendKey, useGamepad, type PadKeys } from "./composables/useGamepad";
+import { useDailyPuzzle } from "./composables/useDailyPuzzle";
+import { padScope, sendKey, usePad, type PadKeys } from "./composables/useGamepad";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
@@ -69,6 +69,7 @@ import {
   playWin,
 } from "./utils/sound";
 import { SPOT_BEST_KEY, readSpotBest } from "./utils/spotIt";
+import { localDateKey } from "./utils/streak";
 import {
   onBoard,
   restorePlacements,
@@ -1176,7 +1177,7 @@ function handlePageHidden() {
   }
 }
 
-// Controllers (useGamepad): B off the board needs to know the screens, and each board's keys.
+// Controllers (usePad): B off the board needs to know the screens, and each board's keys.
 // B off the board: closes what's on top, else goes where the screen's own Back goes.
 function padBack() {
   const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
@@ -1207,7 +1208,7 @@ function padKeys(digit: number): PadKeys {
     clicks: true,
   };
 }
-const { connected: padConnected, digit: padDigit } = useGamepad({
+const { connected: padConnected, digit: padDigit } = usePad({
   onBoard: () =>
     BOARD_SCREENS.has(currentScreen.value) &&
     padScope() === document &&

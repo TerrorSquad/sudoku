@@ -3,7 +3,7 @@
 // Reaching level n takes 250·n·(n−1) lifetime points (L2 at 500, L3 at 1500, L4 at 3000, …),
 // so each level asks for 500 more points than the last.
 
-export interface LevelInfo {
+interface LevelInfo {
   level: number;
   /** Points earned inside the current level. */
   into: number;

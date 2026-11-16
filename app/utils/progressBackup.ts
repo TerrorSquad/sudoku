@@ -34,7 +34,7 @@ export function backupFilename(now: Date = new Date()): string {
   return `sudoku-pro-backup-${now.toISOString().slice(0, 10)}.json`;
 }
 
-export type ParseResult =
+type ParseResult =
   | { ok: true; backup: Backup; items: number }
   | { ok: false; error: "invalid" | "tooLarge" | "empty" };
 

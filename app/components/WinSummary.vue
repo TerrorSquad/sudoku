@@ -4,7 +4,7 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { usePreferences } from "../composables/usePreferences";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { useTimer } from "../composables/useTimer";
+import { formatTime } from "../composables/useTimer";
 
 // The win modal's summary: the level, mistakes and hints, and the techniques the game took.
 defineProps<{
@@ -18,7 +18,6 @@ defineProps<{
 }>();
 const emit = defineEmits<{ lesson: [id: TechniqueId] }>();
 
-const { formatTime } = useTimer();
 const { mistakeLimit } = usePreferences();
 // Lifetime per-technique usage, read as the modal opens.
 const techStatsTotals = useTechniqueStats().getAll();

@@ -51,7 +51,7 @@ export interface Achievement {
 }
 
 /** An Advanced or Expert Spot it round at or under this many seconds earns Eagle eye. */
-export const EAGLE_EYE_SECONDS = 240;
+const EAGLE_EYE_SECONDS = 240;
 
 const HARD_PLUS = new Set(["hard", "expert", "master"]);
 

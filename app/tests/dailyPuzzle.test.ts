@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import { localDateKey, generateDailyBoard, fastestDaily } from "../composables/useDailyPuzzle";
+import { generateDailyBoard, fastestDaily } from "../composables/useDailyPuzzle";
+import { localDateKey } from "../utils/streak";
 import { hasUniqueSolution } from "../utils/sudokuCore";
 
 describe("daily puzzle", () => {

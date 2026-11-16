@@ -1105,7 +1105,7 @@ export function patternUnit(move: SolveMove): BoardUnit {
   return { kind, r: act.r, c: act.c };
 }
 
-export interface LogicalSolveResult {
+interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;
   board: Grid;
@@ -1169,7 +1169,7 @@ export function gradePuzzle(puzzle: Grid): Grade {
   return solveLogically(puzzle).grade;
 }
 
-export interface GradedPuzzle extends GeneratedPuzzle {
+interface GradedPuzzle extends GeneratedPuzzle {
   grade: Grade;
 }
 
