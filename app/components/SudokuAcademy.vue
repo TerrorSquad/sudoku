@@ -13,7 +13,7 @@ const emit = defineEmits<{
   (e: "lesson", id: TechniqueId): void;
   (e: "basics", id: BasicsId): void;
   (e: "weekly", week: Week): void;
-  (e: "spot", tier: Tier): void;
+  (e: "spot", tier: Tier, rush: boolean): void;
   (e: "review", ids: TechniqueId[]): void;
 }>();
 
@@ -215,7 +215,7 @@ const total = computed(() => techniques.length);
         <PathPanels @lesson="(id) => emit('lesson', id)" @weekly="(w) => emit('weekly', w)" />
 
         <ReviewPanel @review="(ids) => emit('review', ids)" />
-        <SpotItPanel @spot="(tier) => emit('spot', tier)" />
+        <SpotItPanel @spot="(tier, rush) => emit('spot', tier, rush)" />
       </div>
 
       <!-- The techniques as cards, or as a map of what builds on what. -->
