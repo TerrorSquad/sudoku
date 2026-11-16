@@ -10,6 +10,8 @@ defineProps<{
   bestTime: string;
   /** The clock has run past `bestTime`. */
   pastBest: boolean;
+  /** `bestTime` is a friend's time from a challenge code, not the player's own best. */
+  challenge?: boolean;
   showMistakes: boolean;
   difficulty: string;
 }>();
@@ -59,8 +61,10 @@ defineEmits<{
           :data-past="pastBest"
           class="text-[0.625rem] leading-none font-semibold text-zinc-500 tabular-nums sm:text-[0.6875rem]"
           :class="{ 'line-through decoration-rose-500/70': pastBest }"
-          >{{ $t("game.best", { time: bestTime })
-          }}<span v-if="pastBest" class="sr-only"> {{ $t("game.bestPassed") }}</span></span
+          >{{ $t(challenge ? "game.toBeat" : "game.best", { time: bestTime })
+          }}<span v-if="pastBest" class="sr-only">
+            {{ $t(challenge ? "game.toBeatPassed" : "game.bestPassed") }}</span
+          ></span
         >
       </div>
       <button

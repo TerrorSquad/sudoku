@@ -650,5 +650,14 @@
   "academy.view.list": "Cards",
   "academy.view.map": "Map",
   "academy.map.hint": "Lines lead from each technique to the ones that build on it. Tap a technique to open it.",
-  "academy.map.buildsOn": "Builds on {names}"
+  "academy.map.buildsOn": "Builds on {names}",
+  "modal.shareChallenge": "Beat my time: paste {code} into Your puzzle",
+  "modal.shareChallengeZen": "Play my puzzle: paste {code} into Your puzzle",
+  "customImport.challenge": "A friend's challenge: beat {time}.",
+  "customImport.challengeZen": "A friend's puzzle, played without a clock.",
+  "game.toBeat": "To beat {time}",
+  "game.toBeatPassed": "(slower than your friend)",
+  "challenge.won": "🏁 You beat your friend's time by {time}!",
+  "challenge.lost": "Your friend was {time} faster. Try again?",
+  "challenge.tie": "🏁 A dead heat with your friend!"
 }

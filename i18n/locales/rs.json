@@ -650,5 +650,14 @@
   "academy.view.list": "Kartice",
   "academy.view.map": "Mapa",
   "academy.map.hint": "Linije vode od svake tehnike do onih koje se na nju nadovezuju. Dodirni tehniku da je otvoriš.",
-  "academy.map.buildsOn": "Oslanja se na: {names}"
+  "academy.map.buildsOn": "Oslanja se na: {names}",
+  "modal.shareChallenge": "Pobedi moje vreme: nalepi {code} u Tvoju slagalicu",
+  "modal.shareChallengeZen": "Odigraj moju slagalicu: nalepi {code} u Tvoju slagalicu",
+  "customImport.challenge": "Izazov prijatelja: pobedi vreme {time}.",
+  "customImport.challengeZen": "Slagalica prijatelja, igrana bez sata.",
+  "game.toBeat": "Cilj: {time}",
+  "game.toBeatPassed": "(sporije od prijatelja)",
+  "challenge.won": "🏁 Brži si od prijatelja za {time}!",
+  "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?",
+  "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!"
 }
