@@ -636,5 +636,13 @@
   "achievements.star-pupil.name": "Star pupil",
   "achievements.star-pupil.desc": "Earn 3 stars on 10 lessons.",
   "achievements.eagle-eye.name": "Eagle eye",
-  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less."
+  "achievements.eagle-eye.desc": "Finish an Advanced or Expert Spot it round in 4 minutes or less.",
+  "modal.shareChallenge": "Beat my time: paste {code} into Your puzzle",
+  "modal.shareChallengeZen": "Play my puzzle: paste {code} into Your puzzle",
+  "customImport.challenge": "A friend's challenge: beat {time}.",
+  "customImport.challengeZen": "A friend's puzzle, played without a clock.",
+  "game.toBeat": "To beat {time}",
+  "game.toBeatPassed": "(slower than your friend)",
+  "challenge.won": "🏁 You beat your friend's time by {time}!",
+  "challenge.lost": "Your friend was {time} faster. Try again?"
 }

@@ -34,6 +34,7 @@ import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
+import { encodeChallenge } from "./utils/challenge";
 import { haptic } from "./utils/haptics";
 import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
@@ -498,7 +499,8 @@ const playerLevel = computed(() => {
 // this difficulty's best. Custom and practice boards vary too much for a best to mean anything.
 const bestTime = computed(() => {
   void currentScreen.value;
-  if (practiceTechnique.value || activeDifficulty.value === "custom") return 0;
+  if (practiceTechnique.value) return 0;
+  if (activeDifficulty.value === "custom") return challengeTarget.value; // a friend's time, or none
   if (isDailyMode.value) return dailyPuzzle.getBestTime();
   return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
 });
@@ -585,6 +587,15 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   if (win) {
     cue("win");
     flashWin();
+    if (activeDifficulty.value === "custom" && challengeTarget.value > 0 && !practised) {
+      const diff = challengeTarget.value - timer.timerSeconds.value;
+      progressNotes.value.push({
+        text: t(diff > 0 ? "challenge.won" : "challenge.lost", {
+          time: timer.formatTime(Math.abs(diff)),
+        }),
+        ok: diff > 0,
+      });
+    }
     const recordsBefore = countsForRecords() ? recordSnapshot() : null;
     if (practiceTechnique.value || gameZen.value) {
       lastScore.value = null;
@@ -704,6 +715,10 @@ async function shareWin() {
     ]
       .filter(Boolean)
       .join(" · "),
+    // A friend pastes the code into Your puzzle to play this board against this time.
+    t(gameZen.value ? "modal.shareChallengeZen" : "modal.shareChallenge", {
+      code: encodeChallenge(initialBoard.value, gameZen.value ? 0 : timer.timerSeconds.value),
+    }),
     GAME_URL,
   ];
   const text = lines.join("\n");
@@ -1303,10 +1318,14 @@ function startDaily() {
   currentScreen.value = "game";
 }
 
+// A friend's time from a challenge code (Your puzzle), shown as the time to beat; 0 = none.
+const challengeTarget = ref(0);
 function handleLoadCustomPuzzle(
   board: import("./types/sudoku").Grid,
   practice: TechniqueId | null = null,
+  challengeSeconds = 0,
 ) {
+  challengeTarget.value = practice ? 0 : challengeSeconds;
   practiceTechnique.value = practice;
   practiceWeek.value = null;
   isDailyMode.value = false;
@@ -1840,7 +1859,7 @@ onUnmounted(() => {
         <!-- CUSTOM IMPORT -->
         <CustomImport
           v-else-if="currentScreen === 'custom-import'"
-          @load-puzzle="handleLoadCustomPuzzle"
+          @load-puzzle="(board, seconds) => handleLoadCustomPuzzle(board, null, seconds)"
           @back-to-menu="currentScreen = 'menu'"
         />
 
@@ -1914,6 +1933,7 @@ onUnmounted(() => {
               :max-mistakes="mistakeLimit"
               :show-timer="showTimer && !gameZen"
               :best-time="bestTime ? timer.formatTime(bestTime) : ''"
+              :challenge="challengeTarget > 0 && activeDifficulty === 'custom'"
               :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
               :difficulty="difficultyLabel"

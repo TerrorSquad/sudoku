@@ -3,10 +3,11 @@ import { ref, computed } from "vue";
 
 import type { Grid } from "../types/sudoku";
 
+import { parseChallenge } from "../utils/challenge";
 import { countSolutions } from "../utils/sudokuCore";
 
 const emit = defineEmits<{
-  (e: "load-puzzle", board: Grid): void;
+  (e: "load-puzzle", board: Grid, challengeSeconds: number): void;
   (e: "back-to-menu"): void;
 }>();
 
@@ -15,7 +16,15 @@ const { t } = useI18n();
 const raw = ref("");
 const error = ref("");
 
-const cleaned = computed(() => raw.value.replace(/\s/g, ""));
+// A friend's challenge code (pasted on its own or inside their whole share text) is its board.
+const challenge = computed(() => parseChallenge(raw.value));
+const cleaned = computed(() =>
+  challenge.value ? challenge.value.board.flat().join("") : raw.value.replace(/\s/g, ""),
+);
+const challengeTime = computed(() => {
+  const s = challenge.value?.seconds ?? 0;
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+});
 
 const isValid = computed(() => {
   const s = cleaned.value;
@@ -78,7 +87,7 @@ function handleLoad() {
     error.value = t("customImport.errorMultipleSolutions");
     return;
   }
-  emit("load-puzzle", board);
+  emit("load-puzzle", board, challenge.value?.seconds ?? 0);
 }
 
 const EXAMPLE = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
@@ -134,6 +143,17 @@ function loadExample() {
     </div>
 
     <p v-if="error" class="text-xs font-semibold text-rose-600 dark:text-rose-400">{{ error }}</p>
+    <p
+      v-if="challenge"
+      data-testid="challenge"
+      class="text-sm font-semibold text-violet-700 dark:text-violet-300"
+    >
+      {{
+        challenge.seconds
+          ? $t("customImport.challenge", { time: challengeTime })
+          : $t("customImport.challengeZen")
+      }}
+    </p>
 
     <!-- Mini preview -->
     <div
