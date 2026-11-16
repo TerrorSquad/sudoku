@@ -1,5 +1,5 @@
-// `pnpm wavedash:release [notes]`: builds and pushes to Wavedash (`pnpm wavedash`), then publishes that
-// build. Right after the push the build is still processing and publish fails with "Only
+// `pnpm wavedash:release [notes]`: builds once (`pnpm wavedash:build`: generate + budget.mjs), smoke-tests
+// that build from a subfolder (playwright.prod.config.ts), pushes it to Wavedash and publishes it. Right after the push the build is still processing and publish fails with "Only
 // completed builds can be published", so that error (and only that one) is retried for ~2 minutes.
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -19,7 +19,15 @@ function run(cmd, args) {
   });
 }
 
-const push = await run("pnpm", ["wavedash"]);
+for (const [cmd, ...args] of [
+  ["pnpm", "wavedash:build"],
+  ["pnpm", "exec", "playwright", "test", "-c", "playwright.prod.config.ts"],
+]) {
+  // oxlint-disable-next-line eslint/no-await-in-loop
+  const { code } = await run(cmd, args);
+  if (code !== 0) process.exit(code || 1);
+}
+const push = await run("wavedash", ["build", "push"]);
 if (push.code !== 0) process.exit(push.code || 1);
 const id = push.out.match(/^Build ID: (\S+)/m)?.[1];
 if (!id) {

@@ -1,0 +1,34 @@
+name: Nuxt fix watch
+
+# nuxt is pinned to 4.6.2 (docs/adr/0002-dependency-pins.md) until a release contains
+# nuxt/nuxt#36913 (commit 8b56419). Weekly, check the latest nuxt on npm and open an issue once it does.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FIX: 8b564198d62310c7486e88f9e96c0628e168342a
+      TITLE: "Nuxt fix for relative base URL is released: unpin nuxt"
+    steps:
+      - name: Open an issue once the latest nuxt contains the fix
+        run: |
+          latest=$(npm view nuxt version)
+          # "ahead": the tag is past the fix; "identical": the tag is the fix. Either way it's in.
+          status=$(gh api "repos/nuxt/nuxt/compare/$FIX...v$latest" --jq .status)
+          echo "nuxt $latest vs the fix: $status"
+          case "$status" in ahead | identical) ;; *) exit 0 ;; esac
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json title --jq "map(select(.title == env.TITLE)) | length")
+          if [ "$open" != "0" ]; then
+            echo "Issue already open."
+            exit 0
+          fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "nuxt $latest contains nuxt/nuxt#36913 ($FIX), so the 4.6.2 pin can go: follow the nuxt row in docs/adr/0002-dependency-pins.md (update nuxt, drop it from \`updateConfig.ignoreDependencies\` in pnpm-workspace.yaml, then check with \`pnpm test:prod\`)."
