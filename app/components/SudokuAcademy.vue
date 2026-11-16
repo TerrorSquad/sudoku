@@ -6,6 +6,7 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+import { BASICS_IDS, type BasicsId } from "../utils/basics";
 import { lessonFromExample } from "../utils/lesson";
 import { masteryFor } from "../utils/mastery";
 import { patternMarks, type Mark } from "../utils/patternMarks";
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   (e: "back-to-menu"): void;
   (e: "practice", id: TechniqueId): void;
   (e: "lesson", id: TechniqueId): void;
+  (e: "basics", id: BasicsId): void;
   (e: "weekly", week: Week): void;
   (e: "spot", tier: Tier): void;
 }>();
@@ -48,6 +50,9 @@ const pathState = (id: TechniqueId) =>
 const week = weekOf();
 const weeklyDone = path.getWeeksDone().includes(week.key);
 const stepOf = (id: TechniqueId) => techniques.findIndex((tech) => tech.id === id) + 1;
+// "How to play", the path's step 0: four short lessons before the first technique.
+const basicsDone = path.getBasics();
+const basicsNext = BASICS_IDS.find((id) => !basicsDone.includes(id)) ?? null;
 
 const MASTERY_STYLE = [
   "",
@@ -231,6 +236,38 @@ const total = computed(() => techniques.length);
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
+      <!-- How to play: the path's step 0. -->
+      <section class="panel mb-3 p-4" data-testid="basics">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
+            <span class="text-violet-700 dark:text-violet-300">{{
+              $t("path.step", { n: 0 })
+            }}</span>
+            · {{ $t("basics.title") }}
+          </h2>
+          <span class="text-xs font-bold text-violet-700 tabular-nums dark:text-violet-300">{{
+            $t("basics.progress", { done: basicsDone.length, total: BASICS_IDS.length })
+          }}</span>
+        </div>
+        <p v-if="basicsNext" class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+          {{ $t("basics.desc") }}
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button
+            v-for="id in BASICS_IDS"
+            :key="id"
+            @click="emit('basics', id)"
+            :class="id === basicsNext ? 'tile-primary' : ''"
+            class="tile px-3 py-1.5 text-xs font-bold"
+          >
+            <span v-if="basicsDone.includes(id)" class="text-emerald-700 dark:text-emerald-400"
+              >✓</span
+            >
+            {{ $t(`basics.lesson.${id}`) }}
+          </button>
+        </div>
+      </section>
+
       <!-- The technique path and the technique of the week. -->
       <div class="mb-6 grid gap-3 sm:mb-8 sm:grid-cols-2">
         <section class="panel p-4" data-testid="technique-path">

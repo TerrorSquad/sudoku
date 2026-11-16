@@ -5,11 +5,13 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
+import type { BasicsId } from "./utils/basics";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
 import AchievementToast from "./components/AchievementToast.vue";
+import BasicsLesson from "./components/BasicsLesson.vue";
 import ControlPanel from "./components/ControlPanel.vue";
 import CustomImport from "./components/CustomImport.vue";
 import DifficultySelector from "./components/DifficultySelector.vue";
@@ -91,6 +93,7 @@ const {
   zen,
   boardTheme,
   uiScale,
+  basicsPrompt,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
@@ -189,6 +192,13 @@ const practiceWeek = ref<string | null>(null);
 const techniquePath = useTechniquePath();
 // The guided lesson on the lesson screen (TechniqueLesson keeps its own board).
 const activeLesson = ref<Lesson | null>(null);
+// The "How to play" lesson on the basics screen.
+const activeBasics = ref<BasicsId>("rule");
+function openBasics(id: BasicsId) {
+  academyFromGame.value = false; // the course never returns to a game
+  activeBasics.value = id;
+  currentScreen.value = "basics";
+}
 // Win-modal lines: progress the win made (ok), or why it made none (a practice win on the path).
 const progressNotes = ref<{ text: string; ok: boolean }[]>([]);
 
@@ -221,12 +231,13 @@ const currentScreen = ref<
   | "achievements"
   | "settings"
   | "lesson"
+  | "basics"
   | "spot"
 >("menu");
 // The Spot it tier being played (the spot screen).
 const spotTier = ref<Tier>("Basic");
 // The screens with a board, which keep the normal size (see applyUiScale).
-const BOARD_SCREENS = new Set(["game", "lesson", "spot"]);
+const BOARD_SCREENS = new Set(["game", "lesson", "spot", "basics"]);
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
 // the game, whose board already fills the height: there a bigger rem would only shrink it. Set
 // during setup, so the first paint is right, then as each screen enters (the screen Transition is
@@ -477,6 +488,20 @@ const lessonsDone = computed(() => {
 const pathDone = computed(
   () => ACADEMY_TECHNIQUES.filter((tech) => lessonsDone.value.includes(tech.id)).length,
 );
+// "New to sudoku?" on the menu: a fresh player who hasn't dismissed it. Fresh: no win anywhere
+// (the unlock count, so Zen wins count too), no technique lesson and no basics lesson done.
+const showBasicsPrompt = computed(() => {
+  void currentScreen.value;
+  const won = Object.values(score.unlockWins()).some(
+    (e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0,
+  );
+  return (
+    basicsPrompt.value &&
+    !won &&
+    lessonsDone.value.length === 0 &&
+    techniquePath.getBasics().length === 0
+  );
+});
 
 // Auto-save on every meaningful state change while a game is active.
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
@@ -723,6 +748,7 @@ function closeModal() {
 }
 function handleModalClose() {
   closeModal();
+  academyFromGame.value = false;
   currentScreen.value = "menu";
 }
 
@@ -1315,6 +1341,7 @@ async function handleLesson(technique: TechniqueId) {
 }
 
 function exitToMenu() {
+  academyFromGame.value = false; // the game is over: no lesson or Academy returns to it
   practiceTechnique.value = null;
   isDailyMode.value = false;
   timer.stopTimer();
@@ -1536,6 +1563,27 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <div
+            v-if="showBasicsPrompt"
+            data-testid="basics-prompt"
+            class="panel flex w-full max-w-[26rem] items-center gap-2 py-1.5 pr-1.5 pl-4"
+          >
+            <button
+              @click="openBasics('rule')"
+              class="min-w-0 flex-1 py-1.5 text-left text-sm font-bold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+            >
+              {{ $t("basics.prompt") }}
+            </button>
+            <button
+              @click="basicsPrompt = false"
+              :aria-label="$t('basics.dismiss')"
+              :title="$t('basics.dismiss')"
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            >
+              <AppIcon class="h-4 w-4" path="M6 18L18 6M6 6l12 12" />
+            </button>
+          </div>
+
           <nav
             :aria-label="$t('menu.title')"
             class="tray grid aspect-square w-full max-w-[26rem] grid-cols-3 grid-rows-3 gap-2 p-2 sm:gap-2.5 sm:p-2.5"
@@ -1672,6 +1720,7 @@ onUnmounted(() => {
           @back-to-menu="currentScreen = academyFromGame ? 'game' : 'menu'"
           @practice="handlePractice"
           @lesson="handleLesson"
+          @basics="openBasics"
           @weekly="(week) => handlePractice(week.technique, week)"
           @spot="
             (tier) => {
@@ -1689,6 +1738,22 @@ onUnmounted(() => {
           :theme="boardTheme"
           @cue="cue"
           @back="currentScreen = 'academy'"
+          @lesson="handleLesson"
+        />
+
+        <!-- HOW TO PLAY -->
+        <BasicsLesson
+          v-else-if="currentScreen === 'basics'"
+          :key="activeBasics"
+          :id="activeBasics"
+          :color-mode="colorMode"
+          :theme="boardTheme"
+          @cue="cue"
+          @back="
+            academyFocus = null;
+            currentScreen = 'academy';
+          "
+          @basics="openBasics"
           @lesson="handleLesson"
         />
 

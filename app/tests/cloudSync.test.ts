@@ -183,6 +183,20 @@ describe("personal records on restore", () => {
     expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_spot_best!)).toEqual(best);
   });
 
+  it("unions the basics done both ways", () => {
+    const local = { ...A, sudoku_v1_basics_done: rec(["rule", "notes"]) };
+    const cloud = { ...B, sudoku_v1_basics_done: rec(["notes", "scan"]) };
+    const all = ["notes", "scan", "rule"];
+    expect(JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_basics_done!)).toEqual(
+      all,
+    );
+    expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_basics_done!)).toEqual([
+      "rule",
+      "notes",
+      "scan",
+    ]);
+  });
+
   it("keeps local records the cloud copy doesn't have yet", () => {
     const local = { ...A, sudoku_v1_records: rec({ mostInDay: 3, hardestNoHint: "hard" }) };
     const restored = JSON.parse(withLocalOnly(file(B, 5), local).data.sudoku_v1_records!);

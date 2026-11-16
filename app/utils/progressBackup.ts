@@ -2,6 +2,7 @@
 // saves, Daily history and preferences. Pure over a Storage-like object; unit-tested in
 // tests/progressBackup.test.ts.
 
+import { BASICS_KEY } from "./basics";
 import { BOARD_THEMES, UI_SCALES } from "./preferenceValues";
 import { LESSON_STARS_KEY } from "./progression";
 import { SPOT_BEST_KEY } from "./spotIt";
@@ -71,6 +72,8 @@ export function validEntry(key: string, value: string): boolean {
     // ignore what they can't use.
     return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
   }
+  // Shape only, like the stars: a later version may add lessons; readBasics keeps the known ones.
+  if (key === BASICS_KEY) return Array.isArray(parsed);
   if (key === "sudoku_v1_score") {
     return (
       !!parsed &&

@@ -37,6 +37,8 @@ function create() {
     zen: pref("zen", false),
     boardTheme: pref<BoardTheme>("board_theme", "tiles"),
     uiScale: pref<UiScale>("ui_scale", 1),
+    /** The menu's "New to sudoku?" prompt, until dismissed (or the basics are done). */
+    basicsPrompt: pref("basics_prompt", true),
   };
 }
 
