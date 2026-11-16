@@ -54,6 +54,9 @@
   "game.wrongCleared": "Pogrešna cifra je obrisana — nastavi!",
   "controls.undo": "Vrati",
   "controls.redo": "Ponovi",
+  "controls.history": "Istorija poteza",
+  "controls.historyStep": "Potez {n} od {total}",
+  "controls.historyHold": "Zadrži za istoriju poteza",
   "controls.erase": "Obriši",
   "controls.notes": "Beleške",
   "controls.hint": "Savet",
@@ -76,6 +79,7 @@
   "sidebar.shortcutAutoFillNotes": "Popuni beleške",
   "sidebar.shortcutUndo": "Poništi",
   "sidebar.shortcutRedo": "Ponovi",
+  "sidebar.shortcutHistory": "Istorija poteza",
   "sidebar.legendGiven": "Data cifra",
   "sidebar.legendEntry": "Tvoj unos",
   "sidebar.legendConflict": "Sukob",
@@ -773,6 +777,6 @@
   "challenge.won": "🏁 Brži si od prijatelja za {time}!",
   "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?",
   "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!",
-  "pad.game": "A upiši · LB/RB cifra · X beleške · B obriši · Y pomoć · Start pauza",
+  "pad.game": "A upiši · LB/RB cifra · X beleške · B obriši · Y pomoć · LT istorija · Start pauza",
   "pad.academy": "A izaberi · X upiši cifru · LB/RB cifra · Y pokaži · B nazad"
 }

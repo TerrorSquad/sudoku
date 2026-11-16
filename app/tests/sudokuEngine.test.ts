@@ -135,6 +135,43 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       engine.redoMove();
       expect(engine.currentBoard.value[0]![0]).toBe(0);
     });
+
+    describe("jumpTo (the move history scrubber)", () => {
+      const cell = () => engine.currentBoard.value[0]![0];
+      beforeEach(() => [5, 7, 9].forEach(edit));
+
+      it("jumps back, then forward again like redo", () => {
+        engine.jumpTo(1);
+        expect(cell()).toBe(5);
+        expect(engine.redoHistory.value).toHaveLength(2);
+        engine.jumpTo(2);
+        expect(cell()).toBe(7);
+        engine.redoMove();
+        expect(cell()).toBe(9);
+      });
+
+      it("jumpTo(0) goes back to the oldest kept state", () => {
+        engine.jumpTo(0);
+        expect(cell()).toBe(0);
+        expect(engine.boardHistory.value).toHaveLength(0);
+        expect(engine.redoHistory.value).toHaveLength(3);
+      });
+
+      it("a fresh edit after a jump drops what was jumped over", () => {
+        engine.jumpTo(1);
+        edit(4);
+        expect(engine.redoHistory.value).toHaveLength(0);
+        expect(engine.boardHistory.value).toHaveLength(2);
+      });
+
+      it("past the end stops at the last state", () => {
+        engine.jumpTo(0);
+        engine.jumpTo(99);
+        expect(cell()).toBe(9);
+        expect(engine.boardHistory.value).toHaveLength(3);
+        expect(engine.redoHistory.value).toHaveLength(0);
+      });
+    });
   });
 
   describe("hints respect the player's notes", () => {
