@@ -3,6 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
 
+import { emptyNotes } from "../utils/gridNav";
 import { digitLabel } from "../utils/sudokuColors";
 import {
   solveBoard,
@@ -40,8 +41,6 @@ export function useSudokuEngine(
   const { t } = useI18n();
 
   const emptyGrid = (): Grid => Array.from({ length: 9 }, () => Array(9).fill(0));
-  const emptyNotes = (): NotesGrid =>
-    Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => Array(10).fill(false)));
 
   const currentBoard = ref<Grid>(emptyGrid());
   const initialBoard = ref<Grid>(emptyGrid());

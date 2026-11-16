@@ -8,12 +8,13 @@ import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
-import { focusCell, stepCell } from "../utils/gridNav";
+import { boardKey, focusCell, onButton, sameCell, shakeCell, stepCell } from "../utils/gridNav";
 import {
   findPrompt,
   instancesOf,
   lessonUnits,
   missText,
+  notesGrid,
   tapPattern,
   type Lesson,
 } from "../utils/lesson";
@@ -59,9 +60,7 @@ const removedDigits = computed(() =>
 
 const board = ref(L.board.map((row) => [...row]));
 const solved = solveBoard(L.board)!;
-const notes = ref<NotesGrid>(
-  L.notes.map((row) => row.map((ns) => Array.from({ length: 10 }, (_, n) => ns.includes(n)))),
-);
+const notes = ref<NotesGrid>(notesGrid(L));
 const step = ref<"find" | "apply" | "done">("find");
 const found = ref<CellCoord[]>([]);
 const removed = ref<DigitAt[]>([]);
@@ -77,8 +76,6 @@ const slips = ref(0);
 const stars = ref<Stars>(3);
 const bestBefore = ref<Stars | undefined>();
 const next = ref<TechniqueId | null>(null);
-
-const same = (a: CellCoord, b: CellCoord) => a.r === b.r && a.c === b.c;
 
 const prompt = computed(() => {
   if (step.value === "find") return findPrompt(L, t, digit);
@@ -110,19 +107,10 @@ const counts = computed(() => {
 const say = (key: string, ok: boolean, params: Record<string, unknown> = {}) =>
   (feedback.value = { text: t(key, params), ok });
 
-const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-function shake({ r, c }: CellCoord) {
-  if (reducedMotion.value) return;
-  document.querySelector(`[data-cell="${r}-${c}"]`)?.animate(
-    [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
-    { duration: 320 },
-  );
-}
-
 function tap(cell: CellCoord) {
   selected.value = cell;
   if (step.value !== "find") return;
-  if (found.value.some((f) => same(f, cell))) return;
+  if (found.value.some((f) => sameCell(f, cell))) return;
   const res = tapPattern(instances, found.value, cell);
   if (res.miss) return slip(cell, missText(L, cell, t, digit));
   found.value = res.found;
@@ -152,7 +140,7 @@ function input(num: number) {
   if (!cell) return say("lesson.selectFirst", false);
   const { r, c } = cell;
   if (L.placement) {
-    if (!same(cell, L.placement)) return reject(cell, "lesson.notThisCell");
+    if (!sameCell(cell, L.placement)) return reject(cell, "lesson.notThisCell");
     if (num !== L.placement.num) return reject(cell, "lesson.notThisDigit", { num: digit(num) });
     board.value[r]![c] = num;
     emit("cue", "place");
@@ -160,8 +148,8 @@ function input(num: number) {
     return finish();
   }
   if (!notes.value[r]![c]![num]) return reject(cell, "lesson.noMark", { num: digit(num) });
-  if (!elims.value.some((e) => same(e, cell) && e.num === num)) {
-    const inStep = elims.value.some((e) => same(e, cell));
+  if (!elims.value.some((e) => sameCell(e, cell) && e.num === num)) {
+    const inStep = elims.value.some((e) => sameCell(e, cell));
     return reject(cell, inStep ? "lesson.keepMark" : "lesson.notThisCell", { num: digit(num) });
   }
   notes.value[r]![c]![num] = false;
@@ -177,13 +165,13 @@ function crossOut() {
   if (step.value !== "apply" || L.placement || !selected.value) return;
   const cell = selected.value;
   const left = elims.value.filter(
-    (e) => same(e, cell) && !removed.value.some((x) => same(x, e) && x.num === e.num),
+    (e) => sameCell(e, cell) && !removed.value.some((x) => sameCell(x, e) && x.num === e.num),
   );
   if (left.length === 1) return input(left[0]!.num);
   if (left.length)
     return say("lesson.whichDigit", false, { digits: left.map((e) => digit(e.num)).join(", ") });
   // Everything this cell loses is gone already: nothing wrong was tried, so no slip.
-  if (elims.value.some((e) => same(e, cell))) return say("lesson.cellDone", true);
+  if (elims.value.some((e) => sameCell(e, cell))) return say("lesson.cellDone", true);
   reject(cell, "lesson.notThisCell");
 }
 
@@ -192,7 +180,7 @@ function reject(cell: CellCoord, key: string, params: Record<string, unknown> = 
 }
 function slip(cell: CellCoord, text: string) {
   slips.value++;
-  shake(cell);
+  shakeCell(cell);
   emit("cue", "mistake");
   feedback.value = { text, ok: false };
 }
@@ -295,11 +283,9 @@ const nudge = computed(() => (step.value === "find" && reveal.value >= 2 ? units
 
 // Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
 // Esc leaves. Once done: Enter or N for the next lesson, R another example, P a full puzzle.
-const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  if (key === "Escape") return emit("back");
+  const key = boardKey(e, () => emit("back"));
+  if (!key) return;
   if (step.value === "done") {
     // Enter on a focused button is that button's own click.
     if ((key === "Enter" && !onButton(e)) || key === "n") {

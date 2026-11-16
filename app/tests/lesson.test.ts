@@ -9,6 +9,7 @@ import {
   lessonFromPuzzle,
   lessonUnits,
   missReason,
+  notesGrid,
   shuffleLesson,
 } from "../utils/lesson";
 import { generatePracticePuzzle } from "../utils/practice";
@@ -47,6 +48,14 @@ function expectSound(lesson: Lesson) {
 }
 
 describe("lessons", () => {
+  it("turns a lesson's marks into a board's notes grid", () => {
+    const lesson = lessonFromExample("naked-pair")!;
+    const grid = notesGrid(lesson);
+    for (let r = 0; r < 9; r++)
+      for (let c = 0; c < 9; c++)
+        expect(grid[r]![c]!.flatMap((on, n) => (on ? [n] : []))).toEqual(lesson.notes[r]![c]);
+  });
+
   it.each(ACADEMY_TECHNIQUES.map((t) => t.id))("the %s example makes a sound lesson", (id) => {
     const lesson = lessonFromExample(id)!;
     expect(lesson.technique).toBe(id);

@@ -6,17 +6,18 @@
 // penalties (it's about remembering, not speed), and each result moves its card (utils/review.ts).
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import type { CellCoord, NotesGrid } from "../types/sudoku";
+import type { CellCoord } from "../types/sudoku";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { localDateKey } from "../composables/useDailyPuzzle";
 import { useTechniquePath } from "../composables/useTechniquePath";
-import { focusCell, stepCell } from "../utils/gridNav";
+import { boardKey, focusCell, onButton, shakeCell, stepCell } from "../utils/gridNav";
 import {
   findPrompt,
   instancesOf,
   missText,
+  notesGrid,
   tapPattern,
   type Instance,
   type Lesson,
@@ -168,15 +169,6 @@ async function load(i: number) {
   hiddenAt = document.hidden ? findStart : 0;
 }
 
-const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-function shake({ r, c }: CellCoord) {
-  if (reducedMotion.value) return;
-  document.querySelector(`[data-cell="${r}-${c}"]`)?.animate(
-    [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
-    { duration: 320 },
-  );
-}
-
 function tap(cell: CellCoord) {
   selected.value = cell;
   const L = lesson.value;
@@ -185,7 +177,7 @@ function tap(cell: CellCoord) {
   const res = tapPattern(instances, found.value, cell);
   if (res.miss) {
     misses.value++;
-    shake(cell);
+    shakeCell(cell);
     emit("cue", "mistake");
     const why = missText(L, cell, t, digit);
     feedback.value = {
@@ -257,12 +249,7 @@ const rows = computed(() => breakdown(results.value));
 
 // The board: the pattern found so far; once settled, the whole move drawn in pen.
 const L = computed(() => lesson.value);
-const notes = computed<NotesGrid>(
-  () =>
-    L.value?.notes.map((row) =>
-      row.map((ns) => Array.from({ length: 10 }, (_, n) => ns.includes(n))),
-    ) ?? [],
-);
+const notes = computed(() => (L.value ? notesGrid(L.value) : []));
 const solved = computed(() => (L.value ? solveBoard(L.value.board)! : []));
 const triggers = computed(() => shown.value?.pattern ?? found.value);
 const eliminationCells = computed(
@@ -286,12 +273,10 @@ const prompt = computed(() => (L.value ? findPrompt(L.value, t, digit) : ""));
 // Arrows or WASD walk the grid, Enter or Space taps, H skips, Esc leaves; once done Enter plays
 // again. (S is WASD's down, so skipping is H, the key that shows the answer everywhere else.)
 function onKey(e: KeyboardEvent) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const onButton = !!(e.target as HTMLElement).closest?.("button");
-  if (key === "Escape") return emit("back");
+  const key = boardKey(e, () => emit("back"));
+  if (!key) return;
   if (phase.value === "done") {
-    if (key === "Enter" && !onButton) {
+    if (key === "Enter" && !onButton(e)) {
       e.preventDefault();
       if (reviewing) emit("back");
       else startRound();
@@ -302,7 +287,7 @@ function onKey(e: KeyboardEvent) {
   if (move) {
     e.preventDefault();
     focusCell((selected.value = move));
-  } else if ((key === "Enter" || key === " ") && selected.value && !onButton) {
+  } else if ((key === "Enter" || key === " ") && selected.value && !onButton(e)) {
     e.preventDefault();
     if (!e.repeat) tap(selected.value); // a held key isn't a stack of +5 s taps
   } else if (key === "h" && !e.repeat) {
