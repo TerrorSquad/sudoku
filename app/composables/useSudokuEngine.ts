@@ -361,8 +361,9 @@ export function useSudokuEngine(
       cands[r]![c]!.includes(n) &&
       !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
     const story = narrate(move, has, t, digit);
-    const told = (result: boolean) =>
-      story.filter((s) => (s.step === "result") === result).map((s) => s.text);
+    // The last step names the cells to change: the result, and reasoning that already names them.
+    const told = (last: boolean) =>
+      story.filter((s) => (s.step === "result" || !!s.answer) === last).map((s) => s.text);
     const findDesc = t(`hint.move.${tech}.desc`, {
       num: digitLabel(move.digits[0] ?? 0, colorMode.value, t),
       digits: digitsStr,

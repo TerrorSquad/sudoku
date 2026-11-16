@@ -1,5 +1,6 @@
 // Regenerates utils/academyExamples.ts for techniques that don't have an example yet:
 //   HARVEST=1 pnpm test academyHarvest
+// REHARVEST=id,id (with HARVEST=1) redoes those techniques' examples too.
 // Each example is a real solver state where the technique is the next logical move. Existing
 // examples are kept as they are, so the Academy only changes where a technique is new.
 import { writeFileSync } from "node:fs";
@@ -33,15 +34,27 @@ function harvest(technique: TechniqueId): AcademyExample | null {
       if (!move) break;
       // A long XY-Chain is hard to follow as a first example: take a four-cell one.
       if (move.technique === technique && (technique !== "xy-chain" || move.triggers.length <= 4)) {
-        // Pencil marks for the pattern and the cells it clears or fills, as the solver sees them.
+        // Pencil marks, as the solver sees them, for every cell in a row, column or box of the
+        // pattern or the cells it clears or fills: what the explanation counts there is all true.
         const target = move.placement ? [{ r: move.placement.r, c: move.placement.c }] : [];
         const cands = getGridCandidates(board);
         const notes: Record<string, number[]> = {};
-        for (const { r, c } of [...move.triggers, ...move.eliminations, ...target]) {
-          notes[`${r}-${c}`] = cands[r]![c]!.filter(
-            (n) => !elims.some((e) => e.r === r && e.c === c && e.num === n),
+        const involved = [...move.triggers, ...move.eliminations, ...target];
+        const shares = (r: number, c: number) =>
+          involved.some(
+            (p) =>
+              p.r === r ||
+              p.c === c ||
+              (Math.floor(p.r / 3) === Math.floor(r / 3) &&
+                Math.floor(p.c / 3) === Math.floor(c / 3)),
           );
-        }
+        for (let r = 0; r < 9; r++)
+          for (let c = 0; c < 9; c++) {
+            if (board[r]![c] || !shares(r, c)) continue;
+            notes[`${r}-${c}`] = cands[r]![c]!.filter(
+              (n) => !elims.some((e) => e.r === r && e.c === c && e.num === n),
+            );
+          }
         const cells = (list: { r: number; c: number }[]) => {
           const seen = new Set<string>();
           return list
@@ -77,8 +90,9 @@ const compact = (json: string) =>
 describe.skipIf(!process.env.HARVEST)("academy harvest", () => {
   it("writes an example for every technique that lacks one", () => {
     const examples = { ...ACADEMY_EXAMPLES };
+    const redo = new Set((process.env.REHARVEST ?? "").split(","));
     for (const id of WANTED) {
-      if (examples[id]) continue;
+      if (examples[id] && !redo.has(id)) continue;
       const ex = harvest(id);
       expect([id, ex !== null]).toEqual([id, true]);
       examples[id] = ex!;

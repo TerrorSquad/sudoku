@@ -102,7 +102,7 @@ function startApply() {
 const story = computed(() => narrate(drawn.value, has, t, digit));
 const why = computed(() =>
   story.value
-    .filter((s) => s.step !== "result" || reveal.value > 0 || step.value === "done")
+    .filter((s) => (s.step !== "result" && !s.answer) || reveal.value > 0 || step.value === "done")
     .map((s) => s.text),
 );
 

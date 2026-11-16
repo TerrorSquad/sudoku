@@ -232,9 +232,24 @@ describe("why not", () => {
           reasons.add(removalReason(lesson, inst, p, num).key);
         }
       expect([...reasons].some((k) => k !== "lesson.notThisCell")).toBe(true);
-      expect(reasons).toContain("lesson.why.inPattern");
+      // A hidden subset removes every other mark from its cells, so none of theirs is left to try.
+      if (!id.startsWith("hidden-")) expect(reasons).toContain("lesson.why.inPattern");
     },
   );
+
+  it("keeps a pattern cell's other marks for what they are: not removed, not 'the pattern'", () => {
+    expect.hasAssertions();
+    for (const { id } of ACADEMY_TECHNIQUES) {
+      const lesson = lessonFromExample(id)!;
+      if (lesson.placement) continue;
+      const inst = instancesOf(lesson)[0]!;
+      const removed = new Set(inst.eliminations.map((e) => e.num));
+      for (const p of inst.pattern)
+        for (const num of lesson.notes[p.r]![p.c]!)
+          if (!removed.has(num))
+            expect(removalReason(lesson, inst, p, num).key).toBe("lesson.why.onlyRemoves");
+    }
+  });
 
   it("names the far ends a skyscraper's removal has to see", () => {
     const lesson = lessonFromExample("skyscraper")!;

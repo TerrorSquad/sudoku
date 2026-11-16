@@ -17,6 +17,8 @@ type Move = Pick<
 export interface Sentence {
   step: "cells" | "links" | "result";
   text: string;
+  /** Names the cell the move changes: a lesson keeps it for Show me, a hint for its last step. */
+  answer?: true;
 }
 
 // ---- Board geometry ----------------------------------------------------------------------------
@@ -164,6 +166,9 @@ export function narrate(
   const out: Sentence[] = [];
   const say = (step: Sentence["step"], key: string, params: Record<string, unknown> = {}) =>
     out.push({ step, text: t(`explain.${key}`, params) });
+  // A reasoning sentence that names the cell to change.
+  const sayAnswer = (key: string, params: Record<string, unknown>) =>
+    out.push({ step: "links", text: t(`explain.${key}`, params), answer: true });
   const cell = (p: CellRC) => t("explain.cell", { r: p.r + 1, c: p.c + 1 });
   const cells = (ps: CellRC[]) => wordList(ps.map(cell), t, "and", "; ");
   const rows = (ps: CellRC[]) => wordList(sorted(ps.map((p) => p.r + 1)), t);
@@ -334,8 +339,7 @@ export function narrate(
       say("cells", "er.box", { b, r: r + 1, c: c + 1, d: D });
       two(byCol ? "col" : "row", near, far, d);
       const tp = { tr: target.r + 1, tc: target.c + 1, d: D };
-      say(
-        "links",
+      sayAnswer(
         byCol ? "er.link.col" : "er.link.row",
         byCol
           ? { ...tp, lc: near.c + 1, nr: near.r + 1 }
@@ -351,7 +355,7 @@ export function narrate(
       const [x, y] = move.digits;
       const all = [...tr, odd];
       say("cells", "ur.cells", { cells: cells(tr), x: digit(x!), y: digit(y!) });
-      say("links", "ur.link", {
+      sayAnswer("ur.link", {
         odd: cell(odd),
         rows: rows(all),
         cols: cols(all),

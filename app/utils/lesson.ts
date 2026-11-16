@@ -9,6 +9,7 @@ import type { Grid, NotesGrid } from "../types/sudoku";
 import { ACADEMY_EXAMPLES } from "./academyExamples";
 import {
   boxOf,
+  unitCells,
   colorSets,
   finnedSides,
   fishSides,
@@ -425,10 +426,10 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
     const row = count("row");
     const col = count("col");
     if (row > k && col > k) return { key: "lesson.why.fishLines", params: { d, row, col, k } };
-    // instancesOf lists every fish of this size on the digit that clears something.
+    // instancesOf lists every fish of this size and cell count on the digit that clears something.
     return {
       key: "lesson.why.fishNone",
-      params: { ...R, d, cols: along("row"), rows: along("col") },
+      params: { ...R, d, n: L.pattern.length, cols: along("row"), rows: along("col") },
     };
   }
   const row = count("row");
@@ -452,10 +453,17 @@ export function missReason(L: Lesson, { r, c }: CellRC): Miss {
       if (row !== 2 && col !== 2 && box !== 2)
         return { key: "lesson.why.noLink3", params: { ...R, d, row, col, box } };
       break;
-    case "empty-rectangle":
+    case "empty-rectangle": {
       if (row !== 2 && col !== 2 && !emptyRectangleBox(L, cell))
         return { key: "lesson.why.erNone", params: { ...R, d } };
+      // Every box cell is in the pattern, so this one could only be an end of its link: a row
+      // (or column) with exactly two spots.
+      const kind = lineKind(L.move);
+      const n = kind === "row" ? row : col;
+      if (kind && n !== 2)
+        return { key: `lesson.why.linkLine.${kind}`, params: { ...R, d, n, at: along(kind) } };
       break;
+    }
     case "finned-x-wing":
     case "finned-swordfish": {
       const size = t === "finned-x-wing" ? 2 : 3;
@@ -542,7 +550,8 @@ function emptyRectangleBox(L: Lesson, p: CellRC): boolean {
   const spots = spotsIn(has(L), "box", p, L.digits[0]!);
   if (new Set(spots.map((q) => q.r)).size < 2 || new Set(spots.map((q) => q.c)).size < 2)
     return false;
-  return spots.some((h) => spots.every((q) => q.r === h.r || q.c === h.c));
+  // The row and column may cross at any of the box's cells, as the grader tries them.
+  return unitCells("box", p).some((h) => spots.every((q) => q.r === h.r || q.c === h.c));
 }
 
 /**
@@ -551,11 +560,11 @@ function emptyRectangleBox(L: Lesson, p: CellRC): boolean {
  */
 export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: number): Miss {
   const at = (p: CellRC) => ({ r: p.r + 1, c: p.c + 1 });
-  if (inst.pattern.some((p) => p.r === cell.r && p.c === cell.c))
-    return { key: "lesson.why.inPattern" };
   const removed = [...new Set(inst.eliminations.map((e) => e.num))].toSorted((a, b) => a - b);
   if (!removed.includes(num))
     return { key: "lesson.why.onlyRemoves", params: { num, marks: removed } };
+  if (inst.pattern.some((p) => p.r === cell.r && p.c === cell.c))
+    return { key: "lesson.why.inPattern" };
   const d = num;
   const t = L.technique;
   const tr = inst.pattern;
@@ -616,7 +625,9 @@ export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: numb
         : t.startsWith("naked-")
           ? L.unit?.kind
           : null;
-  if (unit && !inUnit(unit, tr[0]!, cell)) {
+  // Sharing another unit with the whole pattern, the cell could be cleared by it just as well.
+  const alsoIn = (["row", "col", "box"] as Kind[]).some((u) => tr.every((p) => inUnit(u, p, cell)));
+  if (unit && !inUnit(unit, tr[0]!, cell) && !alsoIn) {
     const n = unit === "row" ? tr[0]!.r + 1 : unit === "col" ? tr[0]!.c + 1 : boxOf(tr[0]!) + 1;
     return { key: `lesson.why.offUnit.${unit}`, params: { n, marks: removed } };
   }
