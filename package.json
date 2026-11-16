@@ -38,7 +38,6 @@
     "@playwright/test": "^1.65.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^26.6.6",
-    "@vite-pwa/nuxt": "^2.0.1",
     "oxfmt": "^0.78.0",
     "oxlint": "^1.93.0",
     "typescript": "^6.0.3",

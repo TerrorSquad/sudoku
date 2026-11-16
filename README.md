@@ -1,12 +1,10 @@
 # Sudoku Pro
 
-[![Deploy](https://github.com/TerrorSquad/sudoku/actions/workflows/deploy.yml/badge.svg)](https://github.com/TerrorSquad/sudoku/actions/workflows/deploy.yml)
-[![Play](https://img.shields.io/badge/play-live%20demo-0EA5E9)](https://terrorsquad.github.io/sudoku/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A Sudoku game built with **Nuxt 4 / Vue 3** that teaches you how to solve Sudoku through step-by-step interactive hints.
 
-**[▶ Play it in your browser](https://terrorsquad.github.io/sudoku/)** — no install, works offline once loaded.
+**▶ Play it on Wavedash** — no install.
 
 ![The hint system naming the technique and highlighting the evidence cells](docs/screenshots/hint-hidden-single.png)
 
@@ -118,18 +116,9 @@ pnpm preview
 
 ---
 
-## Deployment (GitHub Pages)
+## Deployment (Wavedash)
 
-The repository ships with a GitHub Actions workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) that automatically builds and deploys the app on every push to `main`.
-
-### First-time setup
-
-1. Push this repository to GitHub (already at `TerrorSquad/sudoku`).
-2. Go to **Settings → Pages** in the GitHub repository.
-3. Under **Source**, select **GitHub Actions**.
-4. Push to `main` — the workflow runs automatically and publishes the site.
-
-The live URL will be: `https://terrorsquad.github.io/sudoku/`
+`pnpm wavedash` builds and uploads to [Wavedash](https://docs.wavedash.com); `pnpm wavedash:release` also publishes.
 
 ---
 
