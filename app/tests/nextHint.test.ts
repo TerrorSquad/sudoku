@@ -95,7 +95,8 @@ describe("nextHint — soundness", () => {
         count++;
         for (const e of move.eliminations) expect(e.num).not.toBe(solved[e.r]![e.c]);
       });
-    expect(count).toBeGreaterThan(5);
+    // 27 over these seeds: a sharp drop means detection regressed.
+    expect(count).toBeGreaterThan(20);
   });
 
   it("a placement is always the value that actually solves the cell", () => {

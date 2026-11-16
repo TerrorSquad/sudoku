@@ -133,8 +133,8 @@ describe("technique of the week", () => {
   it("pins one week's technique and seed, so a rotation change shows up here", () => {
     expect(weekOf(new Date(2026, 10, 14))).toEqual({
       key: "2026-W46",
-      technique: "naked-triple",
-      seed: "2026-W46:naked-triple",
+      technique: "pointing",
+      seed: "2026-W46:pointing",
     });
   });
 
@@ -145,7 +145,12 @@ describe("technique of the week", () => {
       seen.add(weekOf(new Date(2026, 0, 5 + 7 * i)).technique);
     expect(seen.size).toBe(WEEKLY_TECHNIQUES.length);
     expect(WEEKLY_TECHNIQUES.some((id) => RARE_IN_PUZZLES.has(id))).toBe(false);
-    expect([...RARE_IN_PUZZLES].toSorted()).toEqual(["hidden-quad", "jellyfish", "naked-quad"]);
+    expect([...RARE_IN_PUZZLES].toSorted()).toEqual([
+      "hidden-quad",
+      "jellyfish",
+      "naked-quad",
+      "simple-coloring",
+    ]);
   });
 });
 

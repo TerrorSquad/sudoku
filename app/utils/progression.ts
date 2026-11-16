@@ -94,13 +94,15 @@ export const ACADEMY_TECHNIQUES: { id: TechniqueId; tier: Tier }[] = [
 
 /**
  * Where practice.ts's search (600 digs) usually comes up empty and falls back to the Academy's
- * example. Measured over 40 seeds: hidden quad 1/40 real puzzles, jellyfish 2/40, naked quad
- * 12/40; everything else 25/40 or better (simple coloring the lowest).
+ * example. Measured over 40 seeds (with Empty Rectangle in the solver): jellyfish 0/40 real
+ * puzzles, hidden quad 1/40, simple coloring 12/40, naked quad 12/40; everything else 27/40 or
+ * better (Empty Rectangle the lowest).
  */
 export const RARE_IN_PUZZLES: ReadonlySet<TechniqueId> = new Set([
   "naked-quad",
   "hidden-quad",
   "jellyfish",
+  "simple-coloring",
 ]);
 
 /** The first technique on the path not yet completed; null once all are. */

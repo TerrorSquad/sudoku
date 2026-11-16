@@ -38,6 +38,8 @@ describe("migrateTechniqueStats", () => {
       "Goli Par — Kvadrant": "naked-pair",
       "Pointing Pair — Row": "pointing",
       "Pointing Pair — Column": "pointing",
+      "Empty Rectangle": "empty-rectangle",
+      "Prazan Pravougaonik": "empty-rectangle",
       "Pokazujući Par — Kolona": "pointing",
       "Box-Line Reduction — Row": "box-line",
       "Redukcija Kvadrant-Linija — Kolona": "box-line",
