@@ -2,8 +2,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { solveBoard } from "../app/utils/sudokuCore";
-
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD } from "./seed";
 
 // Each cell's pencil marks, read off its label ("Row 1, column 2, empty, notes 3, 7").
 async function notesOf(page: Page) {

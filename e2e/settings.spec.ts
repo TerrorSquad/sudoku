@@ -1,17 +1,10 @@
 /* oxlint-disable eslint/no-await-in-loop -- key presses are inherently sequential */
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-// A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
-const FIVE_BLANKS =
-  "000008912672195348198342567859761423426853791713924856961537284287419635345286179";
+import { BOARD, blank, cell, playCustom } from "./seed";
 
-async function playCustom(page: Page) {
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(FIVE_BLANKS);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-}
-const cell = (page: Page, n: number) => page.locator(`${BOARD} [data-cell]`).nth(n);
+// A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
+const FIVE_BLANKS = blank(0, 1, 2, 3, 4);
 
 async function enterWrongDigits(page: Page, digits: string[]) {
   await cell(page, 0).click();
@@ -20,7 +13,7 @@ async function enterWrongDigits(page: Page, digits: string[]) {
 
 test("the default limit of 3 mistakes ends the game", async ({ page }) => {
   await page.goto("/");
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await enterWrongDigits(page, ["9", "8", "9"]);
   await expect(page.getByRole("heading", { name: "Game over" })).toBeVisible();
 });
@@ -30,7 +23,7 @@ test("an unlimited mistake limit keeps the game going and hides the maximum", as
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByLabel("Mistake limit").selectOption("0");
   await page.getByRole("button", { name: "Menu" }).click();
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await enterWrongDigits(page, ["9", "8", "9", "8", "9"]);
   await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
   await expect(page.getByText("Mistakes:").locator("..")).toContainText("5");
@@ -42,7 +35,7 @@ test("hiding the timer removes the clock but keeps pause", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("switch", { name: "Show timer" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await expect(page.getByTestId("timer")).toHaveCount(0);
   await expect(page.getByLabel("Pause")).toBeVisible();
 });
@@ -54,7 +47,7 @@ test("with mistake highlighting off, wrong entries are unmarked and can't end th
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("switch", { name: "Highlight mistakes" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await enterWrongDigits(page, ["9", "8", "9", "8"]);
   await expect(page.getByRole("heading", { name: "Game over" })).toBeHidden();
   await expect(page.getByText("Mistakes:")).toBeHidden();
@@ -81,7 +74,7 @@ test("the numpad's remaining counts don't reveal wrong entries when highlighting
 
   // Highlighting on: a wrong 3 leaves the 3 button available (its count only follows correct digits).
   await page.goto("/");
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await enterWrongDigits(page, ["3"]);
   await expect(pad("3")).toBeEnabled();
 
@@ -91,7 +84,7 @@ test("the numpad's remaining counts don't reveal wrong entries when highlighting
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("switch", { name: "Highlight mistakes" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
-  await playCustom(page);
+  await playCustom(page, FIVE_BLANKS);
   await enterWrongDigits(page, ["3"]);
   await expect(pad("3")).toBeDisabled();
 });

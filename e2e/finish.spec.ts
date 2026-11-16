@@ -1,13 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const SOLUTION =
-  "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
-const solved = [...Array(9)].map((_, r) =>
-  SOLUTION.slice(r * 9, r * 9 + 9)
-    .split("")
-    .map(Number),
-);
+import { BOARD, SOLVED, grid, resumeMedium, savedGame } from "./seed";
+
+const solved = grid(SOLVED);
 // The givens: the first four columns blank (a singles-only board).
 const initialBoard = solved.map((row) => row.map((v, c) => (c < 4 ? 0 : v)));
 
@@ -33,24 +28,16 @@ async function seed(page: Page, { left = 5, zen = false, legacy = false, highlig
     },
     {
       errors: highlight,
-      save: {
+      save: savedGame({
         currentBoard,
         initialBoard,
-        solvedBoard: solved,
-        notesBoard: [...Array(9)].map(() => [...Array(9)].map(() => Array(10).fill(false))),
-        difficulty: "medium",
         timerSeconds: t + 20,
-        mistakes: 0,
         zen,
         placements: legacy ? undefined : placements,
-        savedAt: 1_700_000_000_000,
-      },
+      }),
     },
   );
-  await page.goto("/");
-  await page.getByRole("button", { name: "New Game" }).click();
-  await page.getByRole("button", { name: /Medium/ }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await resumeMedium(page);
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
 }
 

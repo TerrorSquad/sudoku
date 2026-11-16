@@ -1,17 +1,13 @@
 import { test, expect } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const ALMOST_SOLVED =
-  "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
+import { blank, cell, playCustom } from "./seed";
 
 async function winCustomPuzzle(page: import("@playwright/test").Page) {
   // Night Owl keys off the real hour; pin the clock so the unlock count is deterministic.
   await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ALMOST_SOLVED);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await playCustom(page, blank(49));
+  await cell(page, 49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 }

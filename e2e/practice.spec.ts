@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD } from "./seed";
 
 test("practising a technique starts a labelled game that doesn't touch progress", async ({
   page,
