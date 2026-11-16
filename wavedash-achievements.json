@@ -176,5 +176,34 @@
       "stat_requirement": null
     }
   ],
-  "stats": []
+  "stats": [
+    {
+      "identifier": "GAMES_WON",
+      "display_name": "Games won"
+    },
+    {
+      "identifier": "DAILIES_WON",
+      "display_name": "Dailies won"
+    },
+    {
+      "identifier": "LONGEST_DAILY_STREAK",
+      "display_name": "Longest Daily streak"
+    },
+    {
+      "identifier": "LIFETIME_SCORE",
+      "display_name": "Lifetime score"
+    },
+    {
+      "identifier": "LEVEL",
+      "display_name": "Level"
+    },
+    {
+      "identifier": "TECHNIQUES_LEARNED",
+      "display_name": "Techniques learned"
+    },
+    {
+      "identifier": "ACHIEVEMENTS_UNLOCKED",
+      "display_name": "Achievements unlocked"
+    }
+  ]
 }
