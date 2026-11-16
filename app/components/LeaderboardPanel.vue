@@ -4,8 +4,16 @@ import type { Board, BoardView } from "../utils/wavedash";
 const { t } = useI18n();
 
 // Shown only on Wavedash (StatsScreen checks hasWavedash()).
+const week = weekOf();
 const boards = computed<{ board: Board; label: string }[]>(() => [
-  { board: dailyBoard(localDateKey()), label: t("leaderboard.dailyToday") },
+  ...LADDER.map((d) => ({
+    board: dailyBoard(localDateKey(), d),
+    label: t("leaderboard.dailyToday", { difficulty: t(`difficulty.${d}`) }),
+  })),
+  {
+    board: weekBoard(week.key),
+    label: t("leaderboard.week", { name: t(`hint.move.${week.technique}.name`) }),
+  },
   ...LADDER.map((d) => ({
     board: timeBoard(d),
     label: t("leaderboard.bestTime", { difficulty: t(`difficulty.${d}`) }),

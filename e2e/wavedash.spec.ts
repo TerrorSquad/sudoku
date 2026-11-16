@@ -124,6 +124,7 @@ test("Stats shows the leaderboards, with Global and Friends tabs and your rank",
   page,
 }) => {
   await fakeWavedash(page);
+  await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
   await page.goto("/");
   await page.getByRole("button", { name: "Statistics" }).click();
   const panel = page.getByRole("region", { name: "Leaderboards" });
@@ -140,6 +141,23 @@ test("Stats shows the leaderboards, with Global and Friends tabs and your rank",
   await panel
     .getByRole("combobox", { name: "Leaderboard" })
     .selectOption({ label: "Best time: Hard" });
+  await expect(panel.getByRole("listitem").first()).toContainText("30:00");
+
+  // Every level's Daily has a board for today, and the technique of the week has its own.
+  const picker = panel.getByRole("combobox", { name: "Leaderboard" });
+  await expect(picker.locator("option")).toContainText([
+    "Today's Daily: Beginner",
+    "Today's Daily: Easy",
+    "Today's Daily: Medium",
+    "Today's Daily: Hard",
+    "Today's Daily: Expert",
+    "Today's Daily: Master",
+    /^Technique of the week: /,
+    "Best time: Beginner",
+  ]);
+  await picker.selectOption("daily-hard-2026-01-15");
+  await expect(panel.getByRole("listitem").first()).toContainText("30:00");
+  await picker.selectOption("week-2026-W03");
   await expect(panel.getByRole("listitem").first()).toContainText("30:00");
 });
 

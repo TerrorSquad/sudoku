@@ -41,6 +41,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Back to Menu" }).click();
 
       for (const [button, screen] of [
+        ["Daily puzzle", "daily"],
         ["Academy", "academy"],
         ["Statistics", "stats"],
         ["Achievements", "achievements"],

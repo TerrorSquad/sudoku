@@ -116,6 +116,11 @@ for (const theme of ["light", "dark"] as const) {
       await shot(page, "difficulty");
     });
 
+    test("daily picker", async ({ page }) => {
+      await page.getByRole("button", { name: "Daily puzzle" }).click();
+      await shot(page, "daily");
+    });
+
     test("resume prompt", async ({ page }) => {
       await page.getByRole("button", { name: "New Game" }).click();
       await page.getByRole("button", { name: /Medium/ }).click();
