@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 
 import en from "../../i18n/locales/en.json";
 import rs from "../../i18n/locales/rs.json";
-import { ACHIEVEMENTS, newlyUnlocked, type WinSummary } from "../utils/achievements";
+import {
+  ACHIEVEMENTS,
+  newlyUnlocked,
+  newlyUnlockedAcademy,
+  type WinSummary,
+} from "../utils/achievements";
 
 const base: WinSummary = {
   difficulty: "medium",
@@ -83,5 +88,39 @@ describe("achievement rules", () => {
     expect(ids({ winsAtDifficulty: 10 })).toContain("specialist");
     expect(ids({ difficulty: "expert" })).toContain("expert-win");
     expect(ids({ difficulty: "master" })).toContain("master-win");
+  });
+});
+
+describe("Academy achievements", () => {
+  const none = {
+    lessons: 0,
+    pathTotal: 22,
+    threeStars: 0,
+    basics: 0,
+    basicsTotal: 4,
+    spotBest: {},
+  };
+  it("unlock from the Academy's progress, never from a win", () => {
+    expect(newlyUnlockedAcademy({}, none)).toEqual([]);
+    expect(newlyUnlockedAcademy({}, { ...none, lessons: 1, basics: 4 })).toEqual([
+      "basics-done",
+      "first-lesson",
+    ]);
+    expect(newlyUnlockedAcademy({}, { ...none, lessons: 11 })).toEqual([
+      "first-lesson",
+      "half-path",
+    ]);
+    expect(newlyUnlockedAcademy({}, { ...none, lessons: 22, threeStars: 10 })).toContain(
+      "graduate",
+    );
+    expect(newlyUnlockedAcademy({}, { ...none, threeStars: 10 })).toEqual(["star-pupil"]);
+  });
+  it("Eagle eye needs a fast Advanced or Expert round, not a Basic one", () => {
+    expect(newlyUnlockedAcademy({}, { ...none, spotBest: { Basic: 30 } })).toEqual([]);
+    expect(newlyUnlockedAcademy({}, { ...none, spotBest: { Expert: 240 } })).toEqual(["eagle-eye"]);
+    expect(newlyUnlockedAcademy({}, { ...none, spotBest: { Advanced: 241 } })).toEqual([]);
+  });
+  it("skips what's already unlocked", () => {
+    expect(newlyUnlockedAcademy({ "first-lesson": 1 }, { ...none, lessons: 1 })).toEqual([]);
   });
 });

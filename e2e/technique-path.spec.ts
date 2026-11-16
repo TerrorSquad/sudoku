@@ -47,6 +47,11 @@ test("the next challenge's lesson: find the cell, place the digit, and the path 
 
   await expect(coach).toContainText("Well done!");
   await expect(coach).toContainText("Challenge complete: Naked Single");
+  // The Academy's own achievements unlock where they're earned.
+  await expect(page.getByText("First lesson", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("sudoku_v1_achievements"))).toContain(
+    "first-lesson",
+  );
   await coach.getByRole("button", { name: "Back to Academy" }).click();
   await expect(path).toContainText("1/22 challenges");
   await expect(path.getByRole("button", { name: "Next challenge: Hidden Single" })).toBeVisible();
