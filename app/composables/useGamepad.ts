@@ -21,7 +21,8 @@ interface PadOptions {
 /** A key press as the focused element would get it, so each screen's own key handling answers. */
 export function sendKey(key: string) {
   (document.activeElement ?? document.body).dispatchEvent(
-    new KeyboardEvent("keydown", { key, bubbles: true }),
+    // A capital letter is typed with Shift (the move history's Shift+Z).
+    new KeyboardEvent("keydown", { key, bubbles: true, shiftKey: key !== key.toLowerCase() }),
   );
 }
 

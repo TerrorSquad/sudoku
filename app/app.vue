@@ -863,7 +863,7 @@ function openHistory() {
   if (historyLength.value && !showModal.value && !practiceLoading.value) historyOpen.value = true;
 }
 function jumpHistory(step: number) {
-  if (showModal.value || practiceLoading.value) return;
+  if (showModal.value || practiceLoading.value || timer.isPaused.value) return;
   engine.jumpTo(step);
   checkWin();
 }
@@ -915,7 +915,7 @@ function handleKeyDown(e: KeyboardEvent) {
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
-    pickedDigit.value = parseInt(e.key);
+    if (!digitFirst.value) pickedDigit.value = parseInt(e.key);
     handleInputNumber(parseInt(e.key));
   } else if (e.key === "Backspace" || e.key === "Delete") {
     eraseCell(selectedCell.value);
@@ -925,7 +925,7 @@ function handleKeyDown(e: KeyboardEvent) {
     handleTriggerHint();
   } else if (e.key.toLowerCase() === "f") {
     handleAutoFillNotes();
-  } else if (e.key === "Z") {
+  } else if (e.shiftKey && e.key.toLowerCase() === "z") {
     openHistory();
   }
 }
@@ -940,6 +940,7 @@ function handlePageHidden() {
   ) {
     timer.togglePause();
     settingsOverGame.value = false; // back on the pause screen, which a paused clock needs
+    historyOpen.value = false;
   }
 }
 

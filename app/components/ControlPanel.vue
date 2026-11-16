@@ -28,6 +28,7 @@ function hold() {
     emit("history");
   }, 500);
 }
+onUnmounted(() => clearTimeout(holdTimer));
 function release() {
   clearTimeout(holdTimer);
   setTimeout(() => (held = false)); // after this press's click, wherever it landed
