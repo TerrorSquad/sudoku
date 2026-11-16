@@ -5,15 +5,25 @@ import type { Tier } from "../utils/progression";
 const emit = defineEmits<{ (e: "spot", tier: Tier, rush: boolean): void }>();
 const best = readSpotBest(readJSON<unknown>(SPOT_BEST_KEY, {}));
 const rushBest = readSpotBest(readJSON<unknown>(RUSH_BEST_KEY, {}));
+// Both grids have a button per tier: each is named by its heading.
+const timedId = useId();
+const rushId = useId();
 </script>
 
 <template>
   <section class="panel p-4 sm:col-span-2">
-    <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">{{ $t("spot.title") }}</h2>
+    <h2 :id="timedId" class="text-sm font-black text-zinc-900 dark:text-zinc-100">
+      {{ $t("spot.title") }}
+    </h2>
     <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
       {{ $t("spot.desc", { miss: MISS_PENALTY, skip: SKIP_PENALTY }) }}
     </p>
-    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="spot-it">
+    <div
+      role="group"
+      :aria-labelledby="timedId"
+      class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
+      data-testid="spot-it"
+    >
       <button
         v-for="tier in SPOT_TIERS"
         :key="tier"
@@ -29,13 +39,18 @@ const rushBest = readSpotBest(readJSON<unknown>(RUSH_BEST_KEY, {}));
         >
       </button>
     </div>
-    <h3 class="mt-4 text-sm font-black text-zinc-900 dark:text-zinc-100">
+    <h3 :id="rushId" class="mt-4 text-sm font-black text-zinc-900 dark:text-zinc-100">
       {{ $t("spot.rush.title") }}
     </h3>
     <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
       {{ $t("spot.rush.desc", { n: RUSH_LIVES }) }}
     </p>
-    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="spot-rush">
+    <div
+      role="group"
+      :aria-labelledby="rushId"
+      class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
+      data-testid="spot-rush"
+    >
       <button
         v-for="tier in SPOT_TIERS"
         :key="tier"

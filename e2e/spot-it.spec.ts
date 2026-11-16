@@ -58,12 +58,12 @@ test("a Basic Spot it round: wrong taps and a skip add time, the best is kept", 
   );
 });
 
-test("a Basic Puzzle rush: a wrong tap and a skip each cost a life, the third ends it", async ({
+test("a Basic Puzzle rush: wrong taps and a skip each cost a life, the third ends it", async ({
   page,
 }) => {
   const slots = buildRound("Basic", makeRng(SEED));
   const lessons = await Promise.all(
-    slots.slice(0, 2).map((s) => quickLesson(s.technique, makeRng(s.seed))),
+    slots.slice(0, 3).map((s) => quickLesson(s.technique, makeRng(s.seed))),
   );
   await page.addInitScript((seed) => ((window as { spotSeed?: number }).spotSeed = seed), SEED);
   await page.goto("/");
@@ -86,20 +86,26 @@ test("a Basic Puzzle rush: a wrong tap and a skip each cost a life, the third en
   // 2: a wrong tap (no time added), then a skip.
   await expect(progress).toContainText("Position 2 · found: 1");
   await expect(skip).toBeEnabled();
-  const filled = lessons[1]!.board
-    .flatMap((row, r) => row.map((v, c) => ({ r, c, v })))
-    .find((x) => x.v)!;
-  await page.locator(`[data-cell="${filled.r}-${filled.c}"]`).click();
+  // A filled cell is never part of a pattern.
+  const wrongTap = (i: number) => {
+    const filled = lessons[i]!.board.flatMap((row, r) => row.map((v, c) => ({ r, c, v }))).find(
+      (x) => x.v,
+    )!;
+    return page.locator(`[data-cell="${filled.r}-${filled.c}"]`).click();
+  };
+  await wrongTap(1);
   await expect(lives).toHaveAttribute("aria-label", "Lives left: 2 of 3");
   await expect(status).not.toContainText("+5 s");
   await page.keyboard.press("h");
   await expect(status).toHaveText("Here it is.");
   await expect(lives).toHaveAttribute("aria-label", "Lives left: 1 of 3");
 
-  // 3: the last life.
+  // 3: the last life, on a wrong tap: its reason stays up with the answer.
   await expect(progress).toContainText("Position 3 · found: 1");
   await expect(skip).toBeEnabled();
-  await page.keyboard.press("h");
+  await wrongTap(2);
+  await expect(status).toHaveText(/\S.* Here it is\.$/);
+  await expect(lives).toHaveAttribute("aria-label", "Lives left: 0 of 3");
 
   const done = page.getByTestId("spot-done");
   await expect(done).toBeVisible();

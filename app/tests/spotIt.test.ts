@@ -66,6 +66,10 @@ describe("breakdown", () => {
     // A rush: three found (one after a wrong tap); a wrong tap and a skip spent.
     expect(foundCount(results)).toBe(3);
     expect(missCount(results)).toBe(2);
+    // Ended by a wrong tap: that position isn't found, and its tap counts once.
+    const out = [...results, { ...r("naked-single", 3, 1), out: true }];
+    expect(foundCount(out)).toBe(3);
+    expect(missCount(out)).toBe(3);
     expect(breakdown(results)).toEqual([
       { technique: "hidden-single", average: 14.5, misses: 1, skips: 1, weak: true },
       { technique: "naked-single", average: 3, misses: 0, skips: 0, weak: false },

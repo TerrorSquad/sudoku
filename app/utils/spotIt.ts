@@ -58,11 +58,14 @@ export interface SpotResult {
   seconds: number;
   misses: number;
   skipped: boolean;
+  /** A rush's last life went on a wrong tap here: shown, but neither found nor skipped. */
+  out?: boolean;
 }
 
 export const totalTime = (results: SpotResult[]) => results.reduce((s, r) => s + r.seconds, 0);
 /** A rush's score: the positions found, not skipped. */
-export const foundCount = (results: SpotResult[]) => results.filter((r) => !r.skipped).length;
+export const foundCount = (results: SpotResult[]) =>
+  results.filter((r) => !r.skipped && !r.out).length;
 /** A rush's lives spent: every wrong tap and every skip. */
 export const missCount = (results: SpotResult[]) =>
   results.reduce((n, r) => n + r.misses + (r.skipped ? 1 : 0), 0);

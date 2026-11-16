@@ -112,6 +112,7 @@ async function load(i: number) {
   const mine = round;
   phase.value = "loading";
   index.value = i;
+  positions[i - 1] = undefined; // never asked for again: a long rush needn't keep every board
   if (rushing && i + 1 >= slots.length)
     slots.push(...buildRound(props.tier, rng, slots.at(-1)!.technique));
   ensure(i);
@@ -159,12 +160,12 @@ function tap(cell: CellCoord) {
       text: reviewing || rushing ? why : `${why} ${t("spot.penalty", { s: MISS_PENALTY })}`,
       ok: false,
     };
-    // The last life: the answer is shown, and the rush ends after it.
-    if (rushing && !lives.value) settle(instances[0]!, true);
+    // The last life: the answer is shown under the reason, and the rush ends after it.
+    if (rushing && !lives.value) settle(instances[0]!, "out");
     return;
   }
   found.value = res.found;
-  if (res.complete) return settle(res.complete, false);
+  if (res.complete) return settle(res.complete, "found");
   feedback.value = {
     text: t("lesson.found", { n: res.found.length, total: L.pattern.length }),
     ok: true,
@@ -172,30 +173,43 @@ function tap(cell: CellCoord) {
 }
 
 function skip() {
-  if (phase.value === "find") settle(instances[0]!, true);
+  if (phase.value === "find") settle(instances[0]!, "skipped");
 }
 
-function settle(instance: Instance, skipped: boolean) {
+/** "out": a rush's last life went on a wrong tap here, so it's neither found nor skipped. */
+function settle(instance: Instance, how: "found" | "skipped" | "out") {
+  const skipped = how === "skipped";
   const seconds =
     (performance.now() - findStart) / 1000 +
     (rushing ? 0 : misses.value * MISS_PENALTY + (skipped ? SKIP_PENALTY : 0));
   results.value = [
     ...results.value,
-    { technique: lesson.value!.technique, seconds, misses: misses.value, skipped },
+    {
+      technique: lesson.value!.technique,
+      seconds,
+      misses: misses.value,
+      skipped,
+      ...(how === "out" && { out: true }),
+    },
   ];
   shown.value = instance;
   phase.value = "reveal";
-  feedback.value = skipped
-    ? {
-        text: reviewing
-          ? t("review.shown")
-          : rushing
-            ? t("spot.rush.shown")
-            : t("spot.skipped", { s: SKIP_PENALTY }),
-        ok: false,
-      }
-    : { text: t("spot.found"), ok: true };
-  emit("cue", skipped ? "hint" : "place");
+  if (how === "out") {
+    // The tap already cued the mistake; the reason stays up with the answer.
+    feedback.value = { text: `${feedback.value?.text} ${t("spot.rush.shown")}`, ok: false };
+  } else {
+    feedback.value = skipped
+      ? {
+          text: reviewing
+            ? t("review.shown")
+            : rushing
+              ? t("spot.rush.shown")
+              : t("spot.skipped", { s: SKIP_PENALTY }),
+          ok: false,
+        }
+      : { text: t("spot.found"), ok: true };
+    emit("cue", skipped ? "hint" : "place");
+  }
   revealTimer = setTimeout(
     () =>
       (rushing ? lives.value : index.value + 1 < slots.length)
