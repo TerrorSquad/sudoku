@@ -2,6 +2,7 @@ import { ref, watch, type Ref } from "vue";
 
 import type { BoardTheme, UiScale } from "../utils/preferenceValues";
 
+import { LADDER } from "../utils/progression";
 import { readJSON, writeJSON } from "../utils/safeJson";
 
 // One place for every player preference, persisted per key under sudoku_v1_pref_*. The refs are
@@ -14,6 +15,14 @@ function pref<T>(name: string, fallback: T): Ref<T> {
   const state = ref(readJSON<T>(`sudoku_v1_pref_${name}`, fallback)) as Ref<T>;
   watch(state, (v) => writeJSON(`sudoku_v1_pref_${name}`, v));
   return state;
+}
+
+// Someone who has won (a scored or Zen game) or saved a game knows the controls: an upgrade
+// doesn't show them the tour.
+function isNewPlayer() {
+  const won = readJSON<{ gamesWon?: number } | null>("sudoku_v1_score", null)?.gamesWon;
+  const saved = [...LADDER, "custom", "daily"].some((d) => readJSON(`sudoku_v1_save_${d}`, null));
+  return !won && !readJSON("sudoku_v1_zen_wins", null) && !saved;
 }
 
 let shared: ReturnType<typeof create> | null = null;
@@ -40,7 +49,7 @@ function create() {
     /** The menu's "New to sudoku?" prompt, until dismissed (or the basics are done). */
     basicsPrompt: pref("basics_prompt", true),
     /** The controls tour, until it has played once (Settings queues it again). */
-    controlsTour: pref("controls_tour", true),
+    controlsTour: pref("controls_tour", isNewPlayer()),
   };
 }
 

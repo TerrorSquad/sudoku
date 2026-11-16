@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// The game's controls tour, drawn by driver.js over the [data-tour] controls. app.vue mounts it
-// lazily (LazyControlsTour), so driver.js and its CSS load only when a tour plays.
+// The game's controls tour, drawn by driver.js over the [data-tour] controls. app.vue loads it
+// lazily (defineAsyncComponent), so driver.js and its CSS load only when a tour plays.
 import { driver } from "driver.js";
 
 const emit = defineEmits<{ (e: "done"): void }>();

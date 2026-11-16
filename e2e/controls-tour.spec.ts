@@ -1,7 +1,7 @@
 /* oxlint-disable eslint/no-await-in-loop -- tour steps are inherently sequential */
 import { test, expect, type Page } from "@playwright/test";
 
-import { BOARD } from "./seed";
+import { BOARD, unlockAllLevels } from "./seed";
 
 const tour = (page: Page) => page.locator(".driver-popover");
 
@@ -20,6 +20,12 @@ test.describe("a new player", () => {
     await newBeginner(page);
     await expect(tour(page)).toContainText("Placing digits");
     await expect(tour(page)).toContainText("1 of 5");
+    // The first tour holds the clock, without the pause overlay over the controls.
+    const clock = page.getByTestId("timer");
+    const held = await clock.textContent();
+    await page.waitForTimeout(2200);
+    await expect(clock).toHaveText(held!);
+    await expect(page.getByText("Paused")).toBeHidden();
     // The tour has the keys: a digit doesn't reach the board behind it.
     await page.keyboard.press("n");
     await expect(page.locator('[data-tour="notes"]')).toHaveAttribute("aria-pressed", "false");
@@ -29,6 +35,7 @@ test.describe("a new player", () => {
     }
     await page.getByRole("button", { name: "Got it" }).click();
     await expect(tour(page)).toBeHidden();
+    await expect(clock).not.toHaveText(held!, { timeout: 3000 });
 
     await page.getByRole("button", { name: "Exit" }).click();
     await page.reload();
@@ -55,6 +62,28 @@ test.describe("a new player", () => {
     await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
     await page.waitForTimeout(500);
     await expect(tour(page)).toBeHidden();
+  });
+});
+
+test("a player who has won before never gets it after an upgrade", async ({ page }) => {
+  await unlockAllLevels(page); // two Master wins, and no tour pref stored
+  await page.goto("/");
+  await newBeginner(page);
+  await page.waitForTimeout(500);
+  await expect(tour(page)).toBeHidden();
+});
+
+test.describe("a tour that can't load", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("leaves the game's keys working", async ({ page }) => {
+    await page.route(/ControlsTour/, (route) => route.abort());
+    await page.goto("/");
+    await newBeginner(page);
+    await page.waitForTimeout(1000);
+    await expect(tour(page)).toBeHidden();
+    await page.keyboard.press("n");
+    await expect(page.locator('[data-tour="notes"]')).toHaveAttribute("aria-pressed", "true");
   });
 });
 

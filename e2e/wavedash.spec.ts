@@ -187,20 +187,6 @@ const seedLocal = (page: Page, items: Record<string, string>) =>
     for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v);
   }, items);
 
-test("a fresh device restores its progress from the cloud", async ({ page }) => {
-  await fakeWavedash(page, {
-    remote: { "progress.json": cloudFile({ sudoku_v1_score: scoreJson(4321) }, 1000) },
-  });
-  await page.goto("/");
-  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
-  expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(4321);
-  expect(JSON.parse((await stored(page, "sudoku_cloud_meta"))!).syncedAt).toBe(1000);
-  expect((await sdkLog(page)).fileUploads).toBe(0);
-  // Restored before the app mounted, so the screens read it without a reload.
-  await page.getByRole("button", { name: "Statistics" }).click();
-  await expect(page.getByText("4,321").first()).toBeVisible();
-});
-
 test("local progress newer than the last sync is uploaded", async ({ page }) => {
   const old = cloudFile({ sudoku_v1_score: scoreJson(100) }, 1000);
   await fakeWavedash(page, { remote: { "progress.json": old } });
@@ -227,8 +213,22 @@ test("a corrupt cloud file never touches local progress", async ({ page }) => {
 });
 
 test.describe("an empty profile", () => {
-  // Nothing to upload on boot, so the win's is the first: no seeded tour pref (playwright.config.ts).
+  // A fresh device, without the tour pref playwright.config.ts seeds: nothing to upload on boot.
   test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("a fresh device restores its progress from the cloud", async ({ page }) => {
+    await fakeWavedash(page, {
+      remote: { "progress.json": cloudFile({ sudoku_v1_score: scoreJson(4321) }, 1000) },
+    });
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+    expect(JSON.parse((await stored(page, "sudoku_v1_score"))!).total).toBe(4321);
+    expect(JSON.parse((await stored(page, "sudoku_cloud_meta"))!).syncedAt).toBe(1000);
+    expect((await sdkLog(page)).fileUploads).toBe(0);
+    // Restored before the app mounted, so the screens read it without a reload.
+    await page.getByRole("button", { name: "Statistics" }).click();
+    await expect(page.getByText("4,321").first()).toBeVisible();
+  });
 
   test("a win uploads progress to the cloud", async ({ page }) => {
     await fakeWavedash(page);

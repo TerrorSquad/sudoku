@@ -875,20 +875,40 @@ function logRestored(before: Grid) {
 }
 
 const shortcutsOpen = ref(false);
-// The controls tour (ControlsTour): once on a first game, again from Settings or the ? sheet. The
-// clock runs, as with Settings over the game; a paused game resumes so the controls show.
+// The controls tour (ControlsTour): once on a new player's first game, again from Settings or the
+// ? sheet. A paused game resumes so the controls show. The first one holds the clock (without the
+// pause overlay, which would cover the controls); a replay doesn't, as with Settings over the game:
+// no free look at the board.
 const touring = ref(false);
-async function startTour() {
+let tourHoldsClock = false;
+async function startTour(holdClock = false) {
   controlsTour.value = false;
   shortcutsOpen.value = false;
   settingsOverGame.value = false;
   if (timer.isPaused.value) timer.togglePause();
+  tourHoldsClock = holdClock;
+  if (holdClock) timer.stopTimer();
   await nextTick(); // a closing sheet hands focus back first, then the tour takes it
   touring.value = true;
 }
+watch(touring, (on) => {
+  if (on || !tourHoldsClock) return;
+  tourHoldsClock = false;
+  const live = currentScreen.value === "game" && !timer.isPaused.value;
+  if (live && !finishing.value && !showModal.value) timer.startTimer();
+});
 function onScreenEntered() {
-  if (currentScreen.value === "game" && controlsTour.value) startTour();
+  if (currentScreen.value === "game" && controlsTour.value) startTour(true);
 }
+// driver.js loads with the tour; if it can't, the tour is off, never a game stuck without keys.
+const ControlsTour = defineAsyncComponent({
+  // oxlint-disable-next-line eslint/no-restricted-imports -- LazyControlsTour has no onError
+  loader: () => import("./components/ControlsTour.vue"),
+  onError(_error, _retry, fail) {
+    touring.value = false;
+    fail();
+  },
+});
 
 function handleKeyDown(e: KeyboardEvent) {
   if (showModal.value) return; // EndModal's own keys
@@ -898,7 +918,7 @@ function handleKeyDown(e: KeyboardEvent) {
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
     currentScreen.value !== "game" ||
-    touring.value || // driver.js has the keys
+    document.body.classList.contains("driver-active") || // the tour has the keys
     document.querySelector("dialog[open]") ||
     practiceLoading.value
   )
@@ -1286,7 +1306,7 @@ onUnmounted(() => {
           in-game
           :timed="!gameZen"
           @back-to-menu="settingsOverGame = false"
-          @tour="startTour"
+          @tour="startTour()"
         />
       </SheetDialog>
 
@@ -1300,7 +1320,7 @@ onUnmounted(() => {
           {{ $t("sidebar.keyboard") }}
         </h2>
         <ShortcutList sheet />
-        <button @click="startTour" class="tile mt-5 w-full py-2 text-sm font-bold">
+        <button @click="startTour()" class="tile mt-5 w-full py-2 text-sm font-bold">
           {{ $t("sidebar.tour") }}
         </button>
         <button @click="shortcutsOpen = false" class="tile mt-2 w-full py-2 text-sm font-bold">
@@ -1326,7 +1346,7 @@ onUnmounted(() => {
         :game="currentScreen === 'game'"
       />
 
-      <LazyControlsTour v-if="touring" @done="touring = false" />
+      <ControlsTour v-if="touring" @done="touring = false" />
 
       <AchievementToast
         :ids="toastIds"
