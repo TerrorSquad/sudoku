@@ -59,6 +59,7 @@ const LEGACY_TITLES: Record<string, TechniqueId> = {
   "empty rectangle": "empty-rectangle",
   "prazan pravougaonik": "empty-rectangle",
   "xy-chain": "xy-chain",
+  "xy-lanac": "xy-chain",
 };
 
 /** The id a stored key stands for: itself unless it's a legacy title. */
