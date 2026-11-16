@@ -6,7 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
 import type { BoardTheme } from "./utils/preferenceValues";
-import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
+import type { DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
 import AchievementsScreen from "./components/AchievementsScreen.vue";
 import AchievementToast from "./components/AchievementToast.vue";
@@ -31,6 +31,7 @@ import { useAchievements } from "./composables/useAchievements";
 import { useDailyPuzzle } from "./composables/useDailyPuzzle";
 import { padScope, sendKey, usePad, type PadKeys } from "./composables/useGamepad";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
+import { useNudge } from "./composables/useNudge";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
 import { statsKey, useScore, winsAt } from "./composables/useScore";
@@ -41,9 +42,8 @@ import { useTimer } from "./composables/useTimer";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
 import { focusCell, stepCell } from "./utils/gridNav";
 import { haptic } from "./utils/haptics";
-import { generateLesson, unitNumber, type Lesson } from "./utils/lesson";
+import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelFor } from "./utils/level";
-import { circled, patternMarks, strikes, withGhosts, type Mark } from "./utils/patternMarks";
 import { generatePracticePuzzle } from "./utils/practice";
 import {
   ACADEMY_TECHNIQUES,
@@ -78,8 +78,8 @@ import {
   type StuckMoment,
 } from "./utils/stuckMoments";
 import { digitLabel } from "./utils/sudokuColors";
-import { getGridCandidates, makeRng, seedFromString } from "./utils/sudokuCore";
-import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
+import { makeRng, seedFromString } from "./utils/sudokuCore";
+import { neededTechniques, singlesPath } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
@@ -179,6 +179,7 @@ const {
   cancelComplexHint,
   checkWinCondition,
   loadCustomBoard,
+  hintMarks,
 } = engine;
 
 const gameSave = useGameSave();
@@ -826,44 +827,12 @@ function handleInputNumber(num: number) {
   }
 }
 
-// The hint's pattern in pen on the board once a step shows it (what it removes or places only on
-// the step that says so). Applying a hint strikes the removed marks through, or circles the placed
-// digit, for a moment.
-const appliedMarks = ref<Mark[]>([]);
-let appliedTimer: ReturnType<typeof setTimeout> | undefined;
-const hintMarks = computed<Mark[]>(() => {
-  const move = engine.activeMove.value;
-  const hint = activeComplexHint.value;
-  // The last step is the one that says what to remove or place.
-  const showsResult = !!hint && currentStepIndex.value === hint.steps.length - 1;
-  if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
-  const cands = getGridCandidates(currentBoard.value);
-  const has = (r: number, c: number, n: number) => {
-    const notes = notesBoard.value[r]![c]!;
-    return notes.some(Boolean) ? !!notes[n] : cands[r]![c]!.includes(n);
-  };
-  const showsNotes = (r: number, c: number) => notesBoard.value[r]![c]!.some(Boolean);
-  return withGhosts(patternMarks(move, has, showsResult), showsNotes);
-});
-function clearApplied() {
-  clearTimeout(appliedTimer);
-  appliedMarks.value = [];
-}
-// A new or resumed board, and undo/redo, start clean.
-watch(initialBoard, clearApplied);
-function showApplied(move: SolveMove | null) {
-  if (!move) return;
-  appliedMarks.value = move.placement ? [circled(move.placement)] : strikes(move.eliminations);
-  clearTimeout(appliedTimer);
-  appliedTimer = setTimeout(() => (appliedMarks.value = []), 1400);
-}
-
 // Stepped through, or applied at once: the hint's move goes in the log and costs a hint, then the
 // game is won or the status line says what changed.
 function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
   const tech = move?.technique; // none for a wrong-entry hint
   const placed = move?.placement;
-  showApplied(move);
+  engine.showApplied(move);
   if (placed) logPlacement(placed);
   if (tech) {
     if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
@@ -888,37 +857,8 @@ function handleNextStep() {
   );
 }
 
-// "Nudge first" hint style: the first press names the technique and the row, column or box its
-// pattern sits in (or the box holding a wrong entry); pressing again (or the banner's Explain
-// button) gives the full step-by-step explanation.
-const nudge = ref<{ unit: BoardUnit; technique: TechniqueId | null } | null>(null);
-const nudgeUnit = computed(() => {
-  const u = nudge.value?.unit;
-  if (!u) return "";
-  return t(`hint.nudge.unit.${u.kind}`, { n: unitNumber(u) });
-});
-// Set once a nudge has counted as a hint: explaining and applying that same step is free.
-let nudgePaid = false;
-watch(
-  currentBoard,
-  () => {
-    nudge.value = null;
-    nudgePaid = false;
-  },
-  { deep: true },
-);
+const { nudge, nudgeUnit, showNudge, chargeHint } = useNudge(engine, hintsUsed, inGame);
 watch(currentScreen, () => (finishing.value = false));
-// The nudge survives the pause screen's Settings detour, not leaving the game.
-watch(inGame, (playing) => {
-  if (playing) return;
-  nudge.value = null;
-  nudgePaid = false;
-});
-// Counts one hint per step, whether it ended at the nudge or went on to the explanation.
-function chargeHint() {
-  if (nudgePaid) nudgePaid = false;
-  else hintsUsed.value++;
-}
 
 // A technique named in a hint or nudge opens its step-by-step lesson; the game waits, paused,
 // and the lesson's Back returns to it.
@@ -936,17 +876,9 @@ function handleTriggerHint() {
     handleInstantApplyHint();
     return;
   }
-  if (hintStyle.value === "nudge" && !nudge.value) {
-    const peek = engine.peekHint();
-    if (peek) {
-      nudge.value = peek.move
-        ? { unit: patternUnit(peek.move), technique: peek.move.technique }
-        : { unit: { kind: "box", ...peek.at }, technique: null };
-      hintsUsed.value++;
-      nudgePaid = true;
-      cue("hint");
-      return;
-    }
+  if (hintStyle.value === "nudge" && showNudge()) {
+    cue("hint");
+    return;
   }
   nudge.value = null;
   cue("hint");
@@ -1096,12 +1028,10 @@ function exitToMenu() {
 // check as a placement; and never act behind a modal (a second win would double-record).
 function undo() {
   if (showModal.value || practiceLoading.value) return;
-  clearApplied();
   undoMove();
 }
 function redo() {
   if (showModal.value || practiceLoading.value) return;
-  clearApplied();
   redoMove();
   checkWin();
 }
@@ -1228,7 +1158,6 @@ onMounted(() => {
 });
 onUnmounted(() => {
   if (flashTimeout) clearTimeout(flashTimeout);
-  clearTimeout(appliedTimer);
 });
 </script>
 
