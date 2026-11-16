@@ -1,11 +1,13 @@
 <script setup lang="ts">
-// The end of a Spot it round (each position's time, a best) or of a Daily review (each card's move).
+// The end of a Spot it round (each position's time, a best), a Puzzle rush (positions found, a
+// best) or a Daily review (each card's move).
 
 import type { SpotResult } from "../utils/spotIt";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 const props = defineProps<{
   review: boolean;
+  rush: boolean;
   reviewed: { technique: TechniqueId; passed: boolean; box: number; next: string }[];
   results: SpotResult[];
   best: number | undefined;
@@ -23,6 +25,8 @@ const lang = computed(
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
 const rows = computed(() => breakdown(props.results));
+// A rush's best is a count, a round's a time.
+const fmt = (n: number) => (props.rush ? String(n) : formatSpotTime(n));
 </script>
 
 <template>
@@ -76,21 +80,23 @@ const rows = computed(() => breakdown(props.results));
   <!-- Results -->
   <div v-else class="mx-auto w-full max-w-md px-4 py-6" data-testid="spot-done">
     <section class="panel flex flex-col gap-3 p-5 text-center">
-      <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">{{ $t("spot.total") }}</p>
+      <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+        {{ $t(rush ? "spot.rush.score" : "spot.total") }}
+      </p>
       <p
         data-testid="spot-total"
         class="font-display text-4xl font-black text-zinc-900 tabular-nums dark:text-zinc-50"
       >
-        {{ formatSpotTime(totalTime(results)) }}
+        {{ rush ? foundCount(results) : formatSpotTime(totalTime(results)) }}
       </p>
       <p v-if="newBest" class="text-sm font-bold text-amber-700 dark:text-amber-400">
         {{ $t("spot.newBest") }}
         <span v-if="best !== undefined" class="font-semibold">{{
-          $t("spot.was", { time: formatSpotTime(best) })
+          $t("spot.was", { time: fmt(best) })
         }}</span>
       </p>
       <p v-else-if="best !== undefined" class="text-sm text-zinc-600 dark:text-zinc-400">
-        {{ $t("spot.best", { time: formatSpotTime(best) }) }}
+        {{ $t("spot.best", { time: fmt(best) }) }}
       </p>
     </section>
 
