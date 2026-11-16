@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StuckMoment } from "../utils/stuckMoments";
+import type { WinResult } from "../composables/useWinResult";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { usePreferences } from "../composables/usePreferences";
@@ -12,8 +12,7 @@ defineProps<{
   zen: boolean;
   mistakes: number;
   hintsUsed: number;
-  neededTechs: TechniqueId[];
-  stuck: StuckMoment[];
+  result: WinResult;
   techniqueLog: TechniqueId[];
 }>();
 const emit = defineEmits<{ lesson: [id: TechniqueId] }>();
@@ -55,13 +54,13 @@ const techStatsTotals = useTechniqueStats().getAll();
         >{{ hintsUsed }}</span
       >
     </div>
-    <div v-if="neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
+    <div v-if="result.neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
       <p class="mb-2 text-xs font-semibold text-zinc-500">
         {{ $t("modal.needed") }}
       </p>
       <div class="flex flex-wrap gap-1">
         <button
-          v-for="id in neededTechs"
+          v-for="id in result.neededTechs"
           :key="id"
           @click="emit('lesson', id)"
           :title="$t('modal.openLesson')"
@@ -71,13 +70,13 @@ const techStatsTotals = useTechniqueStats().getAll();
         </button>
       </div>
     </div>
-    <div v-if="stuck.length" class="px-3 py-2" data-testid="stuck-moments">
+    <div v-if="result.stuck.length" class="px-3 py-2" data-testid="stuck-moments">
       <p class="mb-2 text-xs font-semibold text-zinc-500">
         {{ $t("modal.stuck") }}
       </p>
       <ul class="space-y-1.5">
         <li
-          v-for="m in stuck"
+          v-for="m in result.stuck"
           :key="m.at"
           class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
         >

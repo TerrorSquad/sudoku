@@ -34,29 +34,26 @@ import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGame
 import { useNudge } from "./composables/useNudge";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
-import { statsKey, useScore, winsAt } from "./composables/useScore";
+import { statsKey, useScore } from "./composables/useScore";
 import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { useWinResult, type WinResult } from "./composables/useWinResult";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
 import { focusCell, stepCell } from "./utils/gridNav";
 import { haptic } from "./utils/haptics";
 import { generateLesson, type Lesson } from "./utils/lesson";
-import { levelFor } from "./utils/level";
 import { generatePracticePuzzle } from "./utils/practice";
 import {
   ACADEMY_TECHNIQUES,
   lockOf,
   lockedLevels,
-  nextChallenge,
   type Tier,
   type Week,
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
-import { brokenRecords, type NewRecord, type Snapshot } from "./utils/records";
 import { readJSON } from "./utils/safeJson";
-import { computeScore, type ScoreBreakdown } from "./utils/score";
 import {
   playComplete,
   playDigitDone,
@@ -69,18 +66,11 @@ import {
   playWin,
 } from "./utils/sound";
 import { SPOT_BEST_KEY, readSpotBest } from "./utils/spotIt";
-import { localDateKey } from "./utils/streak";
-import {
-  onBoard,
-  restorePlacements,
-  stuckMoments,
-  type Placement,
-  type StuckMoment,
-} from "./utils/stuckMoments";
+import { onBoard, restorePlacements, type Placement } from "./utils/stuckMoments";
 import { digitLabel } from "./utils/sudokuColors";
 import { makeRng, seedFromString } from "./utils/sudokuCore";
-import { neededTechniques, singlesPath } from "./utils/sudokuGrader";
-import { saveToCloud, submitWin } from "./utils/wavedash";
+import { singlesPath } from "./utils/sudokuGrader";
+import { saveToCloud } from "./utils/wavedash";
 
 const { t, locale, locales } = useI18n();
 
@@ -228,9 +218,6 @@ function openBasics(id: BasicsId) {
   activeBasics.value = id;
   currentScreen.value = "basics";
 }
-// Win-modal lines: progress the win made (ok), or why it made none (a practice win on the path).
-const progressNotes = ref<{ text: string; ok: boolean }[]>([]);
-
 const notesMode = ref<boolean>(false);
 const mistakes = ref<number>(0);
 // The game's status line ("Wrong digit here!", "Notes auto-filled!"), read out by the sr-only
@@ -306,14 +293,11 @@ const inGame = computed(
     currentScreen.value === "game" ||
     (["academy", "lesson", "spot"].includes(currentScreen.value) && academyFromGame.value),
 );
-// What the won puzzle's givens required (not what the player used), for the win modal.
-const neededTechs = ref<TechniqueId[]>([]);
 // The Academy lesson to open on, when a win-modal chip led there.
 const academyFocus = ref<TechniqueId | null>(null);
 const mistakeExplainer = ref<string>("");
 // Every correct digit that went in, on the clock, for "Where you got stuck" on the win modal.
 const placements = ref<Placement[]>([]);
-const stuck = ref<StuckMoment[]>([]);
 function logPlacement({ r, c, num }: DigitAt) {
   placements.value.push({ r, c, num, t: timer.timerSeconds.value });
 }
@@ -331,28 +315,13 @@ const flashCells = ref<FlashCell[]>([]);
 let flashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const score = useScore();
-const lastScore = ref<ScoreBreakdown | null>(null);
-const isNewBest = ref<boolean>(false);
-const lifetimeTotal = ref<number>(0);
-// Set when the just-won game crossed a level threshold, for the win modal banner.
-const reachedLevel = ref<number | null>(null);
 const records = useRecords();
-// Personal records this win broke, for the win modal: at most two lines.
-const newRecords = ref<NewRecord[]>([]);
+// The win modal's result (score, notes, records, what it took): null for a game over.
+const winResult = ref<WinResult | null>(null);
+const { recordWin } = useWinResult(t);
 
 // Practice and custom boards don't count: a one-blank custom board could be won over and over.
 const countsForRecords = () => !practiceTechnique.value && activeDifficulty.value !== "custom";
-
-// What a win can break, read before and after recording it. A Daily's time is compared with
-// earlier Dailies (its own score row), like its "New best" chip.
-function recordSnapshot(): Snapshot {
-  const key = statsKey(activeDifficulty.value, isDailyMode.value);
-  return {
-    ...records.get(),
-    fastest: score.getStats().perDifficulty[key]?.bestTime ?? 0,
-    streak: dailyPuzzle.getLongestStreak(),
-  };
-}
 
 // The time to beat, read when a game opens (0 hides it): the fastest Daily in the Daily, else
 // this difficulty's best. Custom and practice boards vary too much for a best to mean anything.
@@ -399,129 +368,45 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   modalTitle.value = title;
   modalMessage.value = message;
   isWinState.value = win;
-  // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
-  const needed = win ? neededTechniques(initialBoard.value) : [];
-  // A drill's pre-filled notes are invisible to the grader, so lead with what was practised.
-  const practised = practiceTechnique.value;
-  neededTechs.value =
-    win && practised ? [practised, ...needed.filter((id) => id !== practised)] : needed;
-  stuck.value = [];
-  newRecords.value = [];
+  winResult.value = null;
   showModal.value = true;
   activeDigit.value = null;
-  reachedLevel.value = null;
-  progressNotes.value = [];
   timer.stopTimer();
+  const practised = practiceTechnique.value;
   // Read before this game's save is cleared: a level open only through it isn't news.
   const lockedBefore =
     win && !practised ? lockedLevels(score.unlockWins(), (d) => !!gameSave.loadDifficulty(d)) : [];
-  if (!practiceTechnique.value)
-    gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
-  if (win) {
-    cue("win");
-    flashWin();
-    if (activeDifficulty.value === "custom" && challengeTarget.value > 0 && !practised) {
-      const diff = challengeTarget.value - timer.timerSeconds.value;
-      progressNotes.value.push({
-        text: t(diff > 0 ? "challenge.won" : diff === 0 ? "challenge.tie" : "challenge.lost", {
-          time: timer.formatTime(Math.abs(diff)),
-        }),
-        ok: diff >= 0,
-      });
-    }
-    const recordsBefore = countsForRecords() ? recordSnapshot() : null;
-    if (practiceTechnique.value || gameZen.value) {
-      lastScore.value = null;
-      if (practised) {
-        recordPracticeWin(practised);
-      } else {
-        score.recordZenWin(activeDifficulty.value);
-        announceUnlocks(lockedBefore);
-        if (progressNotes.value.length) cue("unlock");
-      }
-    } else {
-      if (isDailyMode.value) {
-        const earnedBefore = dailyPuzzle.getStreakState().earned;
-        dailyPuzzle.markComplete(timer.timerSeconds.value, mistakes.value, dailyDate);
-        if (dailyPuzzle.getStreakState().earned > earnedBefore)
-          progressNotes.value.push({ text: t("streak.freezeEarned"), ok: true });
-      }
-      const breakdown = computeScore({
-        difficulty: activeDifficulty.value,
-        timeSeconds: timer.timerSeconds.value,
-        mistakes: mistakes.value,
-        hintsUsed: hintsUsed.value,
-      });
-      const key = statsKey(activeDifficulty.value, isDailyMode.value);
-      const result = score.record(key, breakdown.total, timer.timerSeconds.value);
-      submitWin({
-        difficulty: activeDifficulty.value,
-        seconds: timer.timerSeconds.value,
-        mistakes: mistakes.value,
-        hints: hintsUsed.value,
-        daily: isDailyMode.value ? dailyDate : null,
-      });
-      lastScore.value = breakdown;
-      isNewBest.value = result.isNewBest;
-      lifetimeTotal.value = result.stats.total;
-      const before = levelFor(result.previousTotal).level;
-      const after = levelFor(result.stats.total).level;
-      reachedLevel.value = after > before ? after : null;
-      announceUnlocks(lockedBefore);
-      const unlocked = achievements.evaluate({
-        difficulty: activeDifficulty.value,
-        timeSeconds: timer.timerSeconds.value,
-        mistakes: mistakes.value,
-        hintsUsed: hintsUsed.value,
-        isDaily: isDailyMode.value,
-        colorMode: colorMode.value,
-        hour: new Date().getHours(),
-        gamesWon: result.stats.gamesWon,
-        winsAtDifficulty: winsAt(result.stats.perDifficulty, key),
-        dailyStreak: isDailyMode.value ? dailyPuzzle.getStreak() : 0,
-        distinctTechniques: Object.keys(techStats.getAll()).length,
-      });
-      toastIds.value.push(...unlocked);
-      if (unlocked.length || progressNotes.value.some((n) => n.ok)) cue("unlock");
-    }
-    if (recordsBefore) {
-      records.recordWin({
-        day: localDateKey(),
-        difficulty: activeDifficulty.value,
-        mistakes: mistakes.value,
-        hints: hintsUsed.value,
-      });
-      newRecords.value = brokenRecords(recordsBefore, recordSnapshot()).slice(0, 2);
-    }
-    if (!practised) saveToCloud();
-    // After the score is safe: a damaged log must cost the stuck moments, not the win.
-    try {
-      if (!gameZen.value) stuck.value = stuckMoments(initialBoard.value, placements.value);
-    } catch {
-      stuck.value = [];
-    }
-    confetti({
-      disableForReducedMotion: true,
-      particleCount: 160,
-      spread: 80,
-      origin: { y: 0.55 },
-      colors: ["#17294a", "#2a52a8", "#8aabe2", "#ffe680", "#c2352b"],
-    });
-  } else {
-    lastScore.value = null;
-  }
-}
-
-// Levels that were locked before this win (counting saves) and are open now.
-function announceUnlocks(lockedBefore: Difficulty[]) {
-  const wins = score.unlockWins();
-  for (const level of lockedBefore.filter((d) => !lockOf(d, wins))) {
-    justUnlocked.value ??= level;
-    progressNotes.value.push({
-      text: t("difficulty.unlocked", { level: t(`difficulty.${level}`) }),
-      ok: true,
-    });
-  }
+  if (!practised) gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
+  if (!win) return;
+  cue("win");
+  flashWin();
+  const { result, toasts, opened, unlock } = recordWin({
+    difficulty: activeDifficulty.value,
+    daily: isDailyMode.value,
+    dailyDate,
+    zen: gameZen.value,
+    practice: practised,
+    week: practiceWeek.value,
+    seconds: timer.timerSeconds.value,
+    mistakes: mistakes.value,
+    hints: hintsUsed.value,
+    colorMode: colorMode.value,
+    challengeTarget: challengeTarget.value,
+    initialBoard: initialBoard.value,
+    placements: placements.value,
+    lockedBefore,
+  });
+  winResult.value = result;
+  toastIds.value.push(...toasts);
+  justUnlocked.value ??= opened;
+  if (unlock) cue("unlock");
+  confetti({
+    disableForReducedMotion: true,
+    particleCount: 160,
+    spread: 80,
+    origin: { y: 0.55 },
+    colors: ["#17294a", "#2a52a8", "#8aabe2", "#ffe680", "#c2352b"],
+  });
 }
 
 // The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
@@ -548,20 +433,6 @@ async function handleNextPuzzle() {
   // Straight to the next board (the menu would cancel its start), Zen if this game was.
   await handleStartGame(level, { zen: gameZen.value, ready: closeModal });
   nextLoading.value = false;
-}
-
-// A practice win can complete the week's puzzle. The path's challenges are its lessons.
-function recordPracticeWin(id: TechniqueId) {
-  const name = t(`hint.move.${id}.name`);
-  const week = practiceWeek.value;
-  if (!week && nextChallenge(techniquePath.getDone()) === id)
-    progressNotes.value.push({ text: t("path.lessonCounts"), ok: false });
-  if (week && techniquePath.markWeekDone(week))
-    progressNotes.value.push({ text: t("weekly.won", { name }), ok: true });
-  if (progressNotes.value.some((n) => n.ok)) {
-    cue("unlock");
-    saveToCloud();
-  }
 }
 
 // Ends the game if the board is solved (a placement, a hint, Finish or redo); `message` replaces
@@ -1471,14 +1342,7 @@ onUnmounted(() => {
         :hints-used="hintsUsed"
         :seconds="timer.timerSeconds.value"
         :board="initialBoard"
-        :last-score="lastScore"
-        :is-new-best="isNewBest"
-        :lifetime-total="lifetimeTotal"
-        :reached-level="reachedLevel"
-        :progress-notes="progressNotes"
-        :new-records="newRecords"
-        :needed-techs="neededTechs"
-        :stuck="stuck"
+        :result="winResult"
         :technique-log="techniqueLog"
         :next-level="nextLevel"
         :next-loading="nextLoading"

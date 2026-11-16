@@ -31,7 +31,7 @@ const emit = defineEmits<{
   (e: "review", ids: TechniqueId[]): void;
 }>();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const techStats = useTechniqueStats();
 
 // Exactly the techniques the in-game analyzer uses (and can hint), in the order of the
@@ -62,6 +62,8 @@ const masteryTitle = (id: TechniqueId) =>
 const tiers = [...new Set(techniques.map((tech) => tech.tier))];
 
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
+// Steps and tips are one message each, split on newlines: "|" is vue-i18n's plural separator.
+const splitLines = (key: string) => t(key).split("\n");
 
 function byTier(tier: Tier) {
   return techniques.filter((tech) => tech.tier === tier);
@@ -307,9 +309,18 @@ const total = computed(() => techniques.length);
               @click="toggleExample(tech.id)"
             >
               <div class="mb-3 flex items-start justify-between gap-3">
-                <h3 class="text-base leading-tight font-black text-zinc-900 dark:text-zinc-100">
-                  {{ techName(tech.id) }}
-                </h3>
+                <div>
+                  <h3 class="text-base leading-tight font-black text-zinc-900 dark:text-zinc-100">
+                    {{ techName(tech.id) }}
+                  </h3>
+                  <!-- Only some techniques have a common other name. -->
+                  <p
+                    v-if="te(`academy.tech.${tech.id}.aka`)"
+                    class="mt-0.5 text-[0.6875rem] text-zinc-500"
+                  >
+                    {{ $t("academy.aka", { names: $t(`academy.tech.${tech.id}.aka`) }) }}
+                  </p>
+                </div>
                 <div class="flex shrink-0 items-center gap-1.5">
                   <!-- Path state; the free Practice button below stays open either way. -->
                   <span
@@ -369,6 +380,48 @@ const total = computed(() => techniques.length);
                       {{ $t(`academy.tech.${tech.id}.howItHelps`) }}
                     </p>
                   </div>
+                  <div>
+                    <p class="mb-1 text-[0.625rem] font-bold text-zinc-500">
+                      {{ $t("academy.spotLabel") }}
+                    </p>
+                    <ol
+                      class="list-decimal space-y-0.5 pl-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"
+                    >
+                      <li v-for="step in splitLines(`academy.tech.${tech.id}.spot`)" :key="step">
+                        {{ step }}
+                      </li>
+                    </ol>
+                  </div>
+                  <!-- Folded so 22 cards don't become walls of text; .stop keeps the card's example shut. -->
+                  <details @click.stop>
+                    <summary
+                      class="cursor-pointer text-[0.625rem] font-bold text-violet-700 dark:text-violet-300"
+                    >
+                      {{ $t("academy.moreLabel") }}
+                    </summary>
+                    <div class="mt-2 space-y-3">
+                      <div>
+                        <p class="mb-1 text-[0.625rem] font-bold text-zinc-500">
+                          {{ $t("academy.whyLabel") }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          {{ $t(`academy.tech.${tech.id}.why`) }}
+                        </p>
+                      </div>
+                      <div>
+                        <p class="mb-1 text-[0.625rem] font-bold text-zinc-500">
+                          {{ $t("academy.tipsLabel") }}
+                        </p>
+                        <ul
+                          class="list-disc space-y-0.5 pl-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400"
+                        >
+                          <li v-for="tip in splitLines(`academy.tech.${tech.id}.tips`)" :key="tip">
+                            {{ tip }}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </details>
                 </div>
                 <!-- Thumbnail of the worked example; the full one opens on click. -->
                 <div
