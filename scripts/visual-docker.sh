@@ -17,5 +17,6 @@ trap chown_back EXIT
 trap 'exit 130' INT TERM
 
 command -v pnpm >/dev/null || npm install --global --silent pnpm@11
-pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+# The store is its own named volume (package.json): under /work it would land in the repo.
+pnpm install --frozen-lockfile --store-dir /root/.pnpm-store --config.confirmModulesPurge=false
 pnpm visual:run "$@"
