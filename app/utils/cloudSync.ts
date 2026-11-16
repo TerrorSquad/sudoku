@@ -17,15 +17,16 @@ export const META_KEY = "sudoku_cloud_meta";
 /** Whichever copy a sync replaced, kept so a bad restore or conflict can be undone by hand. */
 export const SYNC_BACKUP_KEY = "sudoku_sync_backup";
 
-// The Daily's save stays on this device: v1.2.0 rejects a whole cloud file that holds it (it
-// expects every save slot to be named after a difficulty), and it only resumes the same day anyway.
-// Display size is per device (a TV and a phone want different ones), and older versions reject
-// any preference that isn't a boolean.
-const LOCAL_ONLY = new Set(["sudoku_v1_save_daily", "sudoku_v1_pref_ui_scale"]);
+// The Dailies' saves (sudoku_v1_save_daily, sudoku_v1_save_daily_<level>) stay on this device:
+// v1.2.0 rejects a whole cloud file that holds one (it expects every save slot to be named after a
+// difficulty), and they only resume the same day anyway. Display size is per device (a TV and a
+// phone want different ones), and older versions reject any preference that isn't a boolean.
+const localOnly = (key: string) =>
+  key.startsWith("sudoku_v1_save_daily") || key === "sudoku_v1_pref_ui_scale";
 
-/** The local data as it is synced: everything but the LOCAL_ONLY keys. */
+/** The local data as it is synced: everything but the localOnly keys. */
 export function cloudData(local: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(local).filter(([k]) => !LOCAL_ONLY.has(k)));
+  return Object.fromEntries(Object.entries(local).filter(([k]) => !localOnly(k)));
 }
 
 const parseJson = (text: string | undefined): unknown => {
@@ -81,9 +82,9 @@ export function mergedBests(kept: Record<string, string>, replaced: Record<strin
   return out;
 }
 
-/** A cloud copy to restore, carrying over this device's LOCAL_ONLY entries and better bests. */
+/** A cloud copy to restore, carrying over this device's localOnly entries and better bests. */
 export function withLocalOnly(file: CloudFile, local: Record<string, string>): CloudFile {
-  const kept = Object.entries(local).filter(([k]) => LOCAL_ONLY.has(k));
+  const kept = Object.entries(local).filter(([k]) => localOnly(k));
   const data = { ...file.data, ...Object.fromEntries(kept), ...mergedBests(file.data, local) };
   return { ...file, data };
 }

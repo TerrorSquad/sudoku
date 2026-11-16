@@ -27,6 +27,10 @@ describe("useScore: the Daily keeps its own row", () => {
     expect(gamesWon).toBe(2);
     // ...and a Daily still counts as a Medium win toward opening Hard.
     expect(score.unlockWins().medium?.wins).toBe(2);
+    // A Hard Daily: its own row, a Hard win toward opening Expert.
+    score.record(statsKey("hard", true), 700, 500);
+    expect(score.getStats().perDifficulty.hard).toBeUndefined();
+    expect(score.unlockWins().hard?.wins).toBe(1);
   });
 });
 
@@ -41,5 +45,20 @@ describe("winsAt (Specialist and unlocks count games, not rows)", () => {
   it("counts any other level on its own", () => {
     expect(winsAt(per, "hard")).toBe(3);
     expect(winsAt(per, "expert")).toBe(0);
+  });
+
+  it("counts every level's Daily with its level", () => {
+    const withHard = { ...per, daily_hard: { wins: 2 } };
+    expect(winsAt(withHard, "hard")).toBe(5);
+    expect(winsAt(withHard, "daily_hard")).toBe(5);
+    expect(winsAt(withHard, "medium")).toBe(10);
+  });
+});
+
+describe("statsKey", () => {
+  it("names Medium's Daily row daily and the other levels' daily_<level>", () => {
+    expect(statsKey("medium", true)).toBe("daily");
+    expect(statsKey("hard", true)).toBe("daily_hard");
+    expect(statsKey("hard", false)).toBe("hard");
   });
 });

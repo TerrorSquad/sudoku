@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { BOARD, SOLVED, grid, resumeMedium, savedGame } from "./seed";
+import { BOARD, SOLVED, grid, openDaily, resumeMedium, savedGame } from "./seed";
 
 // A medium save with a few seconds on the clock, plus a medium best of 5 s.
 async function seed(page: Page, { zen = false, timerSeconds = 3 } = {}) {
@@ -68,6 +68,6 @@ test("the Daily paces against the fastest Daily, not the medium best", async ({ 
       );
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await openDaily(page);
   await expect(page.getByTestId("best-time")).toHaveText("Best 03:20");
 });
