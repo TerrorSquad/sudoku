@@ -1109,12 +1109,13 @@ const shortcutsOpen = ref(false);
 
 function handleKeyDown(e: KeyboardEvent) {
   if (showModal.value) return; // EndModal's own keys
-  // A sheet over the game takes the keys; Esc closes it natively.
+  // A sheet over the game takes the keys. Read the real dialog state, not the v-models: Esc
+  // closes a dialog at once but its close event (which clears the model) comes a task later, so a
+  // key pressed right after Esc would be dropped.
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
     currentScreen.value !== "game" ||
-    settingsOverGame.value ||
-    shortcutsOpen.value ||
+    document.querySelector("dialog[open]") ||
     practiceLoading.value
   )
     return;
