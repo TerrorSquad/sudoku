@@ -2,6 +2,8 @@ name: Check
 
 # Format, lint, typecheck and unit tests (`pnpm check`) on every PR. The forge pre-commit hook runs
 # the first two locally, but only once `forge install` has run in that clone, so CI is the backstop.
+# Then the Wavedash build, with a hard size budget and the prod smoke test (`pnpm test:prod`), so a
+# broken build fails here rather than at release.
 # Same image as the visual job: it already has the Node the app needs.
 on:
   pull_request:
@@ -28,3 +30,8 @@ jobs:
           pnpm install --frozen-lockfile
 
       - run: pnpm check
+
+      - name: Wavedash build, size budget and prod smoke test
+        run: pnpm test:prod
+        env:
+          BUDGET_STRICT: "1"
