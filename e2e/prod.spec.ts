@@ -52,7 +52,7 @@ async function dropNextChunk(page: Page) {
   });
 }
 
-// Nuxt's own chunk-error reload joined the ./ base to the route: /game/ became /game/game/, blank.
+// A lazy chunk that fails reloads the page (plugins/chunk-reload.client.ts), under /game/.
 test("a lazy screen whose chunk fails reloads in place, under /game/", async ({ page }) => {
   await page.goto("./");
   await page.waitForLoadState("networkidle"); // the idle prefetches are done
@@ -86,8 +86,8 @@ test("a win whose modal chunk fails is still recorded after the reload", async (
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
 });
 
-// Nuxt's router wrote the ./ base joined to the path on start, /game/ → /game/game/: any reload
-// (F5, a backup import) then loaded a blank page. plugins/keep-path.client.ts puts it back.
+// With a ./ base URL Nuxt's router rewrote /game/ to /game/game/ on start, so any reload (F5, a
+// backup import) loaded a blank page. The build sets NUXT_APP_CDN_URL=./ and keeps the base at /.
 test("the address stays /game/, so a reload and a backup import land on the app", async ({
   page,
 }) => {

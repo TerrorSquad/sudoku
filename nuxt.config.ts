@@ -39,12 +39,13 @@ export default defineNuxtConfig({
   },
   ssr: false,
   // A lazy chunk that fails to load (a deploy replaced it, a dropped request) reloads the page via
-  // plugins/chunk-reload.client.ts. Nuxt's own handler reloads at the base joined to the route,
-  // which with the ./ base is /game/game/ for the Wavedash build, a blank page.
+  // plugins/chunk-reload.client.ts: Nuxt's own handler only reloads on a route change, and this app
+  // has no routes.
   experimental: { emitRouteChunkError: "manual" },
   app: {
-    // `pnpm wavedash` sets NUXT_APP_BASE_URL=./ (relative assets); '/' for local dev.
-    baseURL: process.env.NUXT_APP_BASE_URL ?? "/",
+    // The base stays "/": `pnpm wavedash:build` sets NUXT_APP_CDN_URL=./ for relative asset URLs
+    // instead. A ./ base made Nuxt's router rewrite /game/ to /game/game/ (a blank page on reload)
+    // and Nuxt 4.6.3+ prerender "Redirecting..." pages.
     head: {
       meta: [
         // Navy ink on paper, the slate ground (--ground in main.css) in dark mode. app.vue

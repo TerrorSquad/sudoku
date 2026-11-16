@@ -1,14 +1,14 @@
 // Runs after `nuxt generate` (`pnpm wavedash:build`), before anything uploads. First it fails the build when
 // index.html isn't the app shell: 1.10.0 shipped every page as "Redirecting..." (Nuxt 4.6.3+ with
-// the relative base URL) and never loaded. Then it prints the shipped JS and CSS sizes and warns
+// the relative base URL it used then) and never loaded. Then it prints the shipped JS and CSS sizes and warns
 // past a watch level. Locally size never fails the build, as Wavedash's only limit is 1 GB per upload;
 // CI sets BUDGET_STRICT=1 so a PR past FAIL_AT fails instead of slipping by as a warning.
 // The warning is there because bloat creeps in unnoticed: importing every Nuxt UI locale once added 228 KB of
 // JS, and theming every Nuxt UI component 120 KB of CSS.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 
-// With the relative base Wavedash needs, assets must load from ./_nuxt/, not /_nuxt/.
-const assets = process.env.NUXT_APP_BASE_URL === "./" ? 'src="./_nuxt/' : "_nuxt/";
+// Wavedash serves the game from a subfolder: with the relative CDN URL, assets load from ./_nuxt/.
+const assets = process.env.NUXT_APP_CDN_URL === "./" ? 'src="./_nuxt/' : "_nuxt/";
 for (const page of ["index.html", "200.html"]) {
   const html = readFileSync(`.output/public/${page}`, "utf8");
   if (!html.includes("<!DOCTYPE html>") || !html.includes(assets)) {
