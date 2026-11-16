@@ -4,7 +4,7 @@
 // JS, and theming every Nuxt UI component 120 KB of CSS.
 import { readdirSync, statSync } from "node:fs";
 
-const WARN_AT = { js: 900, css: 160 }; // KB, raw: 850 and 134 when set (v1.3.0)
+const WARN_AT = { js: 1100, css: 180 }; // KB, raw: 922 and 142 at v1.6.0 (pattern lines, lessons)
 const dir = ".output/public/_nuxt";
 const kb = { js: 0, css: 0 };
 for (const f of readdirSync(dir)) {

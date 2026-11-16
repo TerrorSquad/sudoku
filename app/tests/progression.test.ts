@@ -11,7 +11,7 @@ import {
   nextChallenge,
   nextLesson,
   readStars,
-  starsFor,
+  lessonStarsFor,
   weekOf,
   withZenWins,
 } from "../utils/progression";
@@ -99,7 +99,7 @@ describe("lesson flow", () => {
   });
 
   it("gives 3 stars for no slips, 2 for one, else 1", () => {
-    expect([0, 1, 2, 7].map(starsFor)).toEqual([3, 2, 1, 1]);
+    expect([0, 1, 2, 7].map(lessonStarsFor)).toEqual([3, 2, 1, 1]);
   });
 
   it("reads only known techniques with 1–3 stars, and merges to each one's best", () => {
