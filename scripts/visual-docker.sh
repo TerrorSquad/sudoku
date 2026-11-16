@@ -5,12 +5,16 @@
 # Pattern borrowed from moj-go's scripts/screenshots-docker.sh.
 set -euo pipefail
 
+# How package.json runs it: linux/amd64 everywhere (an Apple Silicon Mac emulates it), since arm64
+# Skia rasterizes differently from CI. .nuxt and .data are throwaway volumes, so a host dev server
+# never sees root-owned files or /work paths. node_modules is a volume per checkout (Linux binaries,
+# never the host's; parallel worktrees can't install over each other); the pnpm store is shared.
 # The container runs as root: hand what it writes into the bind-mounted repo back to the caller,
-# even on Ctrl-C. node_modules is a named volume (Linux binaries, never the host's), left alone.
+# even on Ctrl-C.
 chown_back() {
   [ -n "${HOST_UID:-}" ] || return 0
   chown -R "${HOST_UID}:${HOST_GID:-$HOST_UID}" \
-    /work/e2e/visual-regression-snapshots /work/test-results /work/playwright-report /work/.nuxt \
+    /work/e2e/visual-regression-snapshots /work/test-results /work/playwright-report \
     2>/dev/null || true
 }
 trap chown_back EXIT
