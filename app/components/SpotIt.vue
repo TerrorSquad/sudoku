@@ -10,7 +10,6 @@ import type { CellCoord } from "../types/sudoku";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { localDateKey } from "../composables/useDailyPuzzle";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { boardKey, focusCell, onButton, shakeCell, stepCell } from "../utils/gridNav";
 import {
@@ -24,14 +23,13 @@ import {
 } from "../utils/lesson";
 import { patternMarks } from "../utils/patternMarks";
 import { makeLesson } from "../utils/puzzlePool";
-import { dayLabel, reviewPassed } from "../utils/review";
+import { reviewPassed } from "../utils/review";
 import { readJSON, writeJSON } from "../utils/safeJson";
 import {
   MISS_PENALTY,
   ROUND_SIZE,
   SKIP_PENALTY,
   SPOT_BEST_KEY,
-  breakdown,
   buildRound,
   formatSpotTime,
   mergeSpotBest,
@@ -43,6 +41,7 @@ import { digitLabel } from "../utils/sudokuColors";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
 import ScreenHeader from "./ScreenHeader.vue";
+import SpotResults from "./SpotResults.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
 const props = defineProps<{
@@ -55,10 +54,7 @@ const emit = defineEmits<{
   (e: "lesson", id: TechniqueId): void;
   (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
 }>();
-const { t, locale, locales } = useI18n();
-const lang = computed(
-  () => locales.value.find((l) => typeof l === "object" && l.code === locale.value)?.language,
-);
+const { t } = useI18n();
 const { colorMode, boardTheme: theme } = usePreferences();
 const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
@@ -245,8 +241,6 @@ function finishRound() {
   saveToCloud();
 }
 
-const rows = computed(() => breakdown(results.value));
-
 // The board: the pattern found so far; once settled, the whole move drawn in pen.
 const L = computed(() => lesson.value);
 const notes = computed(() => (L.value ? notesGrid(L.value) : []));
@@ -319,118 +313,17 @@ onUnmounted(() => {
       >
     </ScreenHeader>
 
-    <!-- Review results: each technique's card, up a box or back to the first. -->
-    <div
-      v-if="phase === 'done' && reviewing"
-      class="mx-auto w-full max-w-md px-4 py-6"
-      data-testid="review-done"
-    >
-      <p class="font-display text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-        {{ $t("review.doneTitle") }}
-      </p>
-      <ul class="mt-4 flex flex-col gap-2">
-        <li
-          v-for="r in reviewed"
-          :key="r.technique"
-          :data-passed="r.passed"
-          class="panel flex items-center gap-3 p-3"
-        >
-          <span
-            aria-hidden="true"
-            :class="
-              r.passed
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-rose-700 dark:text-rose-300'
-            "
-            class="text-lg font-black"
-            >{{ r.passed ? "↑" : "↺" }}</span
-          >
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
-              techName(r.technique)
-            }}</span>
-            <span class="block text-xs text-zinc-600 dark:text-zinc-400">
-              {{ r.passed ? $t("review.up", { box: r.box }) : $t("review.reset") }} ·
-              {{
-                $t("review.next", {
-                  day: dayLabel(r.next, localDateKey(), lang ?? locale, $t("review.tomorrow")),
-                })
-              }}
-            </span>
-          </span>
-          <button
-            v-if="!r.passed"
-            @click="emit('lesson', r.technique)"
-            class="tile shrink-0 px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
-          >
-            {{ $t("spot.learn") }}
-          </button>
-        </li>
-      </ul>
-      <button @click="emit('back')" class="tile tile-primary mt-6 w-full py-3 text-sm font-bold">
-        {{ $t("lesson.back") }}
-      </button>
-    </div>
-
-    <!-- Results -->
-    <div
-      v-else-if="phase === 'done'"
-      class="mx-auto w-full max-w-md px-4 py-6"
-      data-testid="spot-done"
-    >
-      <section class="panel flex flex-col gap-3 p-5 text-center">
-        <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">{{ $t("spot.total") }}</p>
-        <p
-          data-testid="spot-total"
-          class="font-display text-4xl font-black text-zinc-900 tabular-nums dark:text-zinc-50"
-        >
-          {{ formatSpotTime(totalTime(results)) }}
-        </p>
-        <p v-if="newBest" class="text-sm font-bold text-amber-700 dark:text-amber-400">
-          {{ $t("spot.newBest") }}
-          <span v-if="best !== undefined" class="font-semibold">{{
-            $t("spot.was", { time: formatSpotTime(best) })
-          }}</span>
-        </p>
-        <p v-else-if="best !== undefined" class="text-sm text-zinc-600 dark:text-zinc-400">
-          {{ $t("spot.best", { time: formatSpotTime(best) }) }}
-        </p>
-      </section>
-
-      <h2 class="mt-6 mb-2 text-xs font-bold text-zinc-600 dark:text-zinc-400">
-        {{ $t("spot.breakdown") }}
-      </h2>
-      <ul class="flex flex-col gap-2" data-testid="spot-breakdown">
-        <li v-for="row in rows" :key="row.technique" class="panel flex items-center gap-3 p-3">
-          <span class="min-w-0 flex-1">
-            <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
-              techName(row.technique)
-            }}</span>
-            <span class="block text-xs text-zinc-600 dark:text-zinc-400">
-              {{ $t("spot.average", { time: formatSpotTime(row.average) }) }}
-              <template v-if="row.misses"> · {{ $t("spot.misses", { n: row.misses }) }}</template>
-              <template v-if="row.skips"> · {{ $t("spot.skips", { n: row.skips }) }}</template>
-            </span>
-          </span>
-          <button
-            v-if="row.weak"
-            @click="emit('lesson', row.technique)"
-            class="tile shrink-0 px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
-          >
-            {{ $t("spot.learn") }}
-          </button>
-        </li>
-      </ul>
-
-      <div class="mt-6 flex gap-2">
-        <button @click="startRound" class="tile tile-primary flex-1 py-3 text-sm font-bold">
-          {{ $t("spot.again") }}
-        </button>
-        <button @click="emit('back')" class="tile flex-1 py-3 text-sm font-bold">
-          {{ $t("lesson.back") }}
-        </button>
-      </div>
-    </div>
+    <SpotResults
+      v-if="phase === 'done'"
+      :review="reviewing"
+      :reviewed="reviewed"
+      :results="results"
+      :best="best"
+      :new-best="newBest"
+      @back="emit('back')"
+      @again="startRound"
+      @lesson="(id) => emit('lesson', id)"
+    />
 
     <!-- A position -->
     <div
