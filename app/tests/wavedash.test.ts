@@ -46,16 +46,17 @@ describe("wavedash", () => {
     expect(flush(["first-win"], sdk)).toEqual({ left: ["first-win"], wrote: false });
   });
 
-  it("flushStats sends only changed values and keeps rejected ones pending", () => {
+  it("flushStats sends only values above Wavedash's and keeps rejected ones pending", () => {
     const set: [string, number][] = [];
     const { left, wrote } = flushStats(
       new Map([
         ["GAMES_WON", 3],
         ["LEVEL", 2],
         ["LIFETIME_SCORE", 900],
+        ["TECHNIQUES_LEARNED", 1],
       ]),
       {
-        getStat: (id) => (id === "LEVEL" ? 2 : 0),
+        getStat: (id) => ({ LEVEL: 2, TECHNIQUES_LEARNED: 3 })[id] ?? 0,
         setStat: (id, value) => (set.push([id, value]), id !== "LIFETIME_SCORE"),
       },
     );

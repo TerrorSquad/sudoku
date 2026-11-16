@@ -98,7 +98,10 @@ export const STAT_NAMES = {
 } as const;
 export type PlayerStats = Record<keyof typeof STAT_NAMES, number>;
 
-/** The same for stats: sends each value Wavedash doesn't hold yet; returns the ones still pending. */
+/**
+ * The same for stats: sends each value above Wavedash's. Every stat only grows, so a lower local
+ * value (a lost sync conflict, an older backup imported) never drags the platform's copy back.
+ */
 export function flushStats(
   pending: Map<string, number>,
   wd: Pick<WavedashSDK, "getStat" | "setStat">,
@@ -106,7 +109,7 @@ export function flushStats(
   const left = new Map<string, number>();
   let wrote = false;
   for (const [id, value] of pending) {
-    if (wd.getStat(id) === value) continue;
+    if (wd.getStat(id) >= value) continue;
     if (wd.setStat(id, value, false)) wrote = true;
     else left.set(id, value);
   }
@@ -357,8 +360,8 @@ const HIDDEN_GAP_MS = 5_000;
 const FAIL_GAP_MS = 60_000;
 
 /**
- * A checkpoint (a win, the tab hiding): mirrors the stats, and uploads if the data changed since the last sync, at most
- * once per MIN_GAP_MS, with a trailing upload for changes inside the gap. `hidden` uses a shorter
+ * A checkpoint (a win, the tab hiding): mirrors the stats, and uploads if the data changed since
+ * the last sync, at most once per MIN_GAP_MS, with a trailing upload for changes inside the gap. `hidden` uses a shorter
  * gap, since a hidden tab may never run the trailing timer.
  */
 export function saveToCloud(hidden = false) {
