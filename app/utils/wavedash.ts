@@ -33,6 +33,8 @@ interface WavedashSDK {
   requestStats(): Promise<{ success: boolean }>;
   getAchievement(id: string): boolean;
   setAchievement(id: string, storeNow?: boolean): boolean;
+  getStat(id: string): number;
+  setStat(id: string, value: number, storeNow?: boolean): boolean;
   storeStats(): boolean;
   getOrCreateLeaderboard(
     name: string,
@@ -84,11 +86,44 @@ export function flush(
   return { left, wrote };
 }
 
+/** Player stats mirrored to Wavedash (portal → In-Game Stats): identifier → display name. */
+export const STAT_NAMES = {
+  GAMES_WON: "Games won",
+  DAILIES_WON: "Dailies won",
+  LONGEST_DAILY_STREAK: "Longest Daily streak",
+  LIFETIME_SCORE: "Lifetime score",
+  LEVEL: "Level",
+  TECHNIQUES_LEARNED: "Techniques learned",
+  ACHIEVEMENTS_UNLOCKED: "Achievements unlocked",
+} as const;
+export type PlayerStats = Record<keyof typeof STAT_NAMES, number>;
+
+/**
+ * The same for stats: sends each value above Wavedash's. Every stat only grows, so a lower local
+ * value (a lost sync conflict, an older backup imported) never drags the platform's copy back.
+ */
+export function flushStats(
+  pending: Map<string, number>,
+  wd: Pick<WavedashSDK, "getStat" | "setStat">,
+): { left: Map<string, number>; wrote: boolean } {
+  const left = new Map<string, number>();
+  let wrote = false;
+  for (const [id, value] of pending) {
+    if (wd.getStat(id) >= value) continue;
+    if (wd.setStat(id, value, false)) wrote = true;
+    else left.set(id, value);
+  }
+  return { left, wrote };
+}
+
 const RETRY_MS = 1000;
 // ponytail: fixed 60 retries; an id still rejected after that is probably missing from the portal,
 // and the next boot's back-fill tries it again.
 const MAX_TRIES = 60;
 const pending = new Set<string>();
+let pendingStats = new Map<string, number>();
+/** Reads the player's stats from local progress; set by initWavedash. */
+let readStats: (() => PlayerStats) | undefined;
 let ready = false;
 let tries = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -98,19 +133,35 @@ function send() {
   if (!wd || !ready) return;
   clearTimeout(timer);
   const { left, wrote } = flush(pending, wd);
+  const stats = flushStats(pendingStats, wd);
   // Stats auto-save about once a second and nothing flushes on exit, so store right away.
-  if (wrote) wd.storeStats();
+  if (wrote || stats.wrote) wd.storeStats();
   pending.clear();
   for (const id of left) pending.add(id);
-  if (pending.size && ++tries < MAX_TRIES) timer = setTimeout(send, RETRY_MS);
+  pendingStats = stats.left;
+  if ((pending.size || pendingStats.size) && ++tries < MAX_TRIES)
+    timer = setTimeout(send, RETRY_MS);
 }
 
-/** Hides the platform loader and back-fills achievements unlocked before (or off) Wavedash. */
-export function initWavedash(unlocked: string[]) {
+/** Queues the current stats (absolute values, so a resend is harmless) and sends them. */
+function reportStats() {
+  if (!readStats) return;
+  for (const [id, value] of Object.entries(readStats())) pendingStats.set(id, value);
+  tries = 0;
+  send();
+}
+
+/**
+ * Hides the platform loader and back-fills achievements unlocked before (or off) Wavedash, and the
+ * stats `stats` reads; every checkpoint (`saveToCloud`) sends the stats again.
+ */
+export function initWavedash(unlocked: string[], stats: () => PlayerStats) {
   const wd = sdk();
   if (!wd) return;
   wd.init();
   for (const id of unlocked) pending.add(id);
+  readStats = stats;
+  reportStats();
   // A failed load still starts the retries: rejected writes stay pending either way.
   const start = () => {
     ready = true;
@@ -309,13 +360,15 @@ const HIDDEN_GAP_MS = 5_000;
 const FAIL_GAP_MS = 60_000;
 
 /**
- * A checkpoint (a win, the tab hiding): uploads if the data changed since the last sync, at most
- * once per MIN_GAP_MS, with a trailing upload for changes inside the gap. `hidden` uses a shorter
+ * A checkpoint (a win, the tab hiding): mirrors the stats, and uploads if the data changed since
+ * the last sync, at most once per MIN_GAP_MS, with a trailing upload for changes inside the gap. `hidden` uses a shorter
  * gap, since a hidden tab may never run the trailing timer.
  */
 export function saveToCloud(hidden = false) {
   const wd = sdk();
-  if (!wd || !canUpload) return;
+  if (!wd) return;
+  reportStats();
+  if (!canUpload) return;
   clearTimeout(uploadTimer);
   const run = () => void upload(wd).catch((e) => console.warn("Wavedash cloud save:", e));
   const wait = lastUpload + (hidden ? HIDDEN_GAP_MS : MIN_GAP_MS) - Date.now();

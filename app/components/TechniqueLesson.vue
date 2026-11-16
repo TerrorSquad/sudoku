@@ -2,13 +2,13 @@
 // A guided technique lesson: find the pattern, then make the move it allows. Only those moves are
 // accepted, so finishing the lesson shows the technique was applied (it completes the path step).
 // No clock, score or save: its own board state, not the game's.
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
-import type { BoardTheme } from "../utils/preferenceValues";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 import { useTechniquePath } from "../composables/useTechniquePath";
+import { focusCell, stepCell } from "../utils/gridNav";
 import {
   findPrompt,
   instancesOf,
@@ -24,14 +24,13 @@ import { solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
 import AppIcon from "./AppIcon.vue";
 import Numpad from "./Numpad.vue";
+import ScreenHeader from "./ScreenHeader.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
 // inGame: opened from a paused game, so Back returns to it and there's no "full puzzle" (it
 // would replace that game).
 const props = defineProps<{
   lesson: Lesson;
-  colorMode: boolean;
-  theme: BoardTheme;
   inGame?: boolean;
 }>();
 const emit = defineEmits<{
@@ -46,7 +45,8 @@ const { t } = useI18n();
 const L = props.lesson;
 const id = L.technique;
 const name = t(`hint.move.${id}.name`);
-const digit = (n: number) => digitLabel(n, props.colorMode, t);
+const { colorMode, boardTheme: theme } = usePreferences();
+const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const digits = L.digits.map(digit).join(", ");
 // The patterns step 1 accepts (a fish may have a twin); the one found sets step 2's marks.
 const instances = instancesOf(L);
@@ -294,16 +294,6 @@ const nudge = computed(() => (step.value === "find" && reveal.value >= 2 ? units
 
 // Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
 // Esc leaves. Once done: Enter or N for the next lesson, R another example, P a full puzzle.
-const STEPS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  w: [-1, 0],
-  s: [1, 0],
-  a: [0, -1],
-  d: [0, 1],
-};
 const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -318,14 +308,10 @@ function onKey(e: KeyboardEvent) {
     else if (key === "p" && !props.inGame) emit("practice");
     return;
   }
-  const move = STEPS[key];
+  const move = stepCell(selected.value, key);
   if (move) {
     e.preventDefault();
-    const cur = selected.value;
-    const r = Math.min(8, Math.max(0, (cur?.r ?? 0) + (cur ? move[0] : 0)));
-    const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
-    selected.value = { r, c };
-    nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+    focusCell((selected.value = move));
   } else if ((key === "Enter" || key === " ") && selected.value) {
     if (!(e.target as HTMLElement).closest?.("[data-cell]")) return; // a focused button's own key
     e.preventDefault();
@@ -346,26 +332,15 @@ onUnmounted(() => window.removeEventListener("keydown", onKey));
 
 <template>
   <div class="flex min-h-screen w-full flex-col">
-    <div
-      class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
+    <ScreenHeader
+      lesson
+      :back-label="inGame ? $t('settings.backToGame') : $t('lesson.back')"
+      @back="emit('back')"
     >
-      <button
-        :aria-label="inGame ? $t('settings.backToGame') : $t('lesson.back')"
-        @click="emit('back')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{
-          inGame ? $t("settings.backToGame") : $t("lesson.back")
-        }}</span>
-      </button>
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         {{ $t("lesson.title", { name }) }}
       </h1>
-    </div>
+    </ScreenHeader>
 
     <div
       class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 py-3 sm:px-5 lg:grid lg:grid-cols-12 lg:gap-6"

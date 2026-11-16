@@ -19,3 +19,12 @@ export function writeJSON(key: string, value: unknown): boolean {
     return false;
   }
 }
+
+export function removeJSON(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Unavailable storage has nothing to remove.
+  }
+}

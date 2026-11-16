@@ -4,15 +4,15 @@
 // SKIP_PENALTY. The clock only runs while a position is up, not while the next one loads.
 // With `review` set it's the Daily review instead: one position per due technique, no clock or
 // penalties (it's about remembering, not speed), and each result moves its card (utils/review.ts).
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, NotesGrid } from "../types/sudoku";
-import type { BoardTheme } from "../utils/preferenceValues";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { localDateKey } from "../composables/useDailyPuzzle";
 import { useTechniquePath } from "../composables/useTechniquePath";
+import { focusCell, stepCell } from "../utils/gridNav";
 import {
   findPrompt,
   instancesOf,
@@ -41,13 +41,11 @@ import {
 import { digitLabel } from "../utils/sudokuColors";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
-import AppIcon from "./AppIcon.vue";
+import ScreenHeader from "./ScreenHeader.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
 const props = defineProps<{
   tier: Tier;
-  colorMode: boolean;
-  theme: BoardTheme;
   review?: TechniqueId[];
 }>();
 const reviewing = !!props.review;
@@ -60,7 +58,8 @@ const { t, locale, locales } = useI18n();
 const lang = computed(
   () => locales.value.find((l) => typeof l === "object" && l.code === locale.value)?.language,
 );
-const digit = (n: number) => digitLabel(n, props.colorMode, t);
+const { colorMode, boardTheme: theme } = usePreferences();
+const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
 /** How long a found (or skipped) pattern stays drawn before the next position. */
@@ -285,16 +284,6 @@ const prompt = computed(() => (L.value ? findPrompt(L.value, t, digit) : ""));
 
 // Arrows or WASD walk the grid, Enter or Space taps, H skips, Esc leaves; once done Enter plays
 // again. (S is WASD's down, so skipping is H, the key that shows the answer everywhere else.)
-const STEPS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  w: [-1, 0],
-  s: [1, 0],
-  a: [0, -1],
-  d: [0, 1],
-};
 function onKey(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -308,14 +297,10 @@ function onKey(e: KeyboardEvent) {
     }
     return;
   }
-  const move = STEPS[key];
+  const move = stepCell(selected.value, key);
   if (move) {
     e.preventDefault();
-    const cur = selected.value;
-    const r = Math.min(8, Math.max(0, (cur?.r ?? 0) + (cur ? move[0] : 0)));
-    const c = Math.min(8, Math.max(0, (cur?.c ?? 0) + (cur ? move[1] : 0)));
-    selected.value = { r, c };
-    nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
+    focusCell((selected.value = move));
   } else if ((key === "Enter" || key === " ") && selected.value && !onButton) {
     e.preventDefault();
     if (!e.repeat) tap(selected.value); // a held key isn't a stack of +5 s taps
@@ -340,20 +325,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex min-h-screen w-full flex-col">
-    <div
-      class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
-    >
-      <button
-        :aria-label="$t('lesson.back')"
-        @click="emit('back')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
-      </button>
+    <ScreenHeader lesson :back-label="$t('lesson.back')" @back="emit('back')">
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         <template v-if="reviewing">{{ $t("review.title") }}</template>
         <template v-else>{{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}</template>
@@ -364,7 +336,7 @@ onUnmounted(() => {
         class="font-game text-lg font-bold text-zinc-900 tabular-nums dark:text-zinc-50"
         >{{ formatSpotTime(clock) }}</span
       >
-    </div>
+    </ScreenHeader>
 
     <!-- Review results: each technique's card, up a box or back to the first. -->
     <div

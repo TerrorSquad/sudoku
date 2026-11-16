@@ -7,7 +7,6 @@ import { digitLabel } from "../utils/sudokuColors";
 import {
   solveBoard,
   cloneGrid,
-  isValidPlacement,
   getGridCandidates,
   getConflictCells as findConflictCells,
 } from "../utils/sudokuCore";
@@ -40,30 +39,14 @@ export function useSudokuEngine(
 ) {
   const { t } = useI18n();
 
-  const currentBoard = ref<Grid>(
-    Array(9)
-      .fill(null)
-      .map(() => Array(9).fill(0)),
-  );
-  const initialBoard = ref<Grid>(
-    Array(9)
-      .fill(null)
-      .map(() => Array(9).fill(0)),
-  );
-  const solvedBoard = ref<Grid>(
-    Array(9)
-      .fill(null)
-      .map(() => Array(9).fill(0)),
-  );
-  const notesBoard = ref<NotesGrid>(
-    Array(9)
-      .fill(null)
-      .map(() =>
-        Array(9)
-          .fill(null)
-          .map(() => Array(10).fill(false)),
-      ),
-  );
+  const emptyGrid = (): Grid => Array.from({ length: 9 }, () => Array(9).fill(0));
+  const emptyNotes = (): NotesGrid =>
+    Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => Array(10).fill(false)));
+
+  const currentBoard = ref<Grid>(emptyGrid());
+  const initialBoard = ref<Grid>(emptyGrid());
+  const solvedBoard = ref<Grid>(emptyGrid());
+  const notesBoard = ref<NotesGrid>(emptyNotes());
   const boardHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
   // Undone states, newest first to redo; cleared by any fresh edit or a new game.
   const redoHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
@@ -170,14 +153,21 @@ export function useSudokuEngine(
     return activeComplexHint.value.steps[currentStepIndex.value] ?? null;
   });
 
-  // Validity, conflicts and candidates live in utils/sudokuCore (pure, unit-tested).
-  const isValid = isValidPlacement;
-
+  // Conflicts and candidates live in utils/sudokuCore (pure, unit-tested).
   function getConflictCells(row: number, col: number, num: number): CellCoord[] {
     return findConflictCells(currentBoard.value, row, col, num);
   }
 
   // --- GAME MANAGEMENT ---
+  // What every fresh board (new, custom or restored) starts without.
+  function resetGameState() {
+    boardHistory.value = [];
+    redoHistory.value = [];
+    selectedCell.value = null;
+    cancelComplexHint();
+    resetHintChain();
+  }
+
   /** `generated` comes from utils/puzzlePool in the app; tests let it generate in place. */
   function startNewGame(
     difficulty: string,
@@ -189,18 +179,8 @@ export function useSudokuEngine(
     currentBoard.value = puzzle.map((row) => row.concat());
     solvedBoard.value = solution;
 
-    notesBoard.value = Array(9)
-      .fill(null)
-      .map(() =>
-        Array(9)
-          .fill(null)
-          .map(() => Array(10).fill(false)),
-      );
-    boardHistory.value = [];
-    redoHistory.value = [];
-    selectedCell.value = null;
-    cancelComplexHint();
-    resetHintChain();
+    notesBoard.value = emptyNotes();
+    resetGameState();
   }
 
   function loadCustomBoard(board: Grid) {
@@ -210,18 +190,8 @@ export function useSudokuEngine(
     const solved = solveBoard(board);
     solvedBoard.value = solved ?? cloneGrid(board);
 
-    notesBoard.value = Array(9)
-      .fill(null)
-      .map(() =>
-        Array(9)
-          .fill(null)
-          .map(() => Array(10).fill(false)),
-      );
-    boardHistory.value = [];
-    redoHistory.value = [];
-    selectedCell.value = null;
-    cancelComplexHint();
-    resetHintChain();
+    notesBoard.value = emptyNotes();
+    resetGameState();
   }
 
   function eraseCell(coord: CellCoord | null) {
@@ -251,9 +221,7 @@ export function useSudokuEngine(
   }
 
   function saveHistory() {
-    const boardCopy = currentBoard.value.map((row) => [...row]);
-    const notesCopy = notesBoard.value.map((row) => row.map((cell) => [...cell]));
-    boardHistory.value.push({ board: boardCopy, notes: notesCopy });
+    boardHistory.value.push(snapshot());
     if (boardHistory.value.length > 25) boardHistory.value.shift();
     redoHistory.value = [];
   }
@@ -283,6 +251,45 @@ export function useSudokuEngine(
     notesBoard.value = nextState.notes;
     cancelComplexHint();
     resetHintChain();
+  }
+
+  // Every empty cell's notes become exactly its candidates; filled cells keep theirs.
+  function autoFillNotes() {
+    saveHistory();
+    const cands = getGridCandidates(currentBoard.value);
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (currentBoard.value[r]![c] !== 0) continue;
+        const notes = Array(10).fill(false);
+        for (const n of cands[r]![c]!) notes[n] = true;
+        notesBoard.value[r]![c] = notes;
+      }
+    }
+  }
+
+  // What the digit at (r, c) completes: each row, column or box through it whose every cell
+  // matches the solution (not just non-empty: a wrong-but-unconflicting digit can sit unflagged),
+  // and the digit itself once all nine are in and right. A cell in two of them is listed twice.
+  function completedAt(r: number, c: number) {
+    const board = currentBoard.value;
+    const solved = solvedBoard.value;
+    const boxR = r - (r % 3);
+    const boxC = c - (c % 3);
+    const units = [
+      Array.from({ length: 9 }, (_, i) => ({ r, c: i })),
+      Array.from({ length: 9 }, (_, i) => ({ r: i, c })),
+      Array.from({ length: 9 }, (_, i) => ({ r: boxR + Math.floor(i / 3), c: boxC + (i % 3) })),
+    ].filter((unit) => unit.every((p) => board[p.r]![p.c] === solved[p.r]![p.c]));
+    const num = board[r]![c]!;
+    const digitCells = solved.flatMap((row, sr) =>
+      row.flatMap((v, sc) => (v === num ? [{ r: sr, c: sc }] : [])),
+    );
+    const digitDone = digitCells.every((p) => board[p.r]![p.c] === num);
+    return {
+      units: units.length,
+      digitDone,
+      cells: [...units.flat(), ...(digitDone ? digitCells : [])] as CellCoord[],
+    };
   }
 
   function checkWinCondition(): boolean {
@@ -470,15 +477,7 @@ export function useSudokuEngine(
     initialBoard.value = save.initialBoard.map((row) => [...row]) as Grid;
     solvedBoard.value = save.solvedBoard.map((row) => [...row]) as Grid;
     notesBoard.value = save.notesBoard.map((row) => row.map((cell) => [...cell])) as NotesGrid;
-    selectedCell.value = null;
-    activeComplexHint.value = null;
-    currentStepIndex.value = 0;
-    hintTriggers.value = [];
-    hintEliminations.value = [];
-    activeHintCell.value = null;
-    boardHistory.value = [];
-    redoHistory.value = [];
-    resetHintChain();
+    resetGameState();
   }
 
   return {
@@ -495,7 +494,6 @@ export function useSudokuEngine(
     activeComplexHint,
     currentStepIndex,
     currentStep,
-    isValid,
     getConflictCells,
     getGridCandidates,
     startNewGame,
@@ -509,6 +507,8 @@ export function useSudokuEngine(
     redoHistory,
     boardHistory,
     checkWinCondition,
+    autoFillNotes,
+    completedAt,
     triggerComplexHint,
     peekHint,
     findWrongEntry,

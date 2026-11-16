@@ -2,6 +2,7 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { BASICS_KEY, mergeBasics, readBasics, type BasicsId } from "../utils/basics";
 import {
+  ACADEMY_TECHNIQUES,
   LESSON_STARS_KEY,
   completesChallenge,
   mergeStars,
@@ -28,6 +29,12 @@ export function useTechniquePath() {
   function getDone(): string[] {
     const v = readJSON<unknown>(PATH_KEY, []);
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  }
+
+  /** How many of the path's techniques are done. */
+  function pathDone(): number {
+    const done = getDone();
+    return ACADEMY_TECHNIQUES.filter((tech) => done.includes(tech.id)).length;
   }
 
   /** Records a finished lesson; true when it completed the current challenge. */
@@ -101,6 +108,7 @@ export function useTechniquePath() {
     scheduleReview,
     recordReview,
     getDone,
+    pathDone,
     recordLesson,
     getWeeksDone,
     markWeekDone,

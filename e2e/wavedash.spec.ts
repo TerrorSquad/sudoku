@@ -36,6 +36,39 @@ test("a win reports its new achievements and stores them", async ({ page }) => {
   expect((await sdkLog(page)).stores).toBeGreaterThan(0);
 });
 
+test("boot back-fills the stats from local progress, and a win updates them", async ({ page }) => {
+  await fakeWavedash(page);
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    localStorage.setItem(
+      "sudoku_v1_score",
+      JSON.stringify({ total: 600, gamesWon: 2, best: {}, perDifficulty: {} }),
+    );
+    localStorage.setItem("sudoku_v1_technique_path", JSON.stringify(["hidden-single"]));
+  });
+  await page.goto("/");
+  // Zeros match Wavedash's default, so only the rest are written. The learned lesson unlocks its
+  // Academy achievement on boot.
+  await expect
+    .poll(async () => (await sdkLog(page)).stats)
+    .toEqual({
+      GAMES_WON: 2,
+      LIFETIME_SCORE: 600,
+      LEVEL: 2,
+      TECHNIQUES_LEARNED: 1,
+      ACHIEVEMENTS_UNLOCKED: 1,
+    });
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(ALMOST_SOLVED);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await expect.poll(async () => (await sdkLog(page)).stats.GAMES_WON).toBe(3);
+  expect((await sdkLog(page)).stats.ACHIEVEMENTS_UNLOCKED).toBeGreaterThan(1);
+});
+
 const grid = (s: string) =>
   Array.from({ length: 9 }, (_, r) => Array.from(s.slice(r * 9, r * 9 + 9), Number));
 

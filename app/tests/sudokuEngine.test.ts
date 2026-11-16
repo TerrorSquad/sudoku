@@ -242,4 +242,68 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       expect(engine.currentBoard.value[4]![1]).toBe(wrong);
     });
   });
+  it("autoFillNotes gives every empty cell exactly its candidates, keeps filled cells, and undoes", () => {
+    const solved = [
+      [5, 3, 4, 6, 7, 8, 9, 1, 2],
+      [6, 7, 2, 1, 9, 5, 3, 4, 8],
+      [1, 9, 8, 3, 4, 2, 5, 6, 7],
+      [8, 5, 9, 7, 6, 1, 4, 2, 3],
+      [4, 2, 6, 8, 5, 3, 7, 9, 1],
+      [7, 1, 3, 9, 2, 4, 8, 5, 6],
+      [9, 6, 1, 5, 3, 7, 2, 8, 4],
+      [2, 8, 7, 4, 1, 9, 6, 3, 5],
+      [3, 4, 5, 2, 8, 6, 1, 7, 9],
+    ];
+    const puzzle = solved.map((row) => [...row]);
+    puzzle[0]![0] = 0;
+    puzzle[0]![1] = 0;
+    puzzle[1]![0] = 0;
+    engine.loadCustomBoard(puzzle);
+    engine.notesBoard.value[0]![0]![9] = true; // a stale note the fill must drop
+    engine.notesBoard.value[4]![4]![2] = true; // a filled cell's notes stay as they are
+
+    engine.autoFillNotes();
+    const marks = (r: number, c: number) =>
+      engine.notesBoard.value[r]![c]!.flatMap((on, n) => (on ? [n] : []));
+    expect(marks(0, 0)).toEqual([5]);
+    expect(marks(0, 1)).toEqual([3]);
+    expect(marks(1, 0)).toEqual([6]);
+    expect(marks(4, 4)).toEqual([2]);
+
+    engine.undoMove();
+    expect(marks(0, 0)).toEqual([9]);
+    expect(marks(0, 1)).toEqual([]);
+  });
+
+  it("completedAt lists the units and the digit a correct placement finishes", () => {
+    const solved = [
+      [5, 3, 4, 6, 7, 8, 9, 1, 2],
+      [6, 7, 2, 1, 9, 5, 3, 4, 8],
+      [1, 9, 8, 3, 4, 2, 5, 6, 7],
+      [8, 5, 9, 7, 6, 1, 4, 2, 3],
+      [4, 2, 6, 8, 5, 3, 7, 9, 1],
+      [7, 1, 3, 9, 2, 4, 8, 5, 6],
+      [9, 6, 1, 5, 3, 7, 2, 8, 4],
+      [2, 8, 7, 4, 1, 9, 6, 3, 5],
+      [3, 4, 5, 2, 8, 6, 1, 7, 9],
+    ];
+    engine.solvedBoard.value = solved.map((row) => [...row]);
+    engine.currentBoard.value = solved.map((row) => [...row]);
+    engine.currentBoard.value[8]![8] = 0; // the 9 at (8, 8) is still missing
+    engine.currentBoard.value[8]![3] = 0; // so is (8, 3): row 8 and digit 2 stay open
+
+    expect(engine.completedAt(0, 0)).toEqual({
+      units: 3,
+      digitDone: true, // all nine 5s are in
+      cells: expect.any(Array),
+    });
+    expect(engine.completedAt(0, 0).cells).toHaveLength(9 * 3 + 9);
+
+    engine.currentBoard.value[8]![8] = 9;
+    const done = engine.completedAt(8, 8);
+    expect(done.units).toBe(2); // column 8 and the bottom-right box; row 8 lacks (8, 3)
+    expect(done.digitDone).toBe(true);
+    expect(done.cells).toHaveLength(9 * 2 + 9);
+    expect(done.cells.slice(0, 9)).toEqual(Array.from({ length: 9 }, (_, i) => ({ r: i, c: 8 })));
+  });
 });

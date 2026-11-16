@@ -78,3 +78,35 @@ function cellClass(r: number, c: number) {
     <PatternOverlay v-if="marks?.length" :marks="marks" />
   </div>
 </template>
+
+<!-- Trigger and elimination cells pulse, so the pattern reads at a glance. -->
+<style scoped>
+@keyframes trigger-glow {
+  0%,
+  100% {
+    background-color: rgba(99, 102, 241, 0.25);
+    box-shadow: inset 0 0 10px rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    background-color: rgba(99, 102, 241, 0.5);
+    box-shadow: inset 0 0 18px rgba(99, 102, 241, 0.8);
+  }
+}
+@keyframes elimination-blink {
+  0%,
+  100% {
+    background-color: rgba(244, 63, 94, 0.2);
+    box-shadow: inset 0 0 8px rgba(244, 63, 94, 0.3);
+  }
+  50% {
+    background-color: rgba(244, 63, 94, 0.55);
+    box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.7);
+  }
+}
+.bg-indigo-500\/30 {
+  animation: trigger-glow 1.2s infinite ease-in-out !important;
+}
+.bg-rose-500\/30 {
+  animation: elimination-blink 1.2s infinite ease-in-out !important;
+}
+</style>

@@ -96,22 +96,10 @@ const style = computed({
 <template>
   <div :class="inGame ? 'min-h-full' : 'min-h-screen'" class="flex w-full flex-col">
     <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
+    <ScreenHeader
+      :back-label="inGame ? $t('settings.backToGame') : $t('menu.back')"
+      @back="emit('back-to-menu')"
     >
-      <button
-        @click="emit('back-to-menu')"
-        :aria-label="inGame ? $t('settings.backToGame') : $t('menu.back')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{
-          inGame ? $t("settings.backToGame") : $t("menu.back")
-        }}</span>
-      </button>
       <div class="min-w-0 flex-1">
         <h1
           class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
@@ -121,7 +109,7 @@ const style = computed({
         <p v-if="inGame && timed" class="text-xs text-zinc-500">{{ $t("settings.clockRuns") }}</p>
         <p v-else class="hidden text-xs text-zinc-500 sm:block">{{ $t("settings.subtitle") }}</p>
       </div>
-    </div>
+    </ScreenHeader>
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-md flex-1 px-4 py-6 sm:px-8 sm:py-8">

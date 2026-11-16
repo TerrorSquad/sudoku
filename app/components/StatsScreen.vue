@@ -81,20 +81,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
 <template>
   <div class="flex min-h-screen w-full flex-col">
     <!-- Header -->
-    <div
-      class="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] py-4 pr-4 pl-4 sm:pl-8 dark:border-zinc-800"
-    >
-      <button
-        :aria-label="$t('menu.back')"
-        @click="emit('back-to-menu')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{ $t("menu.back") }}</span>
-      </button>
+    <ScreenHeader :back-label="$t('menu.back')" @back="emit('back-to-menu')">
       <div class="min-w-0 flex-1">
         <h1
           class="text-lg leading-tight font-black tracking-tight text-zinc-900 sm:text-2xl dark:text-zinc-50"
@@ -103,7 +90,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
         </h1>
         <p class="hidden text-xs text-zinc-500 sm:block">{{ $t("stats.subtitle") }}</p>
       </div>
-    </div>
+    </ScreenHeader>
 
     <!-- Content -->
     <div class="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
