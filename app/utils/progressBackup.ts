@@ -5,6 +5,7 @@
 import { BASICS_KEY } from "./basics";
 import { BOARD_THEMES, UI_SCALES } from "./preferenceValues";
 import { LESSON_STARS_KEY } from "./progression";
+import { REVIEW_KEY } from "./review";
 import { SPOT_BEST_KEY } from "./spotIt";
 
 export const BACKUP_PREFIX = "sudoku_v1_";
@@ -67,9 +68,9 @@ export function validEntry(key: string, value: string): boolean {
     return (BOARD_THEMES as readonly unknown[]).includes(parsed);
   if (key === "sudoku_v1_pref_ui_scale") return (UI_SCALES as readonly unknown[]).includes(parsed);
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
-  if (key === LESSON_STARS_KEY || key === SPOT_BEST_KEY) {
-    // Shape only: a later version may add techniques, tiers or values; readStars and readSpotBest
-    // ignore what they can't use.
+  if (key === LESSON_STARS_KEY || key === SPOT_BEST_KEY || key === REVIEW_KEY) {
+    // Shape only: a later version may add techniques, tiers or values; readStars, readSpotBest
+    // and readReview ignore what they can't use.
     return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
   }
   // Shape only, like the stars: a later version may add lessons; readBasics keeps the known ones.

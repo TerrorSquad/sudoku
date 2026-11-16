@@ -62,6 +62,12 @@ test("the next challenge's lesson: find the cell, place the digit, and the path 
   expect(await page.evaluate(() => localStorage.getItem("sudoku_v1_technique_path"))).toBe(
     '["naked-single"]',
   );
+  // And it comes up in the Daily review tomorrow: on the panel, nothing due yet.
+  const review = await page.evaluate(() => JSON.parse(localStorage.getItem("sudoku_v1_review")!));
+  expect(review["naked-single"].box).toBe(1);
+  await expect(page.getByTestId("review-status")).toHaveText(
+    "All caught up. Next review: tomorrow.",
+  );
 });
 
 test("Show me walks an elimination lesson through; only the ruled-out marks can go", async ({
