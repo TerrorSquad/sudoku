@@ -29,6 +29,8 @@ test.describe("a new player", () => {
     // The tour has the keys: a digit doesn't reach the board behind it.
     await page.keyboard.press("n");
     await expect(page.locator('[data-tour="notes"]')).toHaveAttribute("aria-pressed", "false");
+    await page.keyboard.press("Shift+Z");
+    await expect(page.getByRole("dialog", { name: "Move history" })).toBeHidden();
     for (const title of ["Notes", "Hints", "Undo", "Pause and menu"]) {
       await page.getByRole("button", { name: "Next" }).click();
       await expect(tour(page)).toContainText(title);

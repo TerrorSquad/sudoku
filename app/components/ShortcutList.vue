@@ -14,6 +14,7 @@ const SHORTCUTS = [
   { key: "P", desc: "sidebar.shortcutPause" },
   { key: "Ctrl+Z", desc: "sidebar.shortcutUndo" },
   { key: "Ctrl+Y", desc: "sidebar.shortcutRedo" },
+  { key: "Shift+Z", desc: "sidebar.shortcutHistory" },
   { key: "?", desc: "sidebar.shortcutHelp" },
 ] as const;
 </script>

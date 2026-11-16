@@ -15,7 +15,8 @@ export type PadAction =
   | "prev" // LB
   | "next" // RB
   | "pause" // Start / Options
-  | "help"; // Back / Select / Share
+  | "help" // Back / Select / Share
+  | "history"; // LT / L2
 
 /** The W3C "standard" gamepad mapping: button index → action. */
 const BUTTONS: Record<number, PadAction> = {
@@ -25,6 +26,7 @@ const BUTTONS: Record<number, PadAction> = {
   3: "hint",
   4: "prev",
   5: "next",
+  6: "history",
   8: "help",
   9: "pause",
   12: "up",

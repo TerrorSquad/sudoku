@@ -54,6 +54,9 @@
   "game.wrongCleared": "Wrong digit cleared — keep going!",
   "controls.undo": "Undo",
   "controls.redo": "Redo",
+  "controls.history": "Move history",
+  "controls.historyStep": "Move {n} of {total}",
+  "controls.historyHold": "Hold for move history",
   "controls.erase": "Erase",
   "controls.notes": "Notes",
   "controls.hint": "Hint",
@@ -91,6 +94,7 @@
   "sidebar.shortcutAutoFillNotes": "Fill notes",
   "sidebar.shortcutUndo": "Undo",
   "sidebar.shortcutRedo": "Redo",
+  "sidebar.shortcutHistory": "Move history",
   "sidebar.legendGiven": "Given digit",
   "sidebar.legendEntry": "Your entry",
   "sidebar.legendConflict": "Conflict",
@@ -793,6 +797,6 @@
   "challenge.won": "🏁 You beat your friend's time by {time}!",
   "challenge.lost": "Your friend was {time} faster. Try again?",
   "challenge.tie": "🏁 A dead heat with your friend!",
-  "pad.game": "A place · LB/RB digit · X notes · B erase · Y hint · Start pause",
+  "pad.game": "A place · LB/RB digit · X notes · B erase · Y hint · LT history · Start pause",
   "pad.academy": "A tap · X enter digit · LB/RB digit · Y show me · B back"
 }
