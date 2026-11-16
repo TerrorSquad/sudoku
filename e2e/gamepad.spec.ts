@@ -31,7 +31,7 @@ async function press(page: Page, button: number, times = 1) {
     await page.waitForTimeout(60);
   }
 }
-const [A, RB, DOWN, RIGHT] = [0, 5, 13, 15];
+const [A, B, RB, DOWN, RIGHT] = [0, 1, 5, 13, 15];
 
 test("a controller walks the board, picks a digit with RB and places it with A", async ({
   page,
@@ -56,4 +56,24 @@ test("a controller walks the board, picks a digit with RB and places it with A",
   // On the end screen the D-pad moves focus between its buttons, and A presses one.
   await press(page, DOWN);
   await expect(page.locator("[data-end-modal] button:focus")).toHaveCount(1);
+  // B closes it, even with one of its buttons focused.
+  await press(page, B);
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+});
+
+test("off the board: the D-pad moves focus, left/right change a select, B goes back", async ({
+  page,
+}) => {
+  await plugIn(page);
+  await page.goto("/");
+  await page.evaluate(() => window.dispatchEvent(new Event("gamepadconnected")));
+  await page.getByRole("button", { name: "Settings" }).click();
+  const theme = page.getByLabel("Theme");
+  await theme.focus();
+  await press(page, RIGHT);
+  await expect(theme).toHaveValue("newsprint");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "newsprint");
+  await press(page, B);
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
 });

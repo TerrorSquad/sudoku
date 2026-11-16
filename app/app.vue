@@ -75,7 +75,7 @@ import {
   type Placement,
   type StuckMoment,
 } from "./utils/stuckMoments";
-import { digitLabel } from "./utils/sudokuColors";
+import { digitLabel, dotClass } from "./utils/sudokuColors";
 import { getGridCandidates, makeRng, seedFromString } from "./utils/sudokuCore";
 import { neededTechniques, patternUnit, singlesPath } from "./utils/sudokuGrader";
 import { saveToCloud, submitWin } from "./utils/wavedash";
@@ -1469,9 +1469,10 @@ watch(shortcutsOpen, (open) => {
 // puzzle, Escape closes.
 function handleModalKey(e: KeyboardEvent) {
   const target = e.target as HTMLElement;
-  if (target.closest?.("[data-end-modal] button")) return; // the modal's own buttons
+  const press = e.key === "Enter" || e.key === " ";
+  if (press && target.closest?.("[data-end-modal] button")) return; // that button's own click
   // A button behind the overlay kept focus (the numpad, Finish): it mustn't press.
-  if (e.key === "Enter" || e.key === " ") e.preventDefault();
+  if (press) e.preventDefault();
   const settled = !isWinState.value || winStep.value >= winStepCount.value;
   if (!settled || e.repeat) return;
   if (e.key === "Enter" && nextLevel.value) {
@@ -1575,9 +1576,27 @@ function moveFocus(step: 1 | -1) {
   );
   if (!list.length) return;
   const i = list.indexOf(document.activeElement as HTMLElement);
-  list[(i + step + list.length) % list.length]!.focus();
+  const next = i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length;
+  list[next]!.focus();
 }
 const ARROWS = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
+// B off the board: closes what's on top, else goes where the screen's own Back goes.
+function padBack() {
+  const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
+  if (dialog) return dialog.close();
+  if (showModal.value) return handleModalClose();
+  if (pendingResume.value) return (pendingResume.value = null);
+  if (currentScreen.value === "game") return sendKey("p"); // paused: resume
+  if (currentScreen.value === "academy")
+    return (currentScreen.value = academyFromGame.value ? "game" : "menu");
+  if (
+    ["difficulty", "stats", "achievements", "settings", "custom-import"].includes(
+      currentScreen.value,
+    )
+  )
+    return (currentScreen.value = "menu");
+  sendKey("Escape"); // the Academy's boards handle their own Back
+}
 const padOnBoard = () =>
   BOARD_SCREENS.has(currentScreen.value) &&
   padScope() === document &&
@@ -1590,13 +1609,17 @@ function onPad(action: PadAction) {
     return;
   }
   if (!padOnBoard()) {
-    if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
+    // A focused <select> can't be opened from script: left/right step through its options.
+    if ((action === "left" || action === "right") && focused instanceof HTMLSelectElement) {
+      const i = focused.selectedIndex + (action === "right" ? 1 : -1);
+      if (i >= 0 && i < focused.options.length) {
+        focused.selectedIndex = i;
+        focused.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } else if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
     else if (action === "press") onControl ? focused!.click() : moveFocus(1);
-    else if (action === "back") {
-      const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
-      if (dialog) dialog.close();
-      else sendKey("Escape");
-    } else if (action === "pause" && currentScreen.value === "game") sendKey("p");
+    else if (action === "back") padBack();
+    else if (action === "pause" && currentScreen.value === "game") sendKey("p");
     return;
   }
   if (action in ARROWS) return sendKey(ARROWS[action as keyof typeof ARROWS]);
@@ -1611,7 +1634,11 @@ function onPad(action: PadAction) {
         help: "?",
       }
     : { alt: String(padDigit.value), back: "Escape", hint: "h" };
-  if (action === "press" && !game) return onControl ? focused!.click() : sendKey("Enter");
+  // How to play has no cells to tap: there A enters the digit too.
+  if (action === "press" && !game)
+    return onControl
+      ? focused!.click()
+      : sendKey(currentScreen.value === "basics" ? String(padDigit.value) : "Enter");
   const key = keys[action];
   if (key) sendKey(key);
 }
@@ -2219,9 +2246,12 @@ onUnmounted(() => {
         aria-hidden="true"
         class="panel fixed bottom-3 left-3 z-40 flex items-center gap-3 px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
       >
-        <span class="font-game text-2xl font-black text-violet-700 dark:text-violet-300">{{
-          digitLabel(padDigit, colorMode, t)
-        }}</span>
+        <span v-if="colorMode" :class="dotClass(padDigit)" class="h-6 w-6" />
+        <span
+          :class="colorMode ? 'text-sm' : 'font-game text-2xl'"
+          class="font-black text-violet-700 dark:text-violet-300"
+          >{{ digitLabel(padDigit, colorMode, t) }}</span
+        >
         <span>{{ $t(currentScreen === "game" ? "pad.game" : "pad.academy") }}</span>
       </div>
 

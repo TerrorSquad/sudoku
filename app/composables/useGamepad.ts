@@ -21,7 +21,12 @@ export function useGamepad(onAction: (action: PadAction) => void) {
   }
   function start() {
     connected.value = true;
-    if (!frame) frame = requestAnimationFrame(poll);
+    if (frame) return;
+    // The press that woke the pad (Chrome exposes pads only after one) mustn't also act.
+    const held = new Set<PadAction>();
+    for (const pad of pads()) heldActions(pad, held);
+    for (const action of held) timers.set(action, Infinity);
+    frame = requestAnimationFrame(poll);
   }
   function stop() {
     if (pads().length) return; // another pad is still plugged in
