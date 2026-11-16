@@ -234,6 +234,8 @@ async function openGameSettings() {
   // A dynamic import, not an auto-import's duplicate: the same lazy chunk as the Settings screen.
   // oxlint-disable-next-line eslint/no-restricted-imports
   SettingsSheet.value ??= (await import("./components/SettingsScreen.vue")).default;
+  // The player may have left the game (or the tab) while it loaded: don't open it or restart the clock.
+  if (currentScreen.value !== "game" || document.hidden) return;
   if (timer.isPaused.value) timer.togglePause();
   settingsOverGame.value = true;
 }
@@ -788,6 +790,7 @@ function handleStartDaily(level: Difficulty) {
 // Generated (in the worker) only when that level's Daily starts, so the menu never builds six
 // boards; its tile shows busy meanwhile. Dropped, like a new game, if the player leaves first.
 const dailyLoading = ref<Difficulty | null>(null);
+watch(currentScreen, () => (dailyLoading.value = null));
 async function startDaily(level: Difficulty) {
   const date = dailyPuzzle.todayKey();
   const token = ++startToken;
@@ -798,7 +801,8 @@ async function startDaily(level: Difficulty) {
     gameSave.clearDifficulty(dailySlot(level));
     beginGame(level, () => loadCustomBoard(board), { daily: date });
   } finally {
-    if (dailyLoading.value === level) dailyLoading.value = null;
+    // Not a newer start's: that one is still generating.
+    if (token === startToken) dailyLoading.value = null;
   }
 }
 

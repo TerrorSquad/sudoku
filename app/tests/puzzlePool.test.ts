@@ -44,7 +44,8 @@ describe("puzzlePool's worker and in-place paths", () => {
     let posted: { result?: unknown; error?: string } = {};
     const fakeSelf = {
       onmessage: null as null | ((e: { data: unknown }) => Promise<void>),
-      postMessage: (m: typeof posted) => (posted = m),
+      // Cloned, as postMessage does: a result that can't cross to the page fails here.
+      postMessage: (m: typeof posted) => (posted = structuredClone(m)),
     };
     vi.stubGlobal("self", fakeSelf);
     await import("../utils/puzzleWorker");
