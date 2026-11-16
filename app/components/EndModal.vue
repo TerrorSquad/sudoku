@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import type { Difficulty, Grid } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
@@ -7,11 +7,11 @@ import type { ScoreBreakdown } from "../utils/score";
 import type { StuckMoment } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { usePreferences } from "../composables/usePreferences";
-import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { useTimer } from "../composables/useTimer";
+import { useWinSteps } from "../composables/useWinSteps";
 import { encodeChallenge } from "../utils/challenge";
 import { starsFor } from "../utils/stars";
+import WinSummary from "./WinSummary.vue";
 
 // The end of a game: the win (stars, score, what it took) or the game over. Mounted per showing.
 const props = defineProps<{
@@ -47,9 +47,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const { formatTime } = useTimer();
-const { mistakeLimit } = usePreferences();
-// Lifetime per-technique usage, read as the modal opens.
-const techStatsTotals = useTechniqueStats().getAll();
 
 function recordLine(r: NewRecord): string {
   const show = (v: number | string) =>
@@ -81,75 +78,22 @@ const scoreRows = computed(() => {
   ].filter((row, i) => !i || row.value);
 });
 
-// The win modal plays in steps once it has faded in: each earned star with a tick, then each
-// score line as the total counts up through it, then the stamp. The DOM holds the real numbers
-// throughout (unrevealed parts are only transparent). A tap or key skips to the end, and reduced
-// motion starts there.
-const WIN_STEPS_AT_MS = 1100; // as .modal-delay finishes fading the result in
-const WIN_STEP_MS = 160;
-const winStepCount = computed(
-  () => winStars.value + scoreRows.value.length + (perfect.value ? 1 : 0),
-);
-const winStep = ref(0);
-// The total has landed: what hangs off it (a new best, records, the lifetime line) shows now.
-const scoreLanded = computed(() => winStep.value >= winStars.value + scoreRows.value.length);
-const winSkipped = ref(false);
-const displayedScore = ref<number>(0); // the visual total; the real one sits beside it, sr-only
-let winTimers: ReturnType<typeof setTimeout>[] = [];
-let countFrame = 0;
-
-function stopWinSteps() {
-  winTimers.forEach(clearTimeout);
-  winTimers = [];
-  cancelAnimationFrame(countFrame);
-}
-
-const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-function startWinSteps() {
-  stopWinSteps();
-  winStep.value = 0;
-  winSkipped.value = false;
-  displayedScore.value = 0;
-  if (reducedMotion.value) {
-    skipWinSteps();
-    if (perfect.value) emit("cue", "stamp");
-    return;
-  }
-  for (let k = 1; k <= winStepCount.value; k++)
-    winTimers.push(setTimeout(() => winStepTo(k), WIN_STEPS_AT_MS + (k - 1) * WIN_STEP_MS));
-}
-
-function winStepTo(k: number) {
-  winStep.value = k;
-  const rows = scoreRows.value;
-  const row = k - winStars.value - 1;
-  if (k <= winStars.value) emit("cue", "tick", k);
-  else if (row < rows.length) {
-    const sum = rows.slice(0, row + 1).reduce((a, r) => a + r.value, 0);
-    // Penalties can take the running sum below zero; the real total is floored, so it lands there.
-    countScoreTo(row === rows.length - 1 ? props.lastScore!.total : Math.max(0, sum));
-  } else emit("cue", "stamp");
-}
-
-function skipWinSteps() {
-  if (winStep.value >= winStepCount.value) return;
-  stopWinSteps();
-  winSkipped.value = true;
-  winStep.value = winStepCount.value;
-  displayedScore.value = props.lastScore?.total ?? 0;
-}
-
-function countScoreTo(to: number) {
-  cancelAnimationFrame(countFrame);
-  const from = displayedScore.value;
-  const start = performance.now();
-  const tick = (now: number) => {
-    const p = Math.min(1, (now - start) / WIN_STEP_MS);
-    displayedScore.value = Math.round(from + (to - from) * (1 - (1 - p) ** 3));
-    if (p < 1) countFrame = requestAnimationFrame(tick);
-  };
-  countFrame = requestAnimationFrame(tick);
-}
+// The win modal plays in steps (useWinSteps): stars, score lines, then the stamp.
+const {
+  winStep,
+  winStepCount,
+  scoreLanded,
+  winSkipped,
+  displayedScore,
+  startWinSteps,
+  skipWinSteps,
+} = useWinSteps({
+  stars: winStars,
+  rows: scoreRows,
+  perfect,
+  total: () => props.lastScore?.total,
+  cue: (kind, ...n) => emit("cue", kind, ...n),
+});
 
 const GAME_URL = "https://wavedash.com/games/sudoku-pro";
 
@@ -222,7 +166,6 @@ useEventListener(window, "keydown", onKey);
 onMounted(() => {
   if (props.win) startWinSteps();
 });
-onUnmounted(stopWinSteps);
 </script>
 
 <template>
@@ -350,99 +293,17 @@ onUnmounted(stopWinSteps);
       </div>
 
       <!-- Win summary -->
-      <div
+      <WinSummary
         v-if="win"
-        class="mb-5 divide-y divide-zinc-200 border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800"
-      >
-        <div class="flex justify-between px-3 py-2">
-          <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.difficulty") }}</span>
-          <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">{{
-            difficultyLabel
-          }}</span>
-        </div>
-        <div class="flex justify-between px-3 py-2">
-          <span class="text-xs font-semibold text-zinc-500">{{ $t("game.mistakes") }}</span>
-          <span
-            class="text-xs font-bold"
-            :class="
-              mistakes === 0
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-rose-600 dark:text-rose-400'
-            "
-            >{{ mistakes }}{{ mistakeLimit && !zen ? ` / ${mistakeLimit}` : "" }}</span
-          >
-        </div>
-        <div class="flex justify-between px-3 py-2">
-          <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.hintsUsed") }}</span>
-          <span
-            class="text-xs font-bold"
-            :class="
-              hintsUsed === 0
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-amber-700 dark:text-amber-400'
-            "
-            >{{ hintsUsed }}</span
-          >
-        </div>
-        <div v-if="neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
-          <p class="mb-2 text-xs font-semibold text-zinc-500">
-            {{ $t("modal.needed") }}
-          </p>
-          <div class="flex flex-wrap gap-1">
-            <button
-              v-for="id in neededTechs"
-              :key="id"
-              @click="emit('lesson', id)"
-              :title="$t('modal.openLesson')"
-              class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
-            >
-              {{ $t(`hint.move.${id}.name`) }}
-            </button>
-          </div>
-        </div>
-        <div v-if="stuck.length" class="px-3 py-2" data-testid="stuck-moments">
-          <p class="mb-2 text-xs font-semibold text-zinc-500">
-            {{ $t("modal.stuck") }}
-          </p>
-          <ul class="space-y-1.5">
-            <li
-              v-for="m in stuck"
-              :key="m.at"
-              class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
-            >
-              <span class="text-xs text-zinc-700 tabular-nums dark:text-zinc-300">{{
-                $t("modal.stuckAt", {
-                  at: formatTime(m.at),
-                  gap: formatTime(m.gap),
-                })
-              }}</span>
-              <button
-                v-if="m.technique"
-                @click="emit('lesson', m.technique!)"
-                :title="$t('modal.openLesson')"
-                class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
-              >
-                {{ $t(`hint.move.${m.technique}.name`) }}
-              </button>
-            </li>
-          </ul>
-        </div>
-        <div v-if="techniqueLog.length" class="px-3 py-2">
-          <p class="mb-2 text-xs font-semibold text-zinc-500">
-            {{ $t("modal.techniquesUsed") }}
-          </p>
-          <div class="flex flex-wrap gap-1">
-            <span
-              v-for="id in techniqueLog"
-              :key="id"
-              :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
-              class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-700 dark:text-amber-400"
-              >{{ $t(`hint.move.${id}.name`) }}
-              <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
-            >
-          </div>
-        </div>
-      </div>
+        :difficulty-label="difficultyLabel"
+        :zen="zen"
+        :mistakes="mistakes"
+        :hints-used="hintsUsed"
+        :needed-techs="neededTechs"
+        :stuck="stuck"
+        :technique-log="techniqueLog"
+        @lesson="(id) => emit('lesson', id)"
+      />
 
       <button
         v-if="win"

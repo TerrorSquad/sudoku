@@ -6,18 +6,13 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
 import { ACADEMY_EXAMPLES, type AcademyExample } from "../utils/academyExamples";
+import { MASTERY_STYLE, TIER_STYLES as tierStyles } from "../utils/academyStyles";
 import { BASICS_IDS, type BasicsId } from "../utils/basics";
 import { masteryFor } from "../utils/mastery";
-import {
-  ACADEMY_TECHNIQUES,
-  BUILDS_ON,
-  MAP_COLUMN,
-  nextChallenge,
-  weekOf,
-  type Tier,
-  type Week,
-} from "../utils/progression";
+import { ACADEMY_TECHNIQUES, nextChallenge, type Tier, type Week } from "../utils/progression";
+import AcademyMap from "./AcademyMap.vue";
 import ExampleGrid from "./ExampleGrid.vue";
+import PathPanels from "./PathPanels.vue";
 import ReviewPanel from "./ReviewPanel.vue";
 import ScreenHeader from "./ScreenHeader.vue";
 import SpotItPanel from "./SpotItPanel.vue";
@@ -47,23 +42,12 @@ const techniques = ACADEMY_TECHNIQUES;
 const path = useTechniquePath();
 const done = path.getDone();
 const nextId = nextChallenge(done);
-const doneCount = path.pathDone();
 const pathState = (id: TechniqueId) =>
   done.includes(id) ? "done" : id === nextId ? "next" : "locked";
-// Key, technique and seed all from one date, so a click after midnight Sunday can't mix weeks.
-const week = weekOf();
-const weeklyDone = path.getWeeksDone().includes(week.key);
 const stepOf = (id: TechniqueId) => techniques.findIndex((tech) => tech.id === id) + 1;
 // "How to play", the path's step 0: four short lessons before the first technique.
 const basicsDone = path.getBasics();
 const basicsNext = BASICS_IDS.find((id) => !basicsDone.includes(id)) ?? null;
-
-const MASTERY_STYLE = [
-  "",
-  "border-zinc-300 bg-zinc-200 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-700/60 dark:text-zinc-400",
-  "border-cyan-400/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
-  "border-amber-400/60 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-] as const;
 
 const countOf = (id: TechniqueId) => techStats.getCount(id);
 // Each lesson's best stars; a finished lesson also counts toward mastery (see utils/mastery.ts).
@@ -78,29 +62,6 @@ const masteryTitle = (id: TechniqueId) =>
 const tiers = [...new Set(techniques.map((tech) => tech.tier))];
 
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
-
-const tierStyles: Record<Tier, { badge: string; heading: string; border: string }> = {
-  Basic: {
-    badge: "bg-emerald-500/15 dark:text-emerald-400 text-emerald-600 border-emerald-500/30",
-    heading: "dark:text-emerald-400 text-emerald-600",
-    border: "border-emerald-500/20 hover:border-emerald-500/50",
-  },
-  Intermediate: {
-    badge: "bg-amber-500/15 dark:text-amber-400 text-amber-700 border-amber-500/30",
-    heading: "dark:text-amber-400 text-amber-700",
-    border: "border-amber-500/20 hover:border-amber-500/50",
-  },
-  Advanced: {
-    badge: "bg-violet-500/15 dark:text-violet-300 text-violet-600 border-violet-500/30",
-    heading: "dark:text-violet-300 text-violet-600",
-    border: "border-violet-500/20 hover:border-violet-500/50",
-  },
-  Expert: {
-    badge: "bg-rose-500/15 dark:text-rose-300 text-rose-600 border-rose-500/30",
-    heading: "dark:text-rose-300 text-rose-600",
-    border: "border-rose-500/20 hover:border-rose-500/50",
-  },
-};
 
 function byTier(tier: Tier) {
   return techniques.filter((tech) => tech.tier === tier);
@@ -184,42 +145,8 @@ function showCard(id: string) {
 }
 onMounted(() => props.focus && showCard(props.focus));
 
-// The technique map: tiers as rows, each technique in its MAP_COLUMN, and a line from each
-// technique to what builds on it (BUILDS_ON). Lines sit in the grid's own units (a cell is 1×1),
-// so they meet the nodes' centres at any width.
+// The techniques as cards, or as a map of what builds on what (AcademyMap).
 const view = ref<"list" | "map">("list");
-const MAP_COLS = Math.max(...Object.values(MAP_COLUMN)) + 1;
-const mapPos = new Map(
-  techniques.map((tech) => [tech.id, { row: tiers.indexOf(tech.tier), col: MAP_COLUMN[tech.id] }]),
-);
-// In the order they're drawn, row by row, so Tab follows what you see.
-const mapNodes = techniques.toSorted(
-  (a, b) => mapPos.get(a.id)!.row - mapPos.get(b.id)!.row || MAP_COLUMN[a.id] - MAP_COLUMN[b.id],
-);
-// The links are drawn (aria-hidden), so each node also says what it builds on.
-const buildsOnText = (id: TechniqueId) =>
-  BUILDS_ON[id]?.length
-    ? t("academy.map.buildsOn", { names: BUILDS_ON[id]!.map(techName).join(", ") })
-    : "";
-const occupied = (row: number, col: number) =>
-  [...mapPos.values()].some((p) => p.row === row && p.col === col);
-const mapEdges = Object.entries(BUILDS_ON).flatMap(([id, pre]) =>
-  pre.map((from) => {
-    const a = mapPos.get(from)!;
-    const b = mapPos.get(id as TechniqueId)!;
-    const [x1, y1, x2, y2] = [a.col + 0.5, a.row + 0.5, b.col + 0.5, b.row + 0.5];
-    // Along a row, bow over any node in between rather than run behind it. The curve peaks
-    // halfway to its control point: 0.45 of a row up, above even a tile with stars and a badge.
-    const span = Math.abs(a.col - b.col);
-    const lo = Math.min(a.col, b.col);
-    const between = Array.from({ length: Math.max(span - 1, 0) }, (_, k) => lo + k + 1);
-    const d =
-      a.row === b.row && between.some((col) => occupied(a.row, col))
-        ? `M${x1} ${y1} Q${(x1 + x2) / 2} ${y1 - 0.9} ${x2} ${y2}`
-        : `M${x1} ${y1} L${x2} ${y2}`;
-    return { key: `${from}>${id}`, d, done: done.includes(from) };
-  }),
-);
 async function openFromMap(id: TechniqueId) {
   view.value = "list";
   expanded.value = new Set([...expanded.value, id]);
@@ -295,60 +222,7 @@ const total = computed(() => techniques.length);
 
       <!-- The technique path and the technique of the week. -->
       <div class="mb-6 grid gap-3 sm:mb-8 sm:grid-cols-2">
-        <section class="panel p-4" data-testid="technique-path">
-          <div class="flex items-baseline justify-between gap-2">
-            <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
-              {{ $t("path.title") }}
-            </h2>
-            <span class="text-xs font-bold text-violet-700 tabular-nums dark:text-violet-300">{{
-              $t("path.progress", { done: doneCount, total })
-            }}</span>
-          </div>
-          <div
-            class="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
-            aria-hidden="true"
-          >
-            <div
-              class="h-full rounded-full bg-violet-600"
-              :style="{ width: `${(doneCount / total) * 100}%` }"
-            />
-          </div>
-          <template v-if="nextId">
-            <p class="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
-              {{ $t("path.nextHint", { name: techName(nextId) }) }}
-            </p>
-            <button
-              class="tile tile-primary mt-3 w-full px-3 py-2.5 text-sm font-bold"
-              @click="emit('lesson', nextId)"
-            >
-              {{ $t("path.next") }}: {{ techName(nextId) }}
-            </button>
-          </template>
-          <p v-else class="mt-3 text-sm font-bold text-emerald-700 dark:text-emerald-400">
-            {{ $t("path.allDone", { n: total }) }}
-          </p>
-        </section>
-
-        <section class="panel p-4" data-testid="technique-of-week">
-          <div class="flex items-baseline justify-between gap-2">
-            <h2 class="text-sm font-black text-zinc-900 dark:text-zinc-100">
-              {{ $t("weekly.title") }}
-            </h2>
-            <span v-if="weeklyDone" class="text-xs font-bold text-emerald-700 dark:text-emerald-400"
-              >✓ {{ $t("weekly.done") }}</span
-            >
-          </div>
-          <p class="mt-2 text-base font-black text-zinc-900 dark:text-zinc-100">
-            {{ techName(week.technique) }}
-          </p>
-          <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{{ $t("weekly.desc") }}</p>
-          <button
-            class="tile tile-amber mt-3 w-full px-3 py-2.5 text-sm font-bold"
-            @click="emit('weekly', week)"
-          >
-            {{ $t("weekly.play") }}
-          </button>
-        </section>
+        <PathPanels @lesson="(id) => emit('lesson', id)" @weekly="(w) => emit('weekly', w)" />
 
         <ReviewPanel @review="(ids) => emit('review', ids)" />
         <SpotItPanel @spot="(tier) => emit('spot', tier)" />
@@ -368,101 +242,13 @@ const total = computed(() => techniques.length);
         </button>
       </div>
 
-      <section
+      <AcademyMap
         v-if="view === 'map'"
-        class="panel mb-10 overflow-x-auto p-3 sm:p-4"
-        :aria-label="$t('academy.view.map')"
-        data-testid="technique-map"
-      >
-        <div class="flex min-w-[58rem]">
-          <!-- Tier names, one per row. -->
-          <div class="flex w-24 shrink-0 flex-col pr-2">
-            <p
-              v-for="tier in tiers"
-              :key="tier"
-              class="flex h-28 items-center text-xs font-black text-zinc-700 dark:text-zinc-300"
-            >
-              {{ $t(`academy.tier.${tier}`) }}
-            </p>
-          </div>
-          <div
-            class="relative grid flex-1 grid-rows-4"
-            :style="{ gridTemplateColumns: `repeat(${MAP_COLS}, minmax(0, 1fr))` }"
-          >
-            <svg
-              class="pointer-events-none absolute inset-0 h-full w-full"
-              :viewBox="`0 0 ${MAP_COLS} ${tiers.length}`"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                v-for="e in mapEdges"
-                :key="e.key"
-                :d="e.d"
-                fill="none"
-                vector-effect="non-scaling-stroke"
-                :class="
-                  e.done
-                    ? 'stroke-violet-500 dark:stroke-violet-400'
-                    : 'stroke-zinc-300 dark:stroke-zinc-600'
-                "
-                stroke-width="1.5"
-              />
-            </svg>
-            <div
-              v-for="tech in mapNodes"
-              :key="tech.id"
-              :style="{
-                gridRow: mapPos.get(tech.id)!.row + 1,
-                gridColumn: mapPos.get(tech.id)!.col + 1,
-              }"
-              class="relative flex h-28 items-center justify-center px-1"
-            >
-              <button
-                :class="[
-                  tierStyles[tech.tier].border,
-                  pathState(tech.id) === 'next' && 'ring-2 ring-violet-500',
-                ]"
-                :data-path="pathState(tech.id)"
-                :data-testid="`map-${tech.id}`"
-                class="tile flex w-full flex-col items-center gap-0.5 px-1 py-1.5 text-center"
-                @click="openFromMap(tech.id)"
-              >
-                <span
-                  class="text-[0.6875rem] leading-tight font-bold text-zinc-900 dark:text-zinc-100"
-                >
-                  <span
-                    v-if="pathState(tech.id) === 'done'"
-                    class="text-emerald-700 dark:text-emerald-400"
-                    >✓
-                  </span>
-                  {{ techName(tech.id) }}
-                </span>
-                <span
-                  v-if="starsOf(tech.id)"
-                  class="text-[0.625rem] tracking-tight text-amber-700 dark:text-amber-400"
-                  :aria-label="$t('lesson.starsLabel', { n: starsOf(tech.id) })"
-                  role="img"
-                  >{{ "★".repeat(starsOf(tech.id)) + "☆".repeat(3 - starsOf(tech.id)) }}</span
-                >
-                <span
-                  v-if="masteryOf(tech.id) > 0"
-                  :class="MASTERY_STYLE[masteryOf(tech.id)]"
-                  class="border px-1 text-[0.5625rem] font-bold"
-                  >{{ $t(`academy.mastery.${masteryOf(tech.id)}`) }}</span
-                >
-                <span v-if="pathState(tech.id) === 'next'" class="sr-only">{{
-                  $t("path.next")
-                }}</span>
-                <span v-if="buildsOnText(tech.id)" class="sr-only">{{
-                  buildsOnText(tech.id)
-                }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-400">{{ $t("academy.map.hint") }}</p>
-      </section>
+        :path-state="pathState"
+        :stars-of="starsOf"
+        :mastery-of="masteryOf"
+        @open="openFromMap"
+      />
 
       <template v-if="view === 'list'">
         <!-- Example legend -->
