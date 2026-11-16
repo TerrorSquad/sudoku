@@ -12,7 +12,7 @@ export interface Challenge {
   seconds: number;
 }
 
-const CODE = /SP1-([0-9]{81})-([0-9]{1,6})/;
+const CODE = /SP1-([0-9]{81})-([0-9]{1,6})(?![0-9])/;
 
 export function encodeChallenge(board: Grid, seconds: number): string {
   return `SP1-${board.flat().join("")}-${Math.max(0, Math.round(seconds))}`;

@@ -641,8 +641,9 @@
   "modal.shareChallengeZen": "Odigraj moju slagalicu: nalepi {code} u Tvoju slagalicu",
   "customImport.challenge": "Izazov prijatelja: pobedi vreme {time}.",
   "customImport.challengeZen": "Slagalica prijatelja, igrana bez sata.",
-  "game.toBeat": "Za pobedu {time}",
+  "game.toBeat": "Cilj: {time}",
   "game.toBeatPassed": "(sporije od prijatelja)",
   "challenge.won": "🏁 Brži si od prijatelja za {time}!",
-  "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?"
+  "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?",
+  "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!"
 }

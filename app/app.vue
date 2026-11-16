@@ -590,10 +590,10 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     if (activeDifficulty.value === "custom" && challengeTarget.value > 0 && !practised) {
       const diff = challengeTarget.value - timer.timerSeconds.value;
       progressNotes.value.push({
-        text: t(diff > 0 ? "challenge.won" : "challenge.lost", {
+        text: t(diff > 0 ? "challenge.won" : diff === 0 ? "challenge.tie" : "challenge.lost", {
           time: timer.formatTime(Math.abs(diff)),
         }),
-        ok: diff > 0,
+        ok: diff >= 0,
       });
     }
     const recordsBefore = countsForRecords() ? recordSnapshot() : null;
@@ -649,7 +649,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
         distinctTechniques: Object.keys(techStats.getAll()).length,
       });
       toastIds.value.push(...unlocked);
-      if (unlocked.length || progressNotes.value.length) cue("unlock");
+      if (unlocked.length || progressNotes.value.some((n) => n.ok)) cue("unlock");
     }
     if (recordsBefore) {
       records.recordWin({
@@ -715,13 +715,16 @@ async function shareWin() {
     ]
       .filter(Boolean)
       .join(" · "),
-    // A friend pastes the code into Your puzzle to play this board against this time.
-    t(gameZen.value ? "modal.shareChallengeZen" : "modal.shareChallenge", {
-      code: encodeChallenge(initialBoard.value, gameZen.value ? 0 : timer.timerSeconds.value),
-    }),
+    // A friend pastes the code into Your puzzle to play this board against this time. Not a
+    // practice board: a drill starts with notes the code can't carry, so the time isn't comparable.
+    practiceTechnique.value
+      ? null
+      : t(gameZen.value ? "modal.shareChallengeZen" : "modal.shareChallenge", {
+          code: encodeChallenge(initialBoard.value, gameZen.value ? 0 : timer.timerSeconds.value),
+        }),
     GAME_URL,
   ];
-  const text = lines.join("\n");
+  const text = lines.filter(Boolean).join("\n");
   const copy = async () => {
     await navigator.clipboard.writeText(text);
     shared.value = true;

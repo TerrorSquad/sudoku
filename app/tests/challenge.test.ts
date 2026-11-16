@@ -26,5 +26,6 @@ describe("challenge codes", () => {
   it("rejects anything that isn't a code", () => {
     expect(parseChallenge(GIVENS)).toBeNull();
     expect(parseChallenge("SP1-123-4")).toBeNull();
+    expect(parseChallenge(`SP1-${GIVENS}-1234567`)).toBeNull(); // too long a time: hand-edited
   });
 });
