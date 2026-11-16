@@ -2,3 +2,9 @@ allowBuilds:
   "@parcel/watcher": true
   esbuild: true
   vue-demi: true
+# `pnpm update --latest` skips these: see docs/adr/0002-toolchain-pins.md.
+updateConfig:
+  ignoreDependencies:
+    - nuxt
+    - typescript
+    - "@vueuse/nuxt"
