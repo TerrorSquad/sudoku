@@ -23,12 +23,19 @@ jobs:
         run: |
           latest=$(npm view nuxt version)
           # "ahead": the tag is past the fix; "identical": the tag is the fix. Either way it's in.
+          # "diverged": the fix may have been cherry-picked onto a release branch (new commit id),
+          # so fall back to the release notes naming the PR.
           status=$(gh api "repos/nuxt/nuxt/compare/$FIX...v$latest" --jq .status)
           echo "nuxt $latest vs the fix: $status"
+          if [ "$status" = diverged ]; then
+            in_notes=$(gh release view "v$latest" -R nuxt/nuxt --json body --jq '.body | contains("36913")')
+            [ "$in_notes" = true ] && status=ahead
+          fi
           case "$status" in ahead | identical) ;; *) exit 0 ;; esac
-          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json title --jq "map(select(.title == env.TITLE)) | length")
-          if [ "$open" != "0" ]; then
-            echo "Issue already open."
+          # Any state: once the issue is closed it must not come back every Monday.
+          seen=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "in:title \"$TITLE\"" --json title --jq "map(select(.title == env.TITLE)) | length")
+          if [ "$seen" != "0" ]; then
+            echo "Issue already filed."
             exit 0
           fi
-          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "nuxt $latest contains nuxt/nuxt#36913 ($FIX), so the 4.6.2 pin can go: follow the nuxt row in docs/adr/0002-dependency-pins.md (update nuxt, drop it from \`updateConfig.ignoreDependencies\` in pnpm-workspace.yaml, then check with \`pnpm test:prod\`)."
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "nuxt $latest contains nuxt/nuxt#36913 ($FIX), so the 4.6.2 pin can go: follow the nuxt row in docs/adr/0002-dependency-pins.md (update nuxt, drop it from \`updateConfig.ignoreDependencies\` in pnpm-workspace.yaml, then check with \`pnpm test:prod\`), and delete .github/workflows/nuxt-fix-watch.yml."

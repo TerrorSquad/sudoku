@@ -4,7 +4,7 @@
 
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, sep } from "node:path";
 
 const ROOT = ".output/public";
 const PREFIX = "/game/";
@@ -21,10 +21,15 @@ const TYPES = {
 };
 
 createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  let path;
+  try {
+    path = decodeURIComponent(new URL(req.url, "http://x").pathname);
+  } catch {
+    return res.writeHead(400).end();
+  }
   if (!path.startsWith(PREFIX)) return res.writeHead(404).end();
   let file = normalize(join(ROOT, path.slice(PREFIX.length)));
-  if (!file.startsWith(ROOT)) return res.writeHead(403).end();
+  if (file !== ROOT && !file.startsWith(ROOT + sep)) return res.writeHead(403).end();
   if (path.endsWith("/")) file = join(file, "index.html");
   try {
     const body = await readFile(file);

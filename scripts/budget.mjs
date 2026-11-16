@@ -21,7 +21,7 @@ for (const page of ["index.html", "200.html"]) {
 
 const WARN_AT = { js: 1100, css: 180 }; // KB, raw: 922 and 142 at v1.6.0 (pattern lines, lessons)
 const FAIL_AT = { js: 1300, css: 200 }; // KB, raw: 1027 and 144 at v1.11.0
-const strict = Boolean(process.env.BUDGET_STRICT);
+const strict = process.env.BUDGET_STRICT === "1";
 let over = false;
 const dir = ".output/public/_nuxt";
 const kb = { js: 0, css: 0 };
