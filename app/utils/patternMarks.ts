@@ -367,9 +367,3 @@ export function beats(move: PatternMove, has: HasMark): Beat[] {
   }
   return out;
 }
-
-/** `has` for a notes grid as SudokuGrid holds it (notes[r][c][n]). */
-export const hasFromNotes =
-  (notes: boolean[][][]): HasMark =>
-  (r, c, n) =>
-    !!notes[r]?.[c]?.[n];

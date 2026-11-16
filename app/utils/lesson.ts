@@ -372,17 +372,19 @@ export function tapPattern(instances: Instance[], found: CellRC[], cell: CellRC)
 
 type Translate = (key: string, params?: Record<string, unknown>) => string;
 
+/** A unit's 1-based number: its row, column or box (boxes count across, then down). */
+export const unitNumber = (u: BoardUnit): number =>
+  u.kind === "row"
+    ? u.r + 1
+    : u.kind === "col"
+      ? u.c + 1
+      : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
+
 /** "in row 4", "in box 2", or "on this board" when the pattern has no one unit. */
 export function unitLabel(L: Lesson, t: Translate): string {
   const u = L.unit;
   if (!u) return t("lesson.where.here");
-  const n =
-    u.kind === "row"
-      ? u.r + 1
-      : u.kind === "col"
-        ? u.c + 1
-        : Math.floor(u.r / 3) * 3 + Math.floor(u.c / 3) + 1;
-  return t(`lesson.where.${u.kind}`, { n });
+  return t(`lesson.where.${u.kind}`, { n: unitNumber(u) });
 }
 
 /** Step 1's prompt: what to look for and where. `digit` renders a digit (or its colour). */

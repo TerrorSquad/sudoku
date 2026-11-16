@@ -7,7 +7,6 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, NotesGrid } from "../types/sudoku";
-import type { BoardTheme } from "../utils/preferenceValues";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
@@ -41,13 +40,11 @@ import {
 import { digitLabel } from "../utils/sudokuColors";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
-import AppIcon from "./AppIcon.vue";
+import ScreenHeader from "./ScreenHeader.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
 const props = defineProps<{
   tier: Tier;
-  colorMode: boolean;
-  theme: BoardTheme;
   review?: TechniqueId[];
 }>();
 const reviewing = !!props.review;
@@ -60,7 +57,8 @@ const { t, locale, locales } = useI18n();
 const lang = computed(
   () => locales.value.find((l) => typeof l === "object" && l.code === locale.value)?.language,
 );
-const digit = (n: number) => digitLabel(n, props.colorMode, t);
+const { colorMode, boardTheme: theme } = usePreferences();
+const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
 /** How long a found (or skipped) pattern stays drawn before the next position. */
@@ -340,20 +338,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex min-h-screen w-full flex-col">
-    <div
-      class="flex items-center gap-4 border-b border-zinc-200 bg-[var(--ground)] px-4 py-3 sm:px-8 dark:border-zinc-800"
-    >
-      <button
-        :aria-label="$t('lesson.back')"
-        @click="emit('back')"
-        class="flex items-center gap-2 text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-      >
-        <AppIcon
-          class="h-4 w-4"
-          path="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
-        />
-        <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
-      </button>
+    <ScreenHeader lesson :back-label="$t('lesson.back')" @back="emit('back')">
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         <template v-if="reviewing">{{ $t("review.title") }}</template>
         <template v-else>{{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}</template>
@@ -364,7 +349,7 @@ onUnmounted(() => {
         class="font-game text-lg font-bold text-zinc-900 tabular-nums dark:text-zinc-50"
         >{{ formatSpotTime(clock) }}</span
       >
-    </div>
+    </ScreenHeader>
 
     <!-- Review results: each technique's card, up a box or back to the first. -->
     <div

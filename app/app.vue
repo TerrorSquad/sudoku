@@ -38,7 +38,7 @@ import { useTimer } from "./composables/useTimer";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
 import { encodeChallenge } from "./utils/challenge";
 import { haptic } from "./utils/haptics";
-import { generateLesson, type Lesson } from "./utils/lesson";
+import { generateLesson, unitNumber, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "./utils/patternMarks";
 import { generatePracticePuzzle } from "./utils/practice";
@@ -1143,10 +1143,8 @@ const nudge = ref<{ unit: BoardUnit; technique: TechniqueId | null } | null>(nul
 const nudgeUnit = computed(() => {
   const u = nudge.value?.unit;
   if (!u) return "";
-  const n = u.kind === "row" ? u.r + 1 : u.kind === "col" ? u.c + 1 : boxNumber(u);
-  return t(`hint.nudge.unit.${u.kind}`, { n });
+  return t(`hint.nudge.unit.${u.kind}`, { n: unitNumber(u) });
 });
-const boxNumber = (c: CellCoord) => Math.floor(c.r / 3) * 3 + Math.floor(c.c / 3) + 1;
 // Set once a nudge has counted as a hint: explaining and applying that same step is free.
 let nudgePaid = false;
 watch(
@@ -1894,8 +1892,6 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'spot'"
           :tier="spotTier"
           :review="spotReview"
-          :color-mode="colorMode"
-          :theme="boardTheme"
           @cue="academyCue"
           @back="currentScreen = 'academy'"
           @lesson="handleLesson"
@@ -1906,8 +1902,6 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'basics'"
           :key="activeBasics"
           :id="activeBasics"
-          :color-mode="colorMode"
-          :theme="boardTheme"
           @cue="academyCue"
           @back="
             academyFocus = null;
@@ -1922,8 +1916,6 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'lesson' && activeLesson"
           :key="activeLesson.technique + activeLesson.board.flat().join('')"
           :lesson="activeLesson"
-          :color-mode="colorMode"
-          :theme="boardTheme"
           @cue="academyCue"
           :in-game="academyFromGame"
           @back="
@@ -2555,37 +2547,6 @@ onUnmounted(() => {
     </div>
   </UApp>
 </template>
-
-<style scoped>
-@keyframes trigger-glow {
-  0%,
-  100% {
-    background-color: rgba(99, 102, 241, 0.25);
-    box-shadow: inset 0 0 10px rgba(99, 102, 241, 0.4);
-  }
-  50% {
-    background-color: rgba(99, 102, 241, 0.5);
-    box-shadow: inset 0 0 18px rgba(99, 102, 241, 0.8);
-  }
-}
-@keyframes elimination-blink {
-  0%,
-  100% {
-    background-color: rgba(244, 63, 94, 0.2);
-    box-shadow: inset 0 0 8px rgba(244, 63, 94, 0.3);
-  }
-  50% {
-    background-color: rgba(244, 63, 94, 0.55);
-    box-shadow: inset 0 0 16px rgba(244, 63, 94, 0.7);
-  }
-}
-:deep(.bg-indigo-500\/30) {
-  animation: trigger-glow 1.2s infinite ease-in-out !important;
-}
-:deep(.bg-rose-500\/30) {
-  animation: elimination-blink 1.2s infinite ease-in-out !important;
-}
-</style>
 
 <!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
