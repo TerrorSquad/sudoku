@@ -85,3 +85,37 @@ test("a win whose modal chunk fails is still recorded after the reload", async (
   expect(stored.save).toBeNull(); // no solved board waiting to be resumed
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
 });
+
+// Nuxt's router wrote the ./ base joined to the path on start, /game/ → /game/game/: any reload
+// (F5, a backup import) then loaded a blank page. plugins/keep-path.client.ts puts it back.
+test("the address stays /game/, so a reload and a backup import land on the app", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/game/");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/game/");
+
+  // Settings → Your data: importing a backup reloads the page.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "sudoku_v1_score",
+      JSON.stringify({ total: 4242, gamesWon: 7, best: {}, perDifficulty: {} }),
+    ),
+  );
+  await page.getByRole("button", { name: "Settings" }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
+  ]);
+  await page.evaluate(() => localStorage.removeItem("sudoku_v1_score"));
+  await page.getByTestId("import-file").setInputFiles((await download.path())!);
+  const reloaded = page.waitForEvent("load");
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
+  await reloaded;
+  expect(new URL(page.url()).pathname).toBe("/game/");
+  await expect(page.getByTestId("level-badge")).toContainText("Level 4");
+});

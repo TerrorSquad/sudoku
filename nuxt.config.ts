@@ -39,8 +39,8 @@ export default defineNuxtConfig({
   },
   ssr: false,
   // A lazy chunk that fails to load (a deploy replaced it, a dropped request) reloads the page via
-  // plugins/chunk-reload.client.ts. Nuxt's own handler reloads at the base joined to the route, and
-  // with the ./ base that sends the Wavedash build from /game/ to /game/game/, a blank page.
+  // plugins/chunk-reload.client.ts. Nuxt's own handler reloads at the base joined to the route,
+  // which with the ./ base is /game/game/ for the Wavedash build, a blank page.
   experimental: { emitRouteChunkError: "manual" },
   app: {
     // `pnpm wavedash` sets NUXT_APP_BASE_URL=./ (relative assets); '/' for local dev.
