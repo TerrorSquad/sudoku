@@ -18,6 +18,7 @@ import {
   type Week,
 } from "../utils/progression";
 import ExampleGrid from "./ExampleGrid.vue";
+import SpotItPanel from "./SpotItPanel.vue";
 
 // Opens on this technique's lesson, expanded and scrolled to (the win screen links here).
 const props = defineProps<{ focus?: TechniqueId | null; inGame?: boolean }>();
@@ -28,6 +29,7 @@ const emit = defineEmits<{
   (e: "lesson", id: TechniqueId): void;
   (e: "basics", id: BasicsId): void;
   (e: "weekly", week: Week): void;
+  (e: "spot", tier: Tier): void;
 }>();
 
 const { t } = useI18n();
@@ -322,6 +324,8 @@ const total = computed(() => techniques.length);
             {{ $t("weekly.play") }}
           </button>
         </section>
+
+        <SpotItPanel @spot="(tier) => emit('spot', tier)" />
       </div>
 
       <!-- Example legend -->
