@@ -164,6 +164,10 @@ describe("progress backup", () => {
     // Spot it bests: shape only too, for the same reason.
     expect(bad("sudoku_v1_spot_best", { Basic: 31.4, Master: 99 })).toMatchObject({ ok: true });
     expect(bad("sudoku_v1_spot_best", [31.4])).toEqual({ ok: false, error: "invalid" });
+    // The review schedule: shape only as well.
+    const card = { box: 9, next: "later" }; // a later version's card: readReview skips it
+    expect(bad("sudoku_v1_review", { "new-technique": card })).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_review", [card])).toEqual({ ok: false, error: "invalid" });
     // The basics done: any array (a later version may add lessons), nothing else.
     const basics = "sudoku_v1_basics_done";
     expect(bad(basics, ["rule", "later-lesson"])).toMatchObject({ ok: true });

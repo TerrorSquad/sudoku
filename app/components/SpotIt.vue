@@ -2,6 +2,8 @@
 // Spot it: ten positions from one Academy tier, against the clock. Tap the pattern's cells (the
 // lesson's step 1, no step 2); a wrong tap adds MISS_PENALTY, skipping shows it and adds
 // SKIP_PENALTY. The clock only runs while a position is up, not while the next one loads.
+// With `review` set it's the Daily review instead: one position per due technique, no clock or
+// penalties (it's about remembering, not speed), and each result moves its card (utils/review.ts).
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 import type { CellCoord, NotesGrid } from "../types/sudoku";
@@ -9,6 +11,8 @@ import type { BoardTheme } from "../utils/preferenceValues";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
+import { localDateKey } from "../composables/useDailyPuzzle";
+import { useTechniquePath } from "../composables/useTechniquePath";
 import {
   findPrompt,
   instancesOf,
@@ -19,6 +23,7 @@ import {
 } from "../utils/lesson";
 import { patternMarks } from "../utils/patternMarks";
 import { makeLesson } from "../utils/puzzlePool";
+import { dayLabel, reviewPassed } from "../utils/review";
 import { readJSON, writeJSON } from "../utils/safeJson";
 import {
   MISS_PENALTY,
@@ -39,13 +44,22 @@ import { saveToCloud } from "../utils/wavedash";
 import AppIcon from "./AppIcon.vue";
 import SudokuGrid from "./SudokuGrid.vue";
 
-const props = defineProps<{ tier: Tier; colorMode: boolean; theme: BoardTheme }>();
+const props = defineProps<{
+  tier: Tier;
+  colorMode: boolean;
+  theme: BoardTheme;
+  review?: TechniqueId[];
+}>();
+const reviewing = !!props.review;
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "lesson", id: TechniqueId): void;
   (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
 }>();
-const { t } = useI18n();
+const { t, locale, locales } = useI18n();
+const lang = computed(
+  () => locales.value.find((l) => typeof l === "object" && l.code === locale.value)?.language,
+);
 const digit = (n: number) => digitLabel(n, props.colorMode, t);
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
@@ -69,6 +83,7 @@ const newBest = ref(false);
 let round = 0;
 let positions: (Promise<Lesson> | undefined)[] = [];
 let slots: ReturnType<typeof buildRound> = [];
+const size = ref(ROUND_SIZE);
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 const ensure = (i: number, retry = 0) => {
   const s = slots[i];
@@ -109,7 +124,11 @@ function startRound() {
   round++;
   // A test pins the round with window.spotSeed; players get a fresh one.
   const seed = (window as { spotSeed?: number }).spotSeed ?? Math.floor(Math.random() * 2 ** 31);
-  slots = buildRound(props.tier, makeRng(seed));
+  const rng = makeRng(seed);
+  slots = props.review
+    ? props.review.map((technique) => ({ technique, seed: Math.floor(rng() * 2 ** 31) }))
+    : buildRound(props.tier, rng);
+  size.value = slots.length;
   positions = [];
   results.value = [];
   newBest.value = false;
@@ -168,8 +187,9 @@ function tap(cell: CellCoord) {
     misses.value++;
     shake(cell);
     emit("cue", "mistake");
+    const why = missText(L, cell, t, digit);
     feedback.value = {
-      text: `${missText(L, cell, t, digit)} ${t("spot.penalty", { s: MISS_PENALTY })}`,
+      text: reviewing ? why : `${why} ${t("spot.penalty", { s: MISS_PENALTY })}`,
       ok: false,
     };
     return;
@@ -198,16 +218,30 @@ function settle(instance: Instance, skipped: boolean) {
   shown.value = instance;
   phase.value = "reveal";
   feedback.value = skipped
-    ? { text: t("spot.skipped", { s: SKIP_PENALTY }), ok: false }
+    ? { text: reviewing ? t("review.shown") : t("spot.skipped", { s: SKIP_PENALTY }), ok: false }
     : { text: t("spot.found"), ok: true };
   emit("cue", skipped ? "hint" : "place");
   revealTimer = setTimeout(
-    () => (index.value + 1 < ROUND_SIZE ? load(index.value + 1) : finishRound()),
+    () => (index.value + 1 < slots.length ? load(index.value + 1) : finishRound()),
     REVEAL_MS,
   );
 }
 
+// The review's outcome per technique: passed or not, and its card now.
+const reviewed = ref<{ technique: TechniqueId; passed: boolean; box: number; next: string }[]>([]);
+
 function finishRound() {
+  if (reviewing) {
+    const path = useTechniquePath();
+    reviewed.value = results.value.map(({ technique, misses: m, skipped }) => {
+      const passed = reviewPassed(m, skipped);
+      return { technique, passed, ...path.recordReview(technique, passed) };
+    });
+    phase.value = "done";
+    emit("cue", reviewed.value.every((r) => r.passed) ? "unlock" : "place");
+    saveToCloud();
+    return;
+  }
   const total = Math.round(totalTime(results.value) * 10) / 10;
   const stored = readJSON<unknown>(SPOT_BEST_KEY, {});
   best.value = readSpotBest(stored)[props.tier];
@@ -269,7 +303,8 @@ function onKey(e: KeyboardEvent) {
   if (phase.value === "done") {
     if (key === "Enter" && !onButton) {
       e.preventDefault();
-      startRound();
+      if (reviewing) emit("back");
+      else startRound();
     }
     return;
   }
@@ -320,18 +355,76 @@ onUnmounted(() => {
         <span class="hidden sm:inline">{{ $t("lesson.back") }}</span>
       </button>
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
-        {{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}
+        <template v-if="reviewing">{{ $t("review.title") }}</template>
+        <template v-else>{{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}</template>
       </h1>
       <span
-        v-if="phase !== 'done'"
+        v-if="phase !== 'done' && !reviewing"
         data-testid="spot-clock"
         class="font-game text-lg font-bold text-zinc-900 tabular-nums dark:text-zinc-50"
         >{{ formatSpotTime(clock) }}</span
       >
     </div>
 
+    <!-- Review results: each technique's card, up a box or back to the first. -->
+    <div
+      v-if="phase === 'done' && reviewing"
+      class="mx-auto w-full max-w-md px-4 py-6"
+      data-testid="review-done"
+    >
+      <p class="font-display text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+        {{ $t("review.doneTitle") }}
+      </p>
+      <ul class="mt-4 flex flex-col gap-2">
+        <li
+          v-for="r in reviewed"
+          :key="r.technique"
+          :data-passed="r.passed"
+          class="panel flex items-center gap-3 p-3"
+        >
+          <span
+            aria-hidden="true"
+            :class="
+              r.passed
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-rose-700 dark:text-rose-300'
+            "
+            class="text-lg font-black"
+            >{{ r.passed ? "↑" : "↺" }}</span
+          >
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
+              techName(r.technique)
+            }}</span>
+            <span class="block text-xs text-zinc-600 dark:text-zinc-400">
+              {{ r.passed ? $t("review.up", { box: r.box }) : $t("review.reset") }} ·
+              {{
+                $t("review.next", {
+                  day: dayLabel(r.next, localDateKey(), lang ?? locale, $t("review.tomorrow")),
+                })
+              }}
+            </span>
+          </span>
+          <button
+            v-if="!r.passed"
+            @click="emit('lesson', r.technique)"
+            class="tile shrink-0 px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
+          >
+            {{ $t("spot.learn") }}
+          </button>
+        </li>
+      </ul>
+      <button @click="emit('back')" class="tile tile-primary mt-6 w-full py-3 text-sm font-bold">
+        {{ $t("lesson.back") }}
+      </button>
+    </div>
+
     <!-- Results -->
-    <div v-if="phase === 'done'" class="mx-auto w-full max-w-md px-4 py-6" data-testid="spot-done">
+    <div
+      v-else-if="phase === 'done'"
+      class="mx-auto w-full max-w-md px-4 py-6"
+      data-testid="spot-done"
+    >
       <section class="panel flex flex-col gap-3 p-5 text-center">
         <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">{{ $t("spot.total") }}</p>
         <p
@@ -397,7 +490,7 @@ onUnmounted(() => {
       >
         <div class="flex gap-1" aria-hidden="true">
           <div
-            v-for="n in ROUND_SIZE"
+            v-for="n in size"
             :key="n"
             :class="
               n - 1 < results.length
@@ -415,7 +508,7 @@ onUnmounted(() => {
           class="text-xs font-bold text-violet-700 dark:text-violet-300"
           data-testid="spot-progress"
         >
-          {{ $t("spot.progress", { n: index + 1, total: ROUND_SIZE }) }}
+          {{ $t("spot.progress", { n: index + 1, total: size }) }}
           <template v-if="lesson && phase !== 'loading'">
             · {{ techName(lesson.technique) }}</template
           >
@@ -434,7 +527,7 @@ onUnmounted(() => {
           @click="skip"
           class="tile self-start px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
         >
-          {{ $t("spot.skip", { s: SKIP_PENALTY }) }}
+          {{ reviewing ? $t("lesson.showMe") : $t("spot.skip", { s: SKIP_PENALTY }) }}
         </button>
         <p
           role="status"
@@ -454,7 +547,7 @@ onUnmounted(() => {
             v-for="k in [
               { key: '↑←↓→', desc: $t('lesson.key.move') },
               { key: 'Enter', desc: $t('lesson.key.tap') },
-              { key: 'H', desc: $t('spot.key.skip') },
+              { key: 'H', desc: reviewing ? $t('lesson.showMe') : $t('spot.key.skip') },
               { key: 'Esc', desc: $t('lesson.key.back') },
             ]"
             :key="k.key"

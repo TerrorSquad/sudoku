@@ -18,6 +18,7 @@ import {
   type Week,
 } from "../utils/progression";
 import ExampleGrid from "./ExampleGrid.vue";
+import ReviewPanel from "./ReviewPanel.vue";
 import SpotItPanel from "./SpotItPanel.vue";
 import WatchExample from "./WatchExample.vue";
 
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (e: "basics", id: BasicsId): void;
   (e: "weekly", week: Week): void;
   (e: "spot", tier: Tier): void;
+  (e: "review", ids: TechniqueId[]): void;
 }>();
 
 const { t } = useI18n();
@@ -347,6 +349,7 @@ const total = computed(() => techniques.length);
           </button>
         </section>
 
+        <ReviewPanel @review="(ids) => emit('review', ids)" />
         <SpotItPanel @spot="(tier) => emit('spot', tier)" />
       </div>
 
