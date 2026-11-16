@@ -91,6 +91,7 @@ export const ACADEMY_TECHNIQUES: { id: TechniqueId; tier: Tier }[] = [
   { id: "simple-coloring", tier: "Expert" },
   { id: "bug-plus-one", tier: "Expert" },
   { id: "xy-chain", tier: "Expert" },
+  { id: "finned-swordfish", tier: "Expert" },
 ];
 
 /**
@@ -166,6 +167,7 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
   "bug-plus-one": ["unique-rectangle"],
   // An XY-Wing is a three-cell XY-Chain.
   "xy-chain": ["xy-wing"],
+  "finned-swordfish": ["finned-x-wing", "swordfish"],
 };
 
 /**
@@ -201,6 +203,7 @@ export const MAP_COLUMN: Record<TechniqueId, number> = {
   "xyz-wing": 4,
   "simple-coloring": 5, // under the kite it builds on
   "xy-chain": 6,
+  "finned-swordfish": 8, // under the Finned X-Wing and Swordfish it builds on
 };
 
 // ---- Lesson stars --------------------------------------------------------------------------

@@ -52,6 +52,8 @@ const LEGACY_TITLES: Record<string, TechniqueId> = {
   "jednostavno bojenje": "simple-coloring",
   "finned x-wing": "finned-x-wing",
   "x-wing sa perajem": "finned-x-wing",
+  "finned swordfish": "finned-swordfish",
+  "swordfish sa perajem": "finned-swordfish",
   "w-wing": "w-wing",
   "bug+1": "bug-plus-one",
   "empty rectangle": "empty-rectangle",

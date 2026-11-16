@@ -319,6 +319,7 @@ const ON_DIGIT = new Set<TechniqueId>([
   "two-string-kite",
   "empty-rectangle",
   "finned-x-wing",
+  "finned-swordfish",
   "simple-coloring",
 ]);
 

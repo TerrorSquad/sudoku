@@ -21,6 +21,7 @@ const WANTED: TechniqueId[] = [
   "bug-plus-one",
   "empty-rectangle",
   "xy-chain",
+  "finned-swordfish",
 ];
 
 function harvest(technique: TechniqueId): AcademyExample | null {

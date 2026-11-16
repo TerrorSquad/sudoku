@@ -50,6 +50,7 @@ describe("nextHint — soundness", () => {
       "bug-plus-one",
       "empty-rectangle",
       "xy-chain",
+      "finned-swordfish",
     ])
       expect(seen).toContain(t);
   });
@@ -135,6 +136,38 @@ describe("nextHint — soundness", () => {
       });
     // 82 over these seeds: a sharp drop means detection regressed.
     expect(count).toBeGreaterThan(60);
+  }, 20_000);
+
+  it("finds a Finned Swordfish: 5 in rows 2, 4 and 7, with a fin in box 9", () => {
+    const found: SolveMove[] = [];
+    eachMove("finned-swordfish", 42, (move) => found.push(move));
+    expect(found[0]).toEqual({
+      technique: "finned-swordfish",
+      tier: 5,
+      // Columns 3, 4 and 7 cover the rows; row 7's spot in column 9 is the fin.
+      triggers: [
+        { r: 1, c: 2 },
+        { r: 1, c: 3 },
+        { r: 3, c: 3 },
+        { r: 3, c: 6 },
+        { r: 6, c: 2 },
+        { r: 6, c: 8 },
+      ],
+      // Column 7 inside the fin's box.
+      eliminations: [{ r: 8, c: 6, num: 5 }],
+      digits: [5],
+    });
+  });
+
+  it("a Finned Swordfish never removes the solution digit (checked by brute force)", () => {
+    let count = 0;
+    for (let seed = 1; seed <= 1000; seed++)
+      eachMove("finned-swordfish", seed, (move, solved) => {
+        count++;
+        for (const e of move.eliminations) expect(e.num).not.toBe(solved[e.r]![e.c]);
+      });
+    // 28 over these seeds: a sharp drop means detection regressed.
+    expect(count).toBeGreaterThan(20);
   }, 20_000);
 
   it("a placement is always the value that actually solves the cell", () => {
