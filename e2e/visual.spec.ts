@@ -215,6 +215,12 @@ for (const theme of ["light", "dark"] as const) {
       await shot(page, "academy");
     });
 
+    test("academy, worked example", async ({ page }) => {
+      await page.getByRole("button", { name: "Academy" }).click();
+      await page.locator("#lesson-x-wing h3").click(); // its caption names the real lines
+      await shot(page, "academy-example");
+    });
+
     test("achievements", async ({ page }) => {
       await page.getByRole("button", { name: "Achievements" }).click();
       await shot(page, "achievements");
