@@ -134,7 +134,7 @@ export function nextLesson(
 export const LESSON_STARS_KEY = "sudoku_v1_lesson_stars";
 export type Stars = 1 | 2 | 3;
 
-export const starsFor = (slips: number): Stars => (slips === 0 ? 3 : slips === 1 ? 2 : 1);
+export const lessonStarsFor = (slips: number): Stars => (slips === 0 ? 3 : slips === 1 ? 2 : 1);
 
 /** Stored stars, keeping only known techniques and 1–3 (the value comes from storage or sync). */
 export function readStars(raw: unknown): Partial<Record<TechniqueId, Stars>> {

@@ -18,7 +18,7 @@ import {
   type Lesson,
 } from "../utils/lesson";
 import { patternMarks, strikes } from "../utils/patternMarks";
-import { nextLesson, starsFor, type Stars } from "../utils/progression";
+import { lessonStarsFor, nextLesson, type Stars } from "../utils/progression";
 import { digitLabel } from "../utils/sudokuColors";
 import { solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";
@@ -201,7 +201,7 @@ function finish() {
   selected.value = null;
   const path = useTechniquePath();
   credited.value = path.recordLesson(id);
-  stars.value = starsFor(slips.value);
+  stars.value = lessonStarsFor(slips.value);
   bestBefore.value = path.recordStars(id, stars.value);
   next.value = nextLesson(id, path.getDone(), credited.value);
   feedback.value = null;
