@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
+import type { PadAction } from "./utils/gamepad";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
@@ -25,6 +26,7 @@ import SudokuGrid from "./components/SudokuGrid.vue";
 import TechniqueLesson from "./components/TechniqueLesson.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
+import { useGamepad } from "./composables/useGamepad";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
@@ -1552,6 +1554,69 @@ function handlePageHidden() {
   }
 }
 
+// Controllers, for a TV: each action becomes the key the screen already answers to. On a board,
+// the D-pad walks the cells and LB/RB pick the digit that A (game) or X (Academy boards) enters;
+// elsewhere the D-pad moves focus, kept inside whatever overlay is on top, and A presses.
+const padDigit = ref(1);
+function sendKey(key: string) {
+  (document.activeElement ?? document.body).dispatchEvent(
+    new KeyboardEvent("keydown", { key, bubbles: true }),
+  );
+}
+const FOCUSABLE =
+  'button:not([disabled]), a[href], select:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea, [tabindex]:not([tabindex="-1"])';
+function padScope(): ParentNode {
+  const scopes = document.querySelectorAll("dialog[open], [data-pad-scope]");
+  return scopes[scopes.length - 1] ?? document;
+}
+function moveFocus(step: 1 | -1) {
+  const list = [...padScope().querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+    (el) => el.getClientRects().length > 0,
+  );
+  if (!list.length) return;
+  const i = list.indexOf(document.activeElement as HTMLElement);
+  list[(i + step + list.length) % list.length]!.focus();
+}
+const ARROWS = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
+const padOnBoard = () =>
+  BOARD_SCREENS.has(currentScreen.value) &&
+  padScope() === document &&
+  !(currentScreen.value === "game" && timer.isPaused.value);
+function onPad(action: PadAction) {
+  const focused = document.activeElement as HTMLElement | null;
+  const onControl = !!focused?.closest?.("button, a, select") && !focused.closest("[data-cell]");
+  if (action === "prev" || action === "next") {
+    padDigit.value = ((padDigit.value + (action === "next" ? 0 : 7)) % 9) + 1;
+    return;
+  }
+  if (!padOnBoard()) {
+    if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
+    else if (action === "press") onControl ? focused!.click() : moveFocus(1);
+    else if (action === "back") {
+      const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
+      if (dialog) dialog.close();
+      else sendKey("Escape");
+    } else if (action === "pause" && currentScreen.value === "game") sendKey("p");
+    return;
+  }
+  if (action in ARROWS) return sendKey(ARROWS[action as keyof typeof ARROWS]);
+  const game = currentScreen.value === "game";
+  const keys: Partial<Record<PadAction, string>> = game
+    ? {
+        press: String(padDigit.value),
+        alt: "n",
+        back: "Backspace",
+        hint: "h",
+        pause: "p",
+        help: "?",
+      }
+    : { alt: String(padDigit.value), back: "Escape", hint: "h" };
+  if (action === "press" && !game) return onControl ? focused!.click() : sendKey("Enter");
+  const key = keys[action];
+  if (key) sendKey(key);
+}
+const { connected: padConnected } = useGamepad(onPad);
+
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
   document.addEventListener("visibilitychange", handlePageHidden);
@@ -2038,6 +2103,7 @@ onUnmounted(() => {
               <!-- PAUSE OVERLAY -->
               <div
                 v-if="timer.isPaused.value"
+                data-pad-scope
                 class="pause-overlay absolute top-0 -right-1 -bottom-1 left-0 z-30 flex flex-col items-center justify-center gap-5 rounded-xl bg-zinc-50/90 backdrop-blur-md dark:bg-zinc-950/90"
               >
                 <AppIcon
@@ -2146,6 +2212,19 @@ onUnmounted(() => {
         <p class="text-sm font-semibold text-zinc-100">{{ $t("practice.generating") }}</p>
       </div>
 
+      <!-- Controller: the digit A or X enters, and the buttons for this screen. -->
+      <div
+        v-if="padConnected && BOARD_SCREENS.has(currentScreen)"
+        data-testid="pad-hud"
+        aria-hidden="true"
+        class="panel fixed bottom-3 left-3 z-40 flex items-center gap-3 px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
+      >
+        <span class="font-game text-2xl font-black text-violet-700 dark:text-violet-300">{{
+          digitLabel(padDigit, colorMode, t)
+        }}</span>
+        <span>{{ $t(currentScreen === "game" ? "pad.game" : "pad.academy") }}</span>
+      </div>
+
       <AchievementToast
         :ids="toastIds"
         @dismiss="(id) => (toastIds = toastIds.filter((x) => x !== id))"
@@ -2155,6 +2234,7 @@ onUnmounted(() => {
       <div
         v-if="showModal"
         data-end-modal
+        data-pad-scope
         :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
         @pointerdown="winStep && skipWinSteps()"
@@ -2404,6 +2484,7 @@ onUnmounted(() => {
       <!-- RESUME PROMPT -->
       <div
         v-if="pendingResume"
+        data-pad-scope
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
       >
         <div

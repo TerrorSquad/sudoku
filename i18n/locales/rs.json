@@ -659,5 +659,7 @@
   "game.toBeatPassed": "(sporije od prijatelja)",
   "challenge.won": "🏁 Brži si od prijatelja za {time}!",
   "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?",
-  "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!"
+  "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!",
+  "pad.game": "A upiši · LB/RB cifra · X beleške · B obriši · Y pomoć · Start pauza",
+  "pad.academy": "A izaberi · X upiši cifru · LB/RB cifra · Y pokaži · B nazad"
 }
