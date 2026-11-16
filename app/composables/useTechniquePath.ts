@@ -8,7 +8,16 @@ import {
   readStars,
   type Stars,
 } from "../utils/progression";
+import {
+  REVIEW_KEY,
+  lessonCard,
+  readReview,
+  reviewCard,
+  withLearned,
+  type Card,
+} from "../utils/review";
 import { readJSON, writeJSON } from "../utils/safeJson";
+import { localDateKey } from "./useDailyPuzzle";
 
 // All under sudoku_v1_, so they back up and cloud-sync with the rest of the progress.
 const PATH_KEY = "sudoku_v1_technique_path";
@@ -61,7 +70,36 @@ export function useTechniquePath() {
     writeJSON(BASICS_KEY, mergeBasics(readJSON<unknown>(BASICS_KEY, []), [id]));
   }
 
+  /**
+   * The review schedule, with every technique whose lesson was finished (the path's, or any with
+   * stars) on it: one finished before review existed is due today.
+   */
+  function getReview() {
+    const learned = [...getDone(), ...Object.keys(getStars())];
+    return withLearned(readReview(readJSON<unknown>(REVIEW_KEY, {})), learned, localDateKey());
+  }
+  /** Writes one card into the raw entry, so a later version's cards survive. */
+  function writeCard(id: TechniqueId, card: Card) {
+    const raw = readJSON<unknown>(REVIEW_KEY, {});
+    const rest = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    writeJSON(REVIEW_KEY, { ...rest, [id]: card });
+  }
+  /** A finished lesson: its technique comes up for review tomorrow (if not scheduled already). */
+  function scheduleReview(id: TechniqueId) {
+    if (!readReview(readJSON<unknown>(REVIEW_KEY, {}))[id])
+      writeCard(id, lessonCard(undefined, localDateKey()));
+  }
+  /** A review's outcome; returns the card after it. */
+  function recordReview(id: TechniqueId, passed: boolean): Card {
+    const after = reviewCard(getReview()[id], passed, localDateKey());
+    writeCard(id, after);
+    return after;
+  }
+
   return {
+    getReview,
+    scheduleReview,
+    recordReview,
     getDone,
     recordLesson,
     getWeeksDone,

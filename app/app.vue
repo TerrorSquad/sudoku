@@ -49,6 +49,7 @@ import {
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
 import { brokenRecords, type NewRecord, type Snapshot } from "./utils/records";
+import { dueToday } from "./utils/review";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import {
   playComplete,
@@ -236,6 +237,8 @@ const currentScreen = ref<
 >("menu");
 // The Spot it tier being played (the spot screen).
 const spotTier = ref<Tier>("Basic");
+// Set when the spot screen plays the Daily review (these techniques) instead of a tier.
+const spotReview = ref<TechniqueId[] | undefined>();
 // The screens with a board, which keep the normal size (see applyUiScale).
 const BOARD_SCREENS = new Set(["game", "lesson", "spot", "basics"]);
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
@@ -488,6 +491,11 @@ const lessonsDone = computed(() => {
 const pathDone = computed(
   () => ACADEMY_TECHNIQUES.filter((tech) => lessonsDone.value.includes(tech.id)).length,
 );
+// Techniques due in the Daily review, for the menu's Academy tile.
+const reviewDue = computed(() => {
+  void currentScreen.value;
+  return dueToday(techniquePath.getReview(), localDateKey()).length;
+});
 // "New to sudoku?" on the menu: a fresh player who hasn't dismissed it. Fresh: no win anywhere
 // (the unlock count, so Zen wins count too), no technique lesson and no basics lesson done.
 const showBasicsPrompt = computed(() => {
@@ -1672,9 +1680,12 @@ onUnmounted(() => {
               />
               <span>
                 <span class="block">{{ $t("menu.academy") }}</span>
-                <span class="block text-[0.6875rem] font-semibold opacity-80">{{
-                  $t("path.menu", { done: pathDone, total: ACADEMY_TECHNIQUES.length })
-                }}</span>
+                <span class="block text-[0.6875rem] font-semibold opacity-80"
+                  >{{ $t("path.menu", { done: pathDone, total: ACADEMY_TECHNIQUES.length }) }}
+                  <span v-if="reviewDue" data-testid="review-badge">
+                    · {{ $t("review.menu", { n: reviewDue }) }}</span
+                  ></span
+                >
               </span>
             </button>
 
@@ -1725,15 +1736,23 @@ onUnmounted(() => {
           @spot="
             (tier) => {
               spotTier = tier;
+              spotReview = undefined;
+              currentScreen = 'spot';
+            }
+          "
+          @review="
+            (ids) => {
+              spotReview = ids;
               currentScreen = 'spot';
             }
           "
         />
 
-        <!-- SPOT IT -->
+        <!-- SPOT IT (and the Daily review, which plays the same way) -->
         <SpotIt
           v-else-if="currentScreen === 'spot'"
           :tier="spotTier"
+          :review="spotReview"
           :color-mode="colorMode"
           :theme="boardTheme"
           @cue="cue"

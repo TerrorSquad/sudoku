@@ -613,5 +613,16 @@
   "spot.key.skip": "preskoči",
   "hint.learnIt": "Prvi put vidiš ovo? Nauči korak po korak",
   "hint.learnAgain": "Ponovi lekciju",
-  "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo."
+  "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo.",
+  "review.title": "Dnevno ponavljanje",
+  "review.due": "Za danas: {n}. Kratko ponavljanje da ne zaboraviš tehnike.",
+  "review.caughtUp": "Sve je ponovljeno. Sledeće ponavljanje: {day}.",
+  "review.start": "Ponovi ({n})",
+  "review.menu": "Ponavljanje: {n}",
+  "review.shown": "Evo je. Uskoro ćeš je ponovo videti.",
+  "review.doneTitle": "Ponavljanje je gotovo",
+  "review.up": "Ide gore: korak {box} od 5",
+  "review.reset": "Vraća se na korak 1",
+  "review.next": "sledeće ponavljanje: {day}",
+  "review.tomorrow": "sutra"
 }

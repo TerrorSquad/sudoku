@@ -203,6 +203,7 @@ function finish() {
   credited.value = path.recordLesson(id);
   stars.value = lessonStarsFor(slips.value);
   bestBefore.value = path.recordStars(id, stars.value);
+  path.scheduleReview(id);
   next.value = nextLesson(id, path.getDone(), credited.value);
   feedback.value = null;
   emit("cue", credited.value ? "unlock" : "place");
