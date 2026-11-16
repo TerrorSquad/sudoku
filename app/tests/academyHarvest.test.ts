@@ -20,6 +20,8 @@ const WANTED: TechniqueId[] = [
   "w-wing",
   "bug-plus-one",
   "empty-rectangle",
+  "xy-chain",
+  "finned-swordfish",
 ];
 
 function harvest(technique: TechniqueId): AcademyExample | null {
@@ -29,7 +31,8 @@ function harvest(technique: TechniqueId): AcademyExample | null {
     for (let step = 0; step < 600; step++) {
       const move = nextHint(board, elims);
       if (!move) break;
-      if (move.technique === technique) {
+      // A long XY-Chain is hard to follow as a first example: take a four-cell one.
+      if (move.technique === technique && (technique !== "xy-chain" || move.triggers.length <= 4)) {
         // Pencil marks for the pattern and the cells it clears or fills, as the solver sees them.
         const target = move.placement ? [{ r: move.placement.r, c: move.placement.c }] : [];
         const cands = getGridCandidates(board);

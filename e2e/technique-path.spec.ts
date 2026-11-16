@@ -16,11 +16,11 @@ test("the next challenge's lesson: find the cell, place the digit, and the path 
   page,
 }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /Academy/ })).toContainText("Path 0/23");
+  await expect(page.getByRole("button", { name: /Academy/ })).toContainText("Path 0/25");
   await page.getByRole("button", { name: /Academy/ }).click();
 
   const path = page.getByTestId("technique-path");
-  await expect(path).toContainText("0/23 challenges");
+  await expect(path).toContainText("0/25 challenges");
   await path.getByRole("button", { name: "Next challenge: Naked Single" }).click();
   const coach = page.getByTestId("coach");
   await expect(coach).toContainText("Step 1 of 2", { timeout: 30_000 });
@@ -52,7 +52,7 @@ test("the next challenge's lesson: find the cell, place the digit, and the path 
     "first-lesson",
   );
   await coach.getByRole("button", { name: "Back to Academy" }).click();
-  await expect(path).toContainText("1/23 challenges");
+  await expect(path).toContainText("1/25 challenges");
   await expect(path.getByRole("button", { name: "Next challenge: Hidden Single" })).toBeVisible();
   await expect(page.locator("#lesson-naked-single")).toHaveAttribute("data-path", "done");
   await expect(page.locator("#lesson-hidden-single")).toHaveAttribute("data-path", "next");
@@ -150,7 +150,7 @@ test("a full practice win is extra practice: it doesn't complete the challenge",
 
   await expect(page.getByText("Full puzzles are extra practice.")).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("button", { name: /Academy/ })).toContainText("Path 0/23");
+  await expect(page.getByRole("button", { name: /Academy/ })).toContainText("Path 0/25");
 });
 
 test("the technique of the week starts the same seeded puzzle each time", async ({ page }) => {

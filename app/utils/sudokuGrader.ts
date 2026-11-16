@@ -11,7 +11,7 @@ import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sud
 //   3 — naked/hidden triple, X-Wing
 //   4 — naked/hidden quad, Swordfish, Skyscraper, 2-String Kite, Empty Rectangle,
 //       Finned X-Wing, Unique Rectangle, XY-Wing, W-Wing
-//   5 — Jellyfish, XYZ-Wing, Simple Coloring, BUG+1
+//   5 — Jellyfish, Finned Swordfish, XYZ-Wing, Simple Coloring, BUG+1, XY-Chain
 
 // 1..5 = hardest technique tier required to fully solve.
 // STUCK = no implemented technique makes progress (needs guessing / a technique
@@ -386,8 +386,10 @@ export type TechniqueId =
   | "unique-rectangle"
   | "simple-coloring"
   | "finned-x-wing"
+  | "finned-swordfish"
   | "w-wing"
-  | "bug-plus-one";
+  | "bug-plus-one"
+  | "xy-chain";
 
 export interface CellRC {
   r: number;
@@ -942,12 +944,12 @@ function findSimpleColoringMove(s: SolveState): SolveMove | null {
   return null;
 }
 
-// --- Finned X-Wing (and Sashimi) ---
-// An X-Wing on v in two rows (or columns), except for extra candidates, the fin, all in one box.
-// If no fin cell is v, the X-Wing is real and clears v from both cover columns; if one is, v is
-// gone from the rest of the fin's box. Cover-column cells inside that box, off the two rows, lose v
+// --- Finned X-Wing / Finned Swordfish (and Sashimi) ---
+// A fish on v in k rows (or columns), except for extra candidates, the fin, all in one box.
+// If no fin cell is v, the fish is real and clears v from its k cover columns; if one is, v is
+// gone from the rest of the fin's box. Cover-column cells inside that box, off the base rows, lose v
 // either way. Sashimi (a corner already missing) follows the same logic.
-function findFinnedXWingMove(s: SolveState): SolveMove | null {
+function findFinnedFishMove(s: SolveState, k: 2 | 3): SolveMove | null {
   for (const baseIsRow of [true, false]) {
     const cell = (u: number, p: number) => (baseIsRow ? idx(u, p) : idx(p, u));
     for (let v = 1; v <= 9; v++) {
@@ -956,37 +958,47 @@ function findFinnedXWingMove(s: SolveState): SolveMove | null {
           (p) => s.board[cell(u, p)] === 0 && s.cands[cell(u, p)]! & bit(v),
         ),
       );
-      for (let u1 = 0; u1 < 9; u1++) {
-        for (let u2 = u1 + 1; u2 < 9; u2++) {
-          if (pos[u1]!.length < 2 || pos[u2]!.length < 2) continue;
-          const union = [...new Set([...pos[u1]!, ...pos[u2]!])];
-          // Two columns is a plain X-Wing; fins fit in one box, so at most three more columns.
-          if (union.length < 3 || union.length > 5) continue;
-          for (const [p1, p2] of combos(union, 2) as Iterable<[number, number]>) {
-            const isCover = (p: number) => p === p1 || p === p2;
-            if (!pos[u1]!.some(isCover) || !pos[u2]!.some(isCover)) continue;
-            const fins = [u1, u2].flatMap((u) =>
-              pos[u]!.filter((p) => !isCover(p)).map((p) => cell(u, p)),
-            );
-            const finBox = boxOf(fins[0]!);
-            if (fins.some((i) => boxOf(i) !== finBox)) continue;
-            const elims: DigitAt[] = [];
-            for (const p of [p1, p2]) {
-              for (let u = 0; u < 9; u++) {
-                const i = cell(u, p);
-                if (u === u1 || u === u2 || boxOf(i) !== finBox) continue;
-                if (s.board[i] === 0 && s.cands[i]! & bit(v)) elims.push({ ...rc(i), num: v });
-              }
+      const lines = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((u) => pos[u]!.length >= 2);
+      const mask = pos.map((ps) => ps.reduce((m, p) => m | (1 << p), 0));
+      for (const base of combos(lines, k)) {
+        // k columns is a plain fish; fins fit in one box, so at most three more columns, and at
+        // most k columns outside the fin's stack. Checked on bitmasks first: this runs often.
+        let m = 0;
+        for (const u of base) m |= mask[u]!;
+        const n = popcount(m);
+        if (n <= k || n > k + 3) continue;
+        if ([0o7, 0o70, 0o700].every((stack) => popcount(m & ~stack) > k)) continue;
+        const union = [...new Set(base.flatMap((u) => pos[u]!))];
+        for (const cover of combos(union, k)) {
+          let c = 0;
+          for (const p of cover) c |= 1 << p;
+          if (!base.every((u) => mask[u]! & c)) continue;
+          // Fins in one box: in one stack of columns, on base rows of one band.
+          const fin = m & ~c;
+          if ([0o7, 0o70, 0o700].every((stack) => fin & ~stack)) continue;
+          const finRows = base.filter((u) => mask[u]! & fin);
+          if (finRows.some((u) => Math.floor(u / 3) !== Math.floor(finRows[0]! / 3))) continue;
+          const isCover = (p: number) => (c >> p) & 1;
+          const fins = base.flatMap((u) =>
+            pos[u]!.filter((p) => !isCover(p)).map((p) => cell(u, p)),
+          );
+          const finBox = boxOf(fins[0]!);
+          const elims: DigitAt[] = [];
+          for (const p of cover) {
+            for (let u = 0; u < 9; u++) {
+              const i = cell(u, p);
+              if (base.includes(u) || boxOf(i) !== finBox) continue;
+              if (s.board[i] === 0 && s.cands[i]! & bit(v)) elims.push({ ...rc(i), num: v });
             }
-            if (elims.length) {
-              return {
-                technique: "finned-x-wing",
-                tier: 4,
-                eliminations: elims,
-                triggers: [u1, u2].flatMap((u) => pos[u]!.map((p) => rc(cell(u, p)))),
-                digits: [v],
-              };
-            }
+          }
+          if (elims.length) {
+            return {
+              technique: k === 2 ? "finned-x-wing" : "finned-swordfish",
+              tier: k === 2 ? 4 : 5,
+              eliminations: elims,
+              triggers: base.flatMap((u) => pos[u]!.map((p) => rc(cell(u, p)))),
+              digits: [v],
+            };
           }
         }
       }
@@ -1068,6 +1080,58 @@ function findBugPlusOneMove(s: SolveState): SolveMove | null {
   return null;
 }
 
+// --- XY-Chain ---
+// Cells holding exactly two candidates, each seeing the next and sharing a digit with it. The
+// first cell holds z: if it isn't z it's its other digit, so the next cell isn't that digit and is
+// its own other one, and so on down the chain. If the last cell's other digit is z, one of the two
+// ends is z, and any cell seeing both loses it. Breadth-first from every start, so the shortest
+// chain wins; capped at 8 cells for speed. Three cells is an XY-Wing, which is tried first.
+const XY_CHAIN_MAX = 8;
+function findXYChainMove(s: SolveState): SolveMove | null {
+  const bivalue: number[] = [];
+  for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
+  const next = new Map(bivalue.map((i) => [i, bivalue.filter((j) => sees(i, j))]));
+  const other = (i: number, d: number) => maskDigits(s.cands[i]! & ~bit(d))[0]!;
+  let best: SolveMove | null = null;
+  for (const start of bivalue) {
+    for (const z of maskDigits(s.cands[start]!)) {
+      // Each path: its cells, and the digit its last cell must be when the first isn't z.
+      let paths = [{ cells: [start], d: other(start, z) }];
+      const seen = new Set([`${start}-${paths[0]!.d}`]);
+      for (let len = 2; len <= XY_CHAIN_MAX && paths.length; len++) {
+        if (best && len >= best.triggers.length) break;
+        const grown: typeof paths = [];
+        for (const { cells, d } of paths) {
+          for (const i of next.get(cells.at(-1)!)!) {
+            if (!(s.cands[i]! & bit(d)) || cells.includes(i)) continue;
+            const e = other(i, d);
+            if (seen.has(`${i}-${e}`)) continue;
+            seen.add(`${i}-${e}`);
+            const chain = [...cells, i];
+            if (e === z && len >= 3) {
+              const elims = PEERS[start]!.filter(
+                (p) => p !== i && s.board[p] === 0 && s.cands[p]! & bit(z) && sees(p, i),
+              );
+              if (elims.length && (!best || len < best.triggers.length))
+                best = {
+                  technique: "xy-chain",
+                  tier: 5,
+                  eliminations: elims.map((p) => ({ ...rc(p), num: z })),
+                  // The chain's cells in order, from one z end to the other: patternMarks reads them so.
+                  triggers: chain.map(rc),
+                  digits: [z],
+                };
+            }
+            grown.push({ cells: chain, d: e });
+          }
+        }
+        paths = grown;
+      }
+    }
+  }
+  return best;
+}
+
 // Easiest-first dispatch — mirrors the grading tier order.
 function findNextMove(s: SolveState): SolveMove | null {
   return (
@@ -1084,15 +1148,17 @@ function findNextMove(s: SolveState): SolveMove | null {
     findFishMove(s, 3) ??
     findTurbotMove(s, false) ??
     findTurbotMove(s, true) ??
-    findFinnedXWingMove(s) ??
+    findFinnedFishMove(s, 2) ??
     findUniqueRectangleMove(s) ??
     findXYWingMove(s) ??
     findWWingMove(s) ??
     findEmptyRectangleMove(s) ??
     findFishMove(s, 4) ??
+    findFinnedFishMove(s, 3) ??
     findXYZWingMove(s) ??
     findSimpleColoringMove(s) ??
-    findBugPlusOneMove(s)
+    findBugPlusOneMove(s) ??
+    findXYChainMove(s)
   );
 }
 
@@ -1185,7 +1251,7 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
         eliminateFish(s, 3) ||
         applyMove(s, findTurbotMove(s, false)) ||
         applyMove(s, findTurbotMove(s, true)) ||
-        applyMove(s, findFinnedXWingMove(s)) ||
+        applyMove(s, findFinnedFishMove(s, 2)) ||
         applyMove(s, findUniqueRectangleMove(s)) ||
         eliminateXYWing(s) ||
         applyMove(s, findWWingMove(s)) ||
@@ -1195,9 +1261,11 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
       tier: 5,
       run: () =>
         eliminateFish(s, 4) ||
+        applyMove(s, findFinnedFishMove(s, 3)) ||
         eliminateXYZWing(s) ||
         applyMove(s, findSimpleColoringMove(s)) ||
-        applyMove(s, findBugPlusOneMove(s)),
+        applyMove(s, findBugPlusOneMove(s)) ||
+        applyMove(s, findXYChainMove(s)),
     },
   ];
 
@@ -1243,7 +1311,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
   expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  // Only ~1.5% of digs grade 5, so Master digs longer to find one (~90% of the time).
+  // Only ~8% of 60-cell digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
   master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
 };
 
@@ -1342,9 +1410,11 @@ const SOLVER_RANK = {
   "w-wing": 17,
   "empty-rectangle": 18,
   jellyfish: 19,
-  "xyz-wing": 20,
-  "simple-coloring": 21,
-  "bug-plus-one": 22,
+  "finned-swordfish": 20,
+  "xyz-wing": 21,
+  "simple-coloring": 22,
+  "bug-plus-one": 23,
+  "xy-chain": 24,
 } satisfies Record<TechniqueId, number>;
 
 /**

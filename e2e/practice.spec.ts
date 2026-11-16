@@ -9,7 +9,7 @@ test("practising a technique starts a labelled game that doesn't touch progress"
   await page.getByRole("button", { name: "Academy" }).click();
   // Swordfish practically never occurs in random puzzles, so this also exercises the drill fallback.
   const card = page
-    .locator("h3", { hasText: "Swordfish" })
+    .locator("h3", { hasText: /^Swordfish$/ })
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')]");
   await card.getByRole("button", { name: "Practice a full puzzle" }).click();
 

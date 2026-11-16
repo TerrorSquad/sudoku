@@ -127,6 +127,8 @@ export function lineKind(move: Move): "row" | "col" | null {
       return fishSides(t, move.eliminations).kind;
     case "finned-x-wing":
       return finnedSides(move, 2)?.kind ?? null;
+    case "finned-swordfish":
+      return finnedSides(move, 3)?.kind ?? null;
     case "skyscraper":
       return t[0] && t[1] && t[0].r === t[1].r ? "row" : "col";
     case "empty-rectangle":
@@ -265,8 +267,10 @@ export function narrate(
       say("result", `fish.result.${kind}`, { ...lines, d: D, cells: cells(elCells) });
       break;
     }
-    case "finned-x-wing": {
-      const f = finnedSides(move, 2);
+    case "finned-x-wing":
+    case "finned-swordfish": {
+      const small = move.technique === "finned-x-wing";
+      const f = finnedSides(move, small ? 2 : 3);
       if (!f) break;
       const lines = {
         base: wordList(
@@ -279,7 +283,7 @@ export function narrate(
         ),
         b: f.box + 1,
         d: D,
-        fish: t("hint.move.x-wing.name"),
+        fish: t(`hint.move.${small ? "x-wing" : "swordfish"}.name`),
       };
       say("cells", `finned.${f.kind}`, { ...lines, fins: cells(f.fins) });
       say("links", `finned.link.${f.kind}`, lines);
@@ -406,6 +410,29 @@ export function narrate(
       two(k, e1, e2, xn);
       say("links", "w.link", { e1: cell(e1), e2: cell(e2), x, y, where: where(k, e1) });
       say("result", "w.result", { y });
+      seesBoth(d);
+      break;
+    }
+    case "xy-chain": {
+      const first = tr[0];
+      const last = tr.at(-1);
+      if (!first || !last) break;
+      // Each cell forced to its other digit in turn, starting from the first one's.
+      const forced: number[] = [];
+      let prev = d;
+      for (const q of tr) {
+        prev = marks(q).find((n) => n !== prev) ?? prev;
+        forced.push(prev);
+      }
+      say("cells", "chain.cells", { cells: cells(tr) });
+      say("links", "chain.link", {
+        first: cell(first),
+        last: cell(last),
+        e: digit(forced[0]!),
+        steps: digits(forced),
+        z: D,
+      });
+      say("result", "chain.result", { z: D });
       seesBoth(d);
       break;
     }

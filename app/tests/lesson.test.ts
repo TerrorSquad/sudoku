@@ -130,6 +130,68 @@ describe("lessons", () => {
     expect(instancesOf(lessonFromExample("pointing")!)).toHaveLength(1);
   });
 
+  it("accepts another XY-Chain on the same digit with as many cells", () => {
+    // Two 4-cell chains from 1 to 1: the lesson's, and one down columns 1 and 8.
+    const notes: number[][][] = Array.from({ length: 9 }, () =>
+      Array.from({ length: 9 }, () => []),
+    );
+    const set = (r: number, c: number, ns: number[]) => (notes[r]![c] = ns);
+    const lessonChain = [
+      { r: 0, c: 4 },
+      { r: 1, c: 5 },
+      { r: 6, c: 5 },
+      { r: 7, c: 3 },
+    ];
+    for (const [{ r, c }, ns] of lessonChain.map(
+      (p, i) =>
+        [
+          p,
+          [
+            [1, 3],
+            [3, 8],
+            [7, 8],
+            [1, 7],
+          ][i]!,
+        ] as const,
+    ))
+      set(r, c, ns);
+    set(2, 0, [1, 2]);
+    set(2, 7, [2, 4]);
+    set(5, 7, [4, 6]);
+    set(5, 0, [1, 6]);
+    // Cells that see both ends of a chain, holding 1 among three marks.
+    set(0, 3, [1, 4, 5]);
+    set(7, 4, [1, 5, 9]);
+    set(8, 0, [1, 5, 9]);
+    const eliminations = [
+      { r: 0, c: 3, num: 1 },
+      { r: 7, c: 4, num: 1 },
+    ];
+    const lesson = {
+      technique: "xy-chain",
+      board: Array.from({ length: 9 }, () => Array<number>(9).fill(0)),
+      notes,
+      pattern: lessonChain,
+      placement: null,
+      eliminations,
+      digits: [1],
+      unit: null,
+      move: { technique: "xy-chain", tier: 5, triggers: lessonChain, eliminations, digits: [1] },
+    } satisfies Lesson;
+    expect(instancesOf(lesson)).toEqual([
+      { pattern: lessonChain, eliminations },
+      {
+        pattern: [
+          { r: 2, c: 0 },
+          { r: 2, c: 7 },
+          { r: 5, c: 7 },
+          { r: 5, c: 0 },
+        ],
+        eliminations: [{ r: 8, c: 0, num: 1 }],
+      },
+    ]);
+  });
+
   it("a single's pattern is the cell it fills, and a pointing pair's unit is its box", async () => {
     const single = lessonFromPuzzle(
       (await generatePracticePuzzle("naked-single", makeRng(3))).board,
