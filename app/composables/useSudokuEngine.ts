@@ -373,13 +373,13 @@ export function useSudokuEngine(
     return at && move ? { at: { r: at.r, c: at.c }, move } : null;
   }
 
-  function triggerComplexHint(hintStatus: { value: string }, hintBody: { value: string }) {
+  /** Starts the next hint; returns the status line to announce. */
+  function triggerComplexHint(): string {
     const wrong = findWrongEntry();
     const move = wrong ? null : nextUsefulHint();
     if (!wrong && !move) {
       activeMove.value = null;
-      hintStatus.value = t("hint.move.none");
-      return;
+      return t("hint.move.none");
     }
     activeMove.value = move;
     const hint = wrong ? buildWrongEntryHint(wrong) : buildHintFromMove(move!);
@@ -388,9 +388,7 @@ export function useSudokuEngine(
     // The selection's yellow would cover a hint cell's colour, so clear it while the hint shows.
     selectedCell.value = null;
     updateStepHighlights();
-
-    hintStatus.value = hint.title;
-    hintBody.value = hint.steps[0]!.description;
+    return hint.title;
   }
 
   function nextHintStep(onComplete: () => void) {

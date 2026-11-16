@@ -14,9 +14,13 @@ import BasicsLesson from "./components/BasicsLesson.vue";
 import ControlPanel from "./components/ControlPanel.vue";
 import CustomImport from "./components/CustomImport.vue";
 import DifficultySelector from "./components/DifficultySelector.vue";
+import EndModal from "./components/EndModal.vue";
 import GameDashboard from "./components/GameDashboard.vue";
+import MainMenu from "./components/MainMenu.vue";
 import Numpad from "./components/Numpad.vue";
+import ResumePrompt from "./components/ResumePrompt.vue";
 import SettingsScreen from "./components/SettingsScreen.vue";
+import ShortcutList from "./components/ShortcutList.vue";
 import SideExplanationPanel from "./components/SideExplanationPanel.vue";
 import SpotIt from "./components/SpotIt.vue";
 import StatsScreen from "./components/StatsScreen.vue";
@@ -35,11 +39,10 @@ import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
-import { encodeChallenge } from "./utils/challenge";
 import { focusCell, stepCell } from "./utils/gridNav";
 import { haptic } from "./utils/haptics";
 import { generateLesson, unitNumber, type Lesson } from "./utils/lesson";
-import { levelBand, levelFor } from "./utils/level";
+import { levelFor } from "./utils/level";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "./utils/patternMarks";
 import { generatePracticePuzzle } from "./utils/practice";
 import {
@@ -52,7 +55,6 @@ import {
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
 import { brokenRecords, type NewRecord, type Snapshot } from "./utils/records";
-import { dueToday } from "./utils/review";
 import { readJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import {
@@ -67,7 +69,6 @@ import {
   playWin,
 } from "./utils/sound";
 import { SPOT_BEST_KEY, readSpotBest } from "./utils/spotIt";
-import { starsFor } from "./utils/stars";
 import {
   onBoard,
   restorePlacements,
@@ -99,7 +100,6 @@ const {
   zen,
   boardTheme,
   uiScale,
-  basicsPrompt,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
@@ -239,15 +239,6 @@ function say(message: string) {
   announcement.value = "";
   nextTick(() => (announcement.value = message));
 }
-const hintStatus = {
-  get value() {
-    return announcement.value;
-  },
-  set value(message: string) {
-    say(message);
-  },
-};
-const hintBody = ref<string>("");
 const currentScreen = ref<
   | "menu"
   | "difficulty"
@@ -377,126 +368,6 @@ function recordSnapshot(): Snapshot {
   };
 }
 
-function recordLine(r: NewRecord): string {
-  const show = (v: number | string) =>
-    r.kind === "fastest"
-      ? timer.formatTime(v as number)
-      : r.kind === "noHint"
-        ? t(`difficulty.${v}`)
-        : v;
-  return t(`records.new.${r.kind}`, {
-    difficulty: t(`difficulty.${statsKey(activeDifficulty.value, isDailyMode.value)}`),
-    value: show(r.value),
-    was: show(r.was),
-  });
-}
-
-// A clean win: no mistakes and no hints (a nudge counts as one). Zen too: it's how you played.
-const perfect = computed(() => isWinState.value && mistakes.value === 0 && hintsUsed.value === 0);
-const winStars = computed(() => starsFor(mistakes.value, hintsUsed.value));
-const scoreRows = computed(() => {
-  const s = lastScore.value;
-  if (!s) return [];
-  const good = "text-emerald-700 dark:text-emerald-400";
-  return [
-    { key: "scoreBase", value: s.base, cls: "text-zinc-800 dark:text-zinc-200" },
-    { key: "scoreSpeed", value: s.speedBonus, cls: good },
-    { key: "scoreFlawless", value: s.flawlessBonus, cls: good },
-    {
-      key: "scoreMistakePenalty",
-      value: -s.mistakePenalty,
-      cls: "text-rose-600 dark:text-rose-400",
-    },
-    { key: "scoreHintPenalty", value: -s.hintPenalty, cls: "text-amber-700 dark:text-amber-400" },
-  ].filter((row, i) => !i || row.value);
-});
-
-// The win modal plays in steps once it has faded in: each earned star with a tick, then each
-// score line as the total counts up through it, then the stamp. The DOM holds the real numbers
-// throughout (unrevealed parts are only transparent). A tap or key skips to the end, and reduced
-// motion starts there.
-const WIN_STEPS_AT_MS = 1100; // as .modal-delay finishes fading the result in
-const WIN_STEP_MS = 160;
-const winStepCount = computed(
-  () => winStars.value + scoreRows.value.length + (perfect.value ? 1 : 0),
-);
-const winStep = ref(0);
-// The total has landed: what hangs off it (a new best, records, the lifetime line) shows now.
-const scoreLanded = computed(() => winStep.value >= winStars.value + scoreRows.value.length);
-const winSkipped = ref(false);
-const displayedScore = ref<number>(0); // the visual total; the real one sits beside it, sr-only
-let winTimers: ReturnType<typeof setTimeout>[] = [];
-let countFrame = 0;
-
-function stopWinSteps() {
-  winTimers.forEach(clearTimeout);
-  winTimers = [];
-  cancelAnimationFrame(countFrame);
-}
-
-function startWinSteps() {
-  stopWinSteps();
-  winStep.value = 0;
-  winSkipped.value = false;
-  displayedScore.value = 0;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    skipWinSteps();
-    if (perfect.value) cue("stamp");
-    return;
-  }
-  for (let k = 1; k <= winStepCount.value; k++)
-    winTimers.push(setTimeout(() => winStepTo(k), WIN_STEPS_AT_MS + (k - 1) * WIN_STEP_MS));
-}
-
-function winStepTo(k: number) {
-  winStep.value = k;
-  const rows = scoreRows.value;
-  const row = k - winStars.value - 1;
-  if (k <= winStars.value) cue("tick", k);
-  else if (row < rows.length) {
-    const sum = rows.slice(0, row + 1).reduce((a, r) => a + r.value, 0);
-    // Penalties can take the running sum below zero; the real total is floored, so it lands there.
-    countScoreTo(row === rows.length - 1 ? lastScore.value!.total : Math.max(0, sum));
-  } else cue("stamp");
-}
-
-function skipWinSteps() {
-  if (winStep.value >= winStepCount.value) return;
-  stopWinSteps();
-  winSkipped.value = true;
-  winStep.value = winStepCount.value;
-  displayedScore.value = lastScore.value?.total ?? 0;
-}
-
-function countScoreTo(to: number) {
-  cancelAnimationFrame(countFrame);
-  const from = displayedScore.value;
-  const start = performance.now();
-  const tick = (now: number) => {
-    const p = Math.min(1, (now - start) / WIN_STEP_MS);
-    displayedScore.value = Math.round(from + (to - from) * (1 - (1 - p) ** 3));
-    if (p < 1) countFrame = requestAnimationFrame(tick);
-  };
-  countFrame = requestAnimationFrame(tick);
-}
-
-// Lifetime per-technique usage from localStorage; refreshed when the win modal opens
-const techStatsTotals = computed(() => {
-  void showModal.value;
-  return techStats.getAll();
-});
-
-// Depend on currentScreen so these refresh when returning to the menu
-// after completing the daily (localStorage itself is not reactive).
-const dailyRecord = computed(() => {
-  void currentScreen.value;
-  return dailyPuzzle.getRecord();
-});
-// Lifetime score drives the level; refreshed on screen change like the daily record above.
-const playerLevel = computed(() => {
-  void currentScreen.value;
-  return levelFor(score.getStats().total);
-});
 // The time to beat, read when a game opens (0 hides it): the fastest Daily in the Daily, else
 // this difficulty's best. Custom and practice boards vary too much for a best to mean anything.
 const bestTime = computed(() => {
@@ -506,36 +377,10 @@ const bestTime = computed(() => {
   if (isDailyMode.value) return dailyPuzzle.getBestTime();
   return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
 });
-const dailyStreak = computed(() => {
-  void currentScreen.value;
-  return dailyPuzzle.getStreakState();
-});
 // Lessons finished, read when the screen changes (a lesson ends on another screen), not per move.
 const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
-});
-const pathDone = computed(
-  () => ACADEMY_TECHNIQUES.filter((tech) => lessonsDone.value.includes(tech.id)).length,
-);
-// Techniques due in the Daily review, for the menu's Academy tile.
-const reviewDue = computed(() => {
-  void currentScreen.value;
-  return dueToday(techniquePath.getReview(), localDateKey()).length;
-});
-// "New to sudoku?" on the menu: a fresh player who hasn't dismissed it. Fresh: no win anywhere
-// (the unlock count, so Zen wins count too), no technique lesson and no basics lesson done.
-const showBasicsPrompt = computed(() => {
-  void currentScreen.value;
-  const won = Object.values(score.unlockWins()).some(
-    (e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0,
-  );
-  return (
-    basicsPrompt.value &&
-    !won &&
-    lessonsDone.value.length === 0 &&
-    techniquePath.getBasics().length === 0
-  );
 });
 
 // Auto-save on every meaningful state change while a game is active.
@@ -663,7 +508,6 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
       newRecords.value = brokenRecords(recordsBefore, recordSnapshot()).slice(0, 2);
     }
     if (!practised) saveToCloud();
-    startWinSteps();
     // After the score is safe: a damaged log must cost the stuck moments, not the win.
     try {
       if (!gameZen.value) stuck.value = stuckMoments(initialBoard.value, placements.value);
@@ -694,8 +538,6 @@ function announceUnlocks(lockedBefore: Difficulty[]) {
   }
 }
 
-const GAME_URL = "https://wavedash.com/games/sudoku-pro";
-
 // The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
 // the Daily, which has one puzzle a day). None for practice and custom boards.
 const justUnlocked = ref<Difficulty | null>(null);
@@ -704,48 +546,6 @@ const nextLevel = computed<Difficulty | null>(() => {
   if (justUnlocked.value) return justUnlocked.value;
   return isDailyMode.value ? "medium" : activeDifficulty.value;
 });
-// Share a win: the system share sheet where there is one (phones), else the clipboard.
-const shared = ref(false);
-async function shareWin() {
-  const lines = [
-    `${t("menu.title")} · ${difficultyLabel.value}`,
-    [
-      gameZen.value ? null : `⏱ ${timer.formatTime(timer.timerSeconds.value)}`,
-      "★".repeat(winStars.value) + "☆".repeat(3 - winStars.value),
-      t("modal.shareMistakes", { n: mistakes.value }),
-      t("modal.shareHints", { n: hintsUsed.value }),
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    // A friend pastes the code into Your puzzle to play this board against this time. Not a
-    // practice board: a drill starts with notes the code can't carry, so the time isn't comparable.
-    practiceTechnique.value
-      ? null
-      : t(gameZen.value ? "modal.shareChallengeZen" : "modal.shareChallenge", {
-          code: encodeChallenge(initialBoard.value, gameZen.value ? 0 : timer.timerSeconds.value),
-        }),
-    GAME_URL,
-  ];
-  const text = lines.filter(Boolean).join("\n");
-  const copy = async () => {
-    await navigator.clipboard.writeText(text);
-    shared.value = true;
-    setTimeout(() => (shared.value = false), 2000);
-  };
-  try {
-    if (!navigator.share) return await copy();
-    try {
-      await navigator.share({ text });
-    } catch (e) {
-      // A dismissed sheet is the player's choice; anything else (an iframe without web-share
-      // permission says NotAllowedError) falls back to the clipboard.
-      if ((e as Error).name !== "AbortError") await copy();
-    }
-  } catch {
-    // A blocked clipboard: nothing more to try.
-  }
-}
-
 // Starting: the modal stays up (its button busy) until the board is ready, so the won board is
 // never live again in between. A saved game at that level goes through the usual resume prompt.
 const nextLoading = ref(false);
@@ -778,6 +578,14 @@ function recordPracticeWin(id: TechniqueId) {
   }
 }
 
+// Ends the game if the board is solved (a placement, a hint, Finish or redo); `message` replaces
+// the usual one.
+function checkWin(message?: string) {
+  if (!checkWinCondition()) return false;
+  triggerLocalModal(t("modal.win"), message ?? winMessage(), true);
+  return true;
+}
+
 // Zen games never mention the clock.
 function winMessage() {
   return gameZen.value
@@ -789,7 +597,6 @@ function winMessage() {
 }
 
 function closeModal() {
-  stopWinSteps();
   showModal.value = false;
   finishing.value = false; // a Finish-button win ends with it set
   justUnlocked.value = null;
@@ -812,26 +619,39 @@ function openLesson(id: TechniqueId) {
   handleLesson(id);
 }
 
-function resumeSavedGame(s: GameSave) {
-  practiceTechnique.value = null;
-  isDailyMode.value = !!s.daily;
-  dailyDate = s.daily ?? "";
-  restoreGame(s);
-  activeDifficulty.value = s.difficulty;
-  mistakes.value = s.mistakes;
-  hintStatus.value = t("game.ready");
-  hintBody.value = "";
+// Every way into a game: `load` puts the board in; a resumed save brings its counts and clock.
+function beginGame(
+  difficulty: Difficulty,
+  load: () => void,
+  {
+    daily = "",
+    zen: zenGame = false,
+    practice = null,
+    save,
+  }: { daily?: string; zen?: boolean; practice?: TechniqueId | null; save?: GameSave } = {},
+) {
+  practiceTechnique.value = practice;
+  isDailyMode.value = !!daily;
+  dailyDate = daily;
+  gameZen.value = zenGame;
+  load();
+  activeDifficulty.value = difficulty;
+  mistakes.value = save?.mistakes ?? 0;
+  say(t(save ? "game.ready" : "game.newBoard"));
   mistakeExplainer.value = "";
   flashCells.value = [];
   notesMode.value = false;
-  hintsUsed.value = s.hintsUsed ?? 0;
-  gameZen.value = s.zen ?? false;
+  hintsUsed.value = save?.hintsUsed ?? 0;
   techniqueLog.value = [];
-  placements.value = restorePlacements(s);
+  placements.value = save ? restorePlacements(save) : [];
   timer.resetTimer();
-  timer.timerSeconds.value = s.timerSeconds;
+  if (save) timer.timerSeconds.value = save.timerSeconds;
   timer.startTimer();
   currentScreen.value = "game";
+}
+
+function resumeSavedGame(s: GameSave) {
+  beginGame(s.difficulty, () => restoreGame(s), { daily: s.daily, zen: s.zen, save: s });
 }
 
 // A board still generating when the player picks again, or leaves the screen, is dropped.
@@ -845,24 +665,8 @@ async function handleStartGame(
   const generated = await takePuzzle(level);
   if (token !== startToken) return;
   ready();
-  practiceTechnique.value = null;
-  isDailyMode.value = false;
-  gameZen.value = zenGame;
   gameSave.clearDifficulty(level);
-  activeDifficulty.value = level;
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  startNewGame(level, generated);
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame(level, () => startNewGame(level, generated), { zen: zenGame });
 }
 
 // A difficulty already has a saved game — ask before silently overwriting it.
@@ -1004,7 +808,7 @@ function handleInputNumber(num: number) {
                 : inBox
                   ? t("game.whereBox")
                   : t("game.whereCell");
-            hintStatus.value = t("game.conflictWith", { where });
+            say(t("game.conflictWith", { where }));
             const first = conflicts[0]!;
             mistakeExplainer.value = t("game.whyConflict", {
               num: digitLabel(num, colorMode.value, t),
@@ -1012,7 +816,7 @@ function handleInputNumber(num: number) {
               c: first.c + 1,
             });
           } else {
-            hintStatus.value = t("game.wrongDigit");
+            say(t("game.wrongDigit"));
             mistakeExplainer.value = t("game.whyWrong", {
               num: digitLabel(num, colorMode.value, t),
             });
@@ -1031,8 +835,7 @@ function handleInputNumber(num: number) {
         logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
         // A winning move gets the win's wave and cue alone, not three stacked on each other.
-        if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
-        else if (highlightErrors.value) flashCompletedUnits(r, c);
+        if (!checkWin() && highlightErrors.value) flashCompletedUnits(r, c);
       }
     }
   }
@@ -1070,35 +873,34 @@ function showApplied(move: SolveMove | null) {
   appliedTimer = setTimeout(() => (appliedMarks.value = []), 1400);
 }
 
+// Stepped through, or applied at once: the hint's move goes in the log and costs a hint, then the
+// game is won or the status line says what changed.
+function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
+  const tech = move?.technique; // none for a wrong-entry hint
+  const placed = move?.placement;
+  showApplied(move);
+  if (placed) logPlacement(placed);
+  if (tech) {
+    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    techStats.record(tech);
+  }
+  chargeHint();
+  if (placed) cue("place", placed.num);
+  if (!checkWin(winMsg))
+    say(t(!tech ? "game.wrongCleared" : placed ? applied : "game.candidatesCleared"));
+}
+
 function handleNextStep() {
-  const move = engine.activeMove.value;
-  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placement = engine.activeMove.value?.placement;
-  const placed = placement?.num;
-  nextHintStep(() => {
-    showApplied(move);
-    if (placement) logPlacement(placement);
-    if (tech) {
-      if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
-      techStats.record(tech);
-    }
-    chargeHint();
-    if (placed) cue("place", placed);
-    if (checkWinCondition()) {
-      triggerLocalModal(
-        t("modal.win"),
-        gameZen.value
-          ? winMessage()
-          : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
-        true,
-      );
-    } else {
-      hintStatus.value = t(
-        !tech ? "game.wrongCleared" : placed ? "game.cellFilled" : "game.candidatesCleared",
-      );
-      hintBody.value = "";
-    }
-  });
+  const move = engine.activeMove.value; // gone once the hint is applied
+  nextHintStep(() =>
+    afterHint(
+      move,
+      "game.cellFilled",
+      gameZen.value
+        ? undefined
+        : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
+    ),
+  );
 }
 
 // "Nudge first" hint style: the first press names the technique and the row, column or box its
@@ -1163,32 +965,14 @@ function handleTriggerHint() {
   }
   nudge.value = null;
   cue("hint");
-  triggerComplexHint(hintStatus, hintBody);
+  say(triggerComplexHint());
 }
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const move = engine.activeMove.value;
-  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placement = engine.activeMove.value?.placement;
-  const placed = placement?.num;
-  chargeHint();
-  if (placement) logPlacement(placement);
-  if (tech) {
-    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
-    techStats.record(tech);
-  }
   engine.applyComplexHint();
-  showApplied(move);
-  if (placed) cue("place", placed);
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
-  } else {
-    hintStatus.value = t(
-      !tech ? "game.wrongCleared" : placed ? "game.instantApplied" : "game.candidatesCleared",
-    );
-    hintBody.value = "";
-  }
+  afterHint(move, "game.instantApplied", t("modal.winInstantMsg"));
 }
 
 // Finish: with only a few cells left, all of them plain singles from here (by the solver, not the
@@ -1230,9 +1014,7 @@ async function handleFinish() {
     if (!instant || !i) cue("place", p.num);
     runFlash([...flashCells.value, { r: p.r, c: p.c, delay: 0 }]);
   }
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), winMessage(), true);
-  } else {
+  if (!checkWin()) {
     // Shouldn't happen (the board is inert meanwhile), but never leave the game locked.
     finishing.value = false;
     timer.startTimer();
@@ -1241,7 +1023,7 @@ async function handleFinish() {
 
 function handleAutoFillNotes() {
   engine.autoFillNotes();
-  hintStatus.value = t("game.notesFilled");
+  say(t("game.notesFilled"));
 }
 
 // Only today's Daily can be resumed; one saved on an earlier day is dropped.
@@ -1254,24 +1036,9 @@ function handleStartDaily() {
 
 function startDaily() {
   gameSave.clearDifficulty("daily");
-  dailyDate = dailyPuzzle.todayKey();
-  practiceTechnique.value = null;
-  gameZen.value = false;
-  isDailyMode.value = true;
-  activeDifficulty.value = "medium";
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  loadCustomBoard(dailyPuzzle.getBoard());
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame("medium", () => loadCustomBoard(dailyPuzzle.getBoard()), {
+    daily: dailyPuzzle.todayKey(),
+  });
 }
 
 // A friend's time from a challenge code (Your puzzle), shown as the time to beat; 0 = none.
@@ -1282,24 +1049,8 @@ function handleLoadCustomPuzzle(
   challengeSeconds = 0,
 ) {
   challengeTarget.value = practice ? 0 : challengeSeconds;
-  practiceTechnique.value = practice;
   practiceWeek.value = null;
-  isDailyMode.value = false;
-  gameZen.value = false;
-  activeDifficulty.value = "custom";
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  loadCustomBoard(board);
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame("custom", () => loadCustomBoard(board), { practice });
 }
 
 let practiceToken = 0;
@@ -1321,9 +1072,9 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
         const [r, c] = key.split("-").map(Number) as [number, number];
         for (const d of digits) notesBoard.value[r]![c]![d] = true;
       }
-      hintStatus.value = t("practice.drill");
+      say(t("practice.drill"));
     } else {
-      hintStatus.value = t("practice.puzzle");
+      say(t("practice.puzzle"));
     }
   } finally {
     practiceLoading.value = false;
@@ -1366,25 +1117,9 @@ function redo() {
   if (showModal.value || practiceLoading.value) return;
   clearApplied();
   redoMove();
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), winMessage(), true);
-  }
+  checkWin();
 }
 
-// The game's keys: the wide-screen sidebar lists them, and ? opens the same list anywhere.
-const SHORTCUTS = [
-  { key: "↑←↓→", desc: "sidebar.shortcutMove" },
-  { key: "WASD", desc: "sidebar.shortcutMove" },
-  { key: "1–9", desc: "sidebar.shortcutInputNumber" },
-  { key: "Backspace", desc: "sidebar.shortcutEraseCell" },
-  { key: "N", desc: "sidebar.shortcutToggleNotes" },
-  { key: "H", desc: "sidebar.shortcutGetHint" },
-  { key: "F", desc: "sidebar.shortcutAutoFillNotes" },
-  { key: "P", desc: "sidebar.shortcutPause" },
-  { key: "Ctrl+Z", desc: "sidebar.shortcutUndo" },
-  { key: "Ctrl+Y", desc: "sidebar.shortcutRedo" },
-  { key: "?", desc: "sidebar.shortcutHelp" },
-] as const;
 const shortcutsOpen = ref(false);
 const shortcutsSheet = ref<HTMLDialogElement | null>(null);
 watch(shortcutsOpen, (open) => {
@@ -1392,31 +1127,8 @@ watch(shortcutsOpen, (open) => {
   else shortcutsSheet.value?.close();
 });
 
-// On a settled end screen (not over a button, whose own Enter wins): Enter plays the next
-// puzzle, Escape closes.
-function handleModalKey(e: KeyboardEvent) {
-  const target = e.target as HTMLElement;
-  const press = e.key === "Enter" || e.key === " ";
-  if (press && target.closest?.("[data-end-modal] button")) return; // that button's own click
-  // A button behind the overlay kept focus (the numpad, Finish): it mustn't press.
-  if (press) e.preventDefault();
-  const settled = !isWinState.value || winStep.value >= winStepCount.value;
-  if (!settled || e.repeat) return;
-  if (e.key === "Enter" && nextLevel.value) {
-    e.preventDefault();
-    handleNextPuzzle();
-  } else if (e.key === "Escape") {
-    handleModalClose();
-  }
-}
-
 function handleKeyDown(e: KeyboardEvent) {
-  if (showModal.value) {
-    handleModalKey(e);
-    // A key still held from the winning move, or pressed before the steps start, skips nothing.
-    if (!e.repeat && winStep.value) skipWinSteps();
-    return;
-  }
+  if (showModal.value) return; // EndModal's own keys
   // The dialogs' own state: Esc closes them at once, their close event (and our refs) come later.
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
@@ -1537,7 +1249,6 @@ onUnmounted(() => {
   document.removeEventListener("visibilitychange", handlePageHidden);
   if (flashTimeout) clearTimeout(flashTimeout);
   clearTimeout(appliedTimer);
-  stopWinSteps();
 });
 </script>
 
@@ -1547,194 +1258,18 @@ onUnmounted(() => {
       class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
       <Transition name="screen" mode="out-in" @before-enter="applyUiScale">
-        <!-- MENU: the menu is itself a 3×3 box, New game filling four of its cells. -->
-        <div
+        <!-- MENU -->
+        <MainMenu
           v-if="currentScreen === 'menu'"
-          class="relative flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12"
-        >
-          <button
-            @click="currentScreen = 'settings'"
-            :aria-label="$t('menu.settings')"
-            :title="$t('menu.settings')"
-            class="tile absolute top-4 right-4 grid h-11 w-11 place-items-center text-zinc-600 dark:text-zinc-300"
-          >
-            <AppIcon
-              class="h-5 w-5"
-              path="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a7.65 7.65 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </button>
-
-          <div class="text-center">
-            <h1
-              class="wordmark relative isolate inline-block text-5xl font-extrabold tracking-tight text-zinc-900 sm:text-6xl dark:text-zinc-50"
-            >
-              {{ $t("menu.title") }}
-            </h1>
-            <p class="mt-3 text-sm text-zinc-500">
-              {{ $t("menu.subtitle") }}
-            </p>
-            <!-- Level / progress -->
-            <div class="mx-auto mt-5 w-full max-w-[15rem]" data-testid="level-badge">
-              <p class="text-xs font-bold text-violet-700 dark:text-violet-300">
-                {{ $t("level.label", { n: playerLevel.level }) }}
-                <span class="font-semibold text-zinc-500"
-                  >· {{ $t(`level.title.${levelBand(playerLevel.level)}`) }}</span
-                >
-              </p>
-              <div
-                class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
-              >
-                <div
-                  class="h-full rounded-full bg-violet-600"
-                  :style="{ width: `${Math.round(playerLevel.progress * 100)}%` }"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="showBasicsPrompt"
-            data-testid="basics-prompt"
-            class="panel flex w-full max-w-[26rem] items-center gap-2 py-1.5 pr-1.5 pl-4"
-          >
-            <button
-              @click="openBasics('rule')"
-              class="min-w-0 flex-1 py-1.5 text-left text-sm font-bold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
-            >
-              {{ $t("basics.prompt") }}
-            </button>
-            <button
-              @click="basicsPrompt = false"
-              :aria-label="$t('basics.dismiss')"
-              :title="$t('basics.dismiss')"
-              class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
-              <AppIcon class="h-4 w-4" path="M6 18L18 6M6 6l12 12" />
-            </button>
-          </div>
-
-          <nav
-            :aria-label="$t('menu.title')"
-            class="tray grid aspect-square w-full max-w-[26rem] grid-cols-3 grid-rows-3 gap-2 p-2 sm:gap-2.5 sm:p-2.5"
-          >
-            <button
-              @click="currentScreen = 'difficulty'"
-              class="tile tile-primary relative col-span-2 row-span-2 flex flex-col justify-between overflow-hidden p-4 text-left sm:p-5"
-            >
-              <!-- A faint corner of a puzzle, so the tile says what it starts. -->
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 90 90"
-                class="pointer-events-none absolute -top-3 -right-3 h-32 w-32 opacity-20 sm:h-40 sm:w-40"
-                fill="none"
-                stroke="currentColor"
-              >
-                <rect x="1" y="1" width="88" height="88" rx="6" stroke-width="2.5" />
-                <path d="M31 1v88M59 1v88M1 31h88M1 59h88" stroke-width="1.2" />
-                <g
-                  fill="currentColor"
-                  stroke="none"
-                  font-family="var(--font-game)"
-                  font-weight="800"
-                  font-size="19"
-                  text-anchor="middle"
-                >
-                  <text x="16" y="23">5</text>
-                  <text x="44" y="23">3</text>
-                  <text x="16" y="51">6</text>
-                  <text x="74" y="51">9</text>
-                  <text x="44" y="79">8</text>
-                  <text x="74" y="79">1</text>
-                </g>
-              </svg>
-              <AppIcon
-                class="h-9 w-9 opacity-90"
-                path="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-              <span>
-                <span
-                  class="block font-display text-2xl leading-tight font-extrabold sm:text-3xl"
-                  >{{ $t("menu.start") }}</span
-                >
-                <span class="mt-1 block text-xs font-medium opacity-80">{{
-                  $t("menu.startHint")
-                }}</span>
-              </span>
-            </button>
-
-            <button
-              @click="handleStartDaily"
-              :disabled="!!dailyRecord"
-              :class="dailyRecord ? '' : 'tile-amber'"
-              class="tile menu-cell"
-            >
-              <AppIcon
-                class="h-5 w-5"
-                path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-              <span>
-                <span class="block">{{
-                  dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
-                }}</span>
-                <span
-                  v-if="dailyStreak.current > 0"
-                  class="block text-[0.6875rem] font-semibold opacity-80"
-                  >🔥 {{ $t("menu.dailyStreak", { n: dailyStreak.current }) }}
-                  <template v-if="dailyStreak.freezes"
-                    >· ❄ {{ dailyStreak.freezes }}</template
-                  ></span
-                >
-              </span>
-            </button>
-
-            <button
-              @click="
-                academyFocus = null;
-                academyFromGame = false;
-                currentScreen = 'academy';
-              "
-              class="tile menu-cell"
-            >
-              <AppIcon
-                class="h-5 w-5 text-violet-600 dark:text-violet-300"
-                path="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-              <span>
-                <span class="block">{{ $t("menu.academy") }}</span>
-                <span class="block text-[0.6875rem] font-semibold opacity-80"
-                  >{{ $t("path.menu", { done: pathDone, total: ACADEMY_TECHNIQUES.length }) }}
-                  <span v-if="reviewDue" data-testid="review-badge">
-                    · {{ $t("review.menu", { n: reviewDue }) }}</span
-                  ></span
-                >
-              </span>
-            </button>
-
-            <button @click="currentScreen = 'stats'" class="tile menu-cell">
-              <AppIcon
-                class="h-5 w-5 text-violet-600 dark:text-violet-300"
-                path="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-              <span>{{ $t("menu.stats") }}</span>
-            </button>
-
-            <button @click="currentScreen = 'achievements'" class="tile menu-cell">
-              <AppIcon
-                class="h-5 w-5 text-violet-600 dark:text-violet-300"
-                path="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
-              />
-              <span>{{ $t("menu.achievements") }}</span>
-            </button>
-
-            <button @click="currentScreen = 'custom-import'" class="tile menu-cell">
-              <AppIcon
-                class="h-5 w-5 text-violet-600 dark:text-violet-300"
-                path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              />
-              <span>{{ $t("menu.customPuzzle") }}</span>
-            </button>
-          </nav>
-        </div>
+          @go="(screen) => (currentScreen = screen)"
+          @daily="handleStartDaily"
+          @academy="
+            academyFocus = null;
+            academyFromGame = false;
+            currentScreen = 'academy';
+          "
+          @basics="openBasics('rule')"
+        />
 
         <!-- DIFFICULTY -->
         <DifficultySelector
@@ -1847,15 +1382,7 @@ onUnmounted(() => {
               <p class="mb-4 text-xs font-bold text-zinc-600 dark:text-zinc-400">
                 {{ $t("sidebar.keyboard") }}
               </p>
-              <ul class="space-y-3">
-                <li v-for="(s, i) in SHORTCUTS" :key="i" class="flex items-center gap-3">
-                  <kbd
-                    class="min-w-[3.75rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                    >{{ s.key }}</kbd
-                  >
-                  <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ $t(s.desc) }}</span>
-                </li>
-              </ul>
+              <ShortcutList />
             </div>
 
             <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
@@ -2090,15 +1617,7 @@ onUnmounted(() => {
         <h2 class="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-50">
           {{ $t("sidebar.keyboard") }}
         </h2>
-        <ul class="space-y-2.5">
-          <li v-for="(s, i) in SHORTCUTS" :key="i" class="flex items-center gap-3">
-            <kbd
-              class="min-w-[4.5rem] shrink-0 border border-zinc-300 bg-zinc-100 px-2 py-1 text-center font-game text-xs font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              >{{ s.key }}</kbd
-            >
-            <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ $t(s.desc) }}</span>
-          </li>
-        </ul>
+        <ShortcutList sheet />
         <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
           {{ $t("modal.close") }}
         </button>
@@ -2137,351 +1656,51 @@ onUnmounted(() => {
       />
 
       <!-- MODAL -->
-      <div
+      <EndModal
         v-if="showModal"
-        data-end-modal
-        data-pad-scope
-        :class="[isWinState ? 'modal-delay' : '', { 'win-done': winSkipped }]"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-        @pointerdown="winStep && skipWinSteps()"
-      >
-        <div
-          class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
-          :class="isWinState ? '!border-t-emerald-500' : '!border-t-rose-500'"
-        >
-          <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-            {{ modalTitle }}
-          </h3>
-          <p class="mb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {{ modalMessage }}
-          </p>
-
-          <!-- Star rating: each earned star fills in on its own step -->
-          <div
-            v-if="isWinState"
-            class="mb-4 flex justify-center gap-1.5"
-            role="img"
-            :aria-label="$t('modal.stars', { n: winStars })"
-          >
-            <span
-              v-for="n in 3"
-              :key="n"
-              :class="
-                n <= winStars && winStep >= n
-                  ? 'star-pop text-amber-400'
-                  : 'text-zinc-300 dark:text-zinc-700'
-              "
-              class="text-3xl leading-none"
-              aria-hidden="true"
-              >★</span
-            >
-          </div>
-
-          <!-- A clean win gets the teacher's red-pen stamp, last -->
-          <div v-if="perfect" class="mb-4 flex justify-center">
-            <span
-              data-testid="perfect-stamp"
-              class="perfect-stamp"
-              :class="winStep >= winStepCount ? 'stamp-in' : 'opacity-0'"
-              >{{ $t("modal.perfect") }}</span
-            >
-          </div>
-
-          <p
-            v-if="isWinState && reachedLevel"
-            class="score-badge mb-4 border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-700 dark:text-violet-300"
-          >
-            ▲ {{ $t("level.up", { n: reachedLevel }) }}
-          </p>
-          <p
-            v-for="note in isWinState ? progressNotes : []"
-            :key="note.text"
-            :class="
-              note.ok
-                ? 'score-badge border-emerald-500/40 bg-emerald-500/10 font-black text-emerald-700 dark:text-emerald-300'
-                : 'border-zinc-300 font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-400'
-            "
-            class="mb-4 border px-3 py-2 text-xs"
-          >
-            {{ note.text }}
-          </p>
-          <p
-            v-for="r in isWinState ? newRecords : []"
-            :key="r.kind"
-            data-testid="new-record"
-            :class="scoreLanded ? 'win-in' : 'opacity-0'"
-            class="mb-4 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-black text-amber-800 dark:text-amber-300"
-          >
-            {{ recordLine(r) }}
-          </p>
-
-          <!-- Score headline: the total counts up through the lines as they appear -->
-          <div v-if="isWinState && lastScore" class="mb-5">
-            <p class="text-[0.6875rem] font-semibold text-zinc-500">
-              {{ $t("modal.scoreTotal") }}
-            </p>
-            <p
-              class="text-5xl leading-tight font-black text-zinc-900 tabular-nums dark:text-zinc-50"
-            >
-              <span aria-hidden="true">{{ displayedScore }}</span>
-              <span class="sr-only">{{ lastScore.total }}</span>
-            </p>
-            <p
-              v-if="isNewBest"
-              :class="scoreLanded ? 'win-in' : 'opacity-0'"
-              class="mt-1 inline-block border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[0.625rem] font-black text-amber-800 dark:text-amber-300"
-            >
-              ★ {{ $t("modal.scoreNewBest") }}
-            </p>
-
-            <!-- breakdown -->
-            <div
-              class="mt-3 divide-y divide-zinc-200 border border-zinc-200 text-left text-xs dark:divide-zinc-800 dark:border-zinc-800"
-            >
-              <div
-                v-for="(row, i) in scoreRows"
-                :key="row.key"
-                :class="winStep > winStars + i ? 'win-in' : 'opacity-0'"
-                class="flex justify-between px-3 py-1.5"
-              >
-                <span class="text-zinc-500">{{ $t(`modal.${row.key}`) }}</span>
-                <span :class="row.cls" class="font-bold tabular-nums"
-                  >{{ i ? (row.value > 0 ? "+" : "−") : "" }}{{ Math.abs(row.value) }}</span
-                >
-              </div>
-              <div
-                :class="scoreLanded ? 'win-in' : 'opacity-0'"
-                class="flex justify-between bg-zinc-500/5 px-3 py-1.5"
-              >
-                <span class="font-semibold text-zinc-500 dark:text-zinc-400">{{
-                  $t("modal.scoreLifetime")
-                }}</span>
-                <span class="font-bold text-zinc-700 tabular-nums dark:text-zinc-300">{{
-                  lifetimeTotal
-                }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Win summary -->
-          <div
-            v-if="isWinState"
-            class="mb-5 divide-y divide-zinc-200 border border-zinc-200 text-left dark:divide-zinc-800 dark:border-zinc-800"
-          >
-            <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.difficulty") }}</span>
-              <span class="text-xs font-bold text-zinc-800 dark:text-zinc-200">{{
-                difficultyLabel
-              }}</span>
-            </div>
-            <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold text-zinc-500">{{ $t("game.mistakes") }}</span>
-              <span
-                class="text-xs font-bold"
-                :class="
-                  mistakes === 0
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-rose-600 dark:text-rose-400'
-                "
-                >{{ mistakes }}{{ mistakeLimit && !gameZen ? ` / ${mistakeLimit}` : "" }}</span
-              >
-            </div>
-            <div class="flex justify-between px-3 py-2">
-              <span class="text-xs font-semibold text-zinc-500">{{ $t("modal.hintsUsed") }}</span>
-              <span
-                class="text-xs font-bold"
-                :class="
-                  hintsUsed === 0
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-amber-700 dark:text-amber-400'
-                "
-                >{{ hintsUsed }}</span
-              >
-            </div>
-            <div v-if="neededTechs.length" class="px-3 py-2" data-testid="needed-techniques">
-              <p class="mb-2 text-xs font-semibold text-zinc-500">
-                {{ $t("modal.needed") }}
-              </p>
-              <div class="flex flex-wrap gap-1">
-                <button
-                  v-for="id in neededTechs"
-                  :key="id"
-                  @click="openLesson(id)"
-                  :title="$t('modal.openLesson')"
-                  class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
-                >
-                  {{ $t(`hint.move.${id}.name`) }}
-                </button>
-              </div>
-            </div>
-            <div v-if="stuck.length" class="px-3 py-2" data-testid="stuck-moments">
-              <p class="mb-2 text-xs font-semibold text-zinc-500">
-                {{ $t("modal.stuck") }}
-              </p>
-              <ul class="space-y-1.5">
-                <li
-                  v-for="m in stuck"
-                  :key="m.at"
-                  class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
-                >
-                  <span class="text-xs text-zinc-700 tabular-nums dark:text-zinc-300">{{
-                    $t("modal.stuckAt", {
-                      at: timer.formatTime(m.at),
-                      gap: timer.formatTime(m.gap),
-                    })
-                  }}</span>
-                  <button
-                    v-if="m.technique"
-                    @click="openLesson(m.technique!)"
-                    :title="$t('modal.openLesson')"
-                    class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
-                  >
-                    {{ $t(`hint.move.${m.technique}.name`) }}
-                  </button>
-                </li>
-              </ul>
-            </div>
-            <div v-if="techniqueLog.length" class="px-3 py-2">
-              <p class="mb-2 text-xs font-semibold text-zinc-500">
-                {{ $t("modal.techniquesUsed") }}
-              </p>
-              <div class="flex flex-wrap gap-1">
-                <span
-                  v-for="id in techniqueLog"
-                  :key="id"
-                  :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
-                  class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-700 dark:text-amber-400"
-                  >{{ $t(`hint.move.${id}.name`) }}
-                  <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
-                >
-              </div>
-            </div>
-          </div>
-
-          <button
-            v-if="isWinState"
-            @click="shareWin"
-            class="mb-2 w-full text-sm font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
-          >
-            {{ shared ? $t("modal.copied") : $t("modal.share") }}
-          </button>
-          <div class="flex gap-2">
-            <button
-              v-if="nextLevel"
-              @click="handleNextPuzzle"
-              data-testid="next-puzzle"
-              :aria-busy="nextLoading"
-              :disabled="nextLoading"
-              class="tile tile-primary flex-1 py-3 text-sm font-bold"
-            >
-              {{ $t("modal.nextPuzzle", { level: $t(`difficulty.${nextLevel}`) }) }}
-            </button>
-            <button
-              @click="handleModalClose"
-              :class="nextLevel ? 'px-5' : 'tile-primary flex-1'"
-              class="tile py-3 text-sm font-bold"
-            >
-              {{ $t("modal.close") }}
-            </button>
-          </div>
-        </div>
-      </div>
+        :title="modalTitle"
+        :message="modalMessage"
+        :win="isWinState"
+        :difficulty-label="difficultyLabel"
+        :stats-key="statsKey(activeDifficulty, isDailyMode)"
+        :zen="gameZen"
+        :practice="!!practiceTechnique"
+        :mistakes="mistakes"
+        :hints-used="hintsUsed"
+        :seconds="timer.timerSeconds.value"
+        :board="initialBoard"
+        :last-score="lastScore"
+        :is-new-best="isNewBest"
+        :lifetime-total="lifetimeTotal"
+        :reached-level="reachedLevel"
+        :progress-notes="progressNotes"
+        :new-records="newRecords"
+        :needed-techs="neededTechs"
+        :stuck="stuck"
+        :technique-log="techniqueLog"
+        :next-level="nextLevel"
+        :next-loading="nextLoading"
+        @next="handleNextPuzzle"
+        @close="handleModalClose"
+        @lesson="openLesson"
+        @cue="cue"
+      />
 
       <!-- RESUME PROMPT -->
-      <div
+      <ResumePrompt
         v-if="pendingResume"
-        data-pad-scope
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-      >
-        <div
-          class="modal-pop panel w-full max-w-sm !rounded-2xl border-t-[0.375rem] !border-t-violet-500 p-6 text-center shadow-2xl"
-        >
-          <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-            {{ $t("resume.title") }}
-          </h3>
-          <p class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {{
-              $t(pendingResume.save.zen ? "resume.messageZen" : "resume.message", {
-                difficulty: $t(`difficulty.${pendingResume.level}`),
-                time: timer.formatTime(pendingResume.save.timerSeconds),
-              })
-            }}
-          </p>
-          <div class="flex flex-col gap-2">
-            <button
-              @click="handleResumeConfirm"
-              class="tile tile-apply w-full py-3 text-sm font-bold"
-            >
-              {{ $t("resume.continue") }}
-            </button>
-            <button @click="handleResumeDecline" class="tile w-full py-3 text-sm font-bold">
-              {{ $t("resume.newGame") }}
-            </button>
-            <button
-              @click="pendingResume = null"
-              class="w-full py-2 text-xs font-bold text-zinc-500 transition-colors hover:text-rose-600 dark:hover:text-rose-400"
-            >
-              {{ $t("resume.cancel") }}
-            </button>
-          </div>
-        </div>
-      </div>
+        :save="pendingResume.save"
+        :level="pendingResume.level"
+        @continue="handleResumeConfirm"
+        @restart="handleResumeDecline"
+        @cancel="pendingResume = null"
+      />
     </div>
   </UApp>
 </template>
 
 <!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
-/* A small menu tile: icon at the top, label at the bottom, like a cell's corner marks. */
-.menu-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.75rem;
-  text-align: left;
-  font-family: var(--font-display);
-  font-size: 0.8125rem;
-  line-height: 1.15;
-  font-weight: 700;
-  color: var(--color-zinc-800);
-}
-.dark .menu-cell {
-  color: var(--color-zinc-100);
-}
-.menu-cell.tile-amber {
-  color: #422006;
-}
-.dark .menu-cell.tile-amber {
-  color: #fde68a;
-}
-
-/* The one loud thing: a highlighter stroke under the wordmark. */
-.wordmark::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  left: -0.12em;
-  right: -0.12em;
-  bottom: 0.04em;
-  height: 0.36em;
-  background: rgba(252, 211, 77, 0.75);
-  transform: skewX(-8deg) rotate(-0.8deg);
-  transform-origin: left center;
-  animation: swipe 0.7s 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.dark .wordmark::after {
-  background: rgba(251, 191, 36, 0.38);
-}
-@keyframes swipe {
-  from {
-    transform: skewX(-8deg) rotate(-0.8deg) scaleX(0);
-  }
-  to {
-    transform: skewX(-8deg) rotate(-0.8deg) scaleX(1);
-  }
-}
-
 /* Screen changes: a short fade with a small settle, not a slide. */
 .screen-enter-active,
 .screen-leave-active {
@@ -2497,21 +1716,6 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* The result appears after the win wave has swept the board. */
-.modal-delay {
-  animation: modal-delay 0.3s 0.9s ease-out both;
-}
-@keyframes modal-delay {
-  from {
-    opacity: 0;
-    pointer-events: none;
-  }
-  to {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
 /* Honour the OS "reduce motion" setting: keep the state changes, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -2523,75 +1727,6 @@ onUnmounted(() => {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-@keyframes star-pop {
-  0% {
-    transform: scale(0) rotate(-30deg);
-    opacity: 0;
-  }
-  70% {
-    transform: scale(1.3) rotate(8deg);
-  }
-  100% {
-    transform: scale(1) rotate(0);
-    opacity: 1;
-  }
-}
-.star-pop {
-  animation: star-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-/* A win-modal line appearing on its step. */
-.win-in {
-  animation: win-in 0.22s ease-out both;
-}
-@keyframes win-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.25rem);
-  }
-}
-
-/* "Perfect!" in the teacher's red pen, stamped on at a slant. */
-.perfect-stamp {
-  display: inline-block;
-  padding: 0.2rem 0.8rem;
-  border: 0.25rem double currentColor;
-  border-radius: 0.375rem;
-  color: var(--color-rose-700);
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transform: rotate(-8deg);
-}
-.dark .perfect-stamp {
-  color: var(--color-rose-300);
-}
-.stamp-in {
-  animation: stamp-in 0.3s cubic-bezier(0.3, 1.3, 0.5, 1) both;
-}
-@keyframes stamp-in {
-  0% {
-    opacity: 0;
-    transform: rotate(-8deg) scale(2.2);
-  }
-  65% {
-    opacity: 1;
-    transform: rotate(-8deg) scale(0.94);
-  }
-  100% {
-    transform: rotate(-8deg) scale(1);
-  }
-}
-
-/* Skipped (a tap or a key): everything is already in place. */
-.win-done .win-in,
-.win-done .star-pop,
-.win-done .stamp-in {
-  animation: none;
 }
 
 @keyframes modal-pop {
@@ -2609,22 +1744,5 @@ onUnmounted(() => {
 }
 .modal-pop {
   animation: modal-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes score-badge {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  70% {
-    transform: scale(1.25);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-.score-badge {
-  animation: score-badge 0.4s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 </style>
