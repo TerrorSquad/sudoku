@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { BOARD, grid, savedGame } from "./seed";
+import { BOARD, grid, place, savedGame, stuckSave } from "./seed";
 
 // Pixel-baseline suite. Runs only in the `visual` project (VISUAL_REGRESSION=1,
 // see playwright.config.ts); baselines live in e2e/visual-regression-snapshots/.
@@ -195,6 +195,20 @@ for (const theme of ["light", "dark"] as const) {
     test("custom puzzle", async ({ page }) => {
       await page.getByRole("button", { name: "Your puzzle" }).click();
       await shot(page, "custom-import");
+    });
+
+    test("solve replay at a stuck moment", async ({ page }) => {
+      await page.evaluate(
+        (save) => localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(save)),
+        stuckSave(),
+      );
+      await openSavedGame(page);
+      await place(page, 73, "4");
+      await page.getByTestId("watch-solve").click();
+      await page.getByRole("button", { name: "Stuck at 00:50" }).click();
+      await settle(page);
+      // The dialog alone: confetti may still be falling behind it.
+      await expect(page.locator("dialog[open]")).toHaveScreenshot(`${theme}/solve-replay.png`);
     });
   });
 }

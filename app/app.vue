@@ -842,12 +842,31 @@ function exitToMenu() {
 // check as a placement; and never act behind a modal (a second win would double-record).
 function undo() {
   if (showModal.value || practiceLoading.value) return;
+  const before = currentBoard.value.map((row) => [...row]);
   undoMove();
+  logRestored(before);
 }
 function redo() {
   if (showModal.value || practiceLoading.value) return;
+  const before = currentBoard.value.map((row) => [...row]);
   redoMove();
+  logRestored(before);
   checkWin();
+}
+// Undo and redo swap in a whole board: a correct digit they bring back goes in the log too, or the
+// replay would end on an empty cell.
+function logRestored(before: Grid) {
+  currentBoard.value.forEach((row, r) =>
+    row.forEach((num, c) => {
+      if (
+        num &&
+        num !== before[r]![c] &&
+        !initialBoard.value[r]![c] &&
+        num === solvedBoard.value[r]![c]
+      )
+        logPlacement({ r, c, num });
+    }),
+  );
 }
 
 const shortcutsOpen = ref(false);
@@ -1287,6 +1306,7 @@ onUnmounted(() => {
         :hints-used="hintsUsed"
         :seconds="timer.timerSeconds.value"
         :board="initialBoard"
+        :placements="placements"
         :result="winResult"
         :technique-log="techniqueLog"
         :next-level="nextLevel"
