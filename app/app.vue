@@ -5,7 +5,6 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
-import type { BasicsId } from "./utils/basics";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
@@ -34,6 +33,7 @@ import { useSudokuEngine } from "./composables/useSudokuEngine";
 import { useTechniquePath } from "./composables/useTechniquePath";
 import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
+import { BASICS_IDS, type BasicsId } from "./utils/basics";
 import { haptic } from "./utils/haptics";
 import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
@@ -49,6 +49,7 @@ import {
 } from "./utils/progression";
 import { takePuzzle } from "./utils/puzzlePool";
 import { brokenRecords, type NewRecord, type Snapshot } from "./utils/records";
+import { readJSON } from "./utils/safeJson";
 import { computeScore, type ScoreBreakdown } from "./utils/score";
 import {
   playComplete,
@@ -61,6 +62,7 @@ import {
   playUnlock,
   playWin,
 } from "./utils/sound";
+import { SPOT_BEST_KEY, readSpotBest } from "./utils/spotIt";
 import { starsFor } from "./utils/stars";
 import {
   onBoard,
@@ -177,6 +179,27 @@ const {
 const gameSave = useGameSave();
 const techStats = useTechniqueStats();
 const achievements = useAchievements();
+// Academy achievements: checked after each lesson, drill or course move (cheap: a few small
+// storage reads), so the toast lands on the screen where it was earned.
+function checkAcademyAchievements() {
+  const done = techniquePath.getDone();
+  const stars = techniquePath.getStars();
+  const fresh = achievements.evaluateAcademy({
+    lessons: ACADEMY_TECHNIQUES.filter((tech) => done.includes(tech.id)).length,
+    pathTotal: ACADEMY_TECHNIQUES.length,
+    threeStars: Object.values(stars).filter((s) => s === 3).length,
+    basics: techniquePath.getBasics().length,
+    basicsTotal: BASICS_IDS.length,
+    spotBest: readSpotBest(readJSON<unknown>(SPOT_BEST_KEY, {})),
+  });
+  if (!fresh.length) return;
+  toastIds.value.push(...fresh);
+  saveToCloud();
+}
+function academyCue(kind: Parameters<typeof cue>[0]) {
+  cue(kind);
+  if (kind !== "mistake" && kind !== "hint") checkAcademyAchievements();
+}
 // Ids of achievements just unlocked, shown as toasts until they time out or are clicked.
 const toastIds = ref<string[]>([]);
 const dailyPuzzle = useDailyPuzzle();
@@ -1502,6 +1525,8 @@ function handlePageHidden() {
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
   document.addEventListener("visibilitychange", handlePageHidden);
+  // Progress made before these achievements existed, or just restored from the cloud.
+  checkAcademyAchievements();
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);
@@ -1736,7 +1761,7 @@ onUnmounted(() => {
           :tier="spotTier"
           :color-mode="colorMode"
           :theme="boardTheme"
-          @cue="cue"
+          @cue="academyCue"
           @back="currentScreen = 'academy'"
           @lesson="handleLesson"
         />
@@ -1748,7 +1773,7 @@ onUnmounted(() => {
           :id="activeBasics"
           :color-mode="colorMode"
           :theme="boardTheme"
-          @cue="cue"
+          @cue="academyCue"
           @back="
             academyFocus = null;
             currentScreen = 'academy';
@@ -1764,7 +1789,7 @@ onUnmounted(() => {
           :lesson="activeLesson"
           :color-mode="colorMode"
           :theme="boardTheme"
-          @cue="cue"
+          @cue="academyCue"
           :in-game="academyFromGame"
           @back="
             academyFocus = activeLesson.technique;
