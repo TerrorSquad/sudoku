@@ -38,8 +38,16 @@ type ParseResult =
   | { ok: true; backup: Backup; items: number }
   | { ok: false; error: "invalid" | "tooLarge" | "empty" };
 
-/** A save's slot (useGameSave): its difficulty, or for a Daily its own: Medium's "daily", else daily_<level>. */
-export function saveSlotOf(save: { daily?: unknown; difficulty?: unknown }): string {
+/**
+ * A save's slot (useGameSave): its difficulty, or for a Daily its own: Medium's "daily", else
+ * daily_<level>. An X-Sudoku game has x_<level> (there is no X Daily).
+ */
+export function saveSlotOf(save: {
+  daily?: unknown;
+  difficulty?: unknown;
+  variant?: unknown;
+}): string {
+  if (save.variant === "x") return `x_${String(save.difficulty)}`;
   if (!save.daily) return String(save.difficulty);
   return save.difficulty === "medium" ? "daily" : `daily_${String(save.difficulty)}`;
 }

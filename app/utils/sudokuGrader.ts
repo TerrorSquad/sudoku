@@ -1,4 +1,4 @@
-import type { Grid } from "../types/sudoku";
+import type { Grid, Variant } from "../types/sudoku";
 
 import { cloneGrid, generatePuzzle, type Rng, type GeneratedPuzzle } from "./sudokuCore";
 
@@ -63,6 +63,20 @@ const PEERS: number[][] = Array.from({ length: 81 }, (_, i) => {
   return [...set];
 });
 
+// X-Sudoku adds the two long diagonals as units (main r = c, then anti r + c = 8): more units for
+// singles, subsets and box-diagonal intersections, and more peers for every technique that asks
+// whether two cells see each other. Extra constraints never undo a sound deduction.
+const DIAGS: number[][] = [
+  Array.from({ length: 9 }, (_, i) => i * 10),
+  Array.from({ length: 9 }, (_, i) => i * 9 + 8 - i),
+];
+const X_UNITS = [...ALL_UNITS, ...DIAGS];
+const X_PEERS: number[][] = PEERS.map((peers, i) => {
+  const set = new Set(peers);
+  for (const d of DIAGS) if (d.includes(i)) for (const j of d) if (j !== i) set.add(j);
+  return [...set];
+});
+
 function* combos(items: number[], k: number, start = 0, acc: number[] = []): Generator<number[]> {
   if (acc.length === k) {
     yield [...acc];
@@ -78,27 +92,32 @@ function* combos(items: number[], k: number, start = 0, acc: number[] = []): Gen
 interface SolveState {
   board: number[]; // 81 cells, 0 = empty
   cands: number[]; // candidate bitmask per cell, 0 for filled
+  x: boolean; // X-Sudoku
+  units: number[][]; // every unit, the diagonals last in X
+  peers: number[][];
 }
 
-function initState(puzzle: Grid): SolveState {
+function initState(puzzle: Grid, variant: Variant = "classic"): SolveState {
+  const x = variant === "x";
+  const peers = x ? X_PEERS : PEERS;
   const board = Array.from({ length: 81 }, () => 0);
   for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) board[r * 9 + c] = puzzle[r]![c]!;
   const cands = Array.from({ length: 81 }, () => 0);
   for (let i = 0; i < 81; i++) {
     if (board[i] !== 0) continue;
     let mask = ALL_MASK;
-    for (const p of PEERS[i]!) {
+    for (const p of peers[i]!) {
       if (board[p] !== 0) mask &= ~bit(board[p]!);
     }
     cands[i] = mask;
   }
-  return { board, cands };
+  return { board, cands, x, units: x ? X_UNITS : ALL_UNITS, peers };
 }
 
 function place(s: SolveState, i: number, v: number): void {
   s.board[i] = v;
   s.cands[i] = 0;
-  for (const p of PEERS[i]!) s.cands[p]! &= ~bit(v);
+  for (const p of s.peers[i]!) s.cands[p]! &= ~bit(v);
 }
 
 // --- Tier 1: singles ---
@@ -116,7 +135,7 @@ function placeNakedSingles(s: SolveState): boolean {
 
 function placeHiddenSingles(s: SolveState): boolean {
   let placed = false;
-  for (const unit of ALL_UNITS) {
+  for (const unit of s.units) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
       let only = -1;
@@ -188,6 +207,7 @@ function eliminateBoxLine(s: SolveState): boolean {
       }
     }
   }
+  if (s.x && applyMove(s, findDiagonalBoxMove(s))) changed = true;
   return changed;
 }
 
@@ -195,7 +215,7 @@ function eliminateBoxLine(s: SolveState): boolean {
 
 function eliminateNakedSubset(s: SolveState, k: number): boolean {
   let changed = false;
-  for (const unit of ALL_UNITS) {
+  for (const unit of s.units) {
     const empty = unit.filter((i) => s.board[i] === 0 && popcount(s.cands[i]!) <= k);
     if (empty.length < k) continue;
     for (const combo of combos(empty, k)) {
@@ -215,7 +235,7 @@ function eliminateNakedSubset(s: SolveState, k: number): boolean {
 
 function eliminateHiddenSubset(s: SolveState, k: number): boolean {
   let changed = false;
-  for (const unit of ALL_UNITS) {
+  for (const unit of s.units) {
     const empty = unit.filter((i) => s.board[i] === 0);
     if (empty.length <= k) continue;
     let present = 0;
@@ -289,7 +309,7 @@ function eliminateXYWing(s: SolveState): boolean {
   }
   for (const pivot of bivalue) {
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(
+    const pincers = s.peers[pivot]!.filter(
       (i) =>
         s.board[i] === 0 && popcount(s.cands[i]!) === 2 && s.cands[i]! & pm && s.cands[i]! !== pm,
     );
@@ -302,9 +322,9 @@ function eliminateXYWing(s: SolveState): boolean {
         if (popcount(z) !== 1) continue;
         if (((ma | mb) & pm) !== pm) continue;
         let changed = false;
-        for (const i of PEERS[pincers[a]!]!) {
+        for (const i of s.peers[pincers[a]!]!) {
           if (i === pivot || i === pincers[b]) continue;
-          if (s.board[i] === 0 && s.cands[i]! & z && PEERS[pincers[b]!]!.includes(i)) {
+          if (s.board[i] === 0 && s.cands[i]! & z && s.peers[pincers[b]!]!.includes(i)) {
             s.cands[i]! &= ~z;
             changed = true;
           }
@@ -324,7 +344,7 @@ function eliminateXYZWing(s: SolveState): boolean {
   for (let pivot = 0; pivot < 81; pivot++) {
     if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(
+    const pincers = s.peers[pivot]!.filter(
       (i) => s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0,
     );
     for (let a = 0; a < pincers.length; a++) {
@@ -339,9 +359,9 @@ function eliminateXYZWing(s: SolveState): boolean {
           if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
           if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
           if (
-            PEERS[pivot]!.includes(i) &&
-            PEERS[pincers[a]!]!.includes(i) &&
-            PEERS[pincers[b]!]!.includes(i)
+            s.peers[pivot]!.includes(i) &&
+            s.peers[pincers[a]!]!.includes(i) &&
+            s.peers[pincers[b]!]!.includes(i)
           ) {
             s.cands[i]! &= ~z;
             changed = true;
@@ -418,7 +438,7 @@ function findNakedSingleMove(s: SolveState): SolveMove | null {
   for (let i = 0; i < 81; i++) {
     if (s.board[i] === 0 && popcount(s.cands[i]!) === 1) {
       const num = maskDigits(s.cands[i]!)[0]!;
-      const triggers = PEERS[i]!.filter((p) => s.board[p] !== 0).map(rc);
+      const triggers = s.peers[i]!.filter((p) => s.board[p] !== 0).map(rc);
       return {
         technique: "naked-single",
         tier: 1,
@@ -433,7 +453,7 @@ function findNakedSingleMove(s: SolveState): SolveMove | null {
 }
 
 function findHiddenSingleMove(s: SolveState): SolveMove | null {
-  for (const [u, unit] of ALL_UNITS.entries()) {
+  for (const [u, unit] of s.units.entries()) {
     for (let v = 1; v <= 9; v++) {
       const b = bit(v);
       let only = -1;
@@ -453,7 +473,7 @@ function findHiddenSingleMove(s: SolveState): SolveMove | null {
           eliminations: [],
           triggers,
           digits: [v],
-          unit: u < 9 ? "row" : u < 18 ? "col" : "box",
+          unit: u < 9 ? "row" : u < 18 ? "col" : u < 27 ? "box" : u === 27 ? "diag" : "anti",
         };
       }
     }
@@ -508,6 +528,38 @@ function findBoxLineMove(s: SolveState): SolveMove | null {
       }
     }
   }
+  return s.x ? findDiagonalBoxMove(s) : null;
+}
+
+// X-Sudoku: a diagonal crosses three boxes in three cells each, and the same two moves work
+// there. A row or column meets a diagonal in one cell only, which is a hidden single's business.
+function findDiagonalBoxMove(s: SolveState): SolveMove | null {
+  for (const diag of DIAGS) {
+    for (const box of BOXES) {
+      const shared = box.filter((i) => diag.includes(i));
+      if (!shared.length) continue;
+      for (let v = 1; v <= 9; v++) {
+        const has = (i: number) => s.board[i] === 0 && !!(s.cands[i]! & bit(v));
+        for (const [technique, from, to] of [
+          ["pointing", box, diag],
+          ["box-line", diag, box],
+        ] as const) {
+          const cells = from.filter(has);
+          if (cells.length < 2 || !cells.every((i) => shared.includes(i))) continue;
+          const elims = to.filter((i) => !shared.includes(i) && has(i));
+          if (elims.length) {
+            return {
+              technique,
+              tier: 2,
+              eliminations: elims.map((i) => ({ ...rc(i), num: v })),
+              triggers: cells.map(rc),
+              digits: [v],
+            };
+          }
+        }
+      }
+    }
+  }
   return null;
 }
 
@@ -524,7 +576,7 @@ const HIDDEN_SUBSET_TECH: Record<number, TechniqueId> = {
 const SUBSET_TIER: Record<number, Grade> = { 2: 2, 3: 3, 4: 4 };
 
 function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
-  for (const unit of ALL_UNITS) {
+  for (const unit of s.units) {
     const empty = unit.filter(
       (i) => s.board[i] === 0 && popcount(s.cands[i]!) <= k && popcount(s.cands[i]!) >= 2,
     );
@@ -554,7 +606,7 @@ function findNakedSubsetMove(s: SolveState, k: number): SolveMove | null {
 }
 
 function findHiddenSubsetMove(s: SolveState, k: number): SolveMove | null {
-  for (const unit of ALL_UNITS) {
+  for (const unit of s.units) {
     const empty = unit.filter((i) => s.board[i] === 0);
     if (empty.length <= k) continue;
     let present = 0;
@@ -648,7 +700,7 @@ function findXYWingMove(s: SolveState): SolveMove | null {
   for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
   for (const pivot of bivalue) {
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(
+    const pincers = s.peers[pivot]!.filter(
       (i) =>
         s.board[i] === 0 && popcount(s.cands[i]!) === 2 && s.cands[i]! & pm && s.cands[i]! !== pm,
     );
@@ -661,9 +713,9 @@ function findXYWingMove(s: SolveState): SolveMove | null {
         if (((ma | mb) & pm) !== pm) continue;
         const zNum = maskDigits(z)[0]!;
         const elims: DigitAt[] = [];
-        for (const i of PEERS[pincers[a]!]!) {
+        for (const i of s.peers[pincers[a]!]!) {
           if (i === pivot || i === pincers[b]) continue;
-          if (s.board[i] === 0 && s.cands[i]! & z && PEERS[pincers[b]!]!.includes(i))
+          if (s.board[i] === 0 && s.cands[i]! & z && s.peers[pincers[b]!]!.includes(i))
             elims.push({ ...rc(i), num: zNum });
         }
         if (elims.length) {
@@ -685,7 +737,7 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
   for (let pivot = 0; pivot < 81; pivot++) {
     if (s.board[pivot] !== 0 || popcount(s.cands[pivot]!) !== 3) continue;
     const pm = s.cands[pivot]!;
-    const pincers = PEERS[pivot]!.filter(
+    const pincers = s.peers[pivot]!.filter(
       (i) => s.board[i] === 0 && popcount(s.cands[i]!) === 2 && (s.cands[i]! & ~pm) === 0,
     );
     for (let a = 0; a < pincers.length; a++) {
@@ -701,9 +753,9 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
           if (i === pivot || i === pincers[a] || i === pincers[b]) continue;
           if (s.board[i] !== 0 || !(s.cands[i]! & z)) continue;
           if (
-            PEERS[pivot]!.includes(i) &&
-            PEERS[pincers[a]!]!.includes(i) &&
-            PEERS[pincers[b]!]!.includes(i)
+            s.peers[pivot]!.includes(i) &&
+            s.peers[pincers[a]!]!.includes(i) &&
+            s.peers[pincers[b]!]!.includes(i)
           ) {
             elims.push({ ...rc(i), num: zNum });
           }
@@ -723,7 +775,7 @@ function findXYZWingMove(s: SolveState): SolveMove | null {
   return null;
 }
 
-const sees = (a: number, b: number) => a !== b && PEERS[a]!.includes(b);
+const sees = (s: SolveState, a: number, b: number) => a !== b && s.peers[a]!.includes(b);
 const boxOf = (i: number) => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
 
 /** Every unit where digit v has exactly two candidates: its strong links, as cell pairs. */
@@ -751,7 +803,7 @@ function seeingAll(s: SolveState, v: number, of: number[]): number[] {
   const out: number[] = [];
   for (let i = 0; i < 81; i++) {
     if (s.board[i] !== 0 || !(s.cands[i]! & bit(v)) || of.includes(i)) continue;
-    if (of.every((o) => sees(i, o))) out.push(i);
+    if (of.every((o) => sees(s, i, o))) out.push(i);
   }
   return out;
 }
@@ -858,6 +910,8 @@ function findEmptyRectangleMove(s: SolveState): SolveMove | null {
 // Four cells on two rows, two columns and two boxes. If three hold exactly {x, y}, the fourth
 // can't be x or y: that would leave a rectangle that swaps freely, i.e. two solutions.
 function findUniqueRectangleMove(s: SolveState): SolveMove | null {
+  // X-Sudoku: a diagonal through a corner can forbid the swap, so the argument fails there.
+  if (s.x) return null;
   for (let r1 = 0; r1 < 9; r1++) {
     for (let r2 = r1 + 1; r2 < 9; r2++) {
       for (let c1 = 0; c1 < 9; c1++) {
@@ -922,12 +976,13 @@ function findSimpleColoringMove(s: SolveState): SolveMove | null {
       ];
       let elims: number[] = [];
       for (const cells of side) {
-        if (cells.some((a) => cells.some((b) => sees(a, b)))) elims = cells;
+        if (cells.some((a) => cells.some((b) => sees(s, a, b)))) elims = cells;
       }
       if (!elims.length) {
         for (let i = 0; i < 81; i++) {
           if (s.board[i] !== 0 || !(s.cands[i]! & bit(v)) || color.has(i)) continue;
-          if (side[0]!.some((a) => sees(i, a)) && side[1]!.some((b) => sees(i, b))) elims.push(i);
+          if (side[0]!.some((a) => sees(s, i, a)) && side[1]!.some((b) => sees(s, i, b)))
+            elims.push(i);
         }
       }
       if (elims.length) {
@@ -1016,7 +1071,7 @@ function findWWingMove(s: SolveState): SolveMove | null {
   for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
   const linksOf: ReturnType<typeof strongLinks>[] = [];
   for (const [a, b] of combos(bivalue, 2) as Iterable<[number, number]>) {
-    if (s.cands[a] !== s.cands[b] || sees(a, b)) continue;
+    if (s.cands[a] !== s.cands[b] || sees(s, a, b)) continue;
     for (const x of maskDigits(s.cands[a]!)) {
       const y = maskDigits(s.cands[a]! & ~bit(x))[0]!;
       const elims = seeingAll(s, y, [a, b]);
@@ -1024,9 +1079,9 @@ function findWWingMove(s: SolveState): SolveMove | null {
       for (const link of (linksOf[x] ??= strongLinks(s, x))) {
         // sees() rules out the link ending on a or b, since a and b don't see each other.
         const ends =
-          sees(a, link.a) && sees(b, link.b)
+          sees(s, a, link.a) && sees(s, b, link.b)
             ? [link.a, link.b]
-            : sees(a, link.b) && sees(b, link.a)
+            : sees(s, a, link.b) && sees(s, b, link.a)
               ? [link.b, link.a]
               : null;
         if (!ends) continue;
@@ -1049,6 +1104,7 @@ function findWWingMove(s: SolveState): SolveMove | null {
 // where switching every cell to its other candidate is a second solution. The puzzle has one
 // solution, so the cell must be that digit (the one it adds a third copy of in its units).
 function findBugPlusOneMove(s: SolveState): SolveMove | null {
+  if (s.x) return null; // like the Unique Rectangle: the diagonals can forbid the switch
   let odd = -1;
   for (let i = 0; i < 81; i++) {
     if (s.board[i] !== 0 || popcount(s.cands[i]!) === 2) continue;
@@ -1090,7 +1146,7 @@ const XY_CHAIN_MAX = 8;
 function findXYChainMove(s: SolveState): SolveMove | null {
   const bivalue: number[] = [];
   for (let i = 0; i < 81; i++) if (s.board[i] === 0 && popcount(s.cands[i]!) === 2) bivalue.push(i);
-  const next = new Map(bivalue.map((i) => [i, bivalue.filter((j) => sees(i, j))]));
+  const next = new Map(bivalue.map((i) => [i, bivalue.filter((j) => sees(s, i, j))]));
   const other = (i: number, d: number) => maskDigits(s.cands[i]! & ~bit(d))[0]!;
   let best: SolveMove | null = null;
   for (const start of bivalue) {
@@ -1109,8 +1165,8 @@ function findXYChainMove(s: SolveState): SolveMove | null {
             seen.add(`${i}-${e}`);
             const chain = [...cells, i];
             if (e === z && len >= 3) {
-              const elims = PEERS[start]!.filter(
-                (p) => p !== i && s.board[p] === 0 && s.cands[p]! & bit(z) && sees(p, i),
+              const elims = s.peers[start]!.filter(
+                (p) => p !== i && s.board[p] === 0 && s.cands[p]! & bit(z) && sees(s, p, i),
               );
               if (elims.length && (!best || len < best.triggers.length))
                 best = {
@@ -1176,8 +1232,12 @@ function applyMove(s: SolveState, move: SolveMove | null): boolean {
  * already shown to the player in earlier hint steps — replayed so an
  * elimination chain progresses to the placement it unlocks.
  */
-export function nextHint(board: Grid, appliedEliminations: DigitAt[] = []): SolveMove | null {
-  const s = initState(board);
+export function nextHint(
+  board: Grid,
+  appliedEliminations: DigitAt[] = [],
+  variant: Variant = "classic",
+): SolveMove | null {
+  const s = initState(board, variant);
   for (const e of appliedEliminations) {
     const i = idx(e.r, e.c);
     if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
@@ -1189,11 +1249,11 @@ export function nextHint(board: Grid, appliedEliminations: DigitAt[] = []): Solv
  * Every empty cell in an order where each is a naked or hidden single at its turn, or null when
  * singles run dry first. Behind the Finish button: it only finishes what logic plainly forces.
  */
-export function singlesPath(board: Grid): DigitAt[] | null {
+export function singlesPath(board: Grid, variant: Variant = "classic"): DigitAt[] | null {
   const b = cloneGrid(board);
   const path: DigitAt[] = [];
   while (b.some((row) => row.includes(0))) {
-    const move = nextHint(b); // tries singles first, so anything else means they ran dry
+    const move = nextHint(b, [], variant); // tries singles first, so anything else means they ran dry
     if (!move?.placement || move.tier !== 1) return null;
     path.push(move.placement);
     b[move.placement.r]![move.placement.c] = move.placement.num;
@@ -1201,9 +1261,9 @@ export function singlesPath(board: Grid): DigitAt[] | null {
   return path;
 }
 
-/** A row, column or box, named by any of its cells. */
+/** A row, column or box (or in X-Sudoku a diagonal: main r = c, anti r + c = 8), named by any of its cells. */
 export interface BoardUnit extends CellRC {
-  kind: "row" | "col" | "box";
+  kind: "row" | "col" | "box" | "diag" | "anti";
 }
 
 /**
@@ -1229,8 +1289,8 @@ interface LogicalSolveResult {
 }
 
 /** Solve as far as pure logic allows; grade = hardest tier that was needed. */
-export function solveLogically(puzzle: Grid): LogicalSolveResult {
-  const s = initState(puzzle);
+export function solveLogically(puzzle: Grid, variant: Variant = "classic"): LogicalSolveResult {
+  const s = initState(puzzle, variant);
   let grade: Grade = 1;
 
   const tiers: { tier: Grade; run: () => boolean }[] = [
@@ -1285,8 +1345,8 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
   return { grade, solved: s.board.every((v) => v !== 0), board };
 }
 
-export function gradePuzzle(puzzle: Grid): Grade {
-  return solveLogically(puzzle).grade;
+export function gradePuzzle(puzzle: Grid, variant: Variant = "classic"): Grade {
+  return solveLogically(puzzle, variant).grade;
 }
 
 interface GradedPuzzle extends GeneratedPuzzle {
@@ -1314,6 +1374,17 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   // Only ~8% of 60-cell digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
   master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
 };
+// X-Sudoku: the diagonals give more away, so the same tiers come from different digs, and it
+// grades differently: tier 3 almost never decides a board (Hard is mostly tier 4) and STUCK is
+// common. 300 X digs of 58 cells graded 1/2/3/4/5/STUCK 28/10/0/16/7/40%. Master takes ~60 ms.
+const X_TARGETS: Record<string, DifficultyTarget> = {
+  beginner: { removeTarget: 46, min: 1, max: 1, ideal: 1 },
+  easy: { removeTarget: 52, min: 1, max: 2, ideal: 1 },
+  medium: { removeTarget: 56, min: 2, max: 3, ideal: 2 },
+  hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
+  expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
+  master: { removeTarget: 58, min: 5, max: 5, ideal: 5, attempts: 150 },
+};
 
 /**
  * Generate a puzzle matching the requested difficulty. Always returns a board
@@ -1326,8 +1397,9 @@ export function generateGradedPuzzle(
   difficulty: string,
   rng: Rng = Math.random,
   maxAttempts?: number,
+  variant: Variant = "classic",
 ): GradedPuzzle {
-  const target = DIFFICULTY_TARGETS[difficulty] ?? {
+  const target = (variant === "x" ? X_TARGETS : DIFFICULTY_TARGETS)[difficulty] ?? {
     removeTarget: 42,
     min: 1 as Grade,
     max: STUCK,
@@ -1340,8 +1412,8 @@ export function generateGradedPuzzle(
   let bestDist = Infinity;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const gp = generatePuzzle(removeTarget, rng);
-    const grade = gradePuzzle(gp.puzzle);
+    const gp = generatePuzzle(removeTarget, rng, variant);
+    const grade = gradePuzzle(gp.puzzle, variant);
     const graded: GradedPuzzle = { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
     if (grade >= target.min && grade <= target.max) return graded;
     // Only solved boards (grade < STUCK) are eligible fallbacks.
@@ -1360,8 +1432,8 @@ export function generateGradedPuzzle(
   // shallow dig, which is virtually always singles-solvable, and keep digging
   // until one grades as solvable so we never return a STUCK board.
   for (;;) {
-    const gp = generatePuzzle(30, rng);
-    const grade = gradePuzzle(gp.puzzle);
+    const gp = generatePuzzle(30, rng, variant);
+    const grade = gradePuzzle(gp.puzzle, variant);
     if (grade < STUCK) return { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
   }
 }
@@ -1371,14 +1443,17 @@ export function generateGradedPuzzle(
  * (so a technique appears only if the easier ones ran dry before it), or null
  * when logic alone can't solve the board.
  */
-export function techniquesRequired(puzzle: Grid): Set<TechniqueId> | null {
+export function techniquesRequired(
+  puzzle: Grid,
+  variant: Variant = "classic",
+): Set<TechniqueId> | null {
   const board = cloneGrid(puzzle);
   const elims: DigitAt[] = [];
   const used = new Set<TechniqueId>();
   // 81 cells; eliminations add a handful of steps each, so this cap is never the limiter.
   for (let step = 0; step < 600; step++) {
     if (board.every((row) => row.every((v) => v !== 0))) return used;
-    const move = nextHint(board, elims);
+    const move = nextHint(board, elims, variant);
     if (!move) return null;
     used.add(move.technique);
     if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
@@ -1421,8 +1496,8 @@ const SOLVER_RANK = {
  * The distinct techniques `puzzle`'s givens need, hardest first, for the win screen. Singles are
  * left out unless nothing harder was needed; empty when logic alone can't finish the board.
  */
-export function neededTechniques(puzzle: Grid): TechniqueId[] {
-  const used = techniquesRequired(puzzle);
+export function neededTechniques(puzzle: Grid, variant: Variant = "classic"): TechniqueId[] {
+  const used = techniquesRequired(puzzle, variant);
   if (!used) return [];
   const all = [...used].toSorted((a, b) => SOLVER_RANK[b] - SOLVER_RANK[a]);
   const hard = all.filter((id) => id !== "naked-single" && id !== "hidden-single");

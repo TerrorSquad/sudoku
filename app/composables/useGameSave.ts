@@ -1,4 +1,4 @@
-import type { Grid, NotesGrid, Difficulty } from "../types/sudoku";
+import type { Grid, NotesGrid, Difficulty, Variant } from "../types/sudoku";
 import type { Placement } from "../utils/stuckMoments";
 
 import { saveSlotOf } from "../utils/progressBackup";
@@ -6,12 +6,15 @@ import { readJSON, removeJSON, writeJSON } from "../utils/safeJson";
 
 /**
  * One slot per difficulty, plus one per level's Daily (it must not overwrite that level's game):
- * "daily" for Medium's, as it always was, daily_<level> for the rest.
+ * "daily" for Medium's, as it always was, daily_<level> for the rest; x_<level> for X-Sudoku.
  */
-export type SaveSlot = Difficulty | "daily" | `daily_${Difficulty}`;
+export type SaveSlot = Difficulty | "daily" | `daily_${Difficulty}` | `x_${Difficulty}`;
 const saveKey = (slot: SaveSlot) => `sudoku_v1_save_${slot}`;
 export const dailySlot = (level: Difficulty) =>
   saveSlotOf({ daily: true, difficulty: level }) as SaveSlot;
+/** A new game's slot: the level's, or its X-Sudoku one. */
+export const gameSlot = (level: Difficulty, variant: Variant) =>
+  saveSlotOf({ difficulty: level, variant }) as SaveSlot;
 
 export interface GameSave {
   currentBoard: Grid;
@@ -27,6 +30,8 @@ export interface GameSave {
   zen?: boolean;
   /** Set on a Daily: the local date (YYYY-MM-DD) of its puzzle. */
   daily?: string;
+  /** "x" for X-Sudoku; older saves and classic games have none. */
+  variant?: Variant;
   /** Correct digits with the clock, for "Where you got stuck". Older saves restore as none. */
   placements?: Placement[];
   savedAt: number;

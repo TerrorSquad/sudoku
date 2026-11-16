@@ -2,7 +2,7 @@
 // starting a game never blocks the main thread on the generator (Master can dig 150 boards).
 // Spot it positions (lessons) are made in the same worker. Without workers (tests, or a host that
 // blocks them) it generates in place, on demand, as before.
-import type { Grid } from "../types/sudoku";
+import type { Grid, Variant } from "../types/sudoku";
 import type { TechniqueId } from "./sudokuGrader";
 
 import { quickLesson, type Lesson } from "./lesson";
@@ -14,7 +14,7 @@ interface NewPuzzle {
   solution: Grid;
 }
 
-type Job = { difficulty: string } | { technique: TechniqueId; seed: number };
+type Job = { difficulty: string; variant: Variant } | { technique: TechniqueId; seed: number };
 
 let worker: Worker | null | undefined; // undefined: not tried yet; null: unavailable
 let nextId = 0;
@@ -29,7 +29,12 @@ const ready = new Map<string, Promise<NewPuzzle>>();
 // Async, so a generator that throws rejects instead of throwing at the caller.
 async function inPlace(job: Job): Promise<NewPuzzle | Lesson> {
   if ("technique" in job) return quickLesson(job.technique, makeRng(job.seed));
-  const { puzzle, solution } = generateGradedPuzzle(job.difficulty);
+  const { puzzle, solution } = generateGradedPuzzle(
+    job.difficulty,
+    undefined,
+    undefined,
+    job.variant,
+  );
   return { puzzle, solution };
 }
 const retryInPlace = ({ job, resolve, reject }: Waiting) => void inPlace(job).then(resolve, reject);
@@ -72,26 +77,28 @@ function run<T>(job: Job): Promise<T> {
   });
 }
 
-const generate = (difficulty: string) => run<NewPuzzle>({ difficulty });
+const generate = (difficulty: string, variant: Variant) => run<NewPuzzle>({ difficulty, variant });
 
 /**
  * Start generating a puzzle for `difficulty` now, if one isn't already on its way. Only with a
  * worker: generating in place would freeze the page for boards that may never be played.
  */
-export function prefetchPuzzle(difficulty: string): void {
+export function prefetchPuzzle(difficulty: string, variant: Variant = "classic"): void {
   if (typeof Worker === "undefined" || !getWorker()) return;
-  if (ready.has(difficulty)) return;
-  const next = generate(difficulty);
+  const key = `${variant}:${difficulty}`;
+  if (ready.has(key)) return;
+  const next = generate(difficulty, variant);
   // A failed one isn't kept (or reported, unless someone takes it).
-  next.catch(() => ready.get(difficulty) === next && ready.delete(difficulty));
-  ready.set(difficulty, next);
+  next.catch(() => ready.get(key) === next && ready.delete(key));
+  ready.set(key, next);
 }
 
 /** A fresh puzzle for `difficulty` (instant when prefetched); the next one starts right away. */
-export function takePuzzle(difficulty: string): Promise<NewPuzzle> {
-  const next = ready.get(difficulty) ?? generate(difficulty);
-  ready.delete(difficulty);
-  prefetchPuzzle(difficulty);
+export function takePuzzle(difficulty: string, variant: Variant = "classic"): Promise<NewPuzzle> {
+  const key = `${variant}:${difficulty}`;
+  const next = ready.get(key) ?? generate(difficulty, variant);
+  ready.delete(key);
+  prefetchPuzzle(difficulty, variant);
   return next;
 }
 
