@@ -5,7 +5,6 @@ import confetti from "canvas-confetti";
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 
 import type { CellCoord, Difficulty, FlashCell } from "./types/sudoku";
-import type { PadAction } from "./utils/gamepad";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
@@ -26,7 +25,7 @@ import SudokuGrid from "./components/SudokuGrid.vue";
 import TechniqueLesson from "./components/TechniqueLesson.vue";
 import { useAchievements } from "./composables/useAchievements";
 import { localDateKey, useDailyPuzzle } from "./composables/useDailyPuzzle";
-import { useGamepad } from "./composables/useGamepad";
+import { padScope, sendKey, useGamepad, type PadKeys } from "./composables/useGamepad";
 import { useGameSave, type GameSave, type SaveSlot } from "./composables/useGameSave";
 import { usePreferences } from "./composables/usePreferences";
 import { useRecords } from "./composables/useRecords";
@@ -37,6 +36,7 @@ import { useTechniqueStats } from "./composables/useTechniqueStats";
 import { useTimer } from "./composables/useTimer";
 import { BASICS_IDS, type BasicsId } from "./utils/basics";
 import { encodeChallenge } from "./utils/challenge";
+import { focusCell, stepCell } from "./utils/gridNav";
 import { haptic } from "./utils/haptics";
 import { generateLesson, type Lesson } from "./utils/lesson";
 import { levelBand, levelFor } from "./utils/level";
@@ -1404,30 +1404,6 @@ function exitToMenu() {
   currentScreen.value = "menu";
 }
 
-// Arrows and WASD both walk the grid (so auto-fill notes lives on F, not A).
-const MOVE_STEPS: Record<string, [number, number]> = {
-  ArrowUp: [-1, 0],
-  ArrowDown: [1, 0],
-  ArrowLeft: [0, -1],
-  ArrowRight: [0, 1],
-  w: [-1, 0],
-  s: [1, 0],
-  a: [0, -1],
-  d: [0, 1],
-};
-
-const clamp = (n: number) => Math.min(8, Math.max(0, n));
-
-// Arrow keys walk the grid (clamped at the edges); focus follows so screen readers announce the cell.
-function moveSelection(dr: number, dc: number) {
-  const cur = selectedCell.value;
-  // With nothing selected, the first arrow press lands on the top-left cell.
-  const r = cur ? clamp(cur.r + dr) : 0;
-  const c = cur ? clamp(cur.c + dc) : 0;
-  selectedCell.value = { r, c }; // not handleSelectCell: arrows must never place an armed digit
-  nextTick(() => document.querySelector<HTMLElement>(`[data-cell="${r}-${c}"]`)?.focus());
-}
-
 // Undo/redo can both change whether the board is solved, so route them through the same win
 // check as a placement; and never act behind a modal (a second win would double-record).
 function undo() {
@@ -1523,10 +1499,11 @@ function handleKeyDown(e: KeyboardEvent) {
     activeDigit.value = null;
     return;
   }
-  const step = MOVE_STEPS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
-  if (step) {
+  // Arrows and WASD walk the grid (so auto-fill notes lives on F, not A).
+  const to = stepCell(selectedCell.value, e.key.length === 1 ? e.key.toLowerCase() : e.key);
+  if (to) {
     e.preventDefault();
-    moveSelection(step[0], step[1]);
+    focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
@@ -1555,31 +1532,7 @@ function handlePageHidden() {
   }
 }
 
-// Controllers, for a TV: each action becomes the key the screen already answers to. On a board,
-// the D-pad walks the cells and LB/RB pick the digit that A (game) or X (Academy boards) enters;
-// elsewhere the D-pad moves focus, kept inside whatever overlay is on top, and A presses.
-const padDigit = ref(1);
-function sendKey(key: string) {
-  (document.activeElement ?? document.body).dispatchEvent(
-    new KeyboardEvent("keydown", { key, bubbles: true }),
-  );
-}
-const FOCUSABLE =
-  'button:not([disabled]), a[href], select:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea, [tabindex]:not([tabindex="-1"])';
-function padScope(): ParentNode {
-  const scopes = document.querySelectorAll("dialog[open], [data-pad-scope]");
-  return scopes[scopes.length - 1] ?? document;
-}
-function moveFocus(step: 1 | -1) {
-  const list = [...padScope().querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (el) => el.getClientRects().length > 0,
-  );
-  if (!list.length) return;
-  const i = list.indexOf(document.activeElement as HTMLElement);
-  const next = i < 0 ? (step > 0 ? 0 : list.length - 1) : (i + step + list.length) % list.length;
-  list[next]!.focus();
-}
-const ARROWS = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
+// Controllers (useGamepad): B off the board needs to know the screens, and each board's keys.
 // B off the board: closes what's on top, else goes where the screen's own Back goes.
 function padBack() {
   const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
@@ -1597,54 +1550,30 @@ function padBack() {
     return (currentScreen.value = "menu");
   sendKey("Escape"); // the Academy's boards handle their own Back
 }
-const padOnBoard = () =>
-  BOARD_SCREENS.has(currentScreen.value) &&
-  padScope() === document &&
-  !(currentScreen.value === "game" && timer.isPaused.value);
-function onPad(action: PadAction) {
-  const focused = document.activeElement as HTMLElement | null;
-  const onControl = !!focused?.closest?.("button, a, select") && !focused.closest("[data-cell]");
-  if (action === "prev" || action === "next") {
-    padDigit.value = ((padDigit.value + (action === "next" ? 0 : 7)) % 9) + 1;
-    return;
-  }
-  if (!padOnBoard()) {
-    // A focused <select> can't be opened from script: left/right step through its options.
-    if ((action === "left" || action === "right") && focused instanceof HTMLSelectElement) {
-      const i = focused.selectedIndex + (action === "right" ? 1 : -1);
-      if (i >= 0 && i < focused.options.length) {
-        focused.selectedIndex = i;
-        focused.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    } else if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
-    else if (action === "press") {
-      if (onControl) focused!.click();
-      else moveFocus(1);
-    } else if (action === "back") padBack();
-    else if (action === "pause" && currentScreen.value === "game") sendKey("p");
-    return;
-  }
-  if (action in ARROWS) return sendKey(ARROWS[action as keyof typeof ARROWS]);
-  const game = currentScreen.value === "game";
-  const keys: Partial<Record<PadAction, string>> = game
-    ? {
-        press: String(padDigit.value),
-        alt: "n",
-        back: "Backspace",
-        hint: "h",
-        pause: "p",
-        help: "?",
-      }
-    : { alt: String(padDigit.value), back: "Escape", hint: "h" };
-  // How to play has no cells to tap: there A enters the digit too.
-  if (action === "press" && !game)
-    return onControl
-      ? focused!.click()
-      : sendKey(currentScreen.value === "basics" ? String(padDigit.value) : "Enter");
-  const key = keys[action];
-  if (key) sendKey(key);
+// LB/RB pick the digit that A (game) or X (Academy boards) enters.
+function padKeys(digit: number): PadKeys {
+  if (currentScreen.value === "game")
+    return { press: String(digit), alt: "n", back: "Backspace", hint: "h", pause: "p", help: "?" };
+  // A presses a focused button; How to play has no cells to tap, so there A enters the digit too.
+  return {
+    press: currentScreen.value === "basics" ? String(digit) : "Enter",
+    alt: String(digit),
+    back: "Escape",
+    hint: "h",
+    clicks: true,
+  };
 }
-const { connected: padConnected } = useGamepad(onPad);
+const { connected: padConnected, digit: padDigit } = useGamepad({
+  onBoard: () =>
+    BOARD_SCREENS.has(currentScreen.value) &&
+    padScope() === document &&
+    !(currentScreen.value === "game" && timer.isPaused.value),
+  boardKeys: padKeys,
+  onBack: padBack,
+  onPause: () => {
+    if (currentScreen.value === "game") sendKey("p");
+  },
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
