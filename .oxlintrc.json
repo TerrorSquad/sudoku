@@ -14,6 +14,35 @@
   },
   "overrides": [
     {
+      // Storage goes through utils/safeJson.ts (SSR-safe, and a sandboxed iframe can throw on any
+      // access): a bare localStorage.removeItem once sat inside the win path.
+      "files": ["app/**"],
+      "rules": {
+        "eslint/no-restricted-globals": [
+          "error",
+          {
+            "name": "localStorage",
+            "message": "Use readJSON/writeJSON/removeJSON from utils/safeJson.ts."
+          },
+          { "name": "sessionStorage", "message": "Use utils/safeJson.ts (or add a helper there)." }
+        ]
+      }
+    },
+    {
+      // The storage layer itself, and code that hands the whole Storage over (backup, cloud sync).
+      "files": [
+        "app/utils/safeJson.ts",
+        "app/utils/progressBackup.ts",
+        "app/utils/wavedash.ts",
+        "app/components/SettingsScreen.vue",
+        "app/composables/useDailyPuzzle.ts",
+        "app/tests/**"
+      ],
+      "rules": {
+        "eslint/no-restricted-globals": "off"
+      }
+    },
+    {
       // Solver tests branch on which logical state a randomized seed landed
       // in (e.g. solved vs STUCK) and assert in every branch — sound branch
       // coverage, not a vacuous check, so this rule is just noise here.

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repo uses **pnpm** (`pnpm-lock.yaml`), not npm or yarn. Running `npm install` against it will produce peer-dependency resolution errors — always use `pnpm`. A hook in `.claude/settings.json` blocks `npm` and `npx` commands.
 
+Node and pnpm versions come from `mise.toml` (major only; `mise upgrade` takes the newest). To upgrade dependencies: `pnpm update --latest --include-github-actions`. It skips the pins in `pnpm-workspace.yaml`'s `updateConfig` (`nuxt`, `typescript`, `@vueuse/nuxt`; reasons there and in `docs/adr/0002-dependency-pins.md`), so don't override them by hand. `tailwindcss` is not a direct dependency: it comes with `@nuxt/ui`. A `@playwright/test` bump also needs the image tag in `package.json`'s `visual` script and both workflows (`visualImage.test.ts` fails otherwise) and `pnpm exec playwright install chromium`.
+
 ## Commands
 
 ```bash
@@ -23,11 +25,11 @@ pnpm fmt              # oxfmt (also runs automatically on commit, see below)
 pnpm lint             # oxlint (also runs automatically on commit, see below)
 ```
 
-Don't run `fmt`/`lint` proactively during normal development — `forge.toml` wires `oxfmt` and `oxlint` into a pre-commit hook (auto-fixing and restaging), and `commit-msg` enforces Conventional Commits. They run automatically at commit time.
+Don't run `fmt`/`lint` proactively during normal development — `forge.toml` wires `oxfmt` and `oxlint` into a pre-commit hook (auto-fixing and restaging), and `commit-msg` enforces Conventional Commits. They run automatically at commit time, **once the hooks are installed**: a fresh clone has none, so run `forge install` and then `git config core.hooksPath "$PWD/.forge/hooks"` (forge writes a relative path, and `.forge/` is gitignored, so worktrees under `.claude/worktrees/` would otherwise run no hooks). `forge run pre-commit --all-files --check` verifies. CI runs `pnpm check` (`.github/workflows/check.yml`) as the backstop.
 
 The e2e suite spins up its own dev server on port 3110 (`E2E_PORT` overrides it, so separate checkouts can run at once) with `NUXT_IGNORE_LOCK=1` (see `playwright.config.ts`), so it can run even while a normal `pnpm dev` is active on another port — Nuxt's dev-server lock is keyed by project directory, not port, so this would otherwise fail with "Another Nuxt dev server is already running." Playwright tests run with `workers: 1`: a single dev-mode Nuxt server backing all tests causes contention/flakiness under parallel workers.
 
-`vitest.config.ts` excludes `e2e/**` — without it, vitest's default glob also picks up the Playwright `.spec.ts` files and fails trying to run them.
+`vitest.config.ts` collects only `app/tests/**/*.test.ts`: the default glob also picks up the Playwright `.spec.ts` files, and the whole repos checked out under `.claude/worktrees/` (thousands of their dependencies' tests).
 
 ## Architecture
 
@@ -47,7 +49,7 @@ This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generat
 - **`useGameSave.ts`** — one save slot per difficulty (`sudoku_v1_save_<difficulty>`), via `safeJson.ts`. There's no global "continue" — picking a difficulty that already has a save triggers a resume-or-restart prompt (`pendingResume` in `app.vue`) instead.
 - **`useDailyPuzzle.ts`** — date-seeded (`seedFromString` + `makeRng`) puzzle, same for everyone on a given local calendar day; tracks completion/streak.
 - **`useScore.ts`**, **`useTechniqueStats.ts`** — lifetime score and per-technique usage stats, also via `safeJson.ts`.
-- **`app/utils/safeJson.ts`** — the shared `readJSON`/`writeJSON` pair every persistence composable uses (SSR-safe, try/catch'd). Reach for this instead of hand-rolling another `localStorage` guard.
+- **`app/utils/safeJson.ts`** — the shared `readJSON`/`writeJSON`/`removeJSON` every persistence composable uses (SSR-safe, try/catch'd: a sandboxed iframe can throw on any storage access). Reach for this instead of hand-rolling another `localStorage` guard; oxlint's `no-restricted-globals` rejects `localStorage`/`sessionStorage` in `app/` outside the storage layer (allow-list in `.oxlintrc.json`).
 
 ### Gamification
 
@@ -110,4 +112,10 @@ Laptops with integrated graphics (an i7 + Iris Xe) are the low end. Measure befo
 ### Testing split
 
 - `app/tests/*.test.ts` (vitest) — pure logic: solver, grader, scoring, daily-puzzle seeding. No DOM.
-- `e2e/*.spec.ts` (Playwright Test) — full browser flows: new game/win, the resume-prompt's three branches, preference persistence, the pause overlay. Costs nothing to re-run once written, unlike manual browser-driven verification.
+- `e2e/*.spec.ts` (Playwright Test) — full browser flows: new game/win, the resume-prompt's three branches, preference persistence, the pause overlay. Costs nothing to re-run once written, unlike manual browser-driven verification. Shared helpers (`BOARD`, `SOLVED`, `blank`, `grid`, `savedGame`, `playCustom`, …) live in `e2e/seed.ts`.
+- Which to run: the unit file and the e2e specs that cover what changed (grep `e2e/` for the component or testid). The full e2e suite takes ~7 minutes: run it once before a release (it's the only place separately-tested PRs meet), not after every change. CI runs `pnpm check` and the visual suite on every PR.
+- e2e runs against the dev server, so it can't catch a broken production build. `pnpm wavedash` guards the one failure that has shipped (see Releasing); for anything build-specific, serve the generated `.output/public` from a subfolder and load it in Chromium.
+
+### Releasing
+
+`pnpm wavedash:release --summary "…" --added "…" --fixed "…"` builds, uploads and publishes, titled with `package.json`'s version (bump it in a PR first). It has no `--help`: any run is a real release. The build step fails before upload when `index.html`/`200.html` aren't the app shell (`scripts/budget.mjs`; 1.10.0 shipped "Redirecting..." pages and never loaded). To roll back, there's no build list in the CLI: check out the last good release commit in a worktree, `pnpm install --frozen-lockfile`, `WAVEDASH=1 NUXT_APP_BASE_URL=./ pnpm exec nuxt generate`, then `wavedash build push` and `wavedash publish <build id> --title vX.Y.Z -y` (retry while it says "Only completed builds").

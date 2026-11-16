@@ -1,0 +1,30 @@
+name: Check
+
+# Format, lint, typecheck and unit tests (`pnpm check`) on every PR. The forge pre-commit hook runs
+# the first two locally, but only once `forge install` has run in that clone, so CI is the backstop.
+# Same image as the visual job: it already has the Node the app needs.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: mcr.microsoft.com/playwright:v1.65.1-noble
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm and dependencies
+        run: |
+          npm install --global --silent pnpm@12
+          pnpm install --frozen-lockfile
+
+      - run: pnpm check
