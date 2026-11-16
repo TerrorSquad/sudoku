@@ -173,6 +173,7 @@ function say(message: string) {
 const currentScreen = ref<
   | "menu"
   | "difficulty"
+  | "daily"
   | "game"
   | "academy"
   | "custom-import"
@@ -205,7 +206,7 @@ const difficultyLabel = computed(() =>
   practiceTechnique.value
     ? `${practiceWeek.value ? t("weekly.title") : t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
     : isDailyMode.value
-      ? t("difficulty.daily")
+      ? t(`difficulty.${statsKey(activeDifficulty.value, true)}`)
       : gameZen.value
         ? `${t(`difficulty.${activeDifficulty.value}`)} · ${t("difficulty.zen")}`
         : t(`difficulty.${activeDifficulty.value}`),
@@ -271,7 +272,7 @@ const bestTime = computed(() => {
   void currentScreen.value;
   if (practiceTechnique.value) return 0;
   if (activeDifficulty.value === "custom") return challengeTarget.value; // a friend's time, or none
-  if (isDailyMode.value) return dailyPuzzle.getBestTime();
+  if (isDailyMode.value) return dailyPuzzle.getBestTime(activeDifficulty.value);
   return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
 });
 // Lessons finished, read when the screen changes (a lesson ends on another screen), not per move.
@@ -318,7 +319,10 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   // Read before this game's save is cleared: a level open only through it isn't news.
   const lockedBefore =
     win && !practised ? lockedLevels(score.unlockWins(), (d) => !!gameSave.loadDifficulty(d)) : [];
-  if (!practised) gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
+  if (!practised)
+    gameSave.clearDifficulty(
+      isDailyMode.value ? dailySlot(activeDifficulty.value) : activeDifficulty.value,
+    );
   if (!win) return;
   cue("win");
   flashWin();
@@ -351,13 +355,13 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   });
 }
 
-// The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
-// the Daily, which has one puzzle a day). None for practice and custom boards.
+// The modal's Next puzzle: a level the win just opened, else the same level again (after a Daily,
+// which has one puzzle a day, a regular game of its level). None for practice and custom boards.
 const justUnlocked = ref<Difficulty | null>(null);
 const nextLevel = computed<Difficulty | null>(() => {
   if (practiceTechnique.value || activeDifficulty.value === "custom") return null;
   if (justUnlocked.value) return justUnlocked.value;
-  return isDailyMode.value ? "medium" : activeDifficulty.value;
+  return activeDifficulty.value;
 });
 // Starting: the modal stays up (its button busy) until the board is ready, so the won board is
 // never live again in between. A saved game at that level goes through the usual resume prompt.
@@ -489,8 +493,8 @@ function handleResumeConfirm() {
 function handleResumeDecline() {
   if (!pendingResume.value) return;
   const { level } = pendingResume.value;
-  if (level === "daily") startDaily();
-  else handleStartGame(level);
+  if (pendingResume.value.save.daily) startDaily(pendingResume.value.save.difficulty);
+  else handleStartGame(level as Difficulty);
   pendingResume.value = null;
 }
 
@@ -758,16 +762,16 @@ function handleAutoFillNotes() {
 }
 
 // Only today's Daily can be resumed; one saved on an earlier day is dropped.
-function handleStartDaily() {
-  const saved = gameSave.loadDifficulty("daily");
+function handleStartDaily(level: Difficulty) {
+  const saved = gameSave.loadDifficulty(dailySlot(level));
   if (saved?.daily === dailyPuzzle.todayKey())
-    pendingResume.value = { save: saved, level: "daily" };
-  else startDaily();
+    pendingResume.value = { save: saved, level: dailySlot(level) };
+  else startDaily(level);
 }
 
-function startDaily() {
-  gameSave.clearDifficulty("daily");
-  beginGame("medium", () => loadCustomBoard(dailyPuzzle.getBoard()), {
+function startDaily(level: Difficulty) {
+  gameSave.clearDifficulty(dailySlot(level));
+  beginGame(level, () => loadCustomBoard(dailyPuzzle.getBoard(level)), {
     daily: dailyPuzzle.todayKey(),
   });
 }
@@ -931,7 +935,7 @@ function padBack() {
   if (currentScreen.value === "academy")
     return (currentScreen.value = academyFromGame.value ? "game" : "menu");
   if (
-    ["difficulty", "stats", "achievements", "settings", "custom-import"].includes(
+    ["difficulty", "daily", "stats", "achievements", "settings", "custom-import"].includes(
       currentScreen.value,
     )
   )
@@ -984,7 +988,7 @@ onUnmounted(() => {
         <MainMenu
           v-if="currentScreen === 'menu'"
           @go="(screen) => (currentScreen = screen)"
-          @daily="handleStartDaily"
+          @daily="currentScreen = 'daily'"
           @academy="
             academyFocus = null;
             academyFromGame = false;
@@ -998,6 +1002,15 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'difficulty'"
           :active-difficulty="activeDifficulty"
           @select-difficulty="handleChooseDifficulty"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- TODAY'S DAILIES: the same tiles, one Daily per level -->
+        <DifficultySelector
+          v-else-if="currentScreen === 'daily'"
+          daily
+          :active-difficulty="activeDifficulty"
+          @select-difficulty="handleStartDaily"
           @back-to-menu="currentScreen = 'menu'"
         />
 

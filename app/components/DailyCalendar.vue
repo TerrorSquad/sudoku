@@ -3,10 +3,12 @@ const WEEKS = 12;
 const daily = useDailyPuzzle();
 
 const frozen = new Set(daily.getStreakState().frozen);
+// A day is done when any level's Daily was (the streak counts it the same way).
+const doneDays = daily.getCompletedDays();
 const days = calendarDays(new Date(), WEEKS).map((d) => ({
   key: d.key,
   future: d.future,
-  done: !d.future && daily.getRecordFor(d.key)?.completed === true,
+  done: !d.future && doneDays.has(d.key),
   frozen: frozen.has(d.key),
 }));
 const completed = days.filter((d) => d.done).length;

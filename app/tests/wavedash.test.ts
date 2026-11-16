@@ -86,7 +86,16 @@ describe("wavedash", () => {
   });
 
   it("a Daily posts its time to that day's board instead", () => {
-    expect(scoresFor({ ...win, daily: "2026-10-27" })[0]!.board.name).toBe("daily-2026-10-27");
+    expect(scoresFor({ ...win, daily: "2026-10-27" })[0]!.board.name).toBe("daily-hard-2026-10-27");
+    expect(scoresFor({ ...win, difficulty: "medium", daily: "2026-10-27" })[0]!.board.name).toBe(
+      "daily-2026-10-27",
+    ); // Medium's Daily keeps the original board
+  });
+
+  it("the technique of the week's puzzle posts to its week's board only", () => {
+    expect(scoresFor({ ...win, difficulty: "custom", week: "2026-W47" })).toEqual([
+      { board: { name: "week-2026-W47" }, score: 300 },
+    ]);
   });
 
   it("custom puzzles and a zero time post nothing", () => {

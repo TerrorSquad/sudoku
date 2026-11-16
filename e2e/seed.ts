@@ -60,6 +60,12 @@ export async function seedMediumSave(page: Page, blanks: number[], timerSeconds 
   );
 }
 
+/** Opens today's Daily at `level` from the menu's Daily picker (Medium is the original Daily). */
+export async function openDaily(page: Page, level = "Medium") {
+  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await page.getByRole("button", { name: new RegExp(`\\b${level}\\b`) }).click();
+}
+
 export async function resumeMedium(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();

@@ -12,8 +12,13 @@ const { basicsPrompt } = usePreferences();
 const dailyPuzzle = useDailyPuzzle();
 const score = useScore();
 const techniquePath = useTechniquePath();
-const dailyRecord = dailyPuzzle.getRecord();
 const dailyStreak = dailyPuzzle.getStreakState();
+// The tile stays lit while an open level's Daily is left today (a locked level's Daily is locked).
+const { loadDifficulty } = useGameSave();
+const unlockWins = score.unlockWins();
+const dailiesLeft = LADDER.some(
+  (d) => !lockOf(d, unlockWins, !!loadDifficulty(d)) && !dailyPuzzle.getRecord(d),
+);
 // Lifetime score drives the level.
 const playerLevel = levelFor(score.getStats().total);
 const lessonsDone = techniquePath.getDone();
@@ -23,7 +28,7 @@ const reviewDue = dueToday(techniquePath.getReview(), localDateKey()).length;
 // "New to sudoku?": a fresh player who hasn't dismissed it. Fresh: no win anywhere (the unlock
 // count, so Zen wins count too), no technique lesson and no basics lesson done.
 const fresh =
-  !Object.values(score.unlockWins()).some((e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0) &&
+  !Object.values(unlockWins).some((e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0) &&
   lessonsDone.length === 0 &&
   techniquePath.getBasics().length === 0;
 const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
@@ -138,8 +143,7 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
 
       <button
         @click="emit('daily')"
-        :disabled="!!dailyRecord"
-        :class="dailyRecord ? '' : 'tile-amber'"
+        :class="dailiesLeft ? 'tile-amber' : ''"
         class="tile menu-cell"
       >
         <AppIcon
@@ -148,7 +152,7 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
         />
         <span>
           <span class="block">{{
-            dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
+            dailiesLeft ? $t("menu.dailyChallenge") : $t("menu.dailyCompleted")
           }}</span>
           <span
             v-if="dailyStreak.current > 0"

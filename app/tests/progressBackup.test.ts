@@ -203,6 +203,10 @@ describe("progress backup", () => {
     });
     expect(bad("sudoku_v1_save_daily", save({ daily: "2026-03-04" }))).toMatchObject({ ok: true });
     expect(bad("sudoku_v1_save_daily", save({}))).toEqual({ ok: false, error: "invalid" });
+    // Every other level's Daily has its own slot too.
+    const hardDaily = save({ difficulty: "hard", daily: "2026-03-04" });
+    expect(bad("sudoku_v1_save_daily_hard", hardDaily)).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_save_daily", hardDaily)).toEqual({ ok: false, error: "invalid" });
     expect(bad("sudoku_v1_save_medium", save({ daily: "2026-03-04" }))).toEqual({
       ok: false,
       error: "invalid",
