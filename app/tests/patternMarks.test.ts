@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { lessonFromExample } from "../utils/lesson";
-import { anchor, patternMarks, type Mark, type Pt } from "../utils/patternMarks";
+import { anchor, beats, patternMarks, type Mark, type Pt } from "../utils/patternMarks";
 import { ACADEMY_TECHNIQUES } from "../utils/progression";
 
 const inBoard = ({ x, y }: Pt) => x > 0 && x < 9 && y > 0 && y < 9;
@@ -27,6 +27,21 @@ describe("patternMarks", () => {
       // Every technique past the singles draws its pattern, not just the result.
       if (!["naked-single", "hidden-single", "bug-plus-one"].includes(id))
         expect(marks.some((m) => m.kind === "line" || m.kind === "ring")).toBe(true);
+    });
+  }
+
+  for (const { id } of ACADEMY_TECHNIQUES) {
+    it(`steps through ${id}'s example (Watch it), ending on the full drawing`, () => {
+      const lesson = lessonFromExample(id)!;
+      const has = (r: number, c: number, n: number) => !!lesson.notes[r]?.[c]?.includes(n);
+      const steps = beats(lesson.move, has);
+      expect(steps.length).toBeGreaterThanOrEqual(3);
+      expect(steps[0]!.step).toBe("look");
+      expect(steps.at(-1)!.step).toBe("result");
+      // Each step adds to the last, and the last holds every mark of the static drawing.
+      for (let i = 1; i < steps.length; i++)
+        expect(steps[i]!.marks).toEqual(expect.arrayContaining(steps[i - 1]!.marks));
+      expect(steps.at(-1)!.marks).toEqual(expect.arrayContaining(patternMarks(lesson.move, has)));
     });
   }
 

@@ -336,6 +336,38 @@ export const strikes = (removed: DigitAt[], fade = true): Mark[] =>
     fade,
   }));
 
+/** One step of "Watch it": the marks drawn so far, and what this step adds. */
+export interface Beat {
+  step: "look" | "cells" | "links" | "result";
+  marks: Mark[];
+}
+
+/**
+ * The move's drawing in narrated steps, each adding to the last: the unit frames, then the
+ * pattern's rings, then its links, then what it removes or places. A step that would add nothing
+ * is left out, except the first and the last. Moves drawn without rings (the singles) get one
+ * round their answer, so there's a pattern step to point at. The last step holds every mark.
+ */
+export function beats(move: PatternMove, has: HasMark): Beat[] {
+  const all = patternMarks(move, has);
+  const p = move.placement;
+  if (p && !all.some((m) => m.kind === "ring"))
+    all.push({ kind: "ring", at: anchor(p.r, p.c, p.num), num: p.num, tone: "pattern" });
+  const upTo: Record<Beat["step"], Mark["kind"][]> = {
+    look: ["frame"],
+    cells: ["frame", "ring"],
+    links: ["frame", "ring", "line"],
+    result: ["frame", "ring", "line", "cross", "place"],
+  };
+  const out: Beat[] = [];
+  for (const step of ["look", "cells", "links", "result"] as const) {
+    const marks = all.filter((m) => upTo[step].includes(m.kind));
+    if (step === "look" || step === "result" || marks.length > out.at(-1)!.marks.length)
+      out.push({ step, marks });
+  }
+  return out;
+}
+
 /** `has` for a notes grid as SudokuGrid holds it (notes[r][c][n]). */
 export const hasFromNotes =
   (notes: boolean[][][]): HasMark =>

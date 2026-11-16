@@ -53,6 +53,17 @@ for (const scheme of ["light", "dark"] as const) {
       }
     });
 
+    test("Academy technique map and a Watch it example", async ({ page }) => {
+      await page.goto("/");
+      await page.getByRole("button", { name: "Academy" }).click();
+      await page.getByRole("button", { name: "Map" }).click();
+      await expect(page.getByTestId("technique-map")).toBeVisible();
+      await scan(page, "academy (map)");
+      await page.getByTestId("map-x-wing").click();
+      await page.locator("#lesson-x-wing").getByRole("button", { name: "From the start" }).click();
+      await scan(page, "academy (watch it)");
+    });
+
     test("stats with Wavedash leaderboards", async ({ page }) => {
       await fakeWavedash(page);
       await page.goto("/");
