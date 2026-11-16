@@ -10,12 +10,17 @@ test("the production build loads and its main screens open", async ({ page }) =>
     if (m.type() === "error") errors.push(m.text());
   });
   await unlockAllLevels(page);
+  // An existing player (the wins above) gets the tour only if asked: ask, to load its chunk.
+  await page.addInitScript(() => localStorage.setItem("sudoku_v1_pref_controls_tour", "true"));
   // Relative to the /game/ base: the ./ assets must resolve under the subfolder.
   await page.goto("./");
 
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Easy/ }).click();
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
+  // The controls tour, a lazy chunk (driver.js and its CSS) that must load too.
+  await expect(page.locator(".driver-popover.controls-tour")).toContainText("Placing digits");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Exit" }).click();
 
   await page.getByRole("button", { name: "Academy" }).click();

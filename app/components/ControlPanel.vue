@@ -44,6 +44,7 @@ function tap(action: "undo" | "redo") {
   <div class="grid grid-cols-6 gap-1.5 sm:gap-2">
     <!-- Undo -->
     <button
+      data-tour="undo"
       @click="tap('undo')"
       @pointerdown="hold"
       @pointerup="release"
@@ -104,6 +105,7 @@ function tap(action: "undo" | "redo") {
 
     <!-- Notes -->
     <button
+      data-tour="notes"
       @click="$emit('toggle-notes')"
       :title="`${$t('controls.notes')} (N)`"
       class="tile relative flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
@@ -128,6 +130,7 @@ function tap(action: "undo" | "redo") {
 
     <!-- Hint -->
     <button
+      data-tour="hint"
       @click="$emit('trigger-hint')"
       :title="`${$t('controls.hint')} (H)`"
       class="tile tile-amber flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
