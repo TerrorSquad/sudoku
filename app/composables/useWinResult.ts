@@ -70,7 +70,13 @@ export function useWinResult(t: Translate) {
     const { difficulty, daily, zen, practice: practised, seconds, mistakes, hints } = game;
     const key = statsKey(difficulty, daily);
     // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
-    const needed = neededTechniques(game.initialBoard);
+    // The save is already cleared, so a grader failure must cost this list, not the win.
+    let needed: ReturnType<typeof neededTechniques> = [];
+    try {
+      needed = neededTechniques(game.initialBoard);
+    } catch {
+      needed = [];
+    }
     const result: WinResult = {
       score: null,
       isNewBest: false,
