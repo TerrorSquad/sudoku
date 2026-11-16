@@ -68,7 +68,7 @@ const topTechniques = computed(() => {
 
 const hasStats = computed(() => stats.gamesWon > 0 || topTechniques.value.length > 0);
 
-function formatTime(seconds: number): string {
+function shortTime(seconds: number): string {
   if (!seconds) return t("stats.dash");
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -180,7 +180,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.wins }}</td>
                   <td class="px-3 py-2 text-right tabular-nums">{{ row.best.toLocaleString() }}</td>
                   <td class="px-3 py-2 text-right tabular-nums">
-                    {{ formatTime(row.bestTime) }}
+                    {{ shortTime(row.bestTime) }}
                   </td>
                 </tr>
               </tbody>
