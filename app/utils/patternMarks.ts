@@ -6,6 +6,8 @@
 
 import type { CellRC, DigitAt, SolveMove } from "./sudokuGrader";
 
+import { sameCell } from "./gridNav";
+
 export interface Pt {
   x: number;
   y: number;
@@ -51,9 +53,10 @@ const frame = (kind: Kind, p: CellRC): Mark =>
 function sharedUnit(cells: CellRC[], order: Kind[] = ["row", "col", "box"]): Kind | null {
   return order.find((k) => cells.every((p) => unitKey(k, p) === unitKey(k, cells[0]!))) ?? null;
 }
-const same = (a: CellRC, b: CellRC) => a.r === b.r && a.c === b.c;
 const uniq = (cells: CellRC[]) =>
-  cells.filter((p, i) => cells.findIndex((q) => same(p, q)) === i).map(({ r, c }) => ({ r, c }));
+  cells
+    .filter((p, i) => cells.findIndex((q) => sameCell(p, q)) === i)
+    .map(({ r, c }) => ({ r, c }));
 const UNIT_CELLS = (kind: Kind, p: CellRC): CellRC[] =>
   Array.from({ length: 9 }, (_, i) =>
     kind === "row"

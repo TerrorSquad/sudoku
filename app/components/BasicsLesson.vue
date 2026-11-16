@@ -18,7 +18,15 @@ import {
   hatchedBy,
   type BasicsId,
 } from "../utils/basics";
-import { focusCell, stepCell } from "../utils/gridNav";
+import {
+  boardKey,
+  emptyNotes,
+  focusCell,
+  onButton,
+  sameCell,
+  shakeCell,
+  stepCell,
+} from "../utils/gridNav";
 import { digitLabel } from "../utils/sudokuColors";
 import { saveToCloud } from "../utils/wavedash";
 import Numpad from "./Numpad.vue";
@@ -42,8 +50,6 @@ const { colorMode, boardTheme: theme } = usePreferences();
 const digit = (n: number) => digitLabel(n, colorMode.value, t);
 
 const board = ref(task.value.board.map((row) => [...row]));
-const emptyNotes = (): NotesGrid =>
-  Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => Array(10).fill(false)));
 const notes = ref<NotesGrid>(emptyNotes());
 const selected = ref<CellCoord | null>(null);
 const notesMode = ref(false);
@@ -66,18 +72,10 @@ function load() {
 }
 load();
 
-const same = (a: CellCoord, b: CellCoord) => a.r === b.r && a.c === b.c;
 const say = (key: string, ok: boolean, params: Record<string, unknown> = {}) =>
   (feedback.value = { text: t(key, params), ok });
-const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 function reject(cell: CellCoord, key: string, params: Record<string, unknown> = {}) {
-  if (!reducedMotion.value)
-    document.querySelector(`[data-cell="${cell.r}-${cell.c}"]`)?.animate(
-      [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
-      {
-        duration: 320,
-      },
-    );
+  shakeCell(cell);
   emit("cue", "mistake");
   say(key, false, params);
 }
@@ -116,7 +114,7 @@ function input(num: number) {
   const tk = task.value;
   if (tk.kind === "notes") return pencil(cell, num);
   if (tk.board[cell.r]![cell.c]) return reject(cell, "basics.miss.filled");
-  if (!same(cell, tk.cell)) {
+  if (!sameCell(cell, tk.cell)) {
     if (tk.scan) {
       const box = (p: CellCoord) => Math.floor(p.r / 3) * 3 + Math.floor(p.c / 3);
       if (box(cell) !== box(tk.cell)) return reject(cell, "basics.miss.outside");
@@ -148,7 +146,7 @@ function input(num: number) {
 // Notes: a maybe that's already in the cell's row, column or box is refused with that reason.
 function pencil(cell: CellCoord, num: number) {
   const tk = task.value;
-  if (!same(cell, tk.cell)) return say("basics.miss.notesCell", false);
+  if (!sameCell(cell, tk.cell)) return say("basics.miss.notesCell", false);
   if (!notesMode.value) return say("basics.notesFirst", false);
   const marks = notes.value[cell.r]![cell.c]!;
   if (marks[num]) {
@@ -248,11 +246,9 @@ function next() {
   else emit("lesson", "naked-single");
 }
 
-const onButton = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest?.("button, select");
 function onKey(e: KeyboardEvent) {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  if (key === "Escape") return emit("back");
+  const key = boardKey(e, () => emit("back"));
+  if (!key) return;
   if (done.value) {
     if (key === "Enter" && !onButton(e)) {
       e.preventDefault();

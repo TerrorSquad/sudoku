@@ -27,6 +27,7 @@ import { computed, onUnmounted, ref } from "vue";
 
 import type { AcademyExample } from "../utils/academyExamples";
 
+import { onButton } from "../utils/gridNav";
 import ExampleGrid from "./ExampleGrid.vue";
 
 const props = defineProps<{
@@ -104,8 +105,7 @@ onUnmounted(stop);
 // Space and ←/→ once the example has focus (a focused button keeps its own Space).
 function onKey(e: KeyboardEvent) {
   if (e.altKey || e.ctrlKey || e.metaKey) return; // Alt+← is the browser's Back
-  const onButton = !!(e.target as HTMLElement).closest?.("button");
-  if (e.key === " " && !onButton) {
+  if (e.key === " " && !onButton(e)) {
     e.preventDefault();
     space();
   } else if (e.key === "ArrowLeft") {
