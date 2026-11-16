@@ -17,7 +17,8 @@ test("the Daily picker: open levels play, locked and finished ones don't", async
     ),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  // Any Daily done today marks the tile done; it still opens the picker for the other levels.
+  await page.getByRole("button", { name: "Daily done ✓" }).click();
   await expect(page.getByRole("heading", { name: "Today's Dailies" })).toBeVisible();
 
   // Today's Medium is done: its time shows and it doesn't start again.
@@ -82,7 +83,7 @@ test("a Hard Daily records on its own key, keeps the streak and posts to its own
     .toEqual(["daily-hard-2026-01-15"]);
 
   await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("button", { name: /1-day streak/ })).toBeVisible();
-  await page.getByRole("button", { name: "Daily puzzle" }).click();
+  await expect(page.getByRole("button", { name: /Daily done ✓.*1-day streak/ })).toBeVisible();
+  await page.getByRole("button", { name: "Daily done ✓" }).click();
   await expect(page.getByRole("button", { name: /\bHard\b/ })).toContainText("Done ·");
 });

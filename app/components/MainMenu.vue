@@ -13,12 +13,9 @@ const dailyPuzzle = useDailyPuzzle();
 const score = useScore();
 const techniquePath = useTechniquePath();
 const dailyStreak = dailyPuzzle.getStreakState();
-// The tile stays lit while an open level's Daily is left today (a locked level's Daily is locked).
-const { loadDifficulty } = useGameSave();
+// Lit until any Daily is done today, the same rule as the streak and the calendar.
+const dailyDone = dailyPuzzle.getCompletedDays().has(dailyPuzzle.todayKey());
 const unlockWins = score.unlockWins();
-const dailiesLeft = LADDER.some(
-  (d) => !lockOf(d, unlockWins, !!loadDifficulty(d)) && !dailyPuzzle.getRecord(d),
-);
 // Lifetime score drives the level.
 const playerLevel = levelFor(score.getStats().total);
 const lessonsDone = techniquePath.getDone();
@@ -141,18 +138,14 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
         </span>
       </button>
 
-      <button
-        @click="emit('daily')"
-        :class="dailiesLeft ? 'tile-amber' : ''"
-        class="tile menu-cell"
-      >
+      <button @click="emit('daily')" :class="dailyDone ? '' : 'tile-amber'" class="tile menu-cell">
         <AppIcon
           class="h-5 w-5"
           path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
         />
         <span>
           <span class="block">{{
-            dailiesLeft ? $t("menu.dailyChallenge") : $t("menu.dailyCompleted")
+            dailyDone ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
           }}</span>
           <span
             v-if="dailyStreak.current > 0"

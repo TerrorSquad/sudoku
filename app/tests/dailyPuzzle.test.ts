@@ -52,10 +52,18 @@ describe("daily puzzle", () => {
     );
     for (const l of levels)
       expect(hasUniqueSolution(generateDailyBoard("2026-06-11", l))).toBe(true);
-    // Pinned like Medium's: a generator change mustn't reshuffle a day's Hard Daily.
-    expect(boards[3]).toMatchInlineSnapshot(
-      `"870003490006000100050000700080005900700000000065102000030040800400507600600000003"`,
-    );
+    // Pinned like Medium's: a grader or generator change mustn't reshuffle a day's Dailies (and
+    // their leaderboards) for players mid-day.
+    expect(Object.fromEntries(levels.map((l, i) => [l, boards[i]]))).toMatchInlineSnapshot(`
+      {
+        "beginner": "100654708007010450480002130000000020300825640706400000098043071240506089503901260",
+        "easy": "804000002210749600000082710060000280340205900000000005009508007700460000425190863",
+        "expert": "000590600080000050000810090900000001070030000820907000058060700000000420400000306",
+        "hard": "870003490006000100050000700080005900700000000065102000030040800400507600600000003",
+        "master": "000000100600500009900080046080057000000000000059000300000200007020706034100900800",
+        "medium": "109500000260310974080026053076002000851073269023000500090001000300200690000000030",
+      }
+    `);
   });
 
   it("Medium keeps the original key; the other levels add theirs", () => {
