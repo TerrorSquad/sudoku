@@ -10,22 +10,17 @@ function formatTime(seconds: number): string {
 
 export function useTimer() {
   const timerSeconds = ref<number>(0);
-  const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
   const isPaused = ref<boolean>(false);
+  const { pause: stopTimer, resume, isActive } = useIntervalFn(
+    () => timerSeconds.value++,
+    1000,
+    { immediate: false },
+  );
 
   function startTimer() {
-    if (timerInterval.value) return;
-    timerInterval.value = setInterval(() => {
-      timerSeconds.value++;
-    }, 1000);
+    if (isActive.value) return; // resume() would restart the second under way
+    resume();
     isPaused.value = false;
-  }
-
-  function stopTimer() {
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value);
-      timerInterval.value = null;
-    }
   }
 
   function resetTimer() {

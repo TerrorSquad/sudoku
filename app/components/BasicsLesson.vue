@@ -2,7 +2,7 @@
 // "How to play": one of the four basics lessons (utils/basics.ts), task by task. Same look and
 // keys as a technique lesson, but its own small engine: the moves are the beginner's (place the
 // missing digit, pencil in the maybes), not a technique's pattern. No clock, score or save.
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { Mark } from "../utils/patternMarks";
@@ -69,8 +69,9 @@ load();
 const same = (a: CellCoord, b: CellCoord) => a.r === b.r && a.c === b.c;
 const say = (key: string, ok: boolean, params: Record<string, unknown> = {}) =>
   (feedback.value = { text: t(key, params), ok });
+const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 function reject(cell: CellCoord, key: string, params: Record<string, unknown> = {}) {
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+  if (!reducedMotion.value)
     document.querySelector(`[data-cell="${cell.r}-${cell.c}"]`)?.animate(
       [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
       {
@@ -271,8 +272,7 @@ function onKey(e: KeyboardEvent) {
     showMe();
   }
 }
-onMounted(() => window.addEventListener("keydown", onKey));
-onUnmounted(() => window.removeEventListener("keydown", onKey));
+useEventListener(window, "keydown", onKey);
 </script>
 
 <template>

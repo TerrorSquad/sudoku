@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   // Off for visual runs: its badge shows a live timing and overlaps the UI in baselines.
   devtools: { enabled: !process.env.VISUAL_REGRESSION },
-  modules: ["@nuxt/ui", "@nuxtjs/i18n"],
+  modules: ["@nuxt/ui", "@nuxtjs/i18n", "@vueuse/nuxt"],
   css: ["~/assets/css/main.css"],
   // Generate theme CSS only for the Nuxt UI components the app uses: 260 KB of CSS otherwise.
   ui: { experimental: { componentDetection: true } },

@@ -44,7 +44,8 @@ const i = ref(last);
 const watching = ref(false); // stepped away from the resting full drawing at least once
 const playing = ref(false);
 // Reduced motion: no auto-advance, just the step controls.
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Read once: a live value could hide Play/Pause mid-playback.
+const still = useMediaQuery("(prefers-reduced-motion: reduce)").value;
 
 const beat = computed(() => steps[i.value]!);
 const at = (step: string) => steps.findIndex((s) => s.step === step);

@@ -111,16 +111,12 @@ export function useGamepad({ onBoard, boardKeys, onBack, onPause }: PadOptions) 
     timers.clear();
   }
 
+  useEventListener(window, "gamepadconnected", start);
+  useEventListener(window, "gamepaddisconnected", stop);
   onMounted(() => {
-    window.addEventListener("gamepadconnected", start);
-    window.addEventListener("gamepaddisconnected", stop);
     if (pads().length) start();
   });
-  onUnmounted(() => {
-    window.removeEventListener("gamepadconnected", start);
-    window.removeEventListener("gamepaddisconnected", stop);
-    cancelAnimationFrame(frame);
-  });
+  onUnmounted(() => cancelAnimationFrame(frame));
 
   return { connected, digit };
 }

@@ -104,12 +104,13 @@ function stopWinSteps() {
   cancelAnimationFrame(countFrame);
 }
 
+const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 function startWinSteps() {
   stopWinSteps();
   winStep.value = 0;
   winSkipped.value = false;
   displayedScore.value = 0;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (reducedMotion.value) {
     skipWinSteps();
     if (perfect.value) emit("cue", "stamp");
     return;
@@ -217,14 +218,11 @@ function onKey(e: KeyboardEvent) {
   if (!e.repeat && winStep.value) skipWinSteps();
 }
 
+useEventListener(window, "keydown", onKey);
 onMounted(() => {
-  window.addEventListener("keydown", onKey);
   if (props.win) startWinSteps();
 });
-onUnmounted(() => {
-  window.removeEventListener("keydown", onKey);
-  stopWinSteps();
-});
+onUnmounted(stopWinSteps);
 </script>
 
 <template>

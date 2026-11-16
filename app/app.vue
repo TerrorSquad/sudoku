@@ -989,6 +989,7 @@ const finishPath = computed(() => {
   return singlesPath(currentBoard.value);
 });
 
+const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 // The clock stops at the press; the cells fill one by one in solve order, each with its own
 // flash and placement cue (all at once under reduced motion), then the usual win flow runs.
 async function handleFinish() {
@@ -1002,7 +1003,7 @@ async function handleFinish() {
   activeDigit.value = null;
   selectedCell.value = null;
   const token = startToken; // bumped if the player exits mid-cascade
-  const instant = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const instant = reducedMotion.value;
   for (const [i, p] of path.entries()) {
     // A cascade: each cell waits for the one before it.
     // oxlint-disable-next-line eslint/no-await-in-loop
@@ -1238,15 +1239,13 @@ const { connected: padConnected, digit: padDigit } = useGamepad({
   },
 });
 
+useEventListener(window, "keydown", handleKeyDown);
+useEventListener(document, "visibilitychange", handlePageHidden);
 onMounted(() => {
-  window.addEventListener("keydown", handleKeyDown);
-  document.addEventListener("visibilitychange", handlePageHidden);
   // Progress made before these achievements existed, or just restored from the cloud.
   checkAcademyAchievements();
 });
 onUnmounted(() => {
-  window.removeEventListener("keydown", handleKeyDown);
-  document.removeEventListener("visibilitychange", handlePageHidden);
   if (flashTimeout) clearTimeout(flashTimeout);
   clearTimeout(appliedTimer);
 });
