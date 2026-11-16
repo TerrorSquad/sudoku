@@ -98,7 +98,7 @@ const ensure = (i: number, retry = 0) => {
 // The clock: what earlier positions took, plus this one so far.
 let findStart = 0;
 const now = ref(0);
-const tick = setInterval(() => (now.value = performance.now()), 100);
+useIntervalFn(() => (now.value = performance.now()), 100);
 // A hidden tab stops the clock: the time away is added to findStart when the tab comes back.
 let hiddenAt = 0;
 function onVisibility() {
@@ -168,8 +168,9 @@ async function load(i: number) {
   hiddenAt = document.hidden ? findStart : 0;
 }
 
+const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 function shake({ r, c }: CellCoord) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (reducedMotion.value) return;
   document.querySelector(`[data-cell="${r}-${c}"]`)?.animate(
     [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
     { duration: 320 },
@@ -309,15 +310,10 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  window.addEventListener("keydown", onKey);
-  document.addEventListener("visibilitychange", onVisibility);
-  startRound();
-});
+useEventListener(window, "keydown", onKey);
+useEventListener(document, "visibilitychange", onVisibility);
+onMounted(startRound);
 onUnmounted(() => {
-  window.removeEventListener("keydown", onKey);
-  document.removeEventListener("visibilitychange", onVisibility);
-  clearInterval(tick);
   clearTimeout(revealTimer);
   round++; // drops a position still loading
 });

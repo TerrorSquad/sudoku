@@ -44,7 +44,7 @@ const i = ref(last);
 const watching = ref(false); // stepped away from the resting full drawing at least once
 const playing = ref(false);
 // Reduced motion: no auto-advance, just the step controls.
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const still = useMediaQuery("(prefers-reduced-motion: reduce)");
 
 const beat = computed(() => steps[i.value]!);
 const at = (step: string) => steps.findIndex((s) => s.step === step);
@@ -97,7 +97,7 @@ function go(to: number) {
 }
 // Space plays or pauses; with reduced motion (no Play) it steps on, round to the start at the end.
 const space = () =>
-  still ? go(i.value >= last ? 0 : i.value + 1) : playing.value ? stop() : play();
+  still.value ? go(i.value >= last ? 0 : i.value + 1) : playing.value ? stop() : play();
 onUnmounted(stop);
 
 // Space and ←/→ once the example has focus (a focused button keeps its own Space).

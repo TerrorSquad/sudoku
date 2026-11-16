@@ -2,7 +2,7 @@
 // A guided technique lesson: find the pattern, then make the move it allows. Only those moves are
 // accepted, so finishing the lesson shows the technique was applied (it completes the path step).
 // No clock, score or save: its own board state, not the game's.
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, ref } from "vue";
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
@@ -110,8 +110,9 @@ const counts = computed(() => {
 const say = (key: string, ok: boolean, params: Record<string, unknown> = {}) =>
   (feedback.value = { text: t(key, params), ok });
 
+const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 function shake({ r, c }: CellCoord) {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (reducedMotion.value) return;
   document.querySelector(`[data-cell="${r}-${c}"]`)?.animate(
     [0, -4, 4, -3, 2, 0].map((x) => ({ transform: `translateX(${x}px)` })),
     { duration: 320 },
@@ -326,8 +327,7 @@ function onKey(e: KeyboardEvent) {
     showMe();
   }
 }
-onMounted(() => window.addEventListener("keydown", onKey));
-onUnmounted(() => window.removeEventListener("keydown", onKey));
+useEventListener(window, "keydown", onKey);
 </script>
 
 <template>
