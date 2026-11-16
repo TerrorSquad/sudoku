@@ -2,7 +2,11 @@ allowBuilds:
   "@parcel/watcher": true
   esbuild: true
   vue-demi: true
-# `pnpm update --latest` skips these: see docs/adr/0002-toolchain-pins.md.
+# `pnpm update --latest` skips these pins. nuxt: 4.6.3+ prerenders every page as "Redirecting..."
+# with the relative base URL (./) the Wavedash build uses; before unpinning, run `pnpm wavedash`'s
+# generate and check index.html is the app shell (scripts/budget.mjs fails otherwise). typescript:
+# vue-tsc needs TS 6's JS compiler API, which TS 7 dropped. @vueuse/nuxt: v15 brings a second
+# @vueuse/core; stay on the 14 line @nuxt/ui uses.
 updateConfig:
   ignoreDependencies:
     - nuxt

@@ -6,12 +6,16 @@
 // JS, and theming every Nuxt UI component 120 KB of CSS.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 
-const html = readFileSync(".output/public/index.html", "utf8");
-if (!html.includes("<!DOCTYPE html>") || !html.includes("_nuxt/")) {
-  console.error(
-    `index.html is not the app shell (${html.length} bytes: ${html.slice(0, 60)}); not uploading.`,
-  );
-  process.exit(1);
+// With the relative base Wavedash needs, assets must load from ./_nuxt/, not /_nuxt/.
+const assets = process.env.NUXT_APP_BASE_URL === "./" ? 'src="./_nuxt/' : "_nuxt/";
+for (const page of ["index.html", "200.html"]) {
+  const html = readFileSync(`.output/public/${page}`, "utf8");
+  if (!html.includes("<!DOCTYPE html>") || !html.includes(assets)) {
+    console.error(
+      `${page} is not the app shell (${html.length} bytes: ${html.slice(0, 60)}); not uploading.`,
+    );
+    process.exit(1);
+  }
 }
 
 const WARN_AT = { js: 1100, css: 180 }; // KB, raw: 922 and 142 at v1.6.0 (pattern lines, lessons)
