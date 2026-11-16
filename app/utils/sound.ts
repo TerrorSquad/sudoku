@@ -34,7 +34,7 @@ function tone(
 const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98];
 
 /** The note a digit plays: 1 lowest, 9 highest. */
-export function digitFreq(digit: number): number {
+function digitFreq(digit: number): number {
   return PENTATONIC[Math.min(9, Math.max(1, digit)) - 1]!;
 }
 

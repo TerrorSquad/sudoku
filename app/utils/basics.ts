@@ -15,7 +15,7 @@ export const SOLUTION = toGrid(
 
 export type BasicsId = "rule" | "notes" | "single" | "scan";
 
-export interface BasicsTask {
+interface BasicsTask {
   /** place: put the cell's digit in; notes: pencil in every digit that could go there. */
   kind: "place" | "notes";
   /** i18n key of the coach's prompt (`basics.task.<prompt>`). */

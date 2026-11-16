@@ -17,13 +17,13 @@ const daily = useDailyPuzzle();
 
 const stats = score.getStats();
 const onWavedash = hasWavedash();
-const streakState = daily.getStreakState();
-const streak = streakState.current;
+const dailyStreak = daily.getStreakState();
+const streak = dailyStreak.current;
 const records = useRecords().get();
 
 // Fastest times are the per-difficulty table's Best time column, not repeated here.
 const recordRows = [
-  { key: "streak", value: streakState.longest },
+  { key: "streak", value: dailyStreak.longest },
   { key: "mostInDay", value: records.mostInDay },
   { key: "cleanRun", value: records.bestCleanRun },
   {
@@ -146,7 +146,7 @@ const maxTechCount = computed(() => Math.max(1, ...topTechniques.value.map((tech
               class="mt-1 text-[0.625rem] font-semibold text-sky-700 dark:text-sky-300"
               data-testid="freezes"
             >
-              ❄ {{ $t("streak.freezes", { n: streakState.freezes, max: MAX_FREEZES }) }}
+              ❄ {{ $t("streak.freezes", { n: dailyStreak.freezes, max: MAX_FREEZES }) }}
             </p>
           </div>
         </div>

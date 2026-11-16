@@ -8,7 +8,7 @@ import type { TechniqueId } from "./sudokuGrader";
 
 export const LADDER: Difficulty[] = ["beginner", "easy", "medium", "hard", "expert", "master"];
 /** Wins at the level below (or harder) that open the next one. */
-export const WINS_TO_UNLOCK = 2;
+const WINS_TO_UNLOCK = 2;
 
 /** useScore's perDifficulty map (the win counts that already exist and already sync). */
 export type WinsByDifficulty = Record<string, { wins: number; best?: number } | undefined>;
@@ -21,7 +21,7 @@ const winsAt = (e: WinsByDifficulty[string]) => Math.max(e?.wins ?? 0, (e?.best 
 const winsFrom = (wins: WinsByDifficulty, i: number) =>
   LADDER.slice(i).reduce((n, d) => n + winsAt(wins[d]), 0);
 
-export interface Lock {
+interface Lock {
   /** The level whose wins (or harder ones) open this one. */
   at: Difficulty;
   have: number;

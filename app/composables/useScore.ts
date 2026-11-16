@@ -5,20 +5,20 @@ const KEY = "sudoku_v1_score";
 /** Zen wins per difficulty: no score, but they open harder levels like any win. */
 const ZEN_KEY = "sudoku_v1_zen_wins";
 
-export interface DifficultyStat {
+interface DifficultyStat {
   best: number; // best single-game score
   wins: number; // games won at this difficulty
   bestTime: number; // fastest win in seconds (0 = none yet)
 }
 
-export interface ScoreStats {
+interface ScoreStats {
   total: number; // lifetime points
   gamesWon: number;
   best: Record<string, number>; // best score per difficulty (kept for the win modal)
   perDifficulty: Record<string, DifficultyStat>;
 }
 
-export interface RecordResult {
+interface RecordResult {
   stats: ScoreStats;
   isNewBest: boolean;
   previousBest: number;

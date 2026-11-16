@@ -9,7 +9,7 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 
 import { usePreferences } from "../composables/usePreferences";
 import { useTechniqueStats } from "../composables/useTechniqueStats";
-import { useTimer } from "../composables/useTimer";
+import { formatTime } from "../composables/useTimer";
 import { encodeChallenge } from "../utils/challenge";
 import { starsFor } from "../utils/stars";
 
@@ -46,7 +46,6 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { formatTime } = useTimer();
 const { mistakeLimit } = usePreferences();
 // Lifetime per-technique usage, read as the modal opens.
 const techStatsTotals = useTechniqueStats().getAll();

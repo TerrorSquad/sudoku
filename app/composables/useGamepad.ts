@@ -7,7 +7,7 @@ export interface PadKeys extends Partial<Record<PadAction, string>> {
   clicks?: boolean;
 }
 
-export interface PadOptions {
+interface PadOptions {
   /** True while the D-pad should walk the cells rather than move focus. */
   onBoard: () => boolean;
   /** The keys for the board on screen, given the digit LB/RB picked. */
@@ -50,7 +50,7 @@ const ARROWS = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "Ar
  * Polls connected controllers once a frame (only while one is connected); `connected` is true
  * while any pad is plugged in.
  */
-export function useGamepad({ onBoard, boardKeys, onBack, onPause }: PadOptions) {
+export function usePad({ onBoard, boardKeys, onBack, onPause }: PadOptions) {
   const connected = ref(false);
   const digit = ref(1);
   const timers = new Map<PadAction, number>();

@@ -1,18 +1,10 @@
 import type { Grid } from "../types/sudoku";
 
 import { readJSON, writeJSON } from "../utils/safeJson";
-import { streakState } from "../utils/streak";
+import { localDateKey, streakState } from "../utils/streak";
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
 
 const DAILY_REMOVE_TARGET = 45;
-
-/** Local calendar date (YYYY-MM-DD) — the daily rolls over at local midnight, not UTC. */
-export function localDateKey(date: Date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 /** Deterministic per-date puzzle with a guaranteed unique solution. */
 export function generateDailyBoard(dateStr: string): Grid {

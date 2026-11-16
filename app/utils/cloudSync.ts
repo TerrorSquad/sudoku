@@ -99,7 +99,7 @@ export type CloudRead =
   | { kind: "newer" }
   | { kind: "corrupt" };
 
-export type Decision =
+type Decision =
   | { action: "none" }
   /** Local and cloud already hold the same data; just remember that. */
   | { action: "in-sync"; file: CloudFile }

@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import type { GameSave, SaveSlot } from "../composables/useGameSave";
 
-import { useTimer } from "../composables/useTimer";
+import { formatTime } from "../composables/useTimer";
 
 // A level that already has a saved game: continue it, start over, or back out.
 defineProps<{ save: GameSave; level: SaveSlot }>();
 const emit = defineEmits<{ continue: []; restart: []; cancel: [] }>();
-const { formatTime } = useTimer();
 </script>
 
 <template>

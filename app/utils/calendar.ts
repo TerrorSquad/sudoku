@@ -1,9 +1,9 @@
 // Pure calendar layout for the Daily activity heat-map — no Vue, no storage.
 // Unit-tested in tests/calendar.test.ts.
 
-import { localDateKey } from "../composables/useDailyPuzzle";
+import { localDateKey } from "./streak";
 
-export interface CalendarDay {
+interface CalendarDay {
   key: string;
   /** After today: rendered as an empty slot so the grid stays rectangular. */
   future: boolean;

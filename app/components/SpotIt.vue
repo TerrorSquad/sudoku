@@ -10,7 +10,6 @@ import type { CellCoord, NotesGrid } from "../types/sudoku";
 import type { Tier } from "../utils/progression";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { localDateKey } from "../composables/useDailyPuzzle";
 import { useTechniquePath } from "../composables/useTechniquePath";
 import { focusCell, stepCell } from "../utils/gridNav";
 import {
@@ -38,6 +37,7 @@ import {
   totalTime,
   type SpotResult,
 } from "../utils/spotIt";
+import { localDateKey } from "../utils/streak";
 import { digitLabel } from "../utils/sudokuColors";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
 import { saveToCloud } from "../utils/wavedash";

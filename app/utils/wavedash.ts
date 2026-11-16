@@ -17,11 +17,12 @@ import {
   type SyncMeta,
 } from "./cloudSync";
 import { applyBackup, createBackup } from "./progressBackup";
+import { LADDER } from "./progression";
 import { readJSON, writeJSON } from "./safeJson";
 
 type Response<T> = { success: true; data: T } | { success: false; data: null; message: string };
 
-export interface LeaderboardEntry {
+interface LeaderboardEntry {
   userId: string;
   username: string;
   score: number;
@@ -185,7 +186,6 @@ export const hasWavedash = () => !!sdk();
 export interface Board {
   name: string;
 }
-export const DIFFICULTIES = ["beginner", "easy", "medium", "hard", "expert", "master"] as const;
 export const dailyBoard = (dateKey: string): Board => ({ name: `daily-${dateKey}` });
 export const timeBoard = (difficulty: string): Board => ({ name: `best-time-${difficulty}` });
 
@@ -203,7 +203,7 @@ export interface Win {
  * puzzles (and anything outside the six difficulties) post nothing.
  */
 export function scoresFor(win: Win): { board: Board; score: number }[] {
-  if (!(DIFFICULTIES as readonly string[]).includes(win.difficulty)) return [];
+  if (!(LADDER as string[]).includes(win.difficulty)) return [];
   const timed = win.daily ? dailyBoard(win.daily) : timeBoard(win.difficulty);
   return win.seconds > 0 ? [{ board: timed, score: win.seconds }] : [];
 }

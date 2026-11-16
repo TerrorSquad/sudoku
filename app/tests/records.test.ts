@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  NO_RECORDS,
   breakCleanRun,
   addWin,
   brokenRecords,
@@ -18,9 +17,18 @@ const win = (over: Partial<Parameters<typeof addWin>[1]> = {}) => ({
   ...over,
 });
 
+const NO_RECORDS = readRecords(null);
+
 describe("readRecords", () => {
   it("reads nothing or garbage as no records", () => {
-    expect(readRecords(null)).toEqual(NO_RECORDS);
+    expect(NO_RECORDS).toEqual({
+      day: "",
+      dayWins: 0,
+      mostInDay: 0,
+      cleanRun: 0,
+      bestCleanRun: 0,
+      hardestNoHint: null,
+    });
     expect(readRecords("x")).toEqual(NO_RECORDS);
     expect(readRecords({ mostInDay: -3, bestCleanRun: 1.5, hardestNoHint: "custom" })).toEqual(
       NO_RECORDS,

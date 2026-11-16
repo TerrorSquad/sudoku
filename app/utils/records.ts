@@ -23,15 +23,6 @@ export interface Records {
   hardestNoHint: Difficulty | null;
 }
 
-export const NO_RECORDS: Records = {
-  day: "",
-  dayWins: 0,
-  mostInDay: 0,
-  cleanRun: 0,
-  bestCleanRun: 0,
-  hardestNoHint: null,
-};
-
 const count = (v: unknown) => (Number.isInteger(v) && (v as number) > 0 ? (v as number) : 0);
 const rank = (d: Difficulty | null) => (d ? LADDER.indexOf(d) : -1);
 const harder = (a: Difficulty | null, b: Difficulty | null) => (rank(a) > rank(b) ? a : b);

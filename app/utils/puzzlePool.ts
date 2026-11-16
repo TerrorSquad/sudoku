@@ -9,7 +9,7 @@ import { quickLesson, type Lesson } from "./lesson";
 import { makeRng } from "./sudokuCore";
 import { generateGradedPuzzle } from "./sudokuGrader";
 
-export interface NewPuzzle {
+interface NewPuzzle {
   puzzle: Grid;
   solution: Grid;
 }

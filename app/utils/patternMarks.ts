@@ -24,12 +24,12 @@ export type Mark =
   | { kind: "cross"; at: Pt; num: number; ghost?: boolean; fade?: boolean }
   | { kind: "place"; at: Pt };
 
-export type PatternMove = Pick<
+type PatternMove = Pick<
   SolveMove,
   "technique" | "triggers" | "eliminations" | "placement" | "digits" | "unit"
 >;
 /** Whether (r, c) has pencil mark n; empty or filled cells have none. */
-export type HasMark = (r: number, c: number, n: number) => boolean;
+type HasMark = (r: number, c: number, n: number) => boolean;
 
 /** Where mark n sits inside its cell: the 3×3 pencil-mark layout of SudokuCell. */
 export const anchor = (r: number, c: number, n: number): Pt => ({

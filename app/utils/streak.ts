@@ -7,7 +7,7 @@
 export const FREEZE_EVERY = 7;
 export const MAX_FREEZES = 2;
 
-export interface StreakState {
+interface StreakState {
   /** Ending today, or yesterday while today is still unplayed. */
   current: number;
   longest: number;
@@ -17,6 +17,14 @@ export interface StreakState {
   earned: number;
   /** Missed days a freeze covered, as YYYY-MM-DD. */
   frozen: string[];
+}
+
+/** Local calendar date (YYYY-MM-DD) — the daily rolls over at local midnight, not UTC. */
+export function localDateKey(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 const DAY = 86_400_000;

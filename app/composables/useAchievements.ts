@@ -7,7 +7,7 @@ import { reportAchievements } from "../utils/wavedash";
 const KEY = "sudoku_v1_achievements";
 
 /** id -> unlock timestamp (ms). */
-export type UnlockedMap = Record<string, number>;
+type UnlockedMap = Record<string, number>;
 
 export function useAchievements() {
   function getUnlocked(): UnlockedMap {
