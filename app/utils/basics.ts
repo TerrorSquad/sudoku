@@ -5,6 +5,7 @@
 import type { Grid } from "../types/sudoku";
 import type { BoardUnit, CellRC } from "./sudokuGrader";
 
+import { sameCell } from "./gridNav";
 import { getGridCandidates } from "./sudokuCore";
 
 export const BASICS_KEY = "sudoku_v1_basics_done";
@@ -44,16 +45,15 @@ const unitCells = ({ kind, r, c }: BoardUnit): CellRC[] =>
         ? { r: i, c }
         : { r: r - (r % 3) + Math.floor(i / 3), c: c - (c % 3) + (i % 3) },
   );
-const same = (a: CellRC, b: CellRC) => a.r === b.r && a.c === b.c;
 /** SOLUTION showing only `cells`. */
 const only = (cells: CellRC[]): Grid =>
-  SOLUTION.map((row, r) => row.map((v, c) => (cells.some((p) => same(p, { r, c })) ? v : 0)));
+  SOLUTION.map((row, r) => row.map((v, c) => (cells.some((p) => sameCell(p, { r, c })) ? v : 0)));
 /** SOLUTION with `cells` emptied. */
 const without = (cells: CellRC[]): Grid =>
-  SOLUTION.map((row, r) => row.map((v, c) => (cells.some((p) => same(p, { r, c })) ? 0 : v)));
+  SOLUTION.map((row, r) => row.map((v, c) => (cells.some((p) => sameCell(p, { r, c })) ? 0 : v)));
 /** One unit filled in but for `cell`, nothing else: the rule on its own. */
 function ruleTask(prompt: string, unit: BoardUnit, cell: CellRC): BasicsTask {
-  const board = only(unitCells(unit).filter((p) => !same(p, cell)));
+  const board = only(unitCells(unit).filter((p) => !sameCell(p, cell)));
   return { kind: "place", prompt, board, cell, unit, preselect: true };
 }
 
@@ -62,7 +62,7 @@ const NOTES_CELL = { r: 4, c: 4 };
 const peers = ({ r, c }: CellRC) =>
   SOLUTION.flatMap((row, pr) => row.map((_, pc) => ({ r: pr, c: pc }))).filter(
     (p) =>
-      !same(p, { r, c }) &&
+      !sameCell(p, { r, c }) &&
       (p.r === r ||
         p.c === c ||
         (Math.floor(p.r / 3) === Math.floor(r / 3) && Math.floor(p.c / 3) === Math.floor(c / 3))),

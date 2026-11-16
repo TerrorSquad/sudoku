@@ -4,7 +4,7 @@
 // The solver tries the easiest technique first, so at the lesson's position nothing simpler
 // applies: the technique is genuinely the way forward, not just one of several.
 
-import type { Grid } from "../types/sudoku";
+import type { Grid, NotesGrid } from "../types/sudoku";
 
 import { ACADEMY_EXAMPLES } from "./academyExamples";
 import { generatePracticePuzzle } from "./practice";
@@ -35,6 +35,10 @@ export interface Lesson {
   unit: BoardUnit | null;
   move: SolveMove;
 }
+
+/** The lesson's pencil marks as a board's NotesGrid. */
+export const notesGrid = (L: Lesson): NotesGrid =>
+  L.notes.map((row) => row.map((ns) => Array.from({ length: 10 }, (_, n) => ns.includes(n))));
 
 type Kind = BoardUnit["kind"];
 const inUnit = (kind: Kind, a: CellRC, p: CellRC) =>
