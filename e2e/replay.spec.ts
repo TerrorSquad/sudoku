@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { place, resumeMedium, stuckSave } from "./seed";
+import { place, resumeMedium, seedMediumSave, stuckSave } from "./seed";
 
 // "Watch your solve": the win modal replays the game's placements, stuck moments marked.
 async function winStuckGame(page: Page) {
@@ -70,4 +70,22 @@ test("with reduced motion there's no autoplay: Space steps", async ({ page }) =>
   await page.getByTestId("solve-replay").focus();
   await page.keyboard.press(" ");
   await expect(stepText(page)).toHaveText("Move 1 of 18 · 00:05");
+});
+
+test("a digit brought back by redo is in the replay, which ends on the solution", async ({
+  page,
+}) => {
+  await seedMediumSave(page, [49, 50]); // a 2 and a 4
+  await resumeMedium(page);
+  await place(page, 49, "2");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+Shift+z");
+  await place(page, 50, "4");
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await page.getByTestId("watch-solve").click();
+  await page.getByRole("button", { name: "Step forward" }).click();
+  await page.getByRole("button", { name: "Step forward" }).click();
+  await expect(stepText(page)).toContainText("Move 2 of 2");
+  const replay = page.getByTestId("solve-replay");
+  await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
 });

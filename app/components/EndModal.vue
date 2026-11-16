@@ -145,7 +145,8 @@ function handleModalKey(e: KeyboardEvent) {
 const watching = ref(false);
 const canWatch = computed(() => props.win && props.placements.some((p) => !p.restored));
 function onKey(e: KeyboardEvent) {
-  if (watching.value) return;
+  // The real dialog state: its close event (which clears `watching`) comes a task after Esc.
+  if (document.querySelector("[data-end-modal] dialog[open]")) return;
   handleModalKey(e);
   // A key still held from the winning move, or pressed before the steps start, skips nothing.
   if (!e.repeat && winStep.value) skipWinSteps();
