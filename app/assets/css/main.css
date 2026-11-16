@@ -96,7 +96,10 @@
 }
 
 /* The page is squared paper: a 1.5rem grid, a stronger line every five squares. */
+/* "only" tells the browser the app draws its own light and dark: without it a forced dark mode
+   (Chrome's auto dark, some extensions) repaints the light board and loses its grid lines. */
 :root {
+  color-scheme: only light;
   --ground: #f1f4f7;
   --grid-fine: rgb(42 82 168 / 0.07);
   --grid-bold: rgb(42 82 168 / 0.13);
@@ -107,6 +110,7 @@
   --tile-lip: rgb(23 41 74 / 0.16);
 }
 .dark {
+  color-scheme: only dark;
   --ground: #1c252f;
   --grid-fine: rgb(255 255 255 / 0.035);
   --grid-bold: rgb(255 255 255 / 0.07);
