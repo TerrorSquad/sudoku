@@ -4,18 +4,23 @@
 // SKIP_PENALTY. The clock only runs while a position is up, not while the next one loads.
 // With `review` set it's the Daily review instead: one position per due technique, no clock or
 // penalties (it's about remembering, not speed), and each result moves its card (utils/review.ts).
+// With `rush` set it's Puzzle rush: positions from the tier until RUSH_LIVES misses (a wrong tap
+// or a skip), no clock or penalties; the score is the positions found.
 
 import type { CellCoord } from "../types/sudoku";
 import type { Instance, Lesson } from "../utils/lesson";
 import type { Tier } from "../utils/progression";
 import type { SpotResult } from "../utils/spotIt";
+import type { Rng } from "../utils/sudokuCore";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 const props = defineProps<{
   tier: Tier;
   review?: TechniqueId[];
+  rush?: boolean;
 }>();
 const reviewing = !!props.review;
+const rushing = !!props.rush && !reviewing;
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "lesson", id: TechniqueId): void;
@@ -46,6 +51,7 @@ const newBest = ref(false);
 let round = 0;
 let positions: (Promise<Lesson> | undefined)[] = [];
 let slots: ReturnType<typeof buildRound> = [];
+let rng: Rng; // a rush draws more slots from it as it goes
 const size = ref(ROUND_SIZE);
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
 const ensure = (i: number, retry = 0) => {
@@ -81,13 +87,17 @@ const clock = computed(() => {
       : 0;
   return totalTime(results.value) + live;
 });
+// A rush's lives: the position up now counts its wrong taps before it's settled.
+const lives = computed(() =>
+  Math.max(0, RUSH_LIVES - missCount(results.value) - (phase.value === "find" ? misses.value : 0)),
+);
 
 function startRound() {
   clearTimeout(revealTimer);
   round++;
   // A test pins the round with window.spotSeed; players get a fresh one.
   const seed = (window as { spotSeed?: number }).spotSeed ?? Math.floor(Math.random() * 2 ** 31);
-  const rng = makeRng(seed);
+  rng = makeRng(seed);
   slots = props.review
     ? props.review.map((technique) => ({ technique, seed: Math.floor(rng() * 2 ** 31) }))
     : buildRound(props.tier, rng);
@@ -102,6 +112,9 @@ async function load(i: number) {
   const mine = round;
   phase.value = "loading";
   index.value = i;
+  positions[i - 1] = undefined; // never asked for again: a long rush needn't keep every board
+  if (rushing && i + 1 >= slots.length)
+    slots.push(...buildRound(props.tier, rng, slots.at(-1)!.technique));
   ensure(i);
   ensure(i + 1);
   let L: Lesson;
@@ -144,13 +157,15 @@ function tap(cell: CellCoord) {
     emit("cue", "mistake");
     const why = missText(L, cell, t, digit);
     feedback.value = {
-      text: reviewing ? why : `${why} ${t("spot.penalty", { s: MISS_PENALTY })}`,
+      text: reviewing || rushing ? why : `${why} ${t("spot.penalty", { s: MISS_PENALTY })}`,
       ok: false,
     };
+    // The last life: the answer is shown under the reason, and the rush ends after it.
+    if (rushing && !lives.value) settle(instances[0]!, "out");
     return;
   }
   found.value = res.found;
-  if (res.complete) return settle(res.complete, false);
+  if (res.complete) return settle(res.complete, "found");
   feedback.value = {
     text: t("lesson.found", { n: res.found.length, total: L.pattern.length }),
     ok: true,
@@ -158,26 +173,48 @@ function tap(cell: CellCoord) {
 }
 
 function skip() {
-  if (phase.value === "find") settle(instances[0]!, true);
+  if (phase.value === "find") settle(instances[0]!, "skipped");
 }
 
-function settle(instance: Instance, skipped: boolean) {
+/** "out": a rush's last life went on a wrong tap here, so it's neither found nor skipped. */
+function settle(instance: Instance, how: "found" | "skipped" | "out") {
+  const skipped = how === "skipped";
   const seconds =
     (performance.now() - findStart) / 1000 +
-    misses.value * MISS_PENALTY +
-    (skipped ? SKIP_PENALTY : 0);
+    (rushing ? 0 : misses.value * MISS_PENALTY + (skipped ? SKIP_PENALTY : 0));
   results.value = [
     ...results.value,
-    { technique: lesson.value!.technique, seconds, misses: misses.value, skipped },
+    {
+      technique: lesson.value!.technique,
+      seconds,
+      misses: misses.value,
+      skipped,
+      ...(how === "out" && { out: true }),
+    },
   ];
   shown.value = instance;
   phase.value = "reveal";
-  feedback.value = skipped
-    ? { text: reviewing ? t("review.shown") : t("spot.skipped", { s: SKIP_PENALTY }), ok: false }
-    : { text: t("spot.found"), ok: true };
-  emit("cue", skipped ? "hint" : "place");
+  if (how === "out") {
+    // The tap already cued the mistake; the reason stays up with the answer.
+    feedback.value = { text: `${feedback.value?.text} ${t("spot.rush.shown")}`, ok: false };
+  } else {
+    feedback.value = skipped
+      ? {
+          text: reviewing
+            ? t("review.shown")
+            : rushing
+              ? t("spot.rush.shown")
+              : t("spot.skipped", { s: SKIP_PENALTY }),
+          ok: false,
+        }
+      : { text: t("spot.found"), ok: true };
+    emit("cue", skipped ? "hint" : "place");
+  }
   revealTimer = setTimeout(
-    () => (index.value + 1 < slots.length ? load(index.value + 1) : finishRound()),
+    () =>
+      (rushing ? lives.value : index.value + 1 < slots.length)
+        ? load(index.value + 1)
+        : finishRound(),
     REVEAL_MS,
   );
 }
@@ -197,12 +234,18 @@ function finishRound() {
     saveToCloud();
     return;
   }
-  const total = Math.round(totalTime(results.value) * 10) / 10;
-  const stored = readJSON<unknown>(SPOT_BEST_KEY, {});
+  const score = rushing
+    ? foundCount(results.value)
+    : Math.round(totalTime(results.value) * 10) / 10;
+  const key = rushing ? RUSH_BEST_KEY : SPOT_BEST_KEY;
+  const stored = readJSON<unknown>(key, {});
   best.value = readSpotBest(stored)[props.tier];
-  newBest.value = best.value === undefined || total < best.value;
+  // A rush is best when longest (one of nothing found is no best), a round when fastest.
+  newBest.value = rushing
+    ? score > (best.value ?? 0)
+    : best.value === undefined || score < best.value;
   // Merged into the raw entry, so tiers this version can't read survive.
-  writeJSON(SPOT_BEST_KEY, mergeSpotBest(stored, { [props.tier]: total }));
+  writeJSON(key, mergeSpotBest(stored, { [props.tier]: score }, rushing ? Math.max : Math.min));
   phase.value = "done";
   emit("cue", newBest.value ? "unlock" : "place");
   saveToCloud();
@@ -270,10 +313,23 @@ onUnmounted(() => {
     <ScreenHeader lesson :back-label="$t('lesson.back')" @back="emit('back')">
       <h1 class="min-w-0 flex-1 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">
         <template v-if="reviewing">{{ $t("review.title") }}</template>
-        <template v-else>{{ $t("spot.title") }} · {{ $t(`academy.tier.${tier}`) }}</template>
+        <template v-else
+          >{{ rushing ? $t("spot.rush.title") : $t("spot.title") }} ·
+          {{ $t(`academy.tier.${tier}`) }}</template
+        >
       </h1>
       <span
-        v-if="phase !== 'done' && !reviewing"
+        v-if="phase !== 'done' && rushing"
+        data-testid="spot-lives"
+        role="img"
+        :aria-label="$t('spot.rush.lives', { n: lives, total: RUSH_LIVES })"
+        class="text-lg font-bold tracking-wider text-rose-600 dark:text-rose-400"
+      >
+        <!-- Filled and hollow hearts: a shape cue, not only a colour. -->
+        <span v-for="n in RUSH_LIVES" :key="n">{{ n <= lives ? "♥" : "♡" }}</span>
+      </span>
+      <span
+        v-else-if="phase !== 'done' && !reviewing"
         data-testid="spot-clock"
         class="font-game text-lg font-bold text-zinc-900 tabular-nums dark:text-zinc-50"
         >{{ formatSpotTime(clock) }}</span
@@ -283,6 +339,7 @@ onUnmounted(() => {
     <SpotResults
       v-if="phase === 'done'"
       :review="reviewing"
+      :rush="rushing"
       :reviewed="reviewed"
       :results="results"
       :best="best"
@@ -301,7 +358,7 @@ onUnmounted(() => {
         class="panel order-first flex flex-col gap-3 p-4 lg:order-last lg:col-span-5 lg:self-start"
         data-testid="spot-coach"
       >
-        <div class="flex gap-1" aria-hidden="true">
+        <div v-if="!rushing" class="flex gap-1" aria-hidden="true">
           <div
             v-for="n in size"
             :key="n"
@@ -321,7 +378,11 @@ onUnmounted(() => {
           class="text-xs font-bold text-violet-700 dark:text-violet-300"
           data-testid="spot-progress"
         >
-          {{ $t("spot.progress", { n: index + 1, total: size }) }}
+          {{
+            rushing
+              ? $t("spot.rush.progress", { n: index + 1, found: foundCount(results) })
+              : $t("spot.progress", { n: index + 1, total: size })
+          }}
           <template v-if="lesson && phase !== 'loading'">
             · {{ techName(lesson.technique) }}</template
           >
@@ -340,7 +401,13 @@ onUnmounted(() => {
           @click="skip"
           class="tile self-start px-3 py-1.5 text-xs font-bold text-violet-700 dark:text-violet-300"
         >
-          {{ reviewing ? $t("lesson.showMe") : $t("spot.skip", { s: SKIP_PENALTY }) }}
+          {{
+            reviewing
+              ? $t("lesson.showMe")
+              : rushing
+                ? $t("spot.rush.skip")
+                : $t("spot.skip", { s: SKIP_PENALTY })
+          }}
         </button>
         <p
           role="status"

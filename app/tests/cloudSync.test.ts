@@ -187,6 +187,16 @@ describe("personal records on restore", () => {
     expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_spot_best!)).toEqual(best);
   });
 
+  it("max-merges Puzzle rush bests both ways", () => {
+    const local = { ...A, sudoku_v1_spot_rush: rec({ Basic: 12, Expert: 2 }) };
+    const cloud = { ...B, sudoku_v1_spot_rush: rec({ Basic: 7, Expert: 5, Master: 1 }) };
+    const best = { Basic: 12, Expert: 5, Master: 1 };
+    expect(JSON.parse(withLocalOnly(file(cloud, 5), local).data.sudoku_v1_spot_rush!)).toEqual(
+      best,
+    );
+    expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_spot_rush!)).toEqual(best);
+  });
+
   it("keeps each technique's last-reviewed card both ways", () => {
     // Local passed it on Nov 10 (box 4, 14 days); the cloud copy missed it on Nov 15.
     const local = {

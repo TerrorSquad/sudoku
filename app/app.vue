@@ -188,6 +188,7 @@ const currentScreen = ref<
 const spotTier = ref<Tier>("Basic");
 // Set when the spot screen plays the Daily review (these techniques) instead of a tier.
 const spotReview = ref<TechniqueId[] | undefined>();
+const spotRush = ref(false); // Puzzle rush rather than a timed round
 // The screens with a board, which keep the normal size (see applyUiScale).
 const BOARD_SCREENS = new Set(["game", "lesson", "spot", "basics"]);
 // Display size (main.css multiplies the root font-size by --ui-scale) enlarges every screen but
@@ -1025,8 +1026,9 @@ onUnmounted(() => {
           @basics="openBasics"
           @weekly="(week) => handlePractice(week.technique, week)"
           @spot="
-            (tier) => {
+            (tier, rush) => {
               spotTier = tier;
+              spotRush = rush;
               spotReview = undefined;
               currentScreen = 'spot';
             }
@@ -1044,6 +1046,7 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'spot'"
           :tier="spotTier"
           :review="spotReview"
+          :rush="spotRush"
           @cue="academyCue"
           @back="currentScreen = 'academy'"
           @lesson="handleLesson"

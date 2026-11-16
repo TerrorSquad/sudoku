@@ -7,7 +7,7 @@ import { BACKUP_PREFIX, parseBackup, validEntry, type Backup } from "./progressB
 import { LESSON_STARS_KEY, mergeStars } from "./progression";
 import { RECORDS_KEY, mergeRecords, readRecords } from "./records";
 import { REVIEW_KEY, mergeReview } from "./review";
-import { SPOT_BEST_KEY, mergeSpotBest } from "./spotIt";
+import { RUSH_BEST_KEY, SPOT_BEST_KEY, mergeSpotBest } from "./spotIt";
 
 /** The one cloud file: a progressBackup export plus when it was uploaded. */
 export const CLOUD_FILE = "progress.json";
@@ -49,7 +49,8 @@ export function mergedRecords(kept: Record<string, string>, replaced: Record<str
 }
 
 /**
- * The bests (personal records, lesson stars, Spot it times, the review schedule, basics done) of
+ * The bests (personal records, lesson stars, Spot it times and rushes, the review schedule, basics
+ * done) of
  * `kept` merged with
  * `replaced`'s, as entries to
  * write, so neither direction of a sync costs one. Only keys `replaced` holds: otherwise `kept`'s
@@ -65,6 +66,10 @@ export function mergedBests(kept: Record<string, string>, replaced: Record<strin
   if (replaced[SPOT_BEST_KEY])
     out[SPOT_BEST_KEY] = JSON.stringify(
       mergeSpotBest(parseJson(kept[SPOT_BEST_KEY]), parseJson(replaced[SPOT_BEST_KEY])),
+    );
+  if (replaced[RUSH_BEST_KEY])
+    out[RUSH_BEST_KEY] = JSON.stringify(
+      mergeSpotBest(parseJson(kept[RUSH_BEST_KEY]), parseJson(replaced[RUSH_BEST_KEY]), Math.max),
     );
   if (replaced[REVIEW_KEY])
     out[REVIEW_KEY] = JSON.stringify(
