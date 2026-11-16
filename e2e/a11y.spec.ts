@@ -135,6 +135,16 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: /Easy/ }).click();
       await expect(page.locator(".grid.aspect-square")).toBeVisible();
       await scan(page, "game");
+      // A picked candidate's chips, then the move history over the board.
+      // One mark per cell: a cell's several marks run together as text no label can match.
+      await page.locator("[data-cell]").filter({ hasText: /^$/ }).first().click();
+      await page.keyboard.press("n");
+      await page.keyboard.press("5");
+      await page.locator('[data-note="5"]').click();
+      await scan(page, "game (candidate picked)");
+      await page.keyboard.press("Shift+Z");
+      await expect(page.getByRole("dialog", { name: "Move history" })).toBeVisible();
+      await scan(page, "move history");
     });
   });
 }
