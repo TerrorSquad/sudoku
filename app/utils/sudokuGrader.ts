@@ -1261,11 +1261,11 @@ export function solveLogically(puzzle: Grid): LogicalSolveResult {
       tier: 5,
       run: () =>
         eliminateFish(s, 4) ||
+        applyMove(s, findFinnedFishMove(s, 3)) ||
         eliminateXYZWing(s) ||
         applyMove(s, findSimpleColoringMove(s)) ||
         applyMove(s, findBugPlusOneMove(s)) ||
-        applyMove(s, findXYChainMove(s)) ||
-        applyMove(s, findFinnedFishMove(s, 3)),
+        applyMove(s, findXYChainMove(s)),
     },
   ];
 
