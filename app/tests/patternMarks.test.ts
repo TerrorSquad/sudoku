@@ -121,6 +121,32 @@ describe("patternMarks", () => {
     expect(patternMarks(move, () => true, false).filter((m) => m.kind === "line")).toHaveLength(2);
   });
 
+  it("draws a Finned Swordfish: three base rows, three cover columns, the fin's box framed", () => {
+    // 5 in rows 2, 4 and 7 fits columns 3, 4 and 7, except row 7's spot in column 9: the fin.
+    const move = {
+      technique: "finned-swordfish" as const,
+      triggers: [
+        { r: 1, c: 2 },
+        { r: 1, c: 3 },
+        { r: 3, c: 3 },
+        { r: 3, c: 6 },
+        { r: 6, c: 2 },
+        { r: 6, c: 8 },
+      ],
+      eliminations: [{ r: 8, c: 6, num: 5 }],
+      digits: [5],
+    };
+    const marks = patternMarks(move, () => true);
+    expect(marks).toContainEqual({ kind: "frame", x: 6, y: 6, w: 3, h: 3 });
+    expect(marks.filter((m) => m.kind === "ring" && m.tone === "alt")).toEqual([
+      { kind: "ring", at: anchor(6, 8, 5), num: 5, tone: "alt" },
+    ]);
+    const lines = marks.filter((m) => m.kind === "line");
+    // Rows 2 and 4 hold two corners each; row 7 just one, so no base line there.
+    expect(lines.filter((m) => m.style === "strong")).toHaveLength(2);
+    expect(lines.filter((m) => m.style === "weak")).toHaveLength(3);
+  });
+
   it("draws an XY-Chain: each cell's two digits joined solid, each next cell dashed on the shared one", () => {
     // 1 or 3, 3 or 8, 8 or 7, 7 or 1: one end is 1, so the cells in line with both lose it.
     const notes: Record<string, number[]> = {

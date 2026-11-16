@@ -43,6 +43,8 @@ describe("migrateTechniqueStats", () => {
       "XY-Chain (length 5)": "xy-chain",
       "XY-Chain (Lanac dužine 4)": "xy-chain",
       "XY-Lanac": "xy-chain",
+      "Finned Swordfish": "finned-swordfish",
+      "Swordfish sa Perajem": "finned-swordfish",
       "Pokazujući Par — Kolona": "pointing",
       "Box-Line Reduction — Row": "box-line",
       "Redukcija Kvadrant-Linija — Kolona": "box-line",
