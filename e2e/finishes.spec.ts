@@ -1,26 +1,10 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-import { SOLVED, resumeMedium, seedMediumSave } from "./seed";
-
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const blank = (...at: number[]) =>
-  Array.from(SOLVED, (d, i) => (at.includes(i) ? "0" : d)).join("");
-const cell = (page: Page, n: number) => page.locator(`${BOARD} [data-cell]`).nth(n);
-
-async function playCustom(page: Page, puzzle: string) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(puzzle);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-}
-
-async function place(page: Page, n: number, digit: string) {
-  await cell(page, n).click();
-  await page.keyboard.press(digit);
-}
+import { blank, place, playCustom, resumeMedium, seedMediumSave } from "./seed";
 
 test("placing the last 5 lights up all nine 5s", async ({ page }) => {
   // Cell 40 is the last 5; 39 and 4 stay open so its row, column and box are not complete.
+  await page.goto("/");
   await playCustom(page, blank(4, 39, 40));
   await place(page, 40, "5");
 
@@ -35,6 +19,7 @@ test("placing the last 5 lights up all nine 5s", async ({ page }) => {
 test("a clean win is stamped Perfect, after the stars and score lines play in", async ({
   page,
 }) => {
+  await page.goto("/");
   await playCustom(page, blank(49));
   await place(page, 49, "2");
 
@@ -47,6 +32,7 @@ test("a clean win is stamped Perfect, after the stars and score lines play in", 
 });
 
 test("a key skips the win modal's steps to the end, once they have started", async ({ page }) => {
+  await page.goto("/");
   await playCustom(page, blank(49));
   await place(page, 49, "2");
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
@@ -60,6 +46,7 @@ test("a key skips the win modal's steps to the end, once they have started", asy
 });
 
 test("a win with a mistake gets no stamp", async ({ page }) => {
+  await page.goto("/");
   await playCustom(page, blank(49));
   await place(page, 49, "3"); // wrong
   await place(page, 49, "2");
@@ -69,6 +56,7 @@ test("a win with a mistake gets no stamp", async ({ page }) => {
 });
 
 test("custom boards don't count toward records", async ({ page }) => {
+  await page.goto("/");
   await playCustom(page, blank(49));
   await place(page, 49, "2");
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();

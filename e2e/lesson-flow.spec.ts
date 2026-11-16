@@ -1,7 +1,7 @@
 /* oxlint-disable eslint/no-await-in-loop -- key presses are inherently sequential */
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD } from "./seed";
 
 // Each cell's pencil marks, read off its label ("Row 1, column 2, empty, notes 3, 7").
 async function notesOf(page: Page) {

@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const toGrid = (rows: string[]) => rows.map((r) => [...r].map((c) => (c === "." ? 0 : Number(c))));
+import { BOARD, blank, grid, playCustom, resumeMedium, savedGame } from "./seed";
 
 // generateGradedPuzzle("expert", makeRng(7)): its givens need an XY-Wing, a Hidden Pair and a
 // Pointing Pair (pinned in sudokuGrader.test.ts).
@@ -33,27 +32,18 @@ test("the win modal lists what the givens needed, hardest first, and links to th
 }) => {
   // A saved game one digit from done: the board left to play needs only a single, but the
   // modal must grade the original givens.
-  const currentBoard = toGrid(SOLUTION);
+  const currentBoard = grid(SOLUTION.join(""));
   currentBoard[8]![8] = 0;
   await page.addInitScript(
     (save) => localStorage.setItem("sudoku_v1_save_medium", JSON.stringify(save)),
-    {
+    savedGame({
       currentBoard,
-      initialBoard: toGrid(PUZZLE),
-      solvedBoard: toGrid(SOLUTION),
-      notesBoard: Array.from({ length: 9 }, () =>
-        Array.from({ length: 9 }, () => Array<boolean>(10).fill(false)),
-      ),
-      difficulty: "medium",
+      initialBoard: grid(PUZZLE.join("")),
+      solvedBoard: grid(SOLUTION.join("")),
       timerSeconds: 300,
-      mistakes: 0,
-      savedAt: 1_700_000_000_000,
-    },
+    }),
   );
-  await page.goto("/");
-  await page.getByRole("button", { name: "New Game" }).click();
-  await page.getByRole("button", { name: /Medium/ }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
+  await resumeMedium(page);
 
   await page.locator(`${BOARD} [data-cell]`).nth(80).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
@@ -74,11 +64,7 @@ test("the win modal lists what the givens needed, hardest first, and links to th
 
 test("a puzzle that needs nothing beyond singles shows the single", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page
-    .locator("textarea")
-    .fill("534678912672195348198342567859761423426853791713904856961537284287419635345286179");
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, blank(49));
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
 

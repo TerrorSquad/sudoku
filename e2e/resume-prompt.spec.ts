@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD } from "./seed";
 
 // Starting a game autosaves immediately, so exiting right back to the
 // difficulty screen for the same level is enough to trigger the prompt.

@@ -1,11 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-// A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
-const FIVE_BLANKS =
-  "000008912672195348198342567859761423426853791713924856961537284287419635345286179";
+import { blank, cell, playCustom } from "./seed";
 
-const cell = (page: Page, n: number) => page.locator(`${BOARD} [data-cell]`).nth(n);
+// A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
+const FIVE_BLANKS = blank(0, 1, 2, 3, 4);
+
 const pad = (page: Page, digit: string) =>
   page.getByTestId("numpad").getByRole("button", { name: new RegExp(`^${digit}(,|$)`) });
 
@@ -14,9 +13,7 @@ async function startDigitFirstGame(page: Page) {
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("switch", { name: "Digit-first input" }).click();
   await page.getByRole("button", { name: "Menu" }).click();
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(FIVE_BLANKS);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, FIVE_BLANKS);
 }
 
 test("arm a digit, then tap cells to place it", async ({ page }) => {
@@ -88,9 +85,7 @@ test("selecting a placed digit outlines where it can still go, following notes",
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(FIVE_BLANKS);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, FIVE_BLANKS);
 
   await cell(page, 15).click(); // a given 3 (row 2)
   await expect(cell(page, 1)).toHaveClass(/ring-violet-400\/50/);

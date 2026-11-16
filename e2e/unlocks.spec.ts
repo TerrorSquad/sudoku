@@ -1,24 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const SOLVED = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
-const grid = (s: string) =>
-  Array.from({ length: 9 }, (_, r) => Array.from(s.slice(r * 9, r * 9 + 9), Number));
+import { BOARD, blank, grid, savedGame } from "./seed";
+
 /** A saved game at `difficulty`, one digit (cell 40) from done. */
 const almostWon = (difficulty: string) => {
-  const puzzle = SOLVED.slice(0, 40) + "0" + SOLVED.slice(41);
-  return {
+  const puzzle = blank(40);
+  return savedGame({
     currentBoard: grid(puzzle),
     initialBoard: grid(puzzle),
-    solvedBoard: grid(SOLVED),
-    notesBoard: Array.from({ length: 9 }, () =>
-      Array.from({ length: 9 }, () => Array<boolean>(10).fill(false)),
-    ),
     difficulty,
     timerSeconds: 100,
-    mistakes: 0,
-    savedAt: 1_700_000_000_000,
-  };
+  });
 };
 // The same lookup the older specs use: a locked tile's requirement ("…on Medium…") is its
 // description, not its name, so it never matches another level's name.

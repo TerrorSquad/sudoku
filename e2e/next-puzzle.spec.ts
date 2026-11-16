@@ -1,8 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { resumeMedium, seedMediumSave } from "./seed";
-
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD, resumeMedium, seedMediumSave } from "./seed";
 
 test("Next puzzle on the win screen starts a fresh board at the same level", async ({ page }) => {
   await seedMediumSave(page, [49]);

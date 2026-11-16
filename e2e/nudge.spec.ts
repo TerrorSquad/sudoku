@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { blank, playCustom } from "./seed";
+
 test("'Nudge first' names the technique and where to look, then explains on demand", async ({
   page,
 }) => {
@@ -90,14 +92,8 @@ test("a nudge about a wrong entry names its box, not a technique", async ({ page
     localStorage.setItem("sudoku_v1_pref_hint_style", '"nudge"');
     localStorage.setItem("sudoku_v1_pref_highlight_errors", "false");
   });
-  const solved =
-    "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page
-    .locator("textarea")
-    .fill([...solved].map((d, i) => (i === 40 || i === 50 ? "0" : d)).join(""));
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, blank(40, 50));
   await page.locator('[data-cell="4-4"]').click();
   await page.keyboard.press("1"); // wrong, and left unmarked
 

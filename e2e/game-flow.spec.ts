@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
+import { BOARD, blank, playCustom } from "./seed";
+
 // A valid solved grid with one cell (row-index 5, col-index 4) blanked out.
-const ALMOST_SOLVED =
-  "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
+const ALMOST_SOLVED = blank(49);
 
 test("starts a new game and renders a full board", async ({ page }) => {
   await page.goto("/");
@@ -14,9 +14,7 @@ test("starts a new game and renders a full board", async ({ page }) => {
 
 test("filling the last correct digit wins the puzzle", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ALMOST_SOLVED);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, ALMOST_SOLVED);
 
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   const numpad = page.getByTestId("numpad");

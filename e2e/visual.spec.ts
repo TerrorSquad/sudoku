@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { BOARD, grid, savedGame } from "./seed";
+
 // Pixel-baseline suite. Runs only in the `visual` project (VISUAL_REGRESSION=1,
 // see playwright.config.ts); baselines live in e2e/visual-regression-snapshots/.
 
@@ -14,45 +16,21 @@ const PUZZLE = [
   "...419..5",
   "....8..79",
 ];
-const SOLUTION = [
-  "534678912",
-  "672195348",
-  "198342567",
-  "859761423",
-  "426853791",
-  "713924856",
-  "961537284",
-  "287419635",
-  "345286179",
-];
-const toGrid = (rows: string[]) => rows.map((r) => [...r].map((c) => (c === "." ? 0 : Number(c))));
 
 // A fixed mid-game position: a few correct entries, one wrong entry (r1c3 = 9,
 // conflicts with the 9 in its box), and pencil notes in one cell block.
-function savedGame() {
-  const initialBoard = toGrid(PUZZLE);
+function midGame() {
+  const initialBoard = grid(PUZZLE.join(""));
   const currentBoard = initialBoard.map((r) => [...r]);
-  currentBoard[0]![2] = 9; // wrong: solution is 4
+  currentBoard[0]![2] = 9; // wrong: solution is 4 (SOLVED)
   currentBoard[0]![3] = 6; // correct
   currentBoard[1]![1] = 7; // correct
-  const notesBoard = Array.from({ length: 9 }, () =>
-    Array.from({ length: 9 }, () => Array<boolean>(10).fill(false)),
-  );
-  for (const n of [1, 2, 4, 9]) notesBoard[4]![1]![n] = true;
-  for (const n of [5, 6]) notesBoard[4]![2]![n] = true;
-  return {
-    currentBoard,
-    initialBoard,
-    solvedBoard: toGrid(SOLUTION),
-    notesBoard,
-    difficulty: "medium",
-    timerSeconds: 754,
-    mistakes: 1,
-    savedAt: 1_700_000_000_000,
-  };
+  const save = savedGame({ currentBoard, initialBoard, timerSeconds: 754, mistakes: 1 });
+  for (const n of [1, 2, 4, 9]) save.notesBoard[4]![1]![n] = true;
+  for (const n of [5, 6]) save.notesBoard[4]![2]![n] = true;
+  return save;
 }
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
 // The in-game clock only.
 const TIMER = "[data-testid=timer]";
 
@@ -118,7 +96,7 @@ for (const theme of ["light", "dark"] as const) {
           }
           sessionStorage.setItem("seeded", "1");
         }
-      }, savedGame());
+      }, midGame());
       await page.goto("/");
       // Cold dev server: don't capture before the SPA has hydrated.
       await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();

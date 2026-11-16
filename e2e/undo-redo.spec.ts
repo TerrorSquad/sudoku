@@ -1,17 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-const BOARD = ".grid.aspect-square.w-full.grid-cols-9";
-const ALMOST_SOLVED =
-  "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
+import { BOARD, blank, playCustom } from "./seed";
 
 test("undo and redo step a placement via buttons and keyboard", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
   // Two blanks so the puzzle isn't won by the first placement.
-  const two =
-    ALMOST_SOLVED.slice(0, 1) + "0" + ALMOST_SOLVED.slice(2, 49) + "0" + ALMOST_SOLVED.slice(50);
-  await page.locator("textarea").fill(two);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, blank(1, 49));
 
   const cell = page.locator(`${BOARD} [data-cell]`).nth(1);
   const undo = page.getByRole("button", { name: "Undo" });
@@ -49,14 +43,11 @@ test("browser shortcuts don't trigger game actions", async ({ page }) => {
   await expect(page.locator("span.bg-violet-500.rounded-full")).toHaveCount(0);
 });
 
-const ONE_BLANK =
-  "534678912672195348198342567859761423426853791713904856961537284287419635345286179";
+const ONE_BLANK = blank(49);
 
 test("shortcuts are inert behind the win modal (no second win, board intact)", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ONE_BLANK);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, ONE_BLANK);
   await page.locator(`${BOARD} [data-cell]`).nth(49).click();
   await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
@@ -71,9 +62,7 @@ test("shortcuts are inert behind the win modal (no second win, board intact)", a
 
 test("redo restores an edit without declaring a win", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ONE_BLANK);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await playCustom(page, ONE_BLANK);
   const cell = page.locator(`${BOARD} [data-cell]`).nth(49);
   await cell.click();
   await page.keyboard.press("1"); // wrong digit for this cell
