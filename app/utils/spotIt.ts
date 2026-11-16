@@ -13,6 +13,10 @@ export const MISS_PENALTY = 5;
 export const SKIP_PENALTY = 15;
 /** Best round time per tier, in seconds: {Basic: 31.4, …}. */
 export const SPOT_BEST_KEY = "sudoku_v1_spot_best";
+/** Puzzle rush: positions keep coming until this many misses (a wrong tap or a skip). */
+export const RUSH_LIVES = 3;
+/** Longest rush per tier, in positions found: {Basic: 12, …}. */
+export const RUSH_BEST_KEY = "sudoku_v1_spot_rush";
 
 interface Slot {
   technique: TechniqueId;
@@ -31,14 +35,16 @@ function shuffle<T>(xs: T[], rng: Rng): T[] {
 
 /**
  * A round's positions: the tier's techniques in shuffled passes, so each comes up as evenly as
- * ten allows, and never the same one twice running when the tier has more than one.
+ * ten allows, and never the same one twice running when the tier has more than one. A rush
+ * chains rounds, passing the last technique as `after` so the seam doesn't repeat one either.
  */
-export function buildRound(tier: Tier, rng: Rng): Slot[] {
+export function buildRound(tier: Tier, rng: Rng, after?: TechniqueId): Slot[] {
   const ids = ACADEMY_TECHNIQUES.filter((t) => t.tier === tier).map((t) => t.id);
   const order: TechniqueId[] = [];
   while (order.length < ROUND_SIZE) {
     const pass = shuffle(ids, rng);
-    if (pass.length > 1 && pass[0] === order.at(-1)) [pass[0], pass[1]] = [pass[1]!, pass[0]!];
+    if (pass.length > 1 && pass[0] === (order.at(-1) ?? after))
+      [pass[0], pass[1]] = [pass[1]!, pass[0]!];
     order.push(...pass);
   }
   return order
@@ -55,6 +61,11 @@ export interface SpotResult {
 }
 
 export const totalTime = (results: SpotResult[]) => results.reduce((s, r) => s + r.seconds, 0);
+/** A rush's score: the positions found, not skipped. */
+export const foundCount = (results: SpotResult[]) => results.filter((r) => !r.skipped).length;
+/** A rush's lives spent: every wrong tap and every skip. */
+export const missCount = (results: SpotResult[]) =>
+  results.reduce((n, r) => n + r.misses + (r.skipped ? 1 : 0), 0);
 
 interface TechniqueRow {
   technique: TechniqueId;
@@ -83,7 +94,10 @@ export function breakdown(results: SpotResult[]): TechniqueRow[] {
 
 const isTime = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
 
-/** Stored bests, keeping only known tiers and positive times (the value comes from storage or sync). */
+/**
+ * Stored bests, keeping only known tiers and positive times (the value comes from storage or
+ * sync). Rush bests are positive counts, so they read the same way.
+ */
 export function readSpotBest(raw: unknown): Partial<Record<Tier, number>> {
   const out: Partial<Record<Tier, number>> = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -95,14 +109,19 @@ export function readSpotBest(raw: unknown): Partial<Record<Tier, number>> {
 }
 
 /**
- * Each tier's faster best, so a sync in either direction never loses one. Entries this version
- * doesn't know pass through as long as they're times, so an older client never strips them.
+ * Each tier's faster best (`pick` Math.max for a rush's longest), so a sync in either direction
+ * never loses one. Entries this version doesn't know pass through as long as they're positive
+ * numbers, so an older client never strips them.
  */
-export function mergeSpotBest(a: unknown, b: unknown): Record<string, number> {
+export function mergeSpotBest(
+  a: unknown,
+  b: unknown,
+  pick: (x: number, y: number) => number = Math.min,
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const raw of [a, b]) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
-    for (const [k, v] of Object.entries(raw)) if (isTime(v)) out[k] = Math.min(out[k] ?? v, v);
+    for (const [k, v] of Object.entries(raw)) if (isTime(v)) out[k] = pick(out[k] ?? v, v);
   }
   return out;
 }
