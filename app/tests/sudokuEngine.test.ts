@@ -149,8 +149,6 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       [3, 6, 0, 0, 0, 5, 8, 7, 4],
       [2, 4, 5, 3, 7, 8, 9, 6, 1],
     ] as Grid;
-    const status = { value: "" };
-    const body = { value: "" };
     const note = (r: number, c: number, nums: number[]) => {
       engine.notesBoard.value[r]![c] = Array.from({ length: 10 }, (_, n) => nums.includes(n));
     };
@@ -161,13 +159,13 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     });
 
     it("suggests a removal the notes still show", () => {
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       expect(engine.activeMove.value?.eliminations).toContainEqual({ r: 4, c: 1, num: 2 });
     });
 
     it("a removal-only hint has no target cell and doesn't paint a selection over the pattern", () => {
       engine.selectedCell.value = { r: 4, c: 6 };
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       expect(engine.activeComplexHint.value?.targetCell).toBeNull();
       expect(engine.activeHintCell.value).toBeNull();
       expect(engine.selectedCell.value).toBeNull();
@@ -176,7 +174,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
     it("skips a removal the player already made", () => {
       note(4, 1, [1, 5]);
       note(4, 3, [1, 5]);
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       const elims = engine.activeMove.value?.eliminations ?? [];
       expect(elims).not.toContainEqual({ r: 4, c: 1, num: 2 });
       expect(elims).not.toContainEqual({ r: 4, c: 3, num: 2 });
@@ -194,7 +192,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
         elims.push(...expected.eliminations);
         expected = nextHint(board, elims);
       }
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       expect(engine.activeMove.value?.technique).toBe(expected?.technique);
       expect(engine.activeMove.value?.placement).toEqual(expected?.placement);
     });
@@ -207,7 +205,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
         c,
         [1, 2, 5].filter((n) => n !== answer),
       );
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       const move = engine.activeMove.value!;
       if (move.placement)
         expect(move.placement.num).toBe(
@@ -224,7 +222,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       engine.currentBoard.value[4]![1] = wrong;
       expect(engine.peekHint()).toEqual({ at: { r: 4, c: 1 }, move: null });
 
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       const hint = engine.activeComplexHint.value!;
       expect(hint.wrongEntry).toBe(true);
       expect(hint.title).toBe("hint.wrong.name");
@@ -236,7 +234,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
       expect(engine.currentBoard.value[4]![1]).toBe(0);
       expect(engine.activeComplexHint.value).toBeNull();
 
-      engine.triggerComplexHint(status, body);
+      engine.triggerComplexHint();
       expect(engine.activeComplexHint.value?.wrongEntry).toBeUndefined();
       expect(engine.activeMove.value?.eliminations).toContainEqual({ r: 4, c: 1, num: 2 });
 

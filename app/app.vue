@@ -239,15 +239,6 @@ function say(message: string) {
   announcement.value = "";
   nextTick(() => (announcement.value = message));
 }
-const hintStatus = {
-  get value() {
-    return announcement.value;
-  },
-  set value(message: string) {
-    say(message);
-  },
-};
-const hintBody = ref<string>("");
 const currentScreen = ref<
   | "menu"
   | "difficulty"
@@ -778,6 +769,14 @@ function recordPracticeWin(id: TechniqueId) {
   }
 }
 
+// Ends the game if the board is solved (a placement, a hint, Finish or redo); `message` replaces
+// the usual one.
+function checkWin(message?: string) {
+  if (!checkWinCondition()) return false;
+  triggerLocalModal(t("modal.win"), message ?? winMessage(), true);
+  return true;
+}
+
 // Zen games never mention the clock.
 function winMessage() {
   return gameZen.value
@@ -812,26 +811,39 @@ function openLesson(id: TechniqueId) {
   handleLesson(id);
 }
 
-function resumeSavedGame(s: GameSave) {
-  practiceTechnique.value = null;
-  isDailyMode.value = !!s.daily;
-  dailyDate = s.daily ?? "";
-  restoreGame(s);
-  activeDifficulty.value = s.difficulty;
-  mistakes.value = s.mistakes;
-  hintStatus.value = t("game.ready");
-  hintBody.value = "";
+// Every way into a game: `load` puts the board in; a resumed save brings its counts and clock.
+function beginGame(
+  difficulty: Difficulty,
+  load: () => void,
+  {
+    daily = "",
+    zen: zenGame = false,
+    practice = null,
+    save,
+  }: { daily?: string; zen?: boolean; practice?: TechniqueId | null; save?: GameSave } = {},
+) {
+  practiceTechnique.value = practice;
+  isDailyMode.value = !!daily;
+  dailyDate = daily;
+  gameZen.value = zenGame;
+  load();
+  activeDifficulty.value = difficulty;
+  mistakes.value = save?.mistakes ?? 0;
+  say(t(save ? "game.ready" : "game.newBoard"));
   mistakeExplainer.value = "";
   flashCells.value = [];
   notesMode.value = false;
-  hintsUsed.value = s.hintsUsed ?? 0;
-  gameZen.value = s.zen ?? false;
+  hintsUsed.value = save?.hintsUsed ?? 0;
   techniqueLog.value = [];
-  placements.value = restorePlacements(s);
+  placements.value = save ? restorePlacements(save) : [];
   timer.resetTimer();
-  timer.timerSeconds.value = s.timerSeconds;
+  if (save) timer.timerSeconds.value = save.timerSeconds;
   timer.startTimer();
   currentScreen.value = "game";
+}
+
+function resumeSavedGame(s: GameSave) {
+  beginGame(s.difficulty, () => restoreGame(s), { daily: s.daily, zen: s.zen, save: s });
 }
 
 // A board still generating when the player picks again, or leaves the screen, is dropped.
@@ -845,24 +857,8 @@ async function handleStartGame(
   const generated = await takePuzzle(level);
   if (token !== startToken) return;
   ready();
-  practiceTechnique.value = null;
-  isDailyMode.value = false;
-  gameZen.value = zenGame;
   gameSave.clearDifficulty(level);
-  activeDifficulty.value = level;
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  startNewGame(level, generated);
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame(level, () => startNewGame(level, generated), { zen: zenGame });
 }
 
 // A difficulty already has a saved game — ask before silently overwriting it.
@@ -1039,7 +1035,7 @@ function handleInputNumber(num: number) {
                 : inBox
                   ? t("game.whereBox")
                   : t("game.whereCell");
-            hintStatus.value = t("game.conflictWith", { where });
+            say(t("game.conflictWith", { where }));
             const first = conflicts[0]!;
             mistakeExplainer.value = t("game.whyConflict", {
               num: digitLabel(num, colorMode.value, t),
@@ -1047,7 +1043,7 @@ function handleInputNumber(num: number) {
               c: first.c + 1,
             });
           } else {
-            hintStatus.value = t("game.wrongDigit");
+            say(t("game.wrongDigit"));
             mistakeExplainer.value = t("game.whyWrong", {
               num: digitLabel(num, colorMode.value, t),
             });
@@ -1066,8 +1062,7 @@ function handleInputNumber(num: number) {
         logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
         // A winning move gets the win's wave and cue alone, not three stacked on each other.
-        if (checkWinCondition()) triggerLocalModal(t("modal.win"), winMessage(), true);
-        else if (highlightErrors.value) flashCompletedUnits(r, c);
+        if (!checkWin() && highlightErrors.value) flashCompletedUnits(r, c);
       }
     }
   }
@@ -1105,35 +1100,34 @@ function showApplied(move: SolveMove | null) {
   appliedTimer = setTimeout(() => (appliedMarks.value = []), 1400);
 }
 
+// Stepped through, or applied at once: the hint's move goes in the log and costs a hint, then the
+// game is won or the status line says what changed.
+function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
+  const tech = move?.technique; // none for a wrong-entry hint
+  const placed = move?.placement;
+  showApplied(move);
+  if (placed) logPlacement(placed);
+  if (tech) {
+    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    techStats.record(tech);
+  }
+  chargeHint();
+  if (placed) cue("place", placed.num);
+  if (!checkWin(winMsg))
+    say(t(!tech ? "game.wrongCleared" : placed ? applied : "game.candidatesCleared"));
+}
+
 function handleNextStep() {
-  const move = engine.activeMove.value;
-  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placement = engine.activeMove.value?.placement;
-  const placed = placement?.num;
-  nextHintStep(() => {
-    showApplied(move);
-    if (placement) logPlacement(placement);
-    if (tech) {
-      if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
-      techStats.record(tech);
-    }
-    chargeHint();
-    if (placed) cue("place", placed);
-    if (checkWinCondition()) {
-      triggerLocalModal(
-        t("modal.win"),
-        gameZen.value
-          ? winMessage()
-          : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
-        true,
-      );
-    } else {
-      hintStatus.value = t(
-        !tech ? "game.wrongCleared" : placed ? "game.cellFilled" : "game.candidatesCleared",
-      );
-      hintBody.value = "";
-    }
-  });
+  const move = engine.activeMove.value; // gone once the hint is applied
+  nextHintStep(() =>
+    afterHint(
+      move,
+      "game.cellFilled",
+      gameZen.value
+        ? undefined
+        : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
+    ),
+  );
 }
 
 // "Nudge first" hint style: the first press names the technique and the row, column or box its
@@ -1200,32 +1194,14 @@ function handleTriggerHint() {
   }
   nudge.value = null;
   cue("hint");
-  triggerComplexHint(hintStatus, hintBody);
+  say(triggerComplexHint());
 }
 
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const move = engine.activeMove.value;
-  const tech = engine.activeMove.value?.technique; // none for a wrong-entry hint
-  const placement = engine.activeMove.value?.placement;
-  const placed = placement?.num;
-  chargeHint();
-  if (placement) logPlacement(placement);
-  if (tech) {
-    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
-    techStats.record(tech);
-  }
   engine.applyComplexHint();
-  showApplied(move);
-  if (placed) cue("place", placed);
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), t("modal.winInstantMsg"), true);
-  } else {
-    hintStatus.value = t(
-      !tech ? "game.wrongCleared" : placed ? "game.instantApplied" : "game.candidatesCleared",
-    );
-    hintBody.value = "";
-  }
+  afterHint(move, "game.instantApplied", t("modal.winInstantMsg"));
 }
 
 // Finish: with only a few cells left, all of them plain singles from here (by the solver, not the
@@ -1267,9 +1243,7 @@ async function handleFinish() {
     if (!instant || !i) cue("place", p.num);
     runFlash([...flashCells.value, { r: p.r, c: p.c, delay: 0 }]);
   }
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), winMessage(), true);
-  } else {
+  if (!checkWin()) {
     // Shouldn't happen (the board is inert meanwhile), but never leave the game locked.
     finishing.value = false;
     timer.startTimer();
@@ -1290,7 +1264,7 @@ function handleAutoFillNotes() {
       }
     }
   }
-  hintStatus.value = t("game.notesFilled");
+  say(t("game.notesFilled"));
 }
 
 // Only today's Daily can be resumed; one saved on an earlier day is dropped.
@@ -1303,24 +1277,9 @@ function handleStartDaily() {
 
 function startDaily() {
   gameSave.clearDifficulty("daily");
-  dailyDate = dailyPuzzle.todayKey();
-  practiceTechnique.value = null;
-  gameZen.value = false;
-  isDailyMode.value = true;
-  activeDifficulty.value = "medium";
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  loadCustomBoard(dailyPuzzle.getBoard());
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame("medium", () => loadCustomBoard(dailyPuzzle.getBoard()), {
+    daily: dailyPuzzle.todayKey(),
+  });
 }
 
 // A friend's time from a challenge code (Your puzzle), shown as the time to beat; 0 = none.
@@ -1331,24 +1290,8 @@ function handleLoadCustomPuzzle(
   challengeSeconds = 0,
 ) {
   challengeTarget.value = practice ? 0 : challengeSeconds;
-  practiceTechnique.value = practice;
   practiceWeek.value = null;
-  isDailyMode.value = false;
-  gameZen.value = false;
-  activeDifficulty.value = "custom";
-  mistakes.value = 0;
-  hintStatus.value = t("game.newBoard");
-  hintBody.value = "";
-  mistakeExplainer.value = "";
-  flashCells.value = [];
-  notesMode.value = false;
-  hintsUsed.value = 0;
-  techniqueLog.value = [];
-  placements.value = [];
-  loadCustomBoard(board);
-  timer.resetTimer();
-  timer.startTimer();
-  currentScreen.value = "game";
+  beginGame("custom", () => loadCustomBoard(board), { practice });
 }
 
 let practiceToken = 0;
@@ -1370,9 +1313,9 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
         const [r, c] = key.split("-").map(Number) as [number, number];
         for (const d of digits) notesBoard.value[r]![c]![d] = true;
       }
-      hintStatus.value = t("practice.drill");
+      say(t("practice.drill"));
     } else {
-      hintStatus.value = t("practice.puzzle");
+      say(t("practice.puzzle"));
     }
   } finally {
     practiceLoading.value = false;
@@ -1439,9 +1382,7 @@ function redo() {
   if (showModal.value || practiceLoading.value) return;
   clearApplied();
   redoMove();
-  if (checkWinCondition()) {
-    triggerLocalModal(t("modal.win"), winMessage(), true);
-  }
+  checkWin();
 }
 
 // The game's keys: the wide-screen sidebar lists them, and ? opens the same list anywhere.
