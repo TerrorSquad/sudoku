@@ -4,7 +4,7 @@
 
 A Sudoku game built with **Nuxt 4 / Vue 3** that teaches you how to solve Sudoku through step-by-step interactive hints.
 
-**▶ Play it on Wavedash** — no install.
+**[▶ Play it on Wavedash](https://wavedash.com/games/sudoku-pro)** — no install.
 
 ![The hint system naming the technique and highlighting the evidence cells](docs/screenshots/hint-hidden-single.png)
 
