@@ -1,0 +1,39 @@
+name: Visual regression
+
+# Pixel-diffs every screen against the committed Linux baselines. Runs in the same Playwright
+# image as `pnpm visual` (scripts/visual-docker.sh), so a baseline made on any machine matches
+# here. Keep the image tag equal to the installed @playwright/test (a unit test checks it).
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm and dependencies
+        run: |
+          npm install --global --silent pnpm@11
+          pnpm install --frozen-lockfile
+
+      - name: Compare screens
+        run: pnpm visual:run
+
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: test-results/
+          retention-days: 7
