@@ -43,7 +43,8 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: /visual\.spec\.ts/,
+      // prod.spec.ts needs the generated build: `pnpm test:prod` (playwright.prod.config.ts).
+      testIgnore: /(visual|prod)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     // Pixel baselines; opt-in so a plain `pnpm test:e2e` never fails on rasterization noise.
