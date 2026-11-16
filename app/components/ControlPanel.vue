@@ -22,6 +22,7 @@ defineEmits<{
   <div class="grid grid-cols-6 gap-1.5 sm:gap-2">
     <!-- Undo -->
     <button
+      data-tour="undo"
       @click="$emit('undo')"
       :title="`${$t('controls.undo')} (Ctrl+Z)`"
       :disabled="!canUndo"
@@ -74,6 +75,7 @@ defineEmits<{
 
     <!-- Notes -->
     <button
+      data-tour="notes"
       @click="$emit('toggle-notes')"
       :title="`${$t('controls.notes')} (N)`"
       class="tile relative flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"
@@ -98,6 +100,7 @@ defineEmits<{
 
     <!-- Hint -->
     <button
+      data-tour="hint"
       @click="$emit('trigger-hint')"
       :title="`${$t('controls.hint')} (H)`"
       class="tile tile-amber flex flex-col items-center justify-center gap-1 py-4 3xl:gap-2 3xl:py-4 lg:py-3"

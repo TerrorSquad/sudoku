@@ -77,3 +77,18 @@ test("off the board: the D-pad moves focus, left/right change a select, B goes b
   await press(page, B);
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
 });
+
+test("the controls tour: A advances, B closes it", async ({ page }) => {
+  await plugIn(page);
+  await page.addInitScript(() => localStorage.setItem("sudoku_v1_pref_controls_tour", "true"));
+  await seedMediumSave(page, [49]);
+  await resumeMedium(page);
+  await page.evaluate(() => window.dispatchEvent(new Event("gamepadconnected")));
+  const tour = page.locator(".driver-popover");
+  await expect(tour).toContainText("1 of 5");
+  await press(page, A);
+  await expect(tour).toContainText("2 of 5");
+  await press(page, B);
+  await expect(tour).toBeHidden();
+  await expect(page.locator('[data-tour="notes"]')).toHaveAttribute("aria-pressed", "false");
+});

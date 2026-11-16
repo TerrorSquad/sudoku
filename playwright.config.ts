@@ -39,6 +39,16 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: "retain-on-failure",
+    // Specs start with the first-game controls tour already seen (controls-tour.spec.ts clears it).
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${port}`,
+          localStorage: [{ name: "sudoku_v1_pref_controls_tour", value: "false" }],
+        },
+      ],
+    },
   },
   projects: [
     {

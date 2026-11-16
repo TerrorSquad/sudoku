@@ -39,6 +39,8 @@ function create() {
     uiScale: pref<UiScale>("ui_scale", 1),
     /** The menu's "New to sudoku?" prompt, until dismissed (or the basics are done). */
     basicsPrompt: pref("basics_prompt", true),
+    /** The controls tour, until it has played once (Settings queues it again). */
+    controlsTour: pref("controls_tour", true),
   };
 }
 

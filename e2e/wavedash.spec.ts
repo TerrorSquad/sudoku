@@ -208,17 +208,24 @@ test("a corrupt cloud file never touches local progress", async ({ page }) => {
   expect(JSON.parse(remote.data.sudoku_v1_score).total).toBe(700);
 });
 
-test("a win uploads progress to the cloud", async ({ page }) => {
-  await fakeWavedash(page);
-  await page.goto("/");
-  await page.getByRole("button", { name: "Your puzzle" }).click();
-  await page.locator("textarea").fill(ALMOST_SOLVED);
-  await page.getByRole("button", { name: "Play Puzzle" }).click();
-  await page.locator(`${BOARD} [data-cell]`).nth(49).click();
-  await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
-  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
-  await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
-  const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
-  expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);
-  expect(typeof remote.updatedAt).toBe("number");
+test.describe("an empty profile", () => {
+  // Nothing to upload on boot, so the win's is the first: no seeded tour pref (playwright.config.ts).
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("a win uploads progress to the cloud", async ({ page }) => {
+    await fakeWavedash(page);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Your puzzle" }).click();
+    await page.locator("textarea").fill(ALMOST_SOLVED);
+    await page.getByRole("button", { name: "Play Puzzle" }).click();
+    await expect(page.locator(".driver-popover")).toBeVisible(); // a first game: the tour
+    await page.keyboard.press("Escape");
+    await page.locator(`${BOARD} [data-cell]`).nth(49).click();
+    await page.getByTestId("numpad").locator("button:not([disabled])").first().click();
+    await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+    await expect.poll(async () => (await sdkLog(page)).fileUploads).toBe(1);
+    const remote = JSON.parse((await sdkLog(page)).remote["progress.json"]!);
+    expect(JSON.parse(remote.data.sudoku_v1_score).total).toBeGreaterThan(0);
+    expect(typeof remote.updatedAt).toBe("number");
+  });
 });

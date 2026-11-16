@@ -33,6 +33,7 @@ const {
   zen,
   boardTheme,
   uiScale,
+  controlsTour,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
@@ -850,6 +851,20 @@ function redo() {
 }
 
 const shortcutsOpen = ref(false);
+// The controls tour (ControlsTour): once on a first game, again from Settings or the ? sheet. The
+// clock runs, as with Settings over the game; a paused game resumes so the controls show.
+const touring = ref(false);
+async function startTour() {
+  controlsTour.value = false;
+  shortcutsOpen.value = false;
+  settingsOverGame.value = false;
+  if (timer.isPaused.value) timer.togglePause();
+  await nextTick(); // a closing sheet hands focus back first, then the tour takes it
+  touring.value = true;
+}
+function onScreenEntered() {
+  if (currentScreen.value === "game" && controlsTour.value) startTour();
+}
 
 function handleKeyDown(e: KeyboardEvent) {
   if (showModal.value) return; // EndModal's own keys
@@ -859,6 +874,7 @@ function handleKeyDown(e: KeyboardEvent) {
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
     currentScreen.value !== "game" ||
+    touring.value || // driver.js has the keys
     document.querySelector("dialog[open]") ||
     practiceLoading.value
   )
@@ -923,6 +939,7 @@ function handlePageHidden() {
 // Controllers (usePad): B off the board needs to know the screens, and each board's keys.
 // B off the board: closes what's on top, else goes where the screen's own Back goes.
 function padBack() {
+  if (touring.value) return (touring.value = false);
   const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
   if (dialog) return dialog.close();
   if (showModal.value) return handleModalClose();
@@ -979,7 +996,12 @@ onUnmounted(() => {
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
-      <Transition name="screen" mode="out-in" @before-enter="applyUiScale">
+      <Transition
+        name="screen"
+        mode="out-in"
+        @before-enter="applyUiScale"
+        @after-enter="onScreenEntered"
+      >
         <!-- MENU -->
         <MainMenu
           v-if="currentScreen === 'menu'"
@@ -1229,6 +1251,7 @@ onUnmounted(() => {
           in-game
           :timed="!gameZen"
           @back-to-menu="settingsOverGame = false"
+          @tour="startTour"
         />
       </SheetDialog>
 
@@ -1242,7 +1265,10 @@ onUnmounted(() => {
           {{ $t("sidebar.keyboard") }}
         </h2>
         <ShortcutList sheet />
-        <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
+        <button @click="startTour" class="tile mt-5 w-full py-2 text-sm font-bold">
+          {{ $t("sidebar.tour") }}
+        </button>
+        <button @click="shortcutsOpen = false" class="tile mt-2 w-full py-2 text-sm font-bold">
           {{ $t("modal.close") }}
         </button>
       </SheetDialog>
@@ -1264,6 +1290,8 @@ onUnmounted(() => {
         :color-mode="colorMode"
         :game="currentScreen === 'game'"
       />
+
+      <LazyControlsTour v-if="touring" @done="touring = false" />
 
       <AchievementToast
         :ids="toastIds"
