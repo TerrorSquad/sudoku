@@ -1525,6 +1525,8 @@ function handlePageHidden() {
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
   document.addEventListener("visibilitychange", handlePageHidden);
+  // Progress made before these achievements existed, or just restored from the cloud.
+  checkAcademyAchievements();
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeyDown);

@@ -162,3 +162,13 @@ test("the technique of the week starts the same seeded puzzle each time", async 
   };
   expect(await givens()).toEqual(await givens());
 });
+
+test("Academy progress made earlier unlocks its achievements on the next start", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("sudoku_v1_technique_path", JSON.stringify(["naked-single"])),
+  );
+  await page.goto("/");
+  await expect(page.getByText("First lesson", { exact: true })).toBeVisible();
+});
