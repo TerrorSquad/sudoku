@@ -1,19 +1,32 @@
 <script setup lang="ts">
 import type { Difficulty } from "../types/sudoku";
 
-defineProps<{ activeDifficulty: Difficulty }>();
+// `daily`: the same tiles pick one of today's Dailies (one per level, a locked level's locked too).
+const props = defineProps<{ activeDifficulty: Difficulty; daily?: boolean }>();
 
 const { zen } = usePreferences();
 
 // Levels with a save in progress, so the player sees where a resume prompt will appear.
 const { loadDifficulty } = useGameSave();
+const dailyPuzzle = useDailyPuzzle();
 // Read in setup, not onMounted, so a locked level never flashes open (or the reverse).
-const inProgress = new Set(LADDER.filter((k) => loadDifficulty(k) !== null));
+const saved = new Set(LADDER.filter((k) => loadDifficulty(k) !== null));
+const today = dailyPuzzle.todayKey();
+const inProgress = props.daily
+  ? new Set(LADDER.filter((k) => loadDifficulty(dailySlot(k))?.daily === today))
+  : saved;
+// Today's finished Dailies, with their time.
+const done = new Map<Difficulty, number>();
+for (const k of LADDER) {
+  const record = props.daily ? dailyPuzzle.getRecord(k) : null;
+  if (record) done.set(k, record.time);
+}
+const isDone = (d: Difficulty) => done.has(d);
 const wins = useScore().unlockWins();
-const lockFor = (d: Difficulty) => lockOf(d, wins, inProgress.has(d));
+const lockFor = (d: Difficulty) => lockOf(d, wins, saved.has(d));
 onMounted(() => {
-  // Have a board ready for every open level by the time one is picked.
-  for (const d of TILES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
+  // Have a board ready for every open level by the time one is picked (Dailies generate on start).
+  if (!props.daily) for (const d of TILES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
 });
 
 const emit = defineEmits<{
@@ -66,7 +79,7 @@ const TILES: {
 ];
 
 function pick(d: Difficulty) {
-  if (!lockFor(d)) emit("select-difficulty", d);
+  if (!lockFor(d) && !isDone(d)) emit("select-difficulty", d);
 }
 </script>
 
@@ -77,12 +90,17 @@ function pick(d: Difficulty) {
     >
       <div class="text-center">
         <h2 class="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-          {{ $t("difficulty.title") }}
+          {{ $t(daily ? "difficulty.dailyTitle" : "difficulty.title") }}
         </h2>
-        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ $t("difficulty.subtitle") }}</p>
+        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {{ $t(daily ? "difficulty.dailySubtitle" : "difficulty.subtitle") }}
+        </p>
       </div>
 
-      <label class="panel flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
+      <label
+        v-if="!daily"
+        class="panel flex cursor-pointer items-center justify-between gap-4 px-4 py-3"
+      >
         <span>
           <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
             $t("difficulty.zen")
@@ -101,10 +119,13 @@ function pick(d: Difficulty) {
           v-for="d in TILES"
           :key="d.key"
           @click="pick(d.key)"
-          :aria-disabled="lockFor(d.key) ? 'true' : undefined"
+          :aria-disabled="lockFor(d.key) || isDone(d.key) ? 'true' : undefined"
           :aria-describedby="lockFor(d.key) ? `unlock-${d.key}` : undefined"
           :data-locked="lockFor(d.key) ? '' : undefined"
-          :class="lockFor(d.key) ? 'cursor-not-allowed' : d.hoverClass"
+          :data-done="isDone(d.key) ? '' : undefined"
+          :class="
+            lockFor(d.key) ? 'cursor-not-allowed' : isDone(d.key) ? 'cursor-default' : d.hoverClass
+          "
           class="tile group p-5 text-left"
         >
           <span class="mb-2 flex h-5 items-center justify-between">
@@ -127,6 +148,11 @@ function pick(d: Difficulty) {
               />
               {{ $t("difficulty.locked") }}
             </span>
+            <span
+              v-else-if="isDone(d.key)"
+              class="text-[0.625rem] font-bold text-emerald-700 tabular-nums dark:text-emerald-300"
+              >{{ $t("difficulty.dailyDone", { time: formatTime(done.get(d.key)!) }) }}</span
+            >
             <span
               v-else-if="inProgress.has(d.key)"
               class="rounded-full border border-violet-500/40 px-1.5 py-0.5 text-[0.5625rem] font-bold text-violet-600 dark:text-violet-300"

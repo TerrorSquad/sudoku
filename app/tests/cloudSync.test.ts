@@ -128,7 +128,11 @@ describe("decide", () => {
 });
 
 describe("the Daily's save and the display size stay on the device", () => {
-  const daily = { sudoku_v1_save_daily: "{}", sudoku_v1_pref_ui_scale: "1.5" };
+  const daily = {
+    sudoku_v1_save_daily: "{}",
+    sudoku_v1_save_daily_hard: "{}",
+    sudoku_v1_pref_ui_scale: "1.5",
+  };
 
   it("is left out of what syncs (v1.2.0 would call the whole file corrupt)", () => {
     expect(cloudData({ ...A, ...daily })).toEqual(A);

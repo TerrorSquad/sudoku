@@ -1,17 +1,36 @@
-import type { Grid } from "../types/sudoku";
+import type { Difficulty, Grid } from "../types/sudoku";
 
 import { readJSON, writeJSON } from "../utils/safeJson";
 import { localDateKey, streakState } from "../utils/streak";
 import { generatePuzzle, makeRng, seedFromString } from "../utils/sudokuCore";
+import { generateGradedPuzzle } from "../utils/sudokuGrader";
 
 const DAILY_REMOVE_TARGET = 45;
 
-/** Deterministic per-date puzzle with a guaranteed unique solution. */
-export function generateDailyBoard(dateStr: string): Grid {
-  return generatePuzzle(DAILY_REMOVE_TARGET, makeRng(seedFromString(dateStr))).puzzle;
+/**
+ * Deterministic per-date (and per-level) puzzle with a guaranteed unique solution. Medium is the
+ * original Daily: its seed and digging never change, so its boards, records and leaderboards carry
+ * on. Every other level is a graded board of that level, seeded from the date and the level.
+ */
+export function generateDailyBoard(dateStr: string, level: Difficulty = "medium"): Grid {
+  if (level === "medium")
+    return generatePuzzle(DAILY_REMOVE_TARGET, makeRng(seedFromString(dateStr))).puzzle;
+  return generateGradedPuzzle(level, makeRng(seedFromString(`${dateStr}:${level}`))).puzzle;
 }
 
 const SAVE_PREFIX = "sudoku_v1_daily_";
+
+/** A Daily's record key: Medium keeps the original sudoku_v1_daily_<date>, the rest add the level. */
+export const dailyKey = (dateKey: string, level: Difficulty = "medium") =>
+  SAVE_PREFIX + (level === "medium" ? "" : `${level}_`) + dateKey;
+
+/** The level and date of a Daily record key, or null for any other key. */
+export function parseDailyKey(key: string): { level: Difficulty; date: string } | null {
+  const m = /^sudoku_v1_daily_(?:(beginner|easy|hard|expert|master)_)?(\d{4}-\d{2}-\d{2})$/.exec(
+    key,
+  );
+  return m ? { level: (m[1] ?? "medium") as Difficulty, date: m[2]! } : null;
+}
 
 interface DailyRecord {
   completed: boolean;
@@ -19,39 +38,52 @@ interface DailyRecord {
   mistakes: number;
 }
 
-/** Fastest completed Daily among the stored `keys`, in seconds; 0 when there is none. */
+type ReadRecord = (dateKey: string, level: Difficulty) => DailyRecord | null;
+
+/** Fastest completed `level` Daily among the stored `keys`, in seconds; 0 when there is none. */
 export function fastestDaily(
   keys: string[],
-  getRecordFor: (dateKey: string) => DailyRecord | null,
-): number {
+  getRecordFor: ReadRecord,
+  level: Difficulty = "medium",
+) {
   let best = 0;
   for (const key of keys) {
-    if (!key.startsWith(SAVE_PREFIX)) continue;
-    const r = getRecordFor(key.slice(SAVE_PREFIX.length));
+    const k = parseDailyKey(key);
+    if (k?.level !== level) continue;
+    const r = getRecordFor(k.date, level);
     if (r?.completed && r.time > 0 && (best === 0 || r.time < best)) best = r.time;
   }
   return best;
+}
+
+/** The days any Daily was completed: what the streak and the calendar count. */
+export function completedDays(keys: string[], getRecordFor: ReadRecord): string[] {
+  return keys
+    .map(parseDailyKey)
+    .filter((k) => k && getRecordFor(k.date, k.level)?.completed)
+    .map((k) => k!.date);
 }
 
 export function useDailyPuzzle() {
   // Evaluated per call, not once: a tab left open past midnight must roll over.
   const todayKey = () => localDateKey();
 
-  function getBoard(): Grid {
-    return generateDailyBoard(todayKey());
+  // Generated only when that level's Daily starts, so the menu never builds six boards.
+  function getBoard(level: Difficulty = "medium"): Grid {
+    return generateDailyBoard(todayKey(), level);
   }
 
-  function getRecordFor(dateKey: string): DailyRecord | null {
-    return readJSON<DailyRecord | null>(SAVE_PREFIX + dateKey, null);
+  function getRecordFor(dateKey: string, level: Difficulty = "medium"): DailyRecord | null {
+    return readJSON<DailyRecord | null>(dailyKey(dateKey, level), null);
   }
 
-  function getRecord(): DailyRecord | null {
-    return getRecordFor(todayKey());
+  function getRecord(level: Difficulty = "medium"): DailyRecord | null {
+    return getRecordFor(todayKey(), level);
   }
 
   /** `dateKey` is the Daily's own day: a game started before midnight can end after it. */
-  function markComplete(time: number, mistakes: number, dateKey: string): void {
-    writeJSON(SAVE_PREFIX + dateKey, { completed: true, time, mistakes });
+  function markComplete(time: number, mistakes: number, dateKey: string, level: Difficulty) {
+    writeJSON(dailyKey(dateKey, level), { completed: true, time, mistakes });
   }
 
   function storedKeys(): string[] {
@@ -62,17 +94,18 @@ export function useDailyPuzzle() {
     }
   }
 
-  function getBestTime(): number {
-    return fastestDaily(storedKeys(), getRecordFor);
+  function getBestTime(level: Difficulty = "medium"): number {
+    return fastestDaily(storedKeys(), getRecordFor, level);
   }
 
-  /** Current and longest streak, freezes held and the days they covered (utils/streak.ts). */
+  const getCompletedDays = () => new Set(completedDays(storedKeys(), getRecordFor));
+
+  /**
+   * Current and longest streak, freezes held and the days they covered (utils/streak.ts). A day
+   * counts when any Daily was done: one who only ever played Medium keeps the same streak.
+   */
   function getStreakState() {
-    const dates = storedKeys()
-      .filter((k) => k.startsWith(SAVE_PREFIX))
-      .map((k) => k.slice(SAVE_PREFIX.length))
-      .filter((d) => getRecordFor(d)?.completed);
-    return streakState(dates, todayKey());
+    return streakState([...getCompletedDays()], todayKey());
   }
   const getStreak = () => getStreakState().current;
   const getLongestStreak = () => getStreakState().longest;
@@ -86,6 +119,7 @@ export function useDailyPuzzle() {
     getBestTime,
     getLongestStreak,
     getStreakState,
+    getCompletedDays,
     todayKey,
   };
 }

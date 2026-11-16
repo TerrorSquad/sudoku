@@ -33,6 +33,7 @@ const {
   zen,
   boardTheme,
   uiScale,
+  controlsTour,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
@@ -173,6 +174,7 @@ function say(message: string) {
 const currentScreen = ref<
   | "menu"
   | "difficulty"
+  | "daily"
   | "game"
   | "academy"
   | "custom-import"
@@ -206,7 +208,7 @@ const difficultyLabel = computed(() =>
   practiceTechnique.value
     ? `${practiceWeek.value ? t("weekly.title") : t("practice.label")} · ${t(`hint.move.${practiceTechnique.value}.name`)}`
     : isDailyMode.value
-      ? t("difficulty.daily")
+      ? t(`difficulty.${statsKey(activeDifficulty.value, true)}`)
       : gameZen.value
         ? `${t(`difficulty.${activeDifficulty.value}`)} · ${t("difficulty.zen")}`
         : t(`difficulty.${activeDifficulty.value}`),
@@ -272,7 +274,7 @@ const bestTime = computed(() => {
   void currentScreen.value;
   if (practiceTechnique.value) return 0;
   if (activeDifficulty.value === "custom") return challengeTarget.value; // a friend's time, or none
-  if (isDailyMode.value) return dailyPuzzle.getBestTime();
+  if (isDailyMode.value) return dailyPuzzle.getBestTime(activeDifficulty.value);
   return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
 });
 // Lessons finished, read when the screen changes (a lesson ends on another screen), not per move.
@@ -313,13 +315,16 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   isWinState.value = win;
   winResult.value = null;
   showModal.value = true;
-  activeDigit.value = null;
+  activeDigit.value = pickedDigit.value = null;
   timer.stopTimer();
   const practised = practiceTechnique.value;
   // Read before this game's save is cleared: a level open only through it isn't news.
   const lockedBefore =
     win && !practised ? lockedLevels(score.unlockWins(), (d) => !!gameSave.loadDifficulty(d)) : [];
-  if (!practised) gameSave.clearDifficulty(isDailyMode.value ? "daily" : activeDifficulty.value);
+  if (!practised)
+    gameSave.clearDifficulty(
+      isDailyMode.value ? dailySlot(activeDifficulty.value) : activeDifficulty.value,
+    );
   if (!win) return;
   cue("win");
   flashWin();
@@ -352,13 +357,13 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   });
 }
 
-// The modal's Next puzzle: a level the win just opened, else the same level again (a Medium after
-// the Daily, which has one puzzle a day). None for practice and custom boards.
+// The modal's Next puzzle: a level the win just opened, else the same level again (after a Daily,
+// which has one puzzle a day, a regular game of its level). None for practice and custom boards.
 const justUnlocked = ref<Difficulty | null>(null);
 const nextLevel = computed<Difficulty | null>(() => {
   if (practiceTechnique.value || activeDifficulty.value === "custom") return null;
   if (justUnlocked.value) return justUnlocked.value;
-  return isDailyMode.value ? "medium" : activeDifficulty.value;
+  return activeDifficulty.value;
 });
 // Starting: the modal stays up (its button busy) until the board is ready, so the won board is
 // never live again in between. A saved game at that level goes through the usual resume prompt.
@@ -490,25 +495,31 @@ function handleResumeConfirm() {
 function handleResumeDecline() {
   if (!pendingResume.value) return;
   const { level } = pendingResume.value;
-  if (level === "daily") startDaily();
-  else handleStartGame(level);
+  if (pendingResume.value.save.daily) startDaily(pendingResume.value.save.difficulty);
+  else handleStartGame(level as Difficulty);
   pendingResume.value = null;
 }
 
 // Digit-first input: the numpad arms a digit, and tapping a cell places it. Tapping a given
 // does nothing but select; tapping a cell that already holds the armed digit removes it.
 const activeDigit = ref<number | null>(null);
+// A digit lit up everywhere, its pencil marks too: picked by tapping a pencil mark, or on the
+// numpad or keys outside digit-first. Selecting a cell any other way drops it.
+const pickedDigit = ref<number | null>(null);
 
 function handleNumpad(num: number) {
   if (digitFirst.value) {
     activeDigit.value = activeDigit.value === num ? null : num;
+    pickedDigit.value = null;
     return;
   }
+  pickedDigit.value = num;
   handleInputNumber(num);
 }
 
-function handleSelectCell(coord: CellCoord) {
+function handleSelectCell(coord: CellCoord, note?: number) {
   selectedCell.value = coord;
+  pickedDigit.value = note ?? null;
   if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
     return;
   // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
@@ -521,6 +532,7 @@ function handleSelectCell(coord: CellCoord) {
 // placed all nine of it.
 watch([inGame, digitFirst], () => {
   if (!inGame.value || !digitFirst.value) activeDigit.value = null;
+  if (!inGame.value) pickedDigit.value = null;
 });
 watch(numberCounts, (counts) => {
   if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
@@ -731,7 +743,7 @@ async function handleFinish() {
   cancelComplexHint();
   engine.resetHintChain();
   nudge.value = null;
-  activeDigit.value = null;
+  activeDigit.value = pickedDigit.value = null;
   selectedCell.value = null;
   const token = startToken; // bumped if the player exits mid-cascade
   const instant = reducedMotion.value;
@@ -759,16 +771,16 @@ function handleAutoFillNotes() {
 }
 
 // Only today's Daily can be resumed; one saved on an earlier day is dropped.
-function handleStartDaily() {
-  const saved = gameSave.loadDifficulty("daily");
+function handleStartDaily(level: Difficulty) {
+  const saved = gameSave.loadDifficulty(dailySlot(level));
   if (saved?.daily === dailyPuzzle.todayKey())
-    pendingResume.value = { save: saved, level: "daily" };
-  else startDaily();
+    pendingResume.value = { save: saved, level: dailySlot(level) };
+  else startDaily(level);
 }
 
-function startDaily() {
-  gameSave.clearDifficulty("daily");
-  beginGame("medium", () => loadCustomBoard(dailyPuzzle.getBoard()), {
+function startDaily(level: Difficulty) {
+  gameSave.clearDifficulty(dailySlot(level));
+  beginGame(level, () => loadCustomBoard(dailyPuzzle.getBoard(level)), {
     daily: dailyPuzzle.todayKey(),
   });
 }
@@ -869,7 +881,55 @@ function logRestored(before: Grid) {
   );
 }
 
+// The move history (hold Undo/Redo, Shift+Z, LT): a slider over every kept state.
+const historyOpen = ref(false);
+const historyLength = computed(() => boardHistory.value.length + redoHistory.value.length);
+function openHistory() {
+  if (historyLength.value && !showModal.value && !practiceLoading.value) historyOpen.value = true;
+}
+function jumpHistory(step: number) {
+  if (showModal.value || practiceLoading.value || timer.isPaused.value) return;
+  const before = currentBoard.value.map((row) => [...row]);
+  engine.jumpTo(step);
+  logRestored(before);
+  checkWin();
+}
+
 const shortcutsOpen = ref(false);
+// The controls tour (ControlsTour): once on a new player's first game, again from Settings or the
+// ? sheet. A paused game resumes so the controls show. The first one holds the clock (without the
+// pause overlay, which would cover the controls); a replay doesn't, as with Settings over the game:
+// no free look at the board.
+const touring = ref(false);
+let tourHoldsClock = false;
+async function startTour(holdClock = false) {
+  controlsTour.value = false;
+  shortcutsOpen.value = false;
+  settingsOverGame.value = false;
+  if (timer.isPaused.value) timer.togglePause();
+  tourHoldsClock = holdClock;
+  if (holdClock) timer.stopTimer();
+  await nextTick(); // a closing sheet hands focus back first, then the tour takes it
+  touring.value = true;
+}
+watch(touring, (on) => {
+  if (on || !tourHoldsClock) return;
+  tourHoldsClock = false;
+  const live = currentScreen.value === "game" && !timer.isPaused.value;
+  if (live && !finishing.value && !showModal.value) timer.startTimer();
+});
+function onScreenEntered() {
+  if (currentScreen.value === "game" && controlsTour.value) startTour(true);
+}
+// driver.js loads with the tour; if it can't, the tour is off, never a game stuck without keys.
+const ControlsTour = defineAsyncComponent({
+  // oxlint-disable-next-line eslint/no-restricted-imports -- LazyControlsTour has no onError
+  loader: () => import("./components/ControlsTour.vue"),
+  onError(_error, _retry, fail) {
+    touring.value = false;
+    fail();
+  },
+});
 
 function handleKeyDown(e: KeyboardEvent) {
   if (showModal.value) return; // EndModal's own keys
@@ -879,6 +939,7 @@ function handleKeyDown(e: KeyboardEvent) {
   // practiceLoading: a lesson opening over the paused game must keep it paused.
   if (
     currentScreen.value !== "game" ||
+    document.body.classList.contains("driver-active") || // the tour has the keys
     document.querySelector("dialog[open]") ||
     practiceLoading.value
   )
@@ -903,8 +964,8 @@ function handleKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     return;
   }
-  if (e.key === "Escape" && activeDigit.value) {
-    activeDigit.value = null;
+  if (e.key === "Escape" && (activeDigit.value || pickedDigit.value)) {
+    activeDigit.value = pickedDigit.value = null;
     return;
   }
   // Arrows and WASD walk the grid (so auto-fill notes lives on F, not A).
@@ -912,9 +973,11 @@ function handleKeyDown(e: KeyboardEvent) {
   if (to) {
     e.preventDefault();
     focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
+    pickedDigit.value = null;
     return;
   }
   if (e.key >= "1" && e.key <= "9") {
+    if (!digitFirst.value) pickedDigit.value = parseInt(e.key);
     handleInputNumber(parseInt(e.key));
   } else if (e.key === "Backspace" || e.key === "Delete") {
     eraseCell(selectedCell.value);
@@ -924,6 +987,8 @@ function handleKeyDown(e: KeyboardEvent) {
     handleTriggerHint();
   } else if (e.key.toLowerCase() === "f") {
     handleAutoFillNotes();
+  } else if (e.shiftKey && e.key.toLowerCase() === "z") {
+    openHistory();
   }
 }
 
@@ -937,12 +1002,14 @@ function handlePageHidden() {
   ) {
     timer.togglePause();
     settingsOverGame.value = false; // back on the pause screen, which a paused clock needs
+    historyOpen.value = false;
   }
 }
 
 // Controllers (usePad): B off the board needs to know the screens, and each board's keys.
 // B off the board: closes what's on top, else goes where the screen's own Back goes.
 function padBack() {
+  if (touring.value) return (touring.value = false);
   const dialog = document.querySelector<HTMLDialogElement>("dialog[open]");
   if (dialog) return dialog.close();
   if (showModal.value) return handleModalClose();
@@ -951,7 +1018,7 @@ function padBack() {
   if (currentScreen.value === "academy")
     return (currentScreen.value = academyFromGame.value ? "game" : "menu");
   if (
-    ["difficulty", "stats", "achievements", "settings", "custom-import"].includes(
+    ["difficulty", "daily", "stats", "achievements", "settings", "custom-import"].includes(
       currentScreen.value,
     )
   )
@@ -961,7 +1028,15 @@ function padBack() {
 // LB/RB pick the digit that A (game) or X (Academy boards) enters.
 function padKeys(digit: number): PadKeys {
   if (currentScreen.value === "game")
-    return { press: String(digit), alt: "n", back: "Backspace", hint: "h", pause: "p", help: "?" };
+    return {
+      press: String(digit),
+      alt: "n",
+      back: "Backspace",
+      hint: "h",
+      pause: "p",
+      help: "?",
+      history: "Z",
+    };
   // A presses a focused button; How to play has no cells to tap, so there A enters the digit too.
   return {
     press: currentScreen.value === "basics" ? String(digit) : "Enter",
@@ -999,12 +1074,17 @@ onUnmounted(() => {
     <div
       class="app-shell flex min-h-screen w-full flex-col bg-[var(--ground)] text-zinc-900 antialiased dark:text-zinc-100"
     >
-      <Transition name="screen" mode="out-in" @before-enter="applyUiScale">
+      <Transition
+        name="screen"
+        mode="out-in"
+        @before-enter="applyUiScale"
+        @after-enter="onScreenEntered"
+      >
         <!-- MENU -->
         <MainMenu
           v-if="currentScreen === 'menu'"
           @go="(screen) => (currentScreen = screen)"
-          @daily="handleStartDaily"
+          @daily="currentScreen = 'daily'"
           @academy="
             academyFocus = null;
             academyFromGame = false;
@@ -1018,6 +1098,15 @@ onUnmounted(() => {
           v-else-if="currentScreen === 'difficulty'"
           :active-difficulty="activeDifficulty"
           @select-difficulty="handleChooseDifficulty"
+          @back-to-menu="currentScreen = 'menu'"
+        />
+
+        <!-- TODAY'S DAILIES: the same tiles, one Daily per level -->
+        <DifficultySelector
+          v-else-if="currentScreen === 'daily'"
+          daily
+          :active-difficulty="activeDifficulty"
+          @select-difficulty="handleStartDaily"
           @back-to-menu="currentScreen = 'menu'"
         />
 
@@ -1180,7 +1269,7 @@ onUnmounted(() => {
                 :color-mode="colorMode"
                 :flash-cells="flashCells"
                 :show-errors="highlightErrors"
-                :active-digit="activeDigit"
+                :active-digit="activeDigit ?? pickedDigit"
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
@@ -1194,6 +1283,7 @@ onUnmounted(() => {
                   :can-redo="redoHistory.length > 0"
                   @undo="undo"
                   @redo="redo"
+                  @history="openHistory"
                   @erase="eraseCell(selectedCell)"
                   @toggle-notes="notesMode = !notesMode"
                   @trigger-hint="handleTriggerHint"
@@ -1251,6 +1341,7 @@ onUnmounted(() => {
           in-game
           :timed="!gameZen"
           @back-to-menu="settingsOverGame = false"
+          @tour="startTour()"
         />
       </SheetDialog>
 
@@ -1264,7 +1355,38 @@ onUnmounted(() => {
           {{ $t("sidebar.keyboard") }}
         </h2>
         <ShortcutList sheet />
-        <button @click="shortcutsOpen = false" class="tile mt-5 w-full py-2 text-sm font-bold">
+        <button @click="startTour()" class="tile mt-5 w-full py-2 text-sm font-bold">
+          {{ $t("sidebar.tour") }}
+        </button>
+        <button @click="shortcutsOpen = false" class="tile mt-2 w-full py-2 text-sm font-bold">
+          {{ $t("modal.close") }}
+        </button>
+      </SheetDialog>
+
+      <!-- The move history, docked low so the board stays in view while scrubbing. -->
+      <SheetDialog
+        v-model:open="historyOpen"
+        class="panel mx-auto mt-auto mb-4 w-[min(26rem,calc(100vw-2rem))] p-4 text-inherit backdrop:bg-transparent"
+        :aria-label="$t('controls.history')"
+      >
+        <label class="flex flex-col gap-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          {{ $t("controls.history") }}
+          <input
+            type="range"
+            min="0"
+            :max="historyLength"
+            :value="boardHistory.length"
+            :aria-valuetext="
+              $t('controls.historyStep', { n: boardHistory.length, total: historyLength })
+            "
+            class="w-full accent-violet-600 dark:accent-violet-400"
+            @input="jumpHistory(Number(($event.target as HTMLInputElement).value))"
+          />
+        </label>
+        <p class="mt-1 text-xs text-zinc-600 tabular-nums dark:text-zinc-400">
+          {{ $t("controls.historyStep", { n: boardHistory.length, total: historyLength }) }}
+        </p>
+        <button @click="historyOpen = false" class="tile mt-3 w-full py-2 text-sm font-bold">
           {{ $t("modal.close") }}
         </button>
       </SheetDialog>
@@ -1286,6 +1408,8 @@ onUnmounted(() => {
         :color-mode="colorMode"
         :game="currentScreen === 'game'"
       />
+
+      <ControlsTour v-if="touring" @done="touring = false" />
 
       <AchievementToast
         :ids="toastIds"

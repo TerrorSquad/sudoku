@@ -32,7 +32,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "select-cell", coord: CellCoord): void;
+  /** `note`: the pencil mark tapped, if the tap landed on one. */
+  (e: "select-cell", coord: CellCoord, note?: number): void;
 }>();
 
 function isCellHighlighted(r: number, c: number): boolean {
@@ -72,6 +73,12 @@ function isCandidate(r: number, c: number): boolean {
   for (let i = 0; i < 3; i++)
     for (let j = 0; j < 3; j++) if (b[br + i]![bc + j] === d) return false;
   return true;
+}
+
+// Every empty cell still pencilled with the focused digit shows it as a chip.
+function noteDigit(r: number, c: number): number {
+  const d = focusDigit.value;
+  return d && props.currentBoard[r]![c] === 0 && props.notesBoard[r]![c]![d] ? d : 0;
 }
 
 function isNudged(r: number, c: number): boolean {
@@ -119,10 +126,11 @@ function hasConflict(r: number, c: number): boolean {
         :show-errors="showErrors"
         :is-candidate="isCandidate(r, c)"
         :is-nudged="isNudged(r, c)"
+        :note-digit="noteDigit(r, c)"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
-        @click="emit('select-cell', { r, c })"
+        @click="(note?: number) => emit('select-cell', { r, c }, note)"
       />
     </div>
     <PatternOverlay v-if="marks?.length" :key="marksKey ?? 0" :marks="marks" />

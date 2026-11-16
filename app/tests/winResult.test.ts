@@ -99,6 +99,16 @@ describe("useWinResult: recording a win", () => {
     expect(toasts).toContain("daily-first");
   });
 
+  it("a Hard Daily marks its own day, scores on its own row and keeps the streak", () => {
+    useWinResult(t).recordWin(
+      game({ difficulty: "hard", daily: true, dailyDate: "2026-11-16", seconds: 600 }),
+    );
+    expect(useDailyPuzzle().getRecordFor("2026-11-16", "hard")?.time).toBe(600);
+    expect(useDailyPuzzle().getRecordFor("2026-11-16")).toBeNull();
+    expect(useScore().getStats().perDifficulty.daily_hard?.bestTime).toBe(600);
+    expect(useDailyPuzzle().getCompletedDays()).toEqual(new Set(["2026-11-16"]));
+  });
+
   it("a custom board against a friend's time gets the challenge note, and no records", () => {
     const { result } = useWinResult(t).recordWin(
       game({ difficulty: "custom", challengeTarget: 100, seconds: 90 }),

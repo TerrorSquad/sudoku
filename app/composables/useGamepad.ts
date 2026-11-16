@@ -21,7 +21,8 @@ interface PadOptions {
 /** A key press as the focused element would get it, so each screen's own key handling answers. */
 export function sendKey(key: string) {
   (document.activeElement ?? document.body).dispatchEvent(
-    new KeyboardEvent("keydown", { key, bubbles: true }),
+    // A capital letter is typed with Shift (the move history's Shift+Z).
+    new KeyboardEvent("keydown", { key, bubbles: true, shiftKey: key !== key.toLowerCase() }),
   );
 }
 
@@ -71,6 +72,15 @@ export function usePad({ onBoard, boardKeys, onBack, onPause }: PadOptions) {
           focused.selectedIndex = i;
           focused.dispatchEvent(new Event("change", { bubbles: true }));
         }
+      } else if (
+        (action === "left" || action === "right") &&
+        focused instanceof HTMLInputElement &&
+        focused.type === "range"
+      ) {
+        // Nor does a synthetic arrow key move a slider (the move history's).
+        if (action === "right") focused.stepUp();
+        else focused.stepDown();
+        focused.dispatchEvent(new Event("input", { bubbles: true }));
       } else if (action in ARROWS) moveFocus(action === "up" || action === "left" ? -1 : 1);
       else if (action === "press") {
         if (onControl) focused!.click();

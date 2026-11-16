@@ -12,8 +12,10 @@ const { basicsPrompt } = usePreferences();
 const dailyPuzzle = useDailyPuzzle();
 const score = useScore();
 const techniquePath = useTechniquePath();
-const dailyRecord = dailyPuzzle.getRecord();
 const dailyStreak = dailyPuzzle.getStreakState();
+// Lit until any Daily is done today, the same rule as the streak and the calendar.
+const dailyDone = dailyPuzzle.getCompletedDays().has(dailyPuzzle.todayKey());
+const unlockWins = score.unlockWins();
 // Lifetime score drives the level.
 const playerLevel = levelFor(score.getStats().total);
 const lessonsDone = techniquePath.getDone();
@@ -23,7 +25,7 @@ const reviewDue = dueToday(techniquePath.getReview(), localDateKey()).length;
 // "New to sudoku?": a fresh player who hasn't dismissed it. Fresh: no win anywhere (the unlock
 // count, so Zen wins count too), no technique lesson and no basics lesson done.
 const fresh =
-  !Object.values(score.unlockWins()).some((e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0) &&
+  !Object.values(unlockWins).some((e) => (e?.wins ?? 0) > 0 || (e?.best ?? 0) > 0) &&
   lessonsDone.length === 0 &&
   techniquePath.getBasics().length === 0;
 const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
@@ -136,19 +138,14 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
         </span>
       </button>
 
-      <button
-        @click="emit('daily')"
-        :disabled="!!dailyRecord"
-        :class="dailyRecord ? '' : 'tile-amber'"
-        class="tile menu-cell"
-      >
+      <button @click="emit('daily')" :class="dailyDone ? '' : 'tile-amber'" class="tile menu-cell">
         <AppIcon
           class="h-5 w-5"
           path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
         />
         <span>
           <span class="block">{{
-            dailyRecord ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
+            dailyDone ? $t("menu.dailyCompleted") : $t("menu.dailyChallenge")
           }}</span>
           <span
             v-if="dailyStreak.current > 0"

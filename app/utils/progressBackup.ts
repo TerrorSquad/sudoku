@@ -38,6 +38,12 @@ type ParseResult =
   | { ok: true; backup: Backup; items: number }
   | { ok: false; error: "invalid" | "tooLarge" | "empty" };
 
+/** A save's slot (useGameSave): its difficulty, or for a Daily its own: Medium's "daily", else daily_<level>. */
+export function saveSlotOf(save: { daily?: unknown; difficulty?: unknown }): string {
+  if (!save.daily) return String(save.difficulty);
+  return save.difficulty === "medium" ? "daily" : `daily_${String(save.difficulty)}`;
+}
+
 const isGrid = (v: unknown) =>
   Array.isArray(v) && v.length === 9 && v.every((row) => Array.isArray(row) && row.length === 9);
 
@@ -58,8 +64,8 @@ export function validEntry(key: string, value: string): boolean {
       isGrid(save.solvedBoard) &&
       Array.isArray(save.notesBoard) &&
       save.notesBoard.length === 9 &&
-      // The Daily plays as medium but has its own slot.
-      (save.daily ? "daily" : save.difficulty) === key.slice("sudoku_v1_save_".length)
+      // A Daily has its own slot, apart from its level's.
+      saveSlotOf(save) === key.slice("sudoku_v1_save_".length)
     );
   }
   if (key === "sudoku_v1_pref_mistake_limit") return [0, 3, 5].includes(parsed as number);

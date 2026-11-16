@@ -89,3 +89,22 @@ test("a digit brought back by redo is in the replay, which ends on the solution"
   const replay = page.getByTestId("solve-replay");
   await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
 });
+
+test("a digit brought back through the move history is in the replay too", async ({ page }) => {
+  await seedMediumSave(page, [49, 50]); // a 2 and a 4
+  await resumeMedium(page);
+  await place(page, 49, "2");
+  await page.keyboard.press("Shift+Z");
+  const slider = page.getByRole("slider", { name: "Move history" });
+  await slider.press("Home");
+  await slider.press("End");
+  await page.keyboard.press("Escape");
+  await place(page, 50, "4");
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+  await page.getByTestId("watch-solve").click();
+  const replay = page.getByTestId("solve-replay");
+  await page.getByRole("button", { name: "Step forward" }).click();
+  await page.getByRole("button", { name: "Step forward" }).click();
+  await expect(stepText(page)).toContainText("Move 2 of 2");
+  await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
+});
