@@ -13,13 +13,14 @@ Node and pnpm versions come from `mise.toml` (major only; `mise upgrade` takes t
 ```bash
 pnpm dev              # dev server at http://localhost:3000
 pnpm build            # production build
-pnpm generate         # static generate (`pnpm wavedash` builds on it)
+pnpm generate         # static generate (`pnpm wavedash:build` builds on it)
 pnpm preview          # preview a static build locally
 
 pnpm test             # vitest, all unit tests (app/tests/*.test.ts)
 pnpm test app/tests/sudokuGrader.test.ts   # single unit test file
 pnpm test:e2e         # Playwright e2e suite (e2e/*.spec.ts)
 pnpm test:e2e e2e/pause.spec.ts             # single e2e file
+pnpm test:prod        # Wavedash build + smoke test of it served from a subfolder (e2e/prod.spec.ts)
 
 pnpm fmt              # oxfmt (also runs automatically on commit, see below)
 pnpm lint             # oxlint (also runs automatically on commit, see below)
@@ -89,7 +90,7 @@ Patterns are drawn in pen over the board, the way puzzle books print them: `util
 
 ### i18n
 
-Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` because i18n-ally was resolving the bare language code to the Suriname flag instead of Serbia's; `language: "sr-Latn-RS"`, the actual BCP-47 tag, is unaffected). Locale files use **flat dot-keys** (e.g. `"menu.title"`, not nested `{ "menu": { "title" } }`) per `.vscode/settings.json`'s `i18n-ally.keystyle: "flat"`. This works because vue-i18n checks for an exact literal-string key match before falling back to nested path resolution — it is not a bug. Keep `en.json` and `rs.json` in exact key parity; nothing currently enforces this automatically.
+Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` because i18n-ally was resolving the bare language code to the Suriname flag instead of Serbia's; `language: "sr-Latn-RS"`, the actual BCP-47 tag, is unaffected). Locale files use **flat dot-keys** (e.g. `"menu.title"`, not nested `{ "menu": { "title" } }`) per `.vscode/settings.json`'s `i18n-ally.keystyle: "flat"`. This works because vue-i18n checks for an exact literal-string key match before falling back to nested path resolution — it is not a bug. Keep `en.json` and `rs.json` in exact key parity: `app/tests/localeParity.test.ts` checks the keys, each key's `{placeholders}` and that no value is empty.
 
 ### Visual regression
 
@@ -109,15 +110,15 @@ Laptops with integrated graphics (an i7 + Iris Xe) are the low end. Measure befo
 
 - Moves cost style and paint, not script (3% of a move's CPU). A transition on the 81 cells restyled and repainted the board for every frame of a highlight change (45% of a move); `e2e/perf.spec.ts` checks that a move starts none. Animate one element, not every cell.
 - New-game generation runs in a Web Worker (`utils/puzzlePool.ts` + `puzzleWorker.ts`), and the difficulty screen prefetches one board per level, so starting a game doesn't wait on it; without workers it generates in place. The Daily and practice puzzles still generate on the main thread. `countFlat` in `sudokuCore.ts` is the hot loop (typed arrays, most-constrained cell first); digging a cell asks for a second solution with that cell's digit banned instead of counting to two. A generator change must keep every seeded board: the daily pin in `dailyPuzzle.test.ts` fails otherwise.
-- `pnpm wavedash` runs `scripts/budget.mjs`, which first fails the upload when `index.html`/`200.html` aren't the app shell (1.10.0 shipped "Redirecting..." pages and never loaded), then prints the shipped JS and CSS sizes and warns past a watch level. Size never fails the build: Wavedash's only limit is 1 GB per upload (docs.wavedash.com/publishing/upload). Nuxt UI is the usual culprit: `import * as` from `@nuxt/ui/locale` bundled 67 locales (228 KB), and without `ui.experimental.componentDetection` it themes every component (120 KB of CSS). Find what grew with source maps (`sourcemap: { client: true }`) and `pnpm dlx source-map-explorer`.
+- `pnpm wavedash:build` (generate, then `scripts/budget.mjs`; `pnpm wavedash`, `test:prod` and the release all run it) first fails when `index.html`/`200.html` aren't the app shell (1.10.0 shipped "Redirecting..." pages and never loaded), then prints the shipped JS and CSS sizes and warns past `WARN_AT`. Locally size never fails the build (Wavedash's only limit is 1 GB per upload, docs.wavedash.com/publishing/upload); CI (`check.yml`) sets `BUDGET_STRICT=1`, which fails past `FAIL_AT` (raise it on purpose, with a reason, not to make a PR pass). Nuxt UI is the usual culprit: `import * as` from `@nuxt/ui/locale` bundled 67 locales (228 KB), and without `ui.experimental.componentDetection` it themes every component (120 KB of CSS). Find what grew with source maps (`sourcemap: { client: true }`) and `pnpm dlx source-map-explorer`.
 
 ### Testing split
 
 - `app/tests/*.test.ts` (vitest) — pure logic: solver, grader, scoring, daily-puzzle seeding. No DOM.
 - `e2e/*.spec.ts` (Playwright Test) — full browser flows: new game/win, the resume-prompt's three branches, preference persistence, the pause overlay. Costs nothing to re-run once written, unlike manual browser-driven verification. Shared helpers (`BOARD`, `SOLVED`, `blank`, `grid`, `savedGame`, `playCustom`, …) live in `e2e/seed.ts`.
 - Which to run: the unit file and the e2e specs that cover what changed (grep `e2e/` for the component or testid). The full e2e suite takes ~7 minutes: run it once before a release (it's the only place separately-tested PRs meet), not after every change. CI runs `pnpm check` and the visual suite on every PR.
-- e2e runs against the dev server, so it can't catch a broken production build. `pnpm wavedash` guards the one failure that has shipped (see Releasing); for anything build-specific, serve the generated `.output/public` from a subfolder and load it in Chromium.
+- e2e runs against the dev server, so it can't catch a broken production build. `pnpm test:prod` does: it builds for Wavedash, serves `.output/public` under `/game/` (`scripts/serve-static.mjs`, the way Wavedash serves it) and runs `e2e/prod.spec.ts` (`playwright.prod.config.ts`; plain `pnpm test:e2e` skips it): it loads with no page or console error, starts an Easy game, opens an Academy card and Stats. CI runs it on every PR (`check.yml`) and the release runs it before upload. For anything else build-specific, extend that spec.
 
 ### Releasing
 
-`pnpm wavedash:release --summary "…" --added "…" --fixed "…"` builds, uploads and publishes, titled with `package.json`'s version (bump it in a PR first). It has no `--help`: any run is a real release. The build step fails before upload when `index.html`/`200.html` aren't the app shell (`scripts/budget.mjs`; 1.10.0 shipped "Redirecting..." pages and never loaded). To roll back, there's no build list in the CLI: check out the last good release commit in a worktree, `pnpm install --frozen-lockfile`, `WAVEDASH=1 NUXT_APP_BASE_URL=./ pnpm exec nuxt generate`, then `wavedash build push` and `wavedash publish <build id> --title vX.Y.Z -y` (retry while it says "Only completed builds").
+`pnpm wavedash:release --summary "…" --added "…" --fixed "…"` builds, uploads and publishes, titled with `package.json`'s version (bump it in a PR first). It has no `--help`: any run is a real release. It builds once (`pnpm wavedash:build`, which fails when `index.html`/`200.html` aren't the app shell: 1.10.0 shipped "Redirecting..." pages and never loaded), runs the prod smoke test on that build, and only then pushes (`scripts/release.mjs`); `pnpm wavedash` is the same build and push without the smoke test or publish. `.github/workflows/nuxt-fix-watch.yml` checks weekly whether the latest nuxt contains nuxt/nuxt#36913 and opens an issue to drop the 4.6.2 pin (`docs/adr/0002-dependency-pins.md`) once it does. To roll back, there's no build list in the CLI: check out the last good release commit in a worktree, `pnpm install --frozen-lockfile`, `WAVEDASH=1 NUXT_APP_BASE_URL=./ pnpm exec nuxt generate`, then `wavedash build push` and `wavedash publish <build id> --title vX.Y.Z -y` (retry while it says "Only completed builds").
