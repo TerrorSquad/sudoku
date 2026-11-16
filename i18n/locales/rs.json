@@ -649,5 +649,6 @@
   "academy.view.label": "Prikaži tehnike kao",
   "academy.view.list": "Kartice",
   "academy.view.map": "Mapa",
-  "academy.map.hint": "Linije vode od svake tehnike do onih koje se na nju nadovezuju. Dodirni tehniku da je otvoriš."
+  "academy.map.hint": "Linije vode od svake tehnike do onih koje se na nju nadovezuju. Dodirni tehniku da je otvoriš.",
+  "academy.map.buildsOn": "Oslanja se na: {names}"
 }

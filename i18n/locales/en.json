@@ -649,5 +649,6 @@
   "academy.view.label": "Show techniques as",
   "academy.view.list": "Cards",
   "academy.view.map": "Map",
-  "academy.map.hint": "Lines lead from each technique to the ones that build on it. Tap a technique to open it."
+  "academy.map.hint": "Lines lead from each technique to the ones that build on it. Tap a technique to open it.",
+  "academy.map.buildsOn": "Builds on {names}"
 }

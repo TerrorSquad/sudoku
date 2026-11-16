@@ -162,8 +162,10 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
 
 /**
  * Each technique's column on the map (its row is its tier). Laid out by hand so most links are
- * a step down or across: the subsets on the left, the fish on the right, column 1–2 of the
- * Advanced row kept free for the naked pair's lines down to the uniqueness and wing techniques.
+ * a step down or across: the subsets on the left, the fish on the right, columns 1–2 of the
+ * Advanced row kept free for the naked pair's lines down to the uniqueness and wing techniques,
+ * the XY-Wing between the W- and XYZ-Wing, and the fish in a chain off the X-Wing, so only the
+ * X-Wing → Swordfish link has to arc over a tile.
  */
 export const MAP_COLUMN: Record<TechniqueId, number> = {
   "naked-single": 1,
@@ -175,19 +177,19 @@ export const MAP_COLUMN: Record<TechniqueId, number> = {
   pointing: 6,
   "box-line": 7,
   "naked-quad": 0,
-  "two-string-kite": 3,
   "hidden-quad": 4,
-  skyscraper: 5,
-  "finned-x-wing": 6,
+  "two-string-kite": 5,
+  skyscraper: 6,
   "x-wing": 7,
-  swordfish: 8,
-  jellyfish: 9,
+  "finned-x-wing": 8,
+  swordfish: 9,
+  jellyfish: 10,
   "bug-plus-one": 0,
   "unique-rectangle": 1,
-  "xy-wing": 2,
-  "simple-coloring": 3,
-  "w-wing": 4,
-  "xyz-wing": 5,
+  "w-wing": 2,
+  "xy-wing": 3,
+  "xyz-wing": 4,
+  "simple-coloring": 5, // under the kite it builds on
 };
 
 // ---- Lesson stars --------------------------------------------------------------------------

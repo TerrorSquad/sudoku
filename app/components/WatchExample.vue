@@ -1,3 +1,24 @@
+<script lang="ts">
+import type { TechniqueId } from "../utils/sudokuGrader";
+
+import { lessonFromExample } from "../utils/lesson";
+import { beats, type Beat } from "../utils/patternMarks";
+
+// The steps of each example, built once (lessonFromExample replays the solver).
+const cache = new Map<TechniqueId, Beat[]>();
+function stepsOf(id: TechniqueId): Beat[] {
+  let steps = cache.get(id);
+  if (!steps) {
+    const lesson = lessonFromExample(id);
+    steps = lesson
+      ? beats(lesson.move, (r, c, n) => !!lesson.notes[r]?.[c]?.includes(n))
+      : [{ step: "result", marks: [] }];
+    cache.set(id, steps);
+  }
+  return steps;
+}
+</script>
+
 <script setup lang="ts">
 // A worked example that can play its move out in narrated steps (utils/patternMarks.ts `beats`):
 // where to look, the pattern's cells, its links, then what it removes or places. It rests on the
@@ -5,10 +26,7 @@
 import { computed, onUnmounted, ref } from "vue";
 
 import type { AcademyExample } from "../utils/academyExamples";
-import type { TechniqueId } from "../utils/sudokuGrader";
 
-import { lessonFromExample } from "../utils/lesson";
-import { beats } from "../utils/patternMarks";
 import ExampleGrid from "./ExampleGrid.vue";
 
 const props = defineProps<{
@@ -20,10 +38,7 @@ const props = defineProps<{
 }>();
 const { t } = useI18n();
 
-const lesson = lessonFromExample(props.id);
-const steps = lesson
-  ? beats(lesson.move, (r, c, n) => !!lesson.notes[r]?.[c]?.includes(n))
-  : [{ step: "result" as const, marks: [] }];
+const steps = stepsOf(props.id);
 const last = steps.length - 1;
 const i = ref(last);
 const watching = ref(false); // stepped away from the resting full drawing at least once
@@ -72,24 +87,26 @@ function tick() {
 function play() {
   watching.value = true;
   if (i.value >= last) i.value = 0;
-  if (still) return;
   playing.value = true;
   tick();
 }
-const toggle = () => (playing.value ? stop() : play());
 function go(to: number) {
   stop();
   watching.value = true;
   i.value = Math.min(last, Math.max(0, to));
 }
+// Space plays or pauses; with reduced motion (no Play) it steps on, round to the start at the end.
+const space = () =>
+  still ? go(i.value >= last ? 0 : i.value + 1) : playing.value ? stop() : play();
 onUnmounted(stop);
 
-// Space plays or pauses, ←/→ step, once the example has focus (a focused button keeps its Space).
+// Space and ←/→ once the example has focus (a focused button keeps its own Space).
 function onKey(e: KeyboardEvent) {
+  if (e.altKey || e.ctrlKey || e.metaKey) return; // Alt+← is the browser's Back
   const onButton = !!(e.target as HTMLElement).closest?.("button");
   if (e.key === " " && !onButton) {
     e.preventDefault();
-    toggle();
+    space();
   } else if (e.key === "ArrowLeft") {
     e.preventDefault();
     go(i.value - 1);
@@ -103,6 +120,8 @@ function onKey(e: KeyboardEvent) {
 <template>
   <div
     tabindex="0"
+    role="group"
+    aria-keyshortcuts="Space ArrowLeft ArrowRight"
     class="rounded-lg outline-offset-4"
     :aria-label="$t('academy.watch.region')"
     data-testid="watch-example"
@@ -117,6 +136,7 @@ function onKey(e: KeyboardEvent) {
       :marks="beat.marks"
       :digits="watching ? example.digits : undefined"
     />
+    <!-- aria-disabled, not disabled, at the ends: a disabled button drops its own focus. -->
     <div class="mt-3 flex items-center justify-center gap-1.5">
       <button
         class="tile grid h-8 w-8 place-items-center"
@@ -130,7 +150,7 @@ function onKey(e: KeyboardEvent) {
         class="tile grid h-8 w-8 place-items-center"
         :aria-label="$t('academy.watch.back')"
         :title="$t('academy.watch.back')"
-        :disabled="i === 0"
+        :aria-disabled="i === 0"
         @click="go(i - 1)"
       >
         <AppIcon class="h-4 w-4" path="M15 19l-7-7 7-7" />
@@ -138,9 +158,8 @@ function onKey(e: KeyboardEvent) {
       <button
         v-if="!still"
         class="tile tile-primary h-8 px-3 text-xs font-bold"
-        :aria-pressed="playing"
         data-testid="watch-play"
-        @click="toggle"
+        @click="space"
       >
         {{ playing ? $t("academy.watch.pause") : $t("academy.watch.play") }}
       </button>
@@ -148,7 +167,7 @@ function onKey(e: KeyboardEvent) {
         class="tile grid h-8 w-8 place-items-center"
         :aria-label="$t('academy.watch.forward')"
         :title="$t('academy.watch.forward')"
-        :disabled="i === last"
+        :aria-disabled="i === last"
         @click="go(i + 1)"
       >
         <AppIcon class="h-4 w-4" path="M9 5l7 7-7 7" />

@@ -191,6 +191,15 @@ const MAP_COLS = Math.max(...Object.values(MAP_COLUMN)) + 1;
 const mapPos = new Map(
   techniques.map((tech) => [tech.id, { row: tiers.indexOf(tech.tier), col: MAP_COLUMN[tech.id] }]),
 );
+// In the order they're drawn, row by row, so Tab follows what you see.
+const mapNodes = techniques.toSorted(
+  (a, b) => mapPos.get(a.id)!.row - mapPos.get(b.id)!.row || MAP_COLUMN[a.id] - MAP_COLUMN[b.id],
+);
+// The links are drawn (aria-hidden), so each node also says what it builds on.
+const buildsOnText = (id: TechniqueId) =>
+  BUILDS_ON[id]?.length
+    ? t("academy.map.buildsOn", { names: BUILDS_ON[id]!.map(techName).join(", ") })
+    : "";
 const occupied = (row: number, col: number) =>
   [...mapPos.values()].some((p) => p.row === row && p.col === col);
 const mapEdges = Object.entries(BUILDS_ON).flatMap(([id, pre]) =>
@@ -198,13 +207,14 @@ const mapEdges = Object.entries(BUILDS_ON).flatMap(([id, pre]) =>
     const a = mapPos.get(from)!;
     const b = mapPos.get(id as TechniqueId)!;
     const [x1, y1, x2, y2] = [a.col + 0.5, a.row + 0.5, b.col + 0.5, b.row + 0.5];
-    // Along a row, bow over any node in between rather than run behind it; wider spans bow higher.
+    // Along a row, bow over any node in between rather than run behind it. The curve peaks
+    // halfway to its control point: 0.45 of a row up, above even a tile with stars and a badge.
     const span = Math.abs(a.col - b.col);
     const lo = Math.min(a.col, b.col);
     const between = Array.from({ length: Math.max(span - 1, 0) }, (_, k) => lo + k + 1);
     const d =
       a.row === b.row && between.some((col) => occupied(a.row, col))
-        ? `M${x1} ${y1} Q${(x1 + x2) / 2} ${y1 - Math.min(0.5 + 0.12 * span, 0.85)} ${x2} ${y2}`
+        ? `M${x1} ${y1} Q${(x1 + x2) / 2} ${y1 - 0.9} ${x2} ${y2}`
         : `M${x1} ${y1} L${x2} ${y2}`;
     return { key: `${from}>${id}`, d, done: done.includes(from) };
   }),
@@ -373,13 +383,13 @@ const total = computed(() => techniques.length);
         :aria-label="$t('academy.view.map')"
         data-testid="technique-map"
       >
-        <div class="flex min-w-[54rem]">
+        <div class="flex min-w-[58rem]">
           <!-- Tier names, one per row. -->
           <div class="flex w-24 shrink-0 flex-col pr-2">
             <p
               v-for="tier in tiers"
               :key="tier"
-              class="flex h-24 items-center text-xs font-black text-zinc-700 dark:text-zinc-300"
+              class="flex h-28 items-center text-xs font-black text-zinc-700 dark:text-zinc-300"
             >
               {{ $t(`academy.tier.${tier}`) }}
             </p>
@@ -409,13 +419,13 @@ const total = computed(() => techniques.length);
               />
             </svg>
             <div
-              v-for="tech in techniques"
+              v-for="tech in mapNodes"
               :key="tech.id"
               :style="{
                 gridRow: mapPos.get(tech.id)!.row + 1,
                 gridColumn: mapPos.get(tech.id)!.col + 1,
               }"
-              class="relative flex h-24 items-center justify-center px-1"
+              class="relative flex h-28 items-center justify-center px-1"
             >
               <button
                 :class="[
@@ -452,6 +462,9 @@ const total = computed(() => techniques.length);
                 >
                 <span v-if="pathState(tech.id) === 'next'" class="sr-only">{{
                   $t("path.next")
+                }}</span>
+                <span v-if="buildsOnText(tech.id)" class="sr-only">{{
+                  buildsOnText(tech.id)
                 }}</span>
               </button>
             </div>
