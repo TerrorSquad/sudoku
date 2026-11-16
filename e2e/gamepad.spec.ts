@@ -77,3 +77,22 @@ test("off the board: the D-pad moves focus, left/right change a select, B goes b
   await press(page, B);
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
 });
+
+test("in Watch your solve the D-pad stays in the replay, and B closes just the replay", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await plugIn(page);
+  await seedMediumSave(page, [49]);
+  await resumeMedium(page);
+  await page.locator('[data-cell="5-4"]').click();
+  await page.keyboard.press("2");
+  await page.evaluate(() => window.dispatchEvent(new Event("gamepadconnected")));
+  await page.getByTestId("watch-solve").click();
+  const replay = page.getByTestId("solve-replay");
+  await press(page, DOWN, 2);
+  await expect(page.locator("dialog[open] :focus")).toHaveCount(1);
+  await press(page, B);
+  await expect(replay).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+});

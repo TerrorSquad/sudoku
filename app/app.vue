@@ -1284,6 +1284,7 @@ onUnmounted(() => {
         :hints-used="hintsUsed"
         :seconds="timer.timerSeconds.value"
         :board="initialBoard"
+        :placements="placements"
         :result="winResult"
         :technique-log="techniqueLog"
         :next-level="nextLevel"

@@ -2,6 +2,7 @@
 import type { WinResult } from "../composables/useWinResult";
 import type { Difficulty, Grid } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
+import type { Placement } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
 
 // The end of a game: the win (stars, score, what it took) or the game over. Mounted per showing.
@@ -16,7 +17,8 @@ const props = defineProps<{
   mistakes: number;
   hintsUsed: number;
   seconds: number;
-  board: Grid; // the givens, for a challenge code
+  board: Grid; // the givens, for a challenge code and the replay
+  placements: Placement[]; // the replay's moves
   result: WinResult | null; // null for a game over
   techniqueLog: TechniqueId[];
   nextLevel: Difficulty | null;
@@ -139,7 +141,11 @@ function handleModalKey(e: KeyboardEvent) {
     emit("close");
   }
 }
+// "Watch your solve", over the modal: its keys are its own (Esc closes it, back to here).
+const watching = ref(false);
+const canWatch = computed(() => props.win && props.placements.some((p) => !p.restored));
 function onKey(e: KeyboardEvent) {
+  if (watching.value) return;
   handleModalKey(e);
   // A key still held from the winning move, or pressed before the steps start, skips nothing.
   if (!e.repeat && winStep.value) skipWinSteps();
@@ -288,6 +294,14 @@ onMounted(() => {
       />
 
       <button
+        v-if="canWatch"
+        @click="watching = true"
+        data-testid="watch-solve"
+        class="mb-2 w-full text-sm font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+      >
+        {{ $t("modal.watch") }}
+      </button>
+      <button
         v-if="win"
         @click="shareWin"
         class="mb-2 w-full text-sm font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
@@ -314,6 +328,23 @@ onMounted(() => {
         </button>
       </div>
     </div>
+    <SheetDialog
+      v-model:open="watching"
+      class="panel m-auto max-h-[calc(100dvh-2rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-5 text-inherit backdrop:bg-black/50"
+      :aria-label="$t('modal.watch')"
+    >
+      <SolveReplay
+        v-if="watching && result"
+        :puzzle="board"
+        :placements="placements"
+        :stuck="result.stuck"
+        :zen="zen"
+        @lesson="(id) => emit('lesson', id)"
+      />
+      <button @click="watching = false" class="tile mt-3 w-full py-2 text-sm font-bold">
+        {{ $t("modal.close") }}
+      </button>
+    </SheetDialog>
   </div>
 </template>
 
