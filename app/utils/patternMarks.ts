@@ -113,22 +113,22 @@ function fish(
   return [...marks, ...extra, ...rings(corners, n), ...crosses(elims)];
 }
 
-// Finned X-Wing: find the two cover lines whose leftovers (the fins) share the eliminations' box.
-function finned(move: PatternMove, n: number, reach: boolean): Mark[] {
+// Finned fish: find the k cover lines whose leftovers (the fins) share the eliminations' box.
+function finned(move: PatternMove, n: number, reach: boolean, k: number): Mark[] {
   const t = uniq(move.triggers);
   const elims = move.eliminations;
   const elimBox = elims[0] ? box(elims[0]) : -1;
+  const choose = (xs: number[], m: number): number[][] =>
+    m === 0 ? [[]] : xs.flatMap((x, i) => choose(xs.slice(i + 1), m - 1).map((r) => [x, ...r]));
   for (const key of ["c", "r"] as const) {
-    const lines = [...new Set(t.map((p) => p[key]))];
-    for (const a of lines)
-      for (const b of lines) {
-        if (b <= a) continue;
-        const corners = t.filter((p) => p[key] === a || p[key] === b);
-        const fins = t.filter((p) => p[key] !== a && p[key] !== b);
-        if (!fins.length || fins.some((f) => box(f) !== elimBox)) continue;
-        if (elims.some((e) => e[key] !== a && e[key] !== b)) continue;
-        return fish(corners, elims, n, reach, [frame("box", fins[0]!), ...rings(fins, n, "alt")]);
-      }
+    for (const cover of choose([...new Set(t.map((p) => p[key]))], k)) {
+      const on = (p: CellRC) => cover.includes(p[key]);
+      const corners = t.filter(on);
+      const fins = t.filter((p) => !on(p));
+      if (!fins.length || fins.some((f) => box(f) !== elimBox)) continue;
+      if (!elims.every(on)) continue;
+      return fish(corners, elims, n, reach, [frame("box", fins[0]!), ...rings(fins, n, "alt")]);
+    }
   }
   return fish(t, elims, n, reach);
 }
@@ -249,7 +249,9 @@ function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
     case "jellyfish":
       return fish(t, elims, n, result);
     case "finned-x-wing":
-      return finned(move, n, result);
+      return finned(move, n, result, 2);
+    case "finned-swordfish":
+      return finned(move, n, result, 3);
     case "skyscraper":
     case "two-string-kite": {
       const [n1, f1, n2, f2] = t;
@@ -307,6 +309,27 @@ function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
         ...rings(z, n),
         ...crosses(elims),
       ];
+    }
+    case "xy-chain": {
+      // The grader lists the chain in order, z at both ends. Each cell is one of its two digits (a
+      // strong link inside it); each next cell sees it and shares a digit (a weak link between).
+      if (t.length < 2) return [];
+      const out: Mark[] = [...rings([t[0]!, t.at(-1)!], n)];
+      let d: number | undefined = n;
+      for (const [i, a] of t.entries()) {
+        const q = t[i + 1];
+        const e: number | undefined = q ? sharedDigit(has, a, q, d) : n;
+        if (d && e)
+          out.push({
+            kind: "line",
+            a: anchor(a.r, a.c, d),
+            b: anchor(a.r, a.c, e),
+            style: "strong",
+          });
+        if (q) out.push(link(has, a, q, e, "weak"), ...(e ? rings([a, q], e, "alt") : []));
+        d = e;
+      }
+      return [...out, ...crosses(elims)];
     }
     case "unique-rectangle": {
       const all = uniq([...t, ...elims]);

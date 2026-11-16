@@ -29,6 +29,8 @@ const ALL: TechniqueId[] = [
   "w-wing",
   "bug-plus-one",
   "empty-rectangle",
+  "xy-chain",
+  "finned-swordfish",
 ];
 
 describe("practice puzzles", () => {

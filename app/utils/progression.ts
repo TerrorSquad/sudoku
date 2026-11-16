@@ -90,6 +90,8 @@ export const ACADEMY_TECHNIQUES: { id: TechniqueId; tier: Tier }[] = [
   { id: "xyz-wing", tier: "Expert" },
   { id: "simple-coloring", tier: "Expert" },
   { id: "bug-plus-one", tier: "Expert" },
+  { id: "xy-chain", tier: "Expert" },
+  { id: "finned-swordfish", tier: "Expert" },
 ];
 
 /**
@@ -163,6 +165,9 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
   "xyz-wing": ["xy-wing"],
   "simple-coloring": ["two-string-kite"],
   "bug-plus-one": ["unique-rectangle"],
+  // An XY-Wing is a three-cell XY-Chain.
+  "xy-chain": ["xy-wing"],
+  "finned-swordfish": ["finned-x-wing", "swordfish"],
 };
 
 /**
@@ -171,7 +176,7 @@ export const BUILDS_ON: Partial<Record<TechniqueId, TechniqueId[]>> = {
  * Advanced row kept free for the naked pair's lines down to the uniqueness and wing techniques,
  * the Empty Rectangle beside the kite and under pointing's reach,
  * the XY-Wing between the W- and XYZ-Wing, and the fish in a chain off the X-Wing, so only the
- * X-Wing → Swordfish link has to arc over a tile.
+ * X-Wing → Swordfish and XY-Wing → XY-Chain links have to arc over a tile.
  */
 export const MAP_COLUMN: Record<TechniqueId, number> = {
   "naked-single": 1,
@@ -197,6 +202,8 @@ export const MAP_COLUMN: Record<TechniqueId, number> = {
   "xy-wing": 3,
   "xyz-wing": 4,
   "simple-coloring": 5, // under the kite it builds on
+  "xy-chain": 6,
+  "finned-swordfish": 8, // under the Finned X-Wing and Swordfish it builds on
 };
 
 // ---- Lesson stars --------------------------------------------------------------------------

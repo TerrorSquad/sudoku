@@ -117,8 +117,12 @@ function caption(id: TechniqueId, ex: AcademyExample): string {
       return t("academy.caption.coloring", { num, nElim, elimList });
     case "finned-x-wing":
       return t("academy.caption.finnedXWing", { num, nElim, elimList });
+    case "finned-swordfish":
+      return t("academy.caption.finnedSwordfish", { num, nElim, elimList });
     case "w-wing":
       return t("academy.caption.wWing", { num, nElim, elimList });
+    case "xy-chain":
+      return t("academy.caption.xyChain", { num, nElim, elimList });
     case "bug-plus-one":
       return t("academy.caption.bug", { cell: RC(ex.placement!), num: ex.placement!.num });
     default:
