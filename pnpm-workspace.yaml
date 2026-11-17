@@ -3,9 +3,7 @@ allowBuilds:
   esbuild: true
   vue-demi: true
 # `pnpm update --latest` skips these pins; why, and when to drop each: docs/adr/0002-dependency-pins.md.
-# (nuxt: 4.6.3+ ships "Redirecting..." pages with our ./ base until nuxt/nuxt#36913 is released.)
 updateConfig:
   ignoreDependencies:
-    - nuxt
     - typescript
     - "@vueuse/nuxt"
