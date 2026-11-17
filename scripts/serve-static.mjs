@@ -1,6 +1,6 @@
 // `node scripts/serve-static.mjs <port>`: serves .output/public under /game/, the way Wavedash
 // serves the game from a subfolder, so the prod smoke test (e2e/prod.spec.ts) loads the real build
-// with its ./ base. Static files only; a directory gets its index.html.
+// with its relative (./) asset URLs. Static files only; a directory gets its index.html.
 
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";

@@ -19,5 +19,5 @@ and the manifest/apple meta are gone (PR #59). The README links the Wavedash gam
 - Anyone who installed the old PWA keeps a frozen copy: deleting the site doesn't unregister a
   service worker (a 404 on `sw.js` leaves it in place). Accepted rather than publishing a
   self-unregistering worker first.
-- `pnpm wavedash` builds with the relative base URL `./`; that is now the build that matters, and
+- `pnpm wavedash` builds with relative asset URLs (`NUXT_APP_CDN_URL=./`); that is now the build that matters, and
   `scripts/budget.mjs` checks it before every upload (see ADR 2).

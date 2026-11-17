@@ -52,7 +52,7 @@ async function dropNextChunk(page: Page) {
   });
 }
 
-// Nuxt's own chunk-error reload joined the ./ base to the route: /game/ became /game/game/, blank.
+// A lazy chunk that fails reloads the page (plugins/chunk-reload.client.ts), under /game/.
 test("a lazy screen whose chunk fails reloads in place, under /game/", async ({ page }) => {
   await page.goto("./");
   await page.waitForLoadState("networkidle"); // the idle prefetches are done
@@ -84,4 +84,38 @@ test("a win whose modal chunk fails is still recorded after the reload", async (
   expect(stored.score).toMatchObject({ gamesWon: 1 });
   expect(stored.save).toBeNull(); // no solved board waiting to be resumed
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+});
+
+// With a ./ base URL Nuxt's router rewrote /game/ to /game/game/ on start, so any reload (F5, a
+// backup import) loaded a blank page. The build sets NUXT_APP_CDN_URL=./ and keeps the base at /.
+test("the address stays /game/, so a reload and a backup import land on the app", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/game/");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/game/");
+
+  // Settings → Your data: importing a backup reloads the page.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "sudoku_v1_score",
+      JSON.stringify({ total: 4242, gamesWon: 7, best: {}, perDifficulty: {} }),
+    ),
+  );
+  await page.getByRole("button", { name: "Settings" }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export", exact: true }).click(),
+  ]);
+  await page.evaluate(() => localStorage.removeItem("sudoku_v1_score"));
+  await page.getByTestId("import-file").setInputFiles((await download.path())!);
+  const reloaded = page.waitForEvent("load");
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
+  await reloaded;
+  expect(new URL(page.url()).pathname).toBe("/game/");
+  await expect(page.getByTestId("level-badge")).toContainText("Level 4");
 });
