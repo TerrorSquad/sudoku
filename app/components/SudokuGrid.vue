@@ -78,10 +78,12 @@ function isCandidate(r: number, c: number): boolean {
   const bc = c - (c % 3);
   for (let i = 0; i < 3; i++)
     for (let j = 0; j < 3; j++) if (b[br + i]![bc + j] === d) return false;
-  for (let i = 0; i < 9; i++) {
-    if (diagBits(r, c) & 1 && b[i]![i] === d) return false;
-    if (diagBits(r, c) & 2 && b[i]![8 - i] === d) return false;
-  }
+  const diag = diagBits(r, c);
+  if (diag)
+    for (let i = 0; i < 9; i++) {
+      if (diag & 1 && b[i]![i] === d) return false;
+      if (diag & 2 && b[i]![8 - i] === d) return false;
+    }
   return true;
 }
 

@@ -15,6 +15,7 @@ import {
 import {
   generateGradedPuzzle,
   nextHint,
+  patternUnit,
   solveLogically,
   type DigitAt,
   type SolveMove,
@@ -120,6 +121,21 @@ describe("X-Sudoku hints", () => {
       expect(solved.solved).toBe(true);
       expect(solved.board).toEqual(g.solution);
     }
+  });
+
+  it("a nudge names the diagonal a pattern lies on, only in X", () => {
+    const move: SolveMove = {
+      technique: "pointing",
+      tier: 2,
+      eliminations: [{ r: 5, c: 5, num: 1 }],
+      triggers: [
+        { r: 0, c: 0 },
+        { r: 1, c: 1 },
+      ],
+      digits: [1],
+    };
+    expect(patternUnit(move, "x").kind).toBe("diag");
+    expect(patternUnit(move).kind).toBe("box");
   });
 
   it("draws a diagonal unit as a line corner to corner", () => {

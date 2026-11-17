@@ -1270,15 +1270,20 @@ export interface BoardUnit extends CellRC {
  * Where a move's pattern lives, for a nudge: the one row, column or box holding all its cells,
  * else (a single, a fish, a wing) the box the move acts in.
  */
-export function patternUnit(move: SolveMove): BoardUnit {
+export function patternUnit(move: SolveMove, variant: Variant = "classic"): BoardUnit {
   const act = move.placement ?? move.eliminations[0] ?? move.triggers[0] ?? { r: 0, c: 0 };
   if (move.unit) return { kind: move.unit, r: act.r, c: act.c };
   const cells: CellRC[] = [...move.triggers, ...move.eliminations, act];
+  const x = variant === "x"; // a classic pattern may lie on a diagonal by chance
   const kind = cells.every((p) => p.r === act.r)
     ? "row"
     : cells.every((p) => p.c === act.c)
       ? "col"
-      : "box";
+      : x && cells.every((p) => p.r === p.c)
+        ? "diag"
+        : x && cells.every((p) => p.r + p.c === 8)
+          ? "anti"
+          : "box";
   return { kind, r: act.r, c: act.c };
 }
 

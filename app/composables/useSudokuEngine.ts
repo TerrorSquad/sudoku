@@ -370,7 +370,12 @@ export function useSudokuEngine(
   function buildHintFromMove(move: SolveMove): ComplexHint {
     const tech = move.technique;
     const digitsStr = move.digits.map((d) => digitLabel(d, colorMode.value, t)).join(", ");
-    const findDesc = t(`hint.move.${tech}.desc`, {
+    // In X a naked single's other digits may sit on a diagonal too.
+    const descKey =
+      tech === "naked-single" && variant.value === "x"
+        ? "hint.move.naked-single.descX"
+        : `hint.move.${tech}.desc`;
+    const findDesc = t(descKey, {
       num: digitLabel(move.digits[0] ?? 0, colorMode.value, t),
       digits: digitsStr,
       count: move.eliminations.length,
@@ -542,6 +547,7 @@ export function useSudokuEngine(
   }
 
   return {
+    variant,
     currentBoard,
     initialBoard,
     solvedBoard,

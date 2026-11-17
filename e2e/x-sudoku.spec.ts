@@ -43,6 +43,8 @@ test("Diagonal starts an X game: shaded diagonals, its own save slot", async ({ 
   await expect(page.locator(`${BOARD} [data-cell]`)).toHaveCount(81);
   await expect(page.locator(`${BOARD} .cell-diag`)).toHaveCount(17);
   await expect(page.getByText("Diagonal · Medium").first()).toBeVisible();
+  await page.setViewportSize({ width: 1920, height: 1080 }); // the wide screen's legend
+  await expect(page.getByText("Diagonal", { exact: true })).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("sudoku_v1_save_"))),

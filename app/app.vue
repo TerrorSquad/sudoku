@@ -1276,7 +1276,7 @@ onUnmounted(() => {
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
           <p class="sr-only" aria-live="polite">{{ announcement }}</p>
-          <GameLegend />
+          <GameLegend :diagonal="gameVariant === 'x'" :theme="boardTheme" />
 
           <!-- Center / main game column -->
           <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
@@ -1492,7 +1492,7 @@ onUnmounted(() => {
         :message="modalMessage"
         :win="isWinState"
         :difficulty-label="difficultyLabel"
-        :stats-key="statsKey(activeDifficulty, isDailyMode)"
+        :stats-key="isDailyMode ? statsKey(activeDifficulty, true) : gameRow"
         :zen="gameZen"
         :practice="!!practiceTechnique"
         :mistakes="mistakes"
