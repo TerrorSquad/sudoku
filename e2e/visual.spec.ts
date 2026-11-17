@@ -223,6 +223,23 @@ for (const theme of ["light", "dark"] as const) {
       await shot(page, "academy-example");
     });
 
+    test("lesson, level picker", async ({ page }) => {
+      // Level 1 done, so the lesson opens on level 2 (its columns marked), on a pinned position.
+      await page.evaluate(() => {
+        localStorage.setItem("sudoku_v1_lesson_stars", JSON.stringify({ "x-wing": 3 }));
+        (window as { lessonSeed?: number }).lessonSeed = 7;
+      });
+      await page.getByRole("button", { name: "Academy" }).click();
+      await page
+        .locator("#lesson-x-wing")
+        .getByRole("button", { name: "Learn it step by step" })
+        .click();
+      await expect(page.getByTestId("level-2")).toHaveAttribute("aria-pressed", "true", {
+        timeout: 30_000,
+      });
+      await shot(page, "lesson-levels");
+    });
+
     test("achievements", async ({ page }) => {
       await page.getByRole("button", { name: "Achievements" }).click();
       await shot(page, "achievements");

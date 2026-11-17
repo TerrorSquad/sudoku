@@ -12,6 +12,7 @@ import {
   notesGrid,
   removalReason,
   shuffleLesson,
+  tapPattern,
 } from "../utils/lesson";
 import { generatePracticePuzzle } from "../utils/practice";
 import { ACADEMY_TECHNIQUES } from "../utils/progression";
@@ -178,7 +179,9 @@ describe("lessons", () => {
       unit: null,
       move: { technique: "xy-chain", tier: 5, triggers: lessonChain, eliminations, digits: [1] },
     } satisfies Lesson;
-    expect(instancesOf(lesson)).toEqual([
+    expect(
+      instancesOf(lesson).map((i) => ({ pattern: i.pattern, eliminations: i.eliminations })),
+    ).toEqual([
       { pattern: lessonChain, eliminations },
       {
         pattern: [
@@ -269,5 +272,83 @@ describe("why not", () => {
       expect(why.key).toMatch(/lesson\.why\.sees(One|None)/);
     }
     expect(f2).toBeDefined();
+  });
+});
+
+describe("on your own (level 3)", () => {
+  const same = (a: CellRC[], b: CellRC[]) =>
+    a.length === b.length && a.every((p) => b.some((q) => q.r === p.r && q.c === p.c));
+  // Tapping every cell of `pattern` against `instances`: the instance it completes, if any.
+  const tapAll = (instances: ReturnType<typeof instancesOf>, pattern: CellRC[]) => {
+    let found: CellRC[] = [];
+    for (const p of pattern) {
+      const res = tapPattern(instances, found, p);
+      if (res.miss) return null;
+      found = res.found;
+      if (res.complete) return res.complete;
+    }
+    return null;
+  };
+
+  // Every instance level 3 counts is real, tapping it completes it, and level 1 doesn't count the
+  // extra ones; a wrong tap's reason gives nothing away (no digit, unit or line).
+  function expectFair(L: Lesson) {
+    const id = L.technique;
+    const solved = solveBoard(L.board)!;
+    const all = instancesOf(L, 3);
+    const guided = instancesOf(L, 1);
+    expect(all[0]!.pattern).toEqual(L.pattern);
+    for (const g of guided) expect(all.some((x) => same(x.pattern, g.pattern))).toBe(true);
+    for (const inst of all) {
+      const p = inst.move.placement;
+      if (p) expect(solved[p.r]![p.c]).toBe(p.num);
+      else expect(inst.eliminations.length).toBeGreaterThan(0);
+      for (const e of inst.eliminations) {
+        expect(solved[e.r]![e.c]).not.toBe(e.num);
+        expect(L.notes[e.r]![e.c]).toContain(e.num);
+      }
+      expect(tapAll(all, inst.pattern)).toBe(inst);
+      if (!guided.some((g) => same(g.pattern, inst.pattern)))
+        expect(tapAll(guided, inst.pattern)).toBeNull();
+    }
+    for (const cell of ALL) {
+      const why = missReason(L, cell, 3);
+      expect(["lesson.why.filled", "lesson.why.manyMarks", "lesson.miss"]).toContain(why.key);
+      if (why.key === "lesson.why.manyMarks") expect(id).toBe("naked-single");
+    }
+  }
+
+  it.each(ACADEMY_TECHNIQUES.map((t) => t.id))("%s's example, and transposed", (id) => {
+    const base = lessonFromExample(id)!;
+    expect(base.technique).toBe(id);
+    expectFair(base);
+    expectFair(shuffleLesson(base, makeRng(5), true));
+  });
+
+  it("finds the board's other singles, pointing pairs, fish and subsets", async () => {
+    for (const id of [
+      "naked-single",
+      "hidden-single",
+      "pointing",
+      "box-line",
+      "jellyfish",
+    ] as const)
+      expect(instancesOf(lessonFromExample(id)!, 3).length).toBeGreaterThan(1);
+    // Seeds whose position has more than one (checked by hand).
+    const found = await Promise.all(
+      (
+        [
+          ["naked-pair", 5],
+          ["hidden-pair", 1],
+          ["x-wing", 2],
+        ] as const
+      ).map(async ([id, seed]) =>
+        lessonFromPuzzle((await generatePracticePuzzle(id, makeRng(seed))).board, id)!,
+      ),
+    );
+    for (const L of found) {
+      expectFair(L);
+      expect(instancesOf(L, 3).length).toBeGreaterThan(1);
+    }
   });
 });

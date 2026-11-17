@@ -8,6 +8,7 @@ import {
   findPrompt,
   guideOf,
   guideUnits,
+  instancesOf,
   lessonFromExample,
   missReason,
   shuffleLesson,
@@ -404,4 +405,25 @@ describe("lesson levels", () => {
       expect(findPrompt(L, t, String, 2)).toMatch(/\bcolumns? \d/);
     }
   });
+});
+
+describe("narrate's facts on level 3's other instances", () => {
+  for (const { id } of ACADEMY_TECHNIQUES) {
+    it(`${id}: each instance a player may find instead is told truly`, () => {
+      const L = lessonFromExample(id)!;
+      const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
+      for (const inst of instancesOf(L, 3).slice(1, 8)) {
+        const lines = narrate(inst.move, has, t, String);
+        const texts = lines.map((s) => s.text);
+        for (const s of lines) {
+          expect(s.text).not.toMatch(/[{}]|explain\./);
+          try {
+            factCheck(L, s.text, texts);
+          } catch (e) {
+            throw new Error(`${s.text}\n${(e as Error).message}`, { cause: e });
+          }
+        }
+      }
+    });
+  }
 });

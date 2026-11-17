@@ -31,10 +31,12 @@ const name = t(`hint.move.${id}.name`);
 const { colorMode, boardTheme: theme } = usePreferences();
 const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const digits = L.digits.map(digit).join(", ");
-// The patterns step 1 accepts (a fish may have a twin); the one found sets step 2's marks.
-const instances = instancesOf(L);
+// The patterns step 1 accepts (a fish may have a twin; on your own, any instance counts); the one
+// found sets step 2's move.
+const instances = instancesOf(L, props.level);
 const active = ref(instances[0]!);
 const elims = computed(() => active.value.eliminations);
+const placement = computed(() => active.value.move.placement);
 
 const board = ref(L.board.map((row) => [...row]));
 const solved = solveBoard(L.board)!;
@@ -66,12 +68,26 @@ const guide = guideOf(id, props.level);
 // Level 2's name says what changes: the way round, or how much is told.
 const levelName = (n: Level) =>
   t(`lesson.level.${n === 2 && guideOf(id, 2) === "marked" ? "turn" : n}`);
+const open = (n: Level) => n === 1 || !!levelStars.value[n - 2];
+// L (a controller's LT): the next open level, round to the first.
+const otherLevel = computed(() => {
+  const after = LEVELS.filter((n) => open(n) && n !== props.level);
+  return after.find((n) => n > props.level) ?? after[0] ?? null;
+});
+
+// Once done, the arrows (a controller's D-pad) walk the coach's buttons; Enter (A) presses one.
+const coachEl = ref<HTMLElement>();
+function stepButton(by: 1 | -1) {
+  const list = [...(coachEl.value?.querySelectorAll<HTMLElement>("button:not([disabled])") ?? [])];
+  const i = list.indexOf(document.activeElement as HTMLElement);
+  list[i < 0 ? (by > 0 ? 0 : list.length - 1) : (i + by + list.length) % list.length]?.focus();
+}
 
 const prompt = computed(() => {
   if (step.value === "find") return findPrompt(L, t, digit, props.level);
   if (step.value === "apply")
-    return L.placement
-      ? t("lesson.apply.place", { num: digit(L.placement.num) })
+    return placement.value
+      ? t("lesson.apply.place", { num: digit(placement.value.num) })
       : t("lesson.apply.eliminate", { count: elims.value.length });
   return "";
 });
@@ -90,16 +106,18 @@ function tap(cell: CellCoord) {
   if (step.value !== "find") return;
   if (found.value.some((f) => sameCell(f, cell))) return;
   const res = tapPattern(instances, found.value, cell);
-  if (res.miss) return slip(cell, missText(L, cell, t, digit));
+  if (res.miss) return slip(cell, missText(L, cell, t, digit, props.level));
   found.value = res.found;
   const complete = res.complete;
   if (!complete) {
-    say("lesson.found", true, { n: res.found.length, total: L.pattern.length });
+    // On your own the count isn't told (and an instance found may have another).
+    if (props.level === 3) feedback.value = null;
+    else say("lesson.found", true, { n: res.found.length, total: L.pattern.length });
     return;
   }
   active.value = complete;
   startApply();
-  // A fish other than the one the lesson picked: just as real, so it's the one to use.
+  // An instance other than the one the lesson picked: just as real, so it's the one to use.
   if (complete !== instances[0]) say("lesson.twin", true, { technique: name });
   else feedback.value = null;
 }
@@ -126,9 +144,10 @@ function input(num: number) {
   const cell = selected.value;
   if (!cell) return say("lesson.selectFirst", false);
   const { r, c } = cell;
-  if (L.placement) {
-    if (!sameCell(cell, L.placement)) return reject(cell, "lesson.notThisCell");
-    if (num !== L.placement.num) return reject(cell, "lesson.notThisDigit", { num: digit(num) });
+  const p = placement.value;
+  if (p) {
+    if (!sameCell(cell, p)) return reject(cell, "lesson.notThisCell");
+    if (num !== p.num) return reject(cell, "lesson.notThisDigit", { num: digit(num) });
     board.value[r]![c] = num;
     emit("cue", "place");
     flash.value = [{ r, c, delay: 0 }];
@@ -147,7 +166,7 @@ function input(num: number) {
 
 // Backspace / Delete / X: crosses out the selected cell's mark when only one is left to go there.
 function crossOut() {
-  if (step.value !== "apply" || L.placement || !selected.value) return;
+  if (step.value !== "apply" || placement.value || !selected.value) return;
   const cell = selected.value;
   const left = elims.value.filter(
     (e) => sameCell(e, cell) && !removed.value.some((x) => sameCell(x, e) && x.num === e.num),
@@ -207,8 +226,8 @@ const eliminationCells = computed(() =>
     : [],
 );
 const target = computed(() =>
-  L.placement && ((step.value === "apply" && reveal.value) || step.value === "done")
-    ? { r: L.placement.r, c: L.placement.c }
+  placement.value && ((step.value === "apply" && reveal.value) || step.value === "done")
+    ? { r: placement.value.r, c: placement.value.c }
     : null,
 );
 // The legend under the coach: the keys that do something on this step.
@@ -219,16 +238,18 @@ const keys = computed(() =>
         ...(next.value ? [{ key: "N", desc: t("lesson.key.next") }] : []),
         { key: "R", desc: t("lesson.key.again") },
         { key: "P", desc: t("lesson.key.practice") },
+        ...(otherLevel.value ? [{ key: "L", desc: t("lesson.key.level") }] : []),
         { key: "Esc", desc: t("lesson.key.back") },
       ]
     : [
         { key: "↑←↓→", desc: t("lesson.key.move") },
         step.value === "find"
           ? { key: "Enter", desc: t("lesson.key.tap") }
-          : L.placement
+          : placement.value
             ? { key: "1–9", desc: t("lesson.key.place") }
             : { key: "1–9 / ⌫", desc: t("lesson.key.cross") },
         { key: "H", desc: t("lesson.showMe") },
+        ...(otherLevel.value ? [{ key: "L", desc: t("lesson.key.level") }] : []),
         { key: "Esc", desc: t("lesson.key.back") },
       ],
 );
@@ -238,7 +259,7 @@ const keys = computed(() =>
 // red). Crossing a mark out strikes it through before it goes.
 const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
 const drawn = computed(() => ({
-  ...L.move,
+  ...active.value.move,
   triggers: active.value.pattern,
   eliminations: active.value.eliminations,
 }));
@@ -271,12 +292,17 @@ const nudge = computed(() =>
 );
 
 // Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
-// Esc leaves. Once done: Enter for the next level (else the next lesson), N the next lesson, R
-// another example, P a full puzzle.
+// Esc leaves, L moves to another open level. Once done: the arrows walk the buttons, Enter for the
+// next level (else the next lesson), N the next lesson, R another example, P a full puzzle.
 function onKey(e: KeyboardEvent) {
   const key = boardKey(e, () => emit("back"));
   if (!key) return;
+  if (key === "l" && otherLevel.value) return emit("lesson", id, otherLevel.value);
   if (step.value === "done") {
+    if (stepCell(null, key)) {
+      e.preventDefault();
+      return stepButton(["ArrowUp", "ArrowLeft", "w", "a"].includes(key) ? -1 : 1);
+    }
     // Enter on a focused button is that button's own click.
     if (key === "Enter" && !onButton(e) && nextLevel.value) {
       e.preventDefault();
@@ -328,6 +354,7 @@ useEventListener(window, "keydown", onKey);
       <section
         class="panel order-first flex flex-col gap-3 p-4 lg:order-last lg:col-span-5 lg:self-start"
         data-testid="coach"
+        ref="coachEl"
       >
         <div class="flex gap-1.5" role="group" :aria-label="$t('lesson.levels')">
           <button
@@ -335,8 +362,8 @@ useEventListener(window, "keydown", onKey);
             :key="n"
             :data-testid="`level-${n}`"
             :aria-pressed="n === level"
-            :disabled="n > 1 && !levelStars[n - 2]"
-            :title="n > 1 && !levelStars[n - 2] ? $t('lesson.levelLocked') : undefined"
+            :disabled="!open(n)"
+            :title="open(n) ? undefined : $t('lesson.levelLocked')"
             :aria-label="
               levelStars[n - 1]
                 ? `${levelName(n)}, ${$t('lesson.starsLabel', { n: levelStars[n - 1] })}`

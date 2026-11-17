@@ -1,7 +1,7 @@
 /* oxlint-disable eslint/no-await-in-loop -- button presses are inherently sequential */
 import { test, expect, type Page } from "@playwright/test";
 
-import { resumeMedium, seedMediumSave } from "./seed";
+import { BOARD, resumeMedium, seedMediumSave } from "./seed";
 
 // A fake standard-mapping controller: tests flip its buttons; the app polls it each frame.
 async function plugIn(page: Page) {
@@ -133,4 +133,49 @@ test("in Watch your solve the D-pad stays in the replay, and B closes just the r
   await press(page, B);
   await expect(replay).toBeHidden();
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
+});
+
+test("a lesson's done screen: the D-pad walks its buttons, A presses one, LT changes level", async ({
+  page,
+}) => {
+  await plugIn(page);
+  await page.goto("/");
+  await page.evaluate(() => window.dispatchEvent(new Event("gamepadconnected")));
+  await page.getByRole("button", { name: /Academy/ }).click();
+  await page.getByRole("button", { name: "Next challenge: Naked Single" }).click();
+  const coach = page.getByTestId("coach");
+  await expect(coach).toContainText("Step 1 of 2", { timeout: 30_000 });
+
+  // The named unit's one cell down to one pencil mark, read off the cells' labels.
+  const [, kind, n] = /in (row|column|box) (\d)/.exec((await coach.textContent()) ?? "")!;
+  const labels = await page
+    .locator(`${BOARD} [data-cell]`)
+    .evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? ""));
+  const at = labels.findIndex((l, i) => {
+    const [r, c, k] = [Math.floor(i / 9), i % 9, Number(n) - 1];
+    const inUnit =
+      kind === "row"
+        ? r === k
+        : kind === "column"
+          ? c === k
+          : Math.floor(r / 3) * 3 + Math.floor(c / 3) === k;
+    return inUnit && /notes \d$/.test(l);
+  });
+  await page.locator(`${BOARD} [data-cell]`).nth(at).click();
+  await page.keyboard.press(/notes (\d)$/.exec(labels[at]!)![1]!);
+  await expect(coach).toContainText("Well done!");
+
+  // Down walks the coach's open buttons: the two open levels, then Next level.
+  await press(page, DOWN, 3);
+  const nextLevel = coach.getByRole("button", { name: "Next level: Less help" });
+  await expect(nextLevel).toBeFocused();
+  await press(page, A);
+  await expect(coach.getByTestId("level-2")).toHaveAttribute("aria-pressed", "true", {
+    timeout: 30_000,
+  });
+  // LT: the next open level, round to the first.
+  await press(page, LT);
+  await expect(coach.getByTestId("level-1")).toHaveAttribute("aria-pressed", "true", {
+    timeout: 30_000,
+  });
 });

@@ -431,7 +431,7 @@ function openLesson(id: TechniqueId) {
   academyFromGame.value = false;
   academyFocus.value = id;
   currentScreen.value = "academy";
-  handleLesson(id);
+  handleLesson(id, 1); // a technique the game just needed: learned from the start, guided
 }
 
 // Every way into a game: `load` puts the board in; a resumed save brings its counts and clock.
@@ -703,7 +703,7 @@ function openGameLesson(id: TechniqueId | null | undefined) {
   if (!timer.isPaused.value) timer.togglePause();
   academyFromGame.value = true;
   academyFocus.value = id;
-  handleLesson(id);
+  handleLesson(id, 1); // stuck on it in a game: learned from the start, guided
 }
 const openNudgeLesson = () => openGameLesson(nudge.value?.technique);
 
@@ -849,7 +849,8 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
 }
 
 // A guided lesson: the same search as practice, then the solver's replay to where it applies.
-// Opened from elsewhere, at the first level not finished yet.
+// With no level (the Academy, the path), at the first level not finished yet; a technique a game or
+// a drill showed was missed opens at level 1.
 async function handleLesson(technique: TechniqueId, level?: Level) {
   if (practiceLoading.value) return;
   practiceLoading.value = true;
@@ -857,7 +858,9 @@ async function handleLesson(technique: TechniqueId, level?: Level) {
   try {
     const from = currentScreen.value; // the Academy, or a finished lesson's next one
     const at = level ?? techniquePath.lessonLevel(technique);
-    const lesson = await guidedLesson(technique, randomSeed(), at);
+    // A test pins the position with window.lessonSeed; players get a fresh one.
+    const seed = (window as { lessonSeed?: number }).lessonSeed ?? randomSeed();
+    const lesson = await guidedLesson(technique, seed, at);
     if (token !== practiceToken || currentScreen.value !== from) return;
     activeLesson.value = lesson;
     lessonLevel.value = at;
@@ -1069,6 +1072,7 @@ function padKeys(digit: number): PadKeys {
     alt: String(digit),
     back: "Escape",
     hint: "h",
+    history: "l", // a lesson's other level
     clicks: true,
   };
 }
@@ -1171,7 +1175,7 @@ onUnmounted(() => {
           :rush="spotRush"
           @cue="academyCue"
           @back="currentScreen = 'academy'"
-          @lesson="handleLesson"
+          @lesson="(id: TechniqueId) => handleLesson(id, 1)"
         />
 
         <!-- HOW TO PLAY -->

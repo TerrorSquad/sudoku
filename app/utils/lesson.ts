@@ -196,7 +196,8 @@ export async function generateLesson(
     lessonFromExample(technique);
   if (!lesson) throw new Error(`No lesson for technique: ${technique}`);
   // The example is one fixed position; a symmetry of it keeps "Another example" from repeating.
-  // A puzzle's position is only transposed, when the level wants it the other way round.
+  // A puzzle's position is shuffled only when the level wants it the other way round: the same
+  // symmetry, transposed (its digits relabelled and its bands reordered as well).
   const turn = turnFor(lesson, level);
   return p.kind === "puzzle" && !turn ? lesson : shuffleLesson(lesson, rng, turn);
 }
@@ -323,10 +324,12 @@ export function shuffleLesson(L: Lesson, rng: Rng = Math.random, turn?: boolean)
 
 // ---- Step 1: what counts, and why a cell doesn't --------------------------------------------
 
-/** One way to finish step 1: the cells to find, and the marks step 2 then removes. */
+/** One way to finish step 1: the cells to find, the marks step 2 then removes, and its move. */
 export interface Instance {
   pattern: CellRC[];
   eliminations: DigitAt[];
+  /** The move it makes: the lesson's own, or one like it on these cells and digits. */
+  move: SolveMove;
 }
 
 const FISH_SIZE: Partial<Record<TechniqueId, number>> = { "x-wing": 2, swordfish: 3, jellyfish: 4 };
@@ -342,14 +345,22 @@ function choose<T>(items: T[], k: number): T[][] {
 /**
  * Every pattern step 1 accepts: the lesson's own, plus for a fish (or an XY-Chain) any other one on
  * the same digit with as many cells (the prompt names the digit and the count) that also clears
- * something. A player who spots that one first has found a real one, so it counts.
+ * something. A player who spots that one first has found a real one, so it counts. Level 3 names
+ * neither, so there any instance of the technique on the board counts (anyInstances).
  */
-export function instancesOf(L: Lesson): Instance[] {
-  const main = { pattern: L.pattern, eliminations: L.eliminations };
+export function instancesOf(L: Lesson, level?: Level): Instance[] {
+  const main = { pattern: L.pattern, eliminations: L.eliminations, move: L.move };
+  if (level === 3)
+    return [main, ...anyInstances(L)].filter(
+      (x, i, all) => all.findIndex((y) => sameCells(x.pattern, y.pattern)) === i,
+    );
   if (L.technique === "xy-chain") return [main, ...otherXYChains(L)];
   const k = FISH_SIZE[L.technique];
-  if (!k) return [main];
-  const d = L.digits[0]!;
+  return k ? [main, ...fishes(L, L.digits[0]!, k, L.pattern.length)] : [main];
+}
+
+/** The fish of size k on d (with n cells, when given) that clear something, but the lesson's. */
+function fishes(L: Lesson, d: number, k: number, n?: number): Instance[] {
   const has = ({ r, c }: CellRC) => L.notes[r]![c]!.includes(d);
   const nine = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   const others: Instance[] = [];
@@ -363,15 +374,132 @@ export function instancesOf(L: Lesson): Instance[] {
       const cover = new Set<number>(combo.flatMap((b) => b.ps));
       if (cover.size !== k) continue;
       const pattern = combo.flatMap((b) => b.ps.map((p) => at(b.u, p)));
-      if (pattern.length !== L.pattern.length || sameCells(pattern, L.pattern)) continue;
+      if ((n && pattern.length !== n) || sameCells(pattern, L.pattern)) continue;
       const base = new Set(combo.map((b) => b.u));
       const eliminations = [...cover].flatMap((p) =>
         nine.filter((u) => !base.has(u) && has(at(u, p))).map((u) => ({ ...at(u, p), num: d })),
       );
-      if (eliminations.length) others.push({ pattern, eliminations });
+      const move = { ...L.move, triggers: pattern, eliminations, digits: [d] };
+      if (eliminations.length) others.push({ pattern, eliminations, move });
     }
   }
-  return [main, ...others];
+  return others;
+}
+
+const SUBSET_SIZE: Partial<Record<TechniqueId, number>> = {
+  "naked-pair": 2,
+  "naked-triple": 3,
+  "naked-quad": 4,
+  "hidden-pair": 2,
+  "hidden-triple": 3,
+  "hidden-quad": 4,
+};
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+// Each unit's empty cells: rows, columns, then boxes.
+const unitsOf = (L: Lesson) =>
+  (["row", "col", "box"] as const).flatMap((kind) =>
+    Array.from({ length: 9 }, (_, i) =>
+      unitCells(
+        kind,
+        kind === "row"
+          ? { r: i, c: 0 }
+          : kind === "col"
+            ? { r: 0, c: i }
+            : { r: Math.floor(i / 3) * 3, c: (i % 3) * 3 },
+      ).filter((p) => !L.board[p.r]![p.c]),
+    ).map((cells) => ({ kind, cells })),
+  );
+
+/**
+ * Every instance of the lesson's technique on its board (as the lesson's own, from its marks),
+ * for level 3, where the prompt names no digit, unit or count.
+ */
+function anyInstances(L: Lesson): Instance[] {
+  const t = L.technique;
+  const marks = ({ r, c }: CellRC) => L.notes[r]![c]!;
+  const spots = (cells: CellRC[], d: number) => cells.filter((p) => marks(p).includes(d));
+  const among = (p: CellRC, cells: CellRC[]) => cells.some((q) => q.r === p.r && q.c === p.c);
+  const make = (pattern: CellRC[], eliminations: DigitAt[], move: Partial<SolveMove>) => ({
+    pattern,
+    eliminations,
+    move: { ...L.move, placement: undefined, triggers: pattern, eliminations, ...move },
+  });
+  const units = unitsOf(L);
+  const k = FISH_SIZE[t] ?? SUBSET_SIZE[t];
+  if (t === "naked-single")
+    return ALL_CELLS.filter((p) => !L.board[p.r]![p.c] && marks(p).length === 1).map((p) =>
+      make([p], [], { placement: { ...p, num: marks(p)[0]! }, digits: [marks(p)[0]!] }),
+    );
+  if (t === "hidden-single")
+    return units.flatMap(({ kind, cells }) =>
+      DIGITS.flatMap((d) => {
+        const [p, ...more] = spots(cells, d);
+        return p && !more.length
+          ? [make([p], [], { placement: { ...p, num: d }, digits: [d], unit: kind })]
+          : [];
+      }),
+    );
+  // Pointing: a box's spots on one line clear the rest of it; box-line: a line's in one box, the box.
+  if (t === "pointing" || t === "box-line")
+    return units
+      .filter(({ kind }) => (kind === "box") === (t === "pointing"))
+      .flatMap(({ cells }) =>
+        DIGITS.flatMap((d) => {
+          const s = spots(cells, d);
+          // The unit the spots share as well: a line for a box's, the box for a line's.
+          const other = (t === "pointing" ? (["row", "col"] as const) : (["box"] as const)).find(
+            (u) => s.length >= 2 && s.every((p) => inUnit(u, s[0]!, p)),
+          );
+          if (!other) return [];
+          const eliminations = spots(unitCells(other, s[0]!), d)
+            .filter((p) => !among(p, s))
+            .map((p) => ({ ...p, num: d }));
+          return eliminations.length ? [make(s, eliminations, { digits: [d] })] : [];
+        }),
+      );
+  if (FISH_SIZE[t]) return DIGITS.flatMap((d) => fishes(L, d, k!));
+  if (t.startsWith("naked-") && k)
+    return units.flatMap(({ cells }) =>
+      choose(
+        cells.filter((p) => marks(p).length >= 2 && marks(p).length <= k),
+        k,
+      ).flatMap((cs) => {
+        const ds = DIGITS.filter((d) => cs.some((p) => marks(p).includes(d)));
+        if (ds.length !== k) return [];
+        // Cleared from every unit the cells share.
+        const shared = (["row", "col", "box"] as const).filter((u) =>
+          cs.every((p) => inUnit(u, cs[0]!, p)),
+        );
+        const eliminations = ALL_CELLS.filter(
+          (p) => !among(p, cs) && shared.some((u) => inUnit(u, cs[0]!, p)),
+        ).flatMap((p) =>
+          marks(p)
+            .filter((n) => ds.includes(n))
+            .map((num) => ({ ...p, num })),
+        );
+        return eliminations.length ? [make(cs, eliminations, { digits: ds })] : [];
+      }),
+    );
+  if (t.startsWith("hidden-") && k)
+    return units.flatMap(({ cells }) =>
+      choose(
+        DIGITS.filter((d) => spots(cells, d).length >= 2 && spots(cells, d).length <= k),
+        k,
+      ).flatMap((ds) => {
+        const cs = uniqueCells(ds.flatMap((d) => spots(cells, d)));
+        if (cs.length !== k) return [];
+        const eliminations = cs.flatMap((p) =>
+          marks(p)
+            .filter((n) => !ds.includes(n))
+            .map((num) => ({ ...p, num })),
+        );
+        return eliminations.length ? [make(cs, eliminations, { digits: ds })] : [];
+      }),
+    );
+  // ponytail: wings, chains, colouring, the kite and the uniqueness patterns count only the
+  // lesson's own (and an XY-Chain's twins) at level 3; search them like the rest if players find
+  // other real ones first.
+  return t === "xy-chain" ? otherXYChains(L) : [];
 }
 
 /**
@@ -397,7 +525,8 @@ function otherXYChains(L: Lesson): Instance[] {
           sees(p, chain[0]!) &&
           sees(p, last),
       ).map((p) => ({ ...p, num: z }));
-      if (eliminations.length) out.push({ pattern: chain, eliminations });
+      const move = { ...L.move, triggers: chain, eliminations };
+      if (eliminations.length) out.push({ pattern: chain, eliminations, move });
       return;
     }
     for (const p of bivalue)
@@ -444,8 +573,13 @@ export interface Miss {
  * only fires on a cell that no pattern of this kind could use, or (where the lesson has only one
  * instance to find) that this one doesn't, so the reason is never wrong.
  */
-export function missReason(L: Lesson, { r, c }: CellRC): Miss {
+export function missReason(L: Lesson, { r, c }: CellRC, level?: Level): Miss {
   if (L.board[r]![c]) return { key: "lesson.why.filled" };
+  // On your own, any instance counts: a reason naming the lesson's digit or unit would give it away.
+  if (level === 3)
+    return L.technique === "naked-single" && L.notes[r]![c]!.length > 1
+      ? { key: "lesson.why.manyMarks", params: { n: L.notes[r]![c]!.length } }
+      : { key: "lesson.miss" };
   // A cell of some instance (missed only for not going with the cells found so far): no reason.
   const instances = instancesOf(L);
   if (instances.some((i) => i.pattern.some((p) => p.r === r && p.c === c)))
@@ -658,7 +792,7 @@ export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: numb
   }
   if (t === "finned-x-wing" || t === "finned-swordfish") {
     const size = t === "finned-x-wing" ? 2 : 3;
-    const f = finnedSides({ ...L.move, triggers: tr, eliminations: inst.eliminations }, size);
+    const f = finnedSides({ ...inst.move, triggers: tr, eliminations: inst.eliminations }, size);
     if (f)
       return {
         key: `lesson.why.offFin.${f.kind}`,
@@ -666,7 +800,11 @@ export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: numb
       };
   }
   if (t === "simple-coloring") {
-    const { sets, wrap } = colorSets({ ...L.move, triggers: tr, eliminations: inst.eliminations });
+    const { sets, wrap } = colorSets({
+      ...inst.move,
+      triggers: tr,
+      eliminations: inst.eliminations,
+    });
     if (!wrap && !sets.every((s) => s.some((q) => sees(cell, q))))
       return { key: "lesson.why.seesOneSet", params: { d } };
   }
@@ -677,7 +815,9 @@ export function removalReason(L: Lesson, inst: Instance, cell: CellRC, num: numb
       : t === "box-line"
         ? "box"
         : t.startsWith("naked-")
-          ? L.unit?.kind
+          ? (["row", "col", "box"] as Kind[]).find((u) =>
+              [...tr, ...inst.eliminations].every((p) => inUnit(u, tr[0]!, p)),
+            )
           : null;
   // Sharing another unit with the whole pattern, the cell could be cleared by it just as well.
   const alsoIn = (["row", "col", "box"] as Kind[]).some((u) => tr.every((p) => inUnit(u, p, cell)));
@@ -757,8 +897,9 @@ export function missText(
   cell: CellRC,
   t: Translate,
   digit: (n: number) => string,
+  level?: Level,
 ): string {
-  return reasonText(L, missReason(L, cell), t, digit);
+  return reasonText(L, missReason(L, cell, level), t, digit);
 }
 
 const DIGIT_PARAMS = new Set(["d", "x", "y", "z", "num"]);
