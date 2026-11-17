@@ -33,10 +33,6 @@ const digits = L.digits.map(digit).join(", ");
 const instances = instancesOf(L);
 const active = ref(instances[0]!);
 const elims = computed(() => active.value.eliminations);
-// What step 2 removes: for hidden subsets that's the other candidates, not the subset's digits.
-const removedDigits = computed(() =>
-  [...new Set(elims.value.map((e) => e.num))].map(digit).join(", "),
-);
 
 const board = ref(L.board.map((row) => [...row]));
 const solved = solveBoard(L.board)!;
@@ -65,18 +61,6 @@ const prompt = computed(() => {
       : t("lesson.apply.eliminate", { count: elims.value.length });
   return "";
 });
-
-// What the hint engine says about this move, as the recap.
-const recap = computed(() => [
-  t(`hint.move.${id}.desc`, { num: digit(L.digits[0] ?? 0), digits, count: elims.value.length }),
-  L.placement
-    ? t("hint.move.placeStep", {
-        num: digit(L.placement.num),
-        row: L.placement.r + 1,
-        col: L.placement.c + 1,
-      })
-    : t("hint.move.eliminateStep", { digits: removedDigits.value, count: elims.value.length }),
-]);
 
 const counts = computed(() => {
   const c = Array(10).fill(0);
@@ -113,6 +97,15 @@ function startApply() {
   emit("cue", "hint");
 }
 
+// The move told with this board's rows, columns and boxes (explain.ts): step 2 gives the why, and
+// Show me (or finishing) adds the conclusion, which names the cells to change; the recap is all of it.
+const story = computed(() => narrate(drawn.value, has, t, digit));
+const why = computed(() =>
+  story.value
+    .filter((s) => (s.step !== "result" && !s.answer) || reveal.value > 0 || step.value === "done")
+    .map((s) => s.text),
+);
+
 function input(num: number) {
   if (step.value === "find") return say("lesson.findFirst", false);
   if (step.value !== "apply") return;
@@ -128,10 +121,8 @@ function input(num: number) {
     return finish();
   }
   if (!notes.value[r]![c]![num]) return reject(cell, "lesson.noMark", { num: digit(num) });
-  if (!elims.value.some((e) => sameCell(e, cell) && e.num === num)) {
-    const inStep = elims.value.some((e) => sameCell(e, cell));
-    return reject(cell, inStep ? "lesson.keepMark" : "lesson.notThisCell", { num: digit(num) });
-  }
+  if (!elims.value.some((e) => sameCell(e, cell) && e.num === num))
+    return slip(cell, reasonText(L, removalReason(L, active.value, cell, num), t, digit));
   notes.value[r]![c]![num] = false;
   removed.value.push({ r, c, num });
   emit("cue", "place");
@@ -328,6 +319,13 @@ useEventListener(window, "keydown", onKey);
           <p class="text-xs font-bold text-violet-700 dark:text-violet-300">
             {{ $t(step === "find" ? "lesson.step1" : "lesson.step2") }}
           </p>
+          <ul
+            v-if="step === 'apply'"
+            class="space-y-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"
+            data-testid="lesson-why"
+          >
+            <li v-for="(line, i) in why" :key="i">{{ line }}</li>
+          </ul>
           <p class="text-base leading-snug font-semibold text-zinc-900 dark:text-zinc-100">
             {{ prompt }}
           </p>
@@ -370,7 +368,7 @@ useEventListener(window, "keydown", onKey);
             {{ $t("path.completed", { name }) }}
           </p>
           <p
-            v-for="(line, i) in recap"
+            v-for="(line, i) in why"
             :key="i"
             class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300"
           >

@@ -10,6 +10,7 @@ import {
   lessonUnits,
   missReason,
   notesGrid,
+  removalReason,
   shuffleLesson,
 } from "../utils/lesson";
 import { generatePracticePuzzle } from "../utils/practice";
@@ -202,5 +203,71 @@ describe("lessons", () => {
     ]);
     const pointing = lessonFromExample("pointing")!;
     expect(pointing.unit?.kind).toBe("box");
+  });
+});
+
+describe("why not", () => {
+  // Every Academy example: tap each empty non-pattern cell; most get a reason naming something
+  // specific, never the bare "Not that cell" when anything more is true.
+  it.each(ACADEMY_TECHNIQUES.map((t) => t.id))(
+    "%s: most wrong taps get a specific reason",
+    (id) => {
+      const lesson = lessonFromExample(id)!;
+      const isPattern = (p: CellRC) => lesson.pattern.some((q) => q.r === p.r && q.c === p.c);
+      const taps = ALL.filter((p) => !lesson.board[p.r]![p.c] && !isPattern(p));
+      const vague = taps.filter((p) => missReason(lesson, p).key === "lesson.miss");
+      expect(vague.length / taps.length).toBeLessThan(1 / 3);
+    },
+  );
+
+  it.each(ACADEMY_TECHNIQUES.map((t) => t.id).filter((id) => !lessonFromExample(id)!.placement))(
+    "%s: a wrong removal says why the mark stays",
+    (id) => {
+      const lesson = lessonFromExample(id)!;
+      const inst = instancesOf(lesson)[0]!;
+      const reasons = new Set<string>();
+      for (const p of ALL)
+        for (const num of lesson.notes[p.r]![p.c]!) {
+          if (inst.eliminations.some((e) => e.r === p.r && e.c === p.c && e.num === num)) continue;
+          reasons.add(removalReason(lesson, inst, p, num).key);
+        }
+      expect([...reasons].some((k) => k !== "lesson.notThisCell")).toBe(true);
+      // A hidden subset removes every other mark from its cells, so none of theirs is left to try.
+      if (!id.startsWith("hidden-")) expect(reasons).toContain("lesson.why.inPattern");
+    },
+  );
+
+  it("keeps a pattern cell's other marks for what they are: not removed, not 'the pattern'", () => {
+    expect.hasAssertions();
+    for (const { id } of ACADEMY_TECHNIQUES) {
+      const lesson = lessonFromExample(id)!;
+      if (lesson.placement) continue;
+      const inst = instancesOf(lesson)[0]!;
+      const removed = new Set(inst.eliminations.map((e) => e.num));
+      for (const p of inst.pattern)
+        for (const num of lesson.notes[p.r]![p.c]!)
+          if (!removed.has(num))
+            expect(removalReason(lesson, inst, p, num).key).toBe("lesson.why.onlyRemoves");
+    }
+  });
+
+  it("names the far ends a skyscraper's removal has to see", () => {
+    const lesson = lessonFromExample("skyscraper")!;
+    const inst = instancesOf(lesson)[0]!;
+    const d = lesson.digits[0]!;
+    const [, f1, , f2] = lesson.pattern;
+    // A cell with the digit in a far end's row, not one the move clears: it sees only that end.
+    const one = ALL.find(
+      (p) =>
+        lesson.notes[p.r]![p.c]!.includes(d) &&
+        p.r === f1!.r &&
+        !lesson.pattern.some((q) => q.r === p.r && q.c === p.c) &&
+        !inst.eliminations.some((e) => e.r === p.r && e.c === p.c),
+    );
+    if (one) {
+      const why = removalReason(lesson, inst, one, d);
+      expect(why.key).toMatch(/lesson\.why\.sees(One|None)/);
+    }
+    expect(f2).toBeDefined();
   });
 });
