@@ -8,7 +8,7 @@ import confetti from "canvas-confetti";
 import type { PadKeys } from "./composables/useGamepad";
 import type { GameSave, SaveSlot } from "./composables/useGameSave";
 import type { WinResult } from "./composables/useWinResult";
-import type { CellCoord, Difficulty, FlashCell, Grid } from "./types/sudoku";
+import type { CellCoord, Difficulty, FlashCell, Grid, Variant } from "./types/sudoku";
 import type { BasicsId } from "./utils/basics";
 import type { Lesson } from "./utils/lesson";
 import type { BoardTheme } from "./utils/preferenceValues";
@@ -33,6 +33,7 @@ const {
   hintStyle,
   showCandidates,
   zen,
+  diagonal,
   boardTheme,
   uiScale,
   controlsTour,
@@ -79,9 +80,13 @@ function cue(kind: keyof typeof CUES, ...arg: number[]) {
   if (soundEnabled.value) (sound as (...a: number[]) => void)(...arg);
   if (vibration && hapticsEnabled.value) haptic(vibration);
 }
+// The game's rules: X-Sudoku ("Diagonal") is picked on the difficulty screen; Dailies, custom and
+// practice boards are classic.
+const gameVariant = ref<Variant>("classic");
 const engine = useSudokuEngine(
   colorMode,
   computed(() => !highlightErrors.value),
+  gameVariant,
 );
 const timer = useTimer();
 
@@ -205,6 +210,8 @@ function applyUiScale() {
 applyUiScale();
 watch(uiScale, applyUiScale);
 const activeDifficulty = ref<Difficulty>("medium");
+// This game's stats row, also its name: the level's, or its X-Sudoku one (x_<level>).
+const gameRow = computed(() => statsKey(activeDifficulty.value, false, gameVariant.value));
 // What the dashboard chip and the win modal call this game, in the player's language.
 const difficultyLabel = computed(() =>
   practiceTechnique.value
@@ -212,8 +219,8 @@ const difficultyLabel = computed(() =>
     : isDailyMode.value
       ? t(`difficulty.${statsKey(activeDifficulty.value, true)}`)
       : gameZen.value
-        ? `${t(`difficulty.${activeDifficulty.value}`)} · ${t("difficulty.zen")}`
-        : t(`difficulty.${activeDifficulty.value}`),
+        ? `${t(`difficulty.${gameRow.value}`)} · ${t("difficulty.zen")}`
+        : t(`difficulty.${gameRow.value}`),
 );
 
 const showModal = ref<boolean>(false);
@@ -284,7 +291,7 @@ const bestTime = computed(() => {
   if (practiceTechnique.value) return 0;
   if (activeDifficulty.value === "custom") return challengeTarget.value; // a friend's time, or none
   if (isDailyMode.value) return dailyPuzzle.getBestTime(activeDifficulty.value);
-  return score.getStats().perDifficulty[activeDifficulty.value]?.bestTime ?? 0;
+  return score.getStats().perDifficulty[gameRow.value]?.bestTime ?? 0;
 });
 // Lessons finished, read when the screen changes (a lesson ends on another screen), not per move.
 const lessonsDone = computed(() => {
@@ -311,6 +318,7 @@ watch(
       hintsUsed: hintsUsed.value,
       zen: gameZen.value,
       daily: isDailyMode.value ? dailyDate : undefined,
+      variant: gameVariant.value === "x" ? "x" : undefined, // classic saves stay as they were
       placements: placements.value,
     });
   },
@@ -332,13 +340,16 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
     win && !practised ? lockedLevels(score.unlockWins(), (d) => !!gameSave.loadDifficulty(d)) : [];
   if (!practised)
     gameSave.clearDifficulty(
-      isDailyMode.value ? dailySlot(activeDifficulty.value) : activeDifficulty.value,
+      isDailyMode.value
+        ? dailySlot(activeDifficulty.value)
+        : gameSlot(activeDifficulty.value, gameVariant.value),
     );
   if (!win) return;
   cue("win");
   flashWin();
   const { result, toasts, opened, unlock } = recordWin({
     difficulty: activeDifficulty.value,
+    variant: gameVariant.value,
     daily: isDailyMode.value,
     dailyDate,
     zen: gameZen.value,
@@ -380,15 +391,16 @@ const nextLoading = ref(false);
 async function handleNextPuzzle() {
   const level = nextLevel.value;
   if (!level || nextLoading.value) return;
-  if (gameSave.loadDifficulty(level)) {
+  const variant = gameVariant.value;
+  if (gameSave.loadDifficulty(gameSlot(level, variant))) {
     handleModalClose();
     currentScreen.value = "difficulty";
-    handleChooseDifficulty(level);
+    handleChooseDifficulty(level, variant);
     return;
   }
   nextLoading.value = true;
-  // Straight to the next board (the menu would cancel its start), Zen if this game was.
-  await handleStartGame(level, { zen: gameZen.value, ready: closeModal });
+  // Straight to the next board (the menu would cancel its start), Zen (or X) if this game was.
+  await handleStartGame(level, { zen: gameZen.value, variant, ready: closeModal });
   nextLoading.value = false;
 }
 
@@ -442,9 +454,17 @@ function beginGame(
     zen: zenGame = false,
     practice = null,
     save,
-  }: { daily?: string; zen?: boolean; practice?: TechniqueId | null; save?: GameSave } = {},
+    variant = "classic",
+  }: {
+    daily?: string;
+    zen?: boolean;
+    practice?: TechniqueId | null;
+    save?: GameSave;
+    variant?: Variant;
+  } = {},
 ) {
   practiceTechnique.value = practice;
+  gameVariant.value = variant;
   isDailyMode.value = !!daily;
   dailyDate = daily;
   gameZen.value = zenGame;
@@ -465,7 +485,12 @@ function beginGame(
 }
 
 function resumeSavedGame(s: GameSave) {
-  beginGame(s.difficulty, () => restoreGame(s), { daily: s.daily, zen: s.zen, save: s });
+  beginGame(s.difficulty, () => restoreGame(s), {
+    daily: s.daily,
+    zen: s.zen,
+    save: s,
+    variant: s.variant ?? "classic",
+  });
 }
 
 // A board still generating when the player picks again, or leaves the screen, is dropped.
@@ -473,25 +498,34 @@ let startToken = 0;
 watch(currentScreen, () => startToken++);
 async function handleStartGame(
   level: Difficulty,
-  { zen: zenGame = zen.value, ready = () => {} } = {},
+  {
+    zen: zenGame = zen.value,
+    variant = (diagonal.value ? "x" : "classic") as Variant,
+    ready = () => {},
+  } = {},
 ) {
   const token = ++startToken;
-  const generated = await takePuzzle(level);
+  const generated = await takePuzzle(level, variant);
   if (token !== startToken) return;
   ready();
-  gameSave.clearDifficulty(level);
-  beginGame(level, () => startNewGame(level, generated), { zen: zenGame });
+  gameSave.clearDifficulty(gameSlot(level, variant));
+  beginGame(level, () => startNewGame(level, generated), { zen: zenGame, variant });
 }
 
-// A difficulty already has a saved game — ask before silently overwriting it.
-function handleChooseDifficulty(level: Difficulty) {
-  const existing = gameSave.loadDifficulty(level);
+// A difficulty already has a saved game — ask before silently overwriting it. X-Sudoku games
+// have their own slot per level.
+function handleChooseDifficulty(
+  level: Difficulty,
+  variant: Variant = diagonal.value ? "x" : "classic",
+) {
+  const slot = gameSlot(level, variant);
+  const existing = gameSave.loadDifficulty(slot);
   if (existing) {
-    pendingResume.value = { save: existing, level };
+    pendingResume.value = { save: existing, level: slot };
   } else if (lockOf(level, score.unlockWins())) {
     return; // the selector shows it locked; never start one past it
   } else {
-    handleStartGame(level);
+    handleStartGame(level, { variant });
   }
 }
 
@@ -503,9 +537,9 @@ function handleResumeConfirm() {
 
 function handleResumeDecline() {
   if (!pendingResume.value) return;
-  const { level } = pendingResume.value;
-  if (pendingResume.value.save.daily) startDaily(pendingResume.value.save.difficulty);
-  else handleStartGame(level as Difficulty);
+  const { save } = pendingResume.value;
+  if (save.daily) startDaily(save.difficulty);
+  else handleStartGame(save.difficulty, { variant: save.variant ?? "classic" });
   pendingResume.value = null;
 }
 
@@ -621,21 +655,31 @@ function handleInputNumber(num: number) {
           if (conflicts.length > 0) {
             const inRow = conflicts.some((cc) => cc.r === r);
             const inCol = conflicts.some((cc) => cc.c === c);
-            const inBox = conflicts.some((cc) => cc.r !== r && cc.c !== c);
+            const sameBox = (cc: CellCoord) =>
+              Math.floor(cc.r / 3) === Math.floor(r / 3) &&
+              Math.floor(cc.c / 3) === Math.floor(c / 3);
+            const inBox = conflicts.some(sameBox);
+            // X-Sudoku: what's left clashes only along a diagonal.
+            const inDiag = conflicts.some((cc) => cc.r !== r && cc.c !== c && !sameBox(cc));
             const where = inRow
               ? t("game.whereRow", { n: r + 1 })
               : inCol
                 ? t("game.whereCol", { n: c + 1 })
                 : inBox
                   ? t("game.whereBox")
-                  : t("game.whereCell");
+                  : inDiag
+                    ? t("game.whereDiag")
+                    : t("game.whereCell");
             say(t("game.conflictWith", { where }));
             const first = conflicts[0]!;
-            mistakeExplainer.value = t("game.whyConflict", {
-              num: digitLabel(num, colorMode.value, t),
-              r: first.r + 1,
-              c: first.c + 1,
-            });
+            mistakeExplainer.value = t(
+              gameVariant.value === "x" ? "game.whyConflictX" : "game.whyConflict",
+              {
+                num: digitLabel(num, colorMode.value, t),
+                r: first.r + 1,
+                c: first.c + 1,
+              },
+            );
           } else {
             say(t("game.wrongDigit"));
             mistakeExplainer.value = t("game.whyWrong", {
@@ -738,7 +782,7 @@ const finishPath = computed(() => {
   if (currentScreen.value !== "game" || showModal.value || !highlightErrors.value) return null;
   const empty = currentBoard.value.flat().filter((v) => v === 0).length;
   if (!empty || empty > FINISH_MAX_EMPTY || engine.findWrongEntry()) return null;
-  return singlesPath(currentBoard.value);
+  return singlesPath(currentBoard.value, gameVariant.value);
 });
 
 const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -1232,7 +1276,7 @@ onUnmounted(() => {
         >
           <!-- Screen readers hear what sighted players see on the board: "Wrong digit here!" etc. -->
           <p class="sr-only" aria-live="polite">{{ announcement }}</p>
-          <GameLegend />
+          <GameLegend :diagonal="gameVariant === 'x'" :theme="boardTheme" />
 
           <!-- Center / main game column -->
           <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
@@ -1297,6 +1341,7 @@ onUnmounted(() => {
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
                 :marks="hintMarks"
+                :diagonal="gameVariant === 'x'"
                 @select-cell="handleSelectCell"
               />
               <div class="flex flex-col gap-2.5">
@@ -1447,7 +1492,7 @@ onUnmounted(() => {
         :message="modalMessage"
         :win="isWinState"
         :difficulty-label="difficultyLabel"
-        :stats-key="statsKey(activeDifficulty, isDailyMode)"
+        :stats-key="isDailyMode ? statsKey(activeDifficulty, true) : gameRow"
         :zen="gameZen"
         :practice="!!practiceTechnique"
         :mistakes="mistakes"

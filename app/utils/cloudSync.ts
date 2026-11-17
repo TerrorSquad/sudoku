@@ -19,10 +19,13 @@ export const SYNC_BACKUP_KEY = "sudoku_sync_backup";
 
 // The Dailies' saves (sudoku_v1_save_daily, sudoku_v1_save_daily_<level>) stay on this device:
 // v1.2.0 rejects a whole cloud file that holds one (it expects every save slot to be named after a
-// difficulty), and they only resume the same day anyway. Display size is per device (a TV and a
+// difficulty), and they only resume the same day anyway. X-Sudoku saves (sudoku_v1_save_x_<level>)
+// too, for the same reason: every version before them would reject the file. Display size is per device (a TV and a
 // phone want different ones), and older versions reject any preference that isn't a boolean.
 const localOnly = (key: string) =>
-  key.startsWith("sudoku_v1_save_daily") || key === "sudoku_v1_pref_ui_scale";
+  key.startsWith("sudoku_v1_save_daily") ||
+  key.startsWith("sudoku_v1_save_x_") ||
+  key === "sudoku_v1_pref_ui_scale";
 
 /** The local data as it is synced: everything but the localOnly keys. */
 export function cloudData(local: Record<string, string>): Record<string, string> {

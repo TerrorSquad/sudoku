@@ -31,6 +31,17 @@ function midGame() {
   return save;
 }
 
+// An X-Sudoku game (shaded diagonals): a generated X puzzle and its solution.
+function xGame() {
+  const initialBoard = grid(
+    "300200040000006007000034060207050090040800070603900000802009703070000914430000608",
+  );
+  const solvedBoard = grid(
+    "368297145194586237725134869287451396941863572653972481812649753576328914439715628",
+  );
+  return savedGame({ currentBoard: initialBoard, initialBoard, solvedBoard, variant: "x" });
+}
+
 // The in-game clock only.
 const TIMER = "[data-testid=timer]";
 
@@ -174,6 +185,20 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("Shift+Z");
       await expect(page.getByRole("dialog", { name: "Move history" })).toBeVisible();
       await shot(page, "game-move-history");
+    });
+
+    test("game, diagonal (X-Sudoku)", async ({ page }) => {
+      await page.evaluate((save) => {
+        localStorage.setItem("sudoku_v1_save_x_medium", JSON.stringify(save));
+        localStorage.setItem("sudoku_v1_pref_diagonal", "true");
+      }, xGame());
+      await page.reload();
+      await openSavedGame(page);
+      await page
+        .locator(`${BOARD} [data-cell]`)
+        .nth(9 + 4)
+        .click(); // r2c5, off the diagonals
+      await shot(page, "game-diagonal");
     });
 
     test("game, paused", async ({ page }) => {

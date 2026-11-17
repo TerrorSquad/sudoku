@@ -15,4 +15,7 @@ export interface HintCoordinate extends CellCoord {
   type: "trigger" | "elimination";
 }
 
+/** Classic rules, or X-Sudoku ("Diagonal"): both long diagonals also hold 1–9 once each. */
+export type Variant = "classic" | "x";
+
 export type Difficulty = "beginner" | "easy" | "medium" | "hard" | "expert" | "master" | "custom";

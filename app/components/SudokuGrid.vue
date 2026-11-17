@@ -29,7 +29,13 @@ const props = defineProps<{
   /** A technique's pattern drawn in pen over the board; a new `marksKey` draws it again. */
   marks?: Mark[];
   marksKey?: number;
+  /** X-Sudoku: both long diagonals are units, shaded, and count as peers and for candidates. */
+  diagonal?: boolean;
 }>();
+
+// Which long diagonals (r = c, r + c = 8) a cell is on, as bits; none outside X-Sudoku.
+const diagBits = (r: number, c: number) =>
+  props.diagonal ? (r === c ? 1 : 0) | (r + c === 8 ? 2 : 0) : 0;
 
 const emit = defineEmits<{
   /** `note`: the pencil mark tapped, if the tap landed on one. */
@@ -41,7 +47,7 @@ function isCellHighlighted(r: number, c: number): boolean {
   const { r: selR, c: selC } = props.selectedCell;
   const inSameBox =
     Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3);
-  return r === selR || c === selC || inSameBox;
+  return r === selR || c === selC || inSameBox || !!(diagBits(r, c) & diagBits(selR, selC));
 }
 
 function flashFor(r: number, c: number): FlashCell | undefined {
@@ -72,6 +78,12 @@ function isCandidate(r: number, c: number): boolean {
   const bc = c - (c % 3);
   for (let i = 0; i < 3; i++)
     for (let j = 0; j < 3; j++) if (b[br + i]![bc + j] === d) return false;
+  const diag = diagBits(r, c);
+  if (diag)
+    for (let i = 0; i < 9; i++) {
+      if (diag & 1 && b[i]![i] === d) return false;
+      if (diag & 2 && b[i]![8 - i] === d) return false;
+    }
   return true;
 }
 
@@ -88,7 +100,12 @@ function isNudged(r: number, c: number): boolean {
       ? n.r === r
       : n.kind === "col"
         ? n.c === c
-        : Math.floor(n.r / 3) === Math.floor(r / 3) && Math.floor(n.c / 3) === Math.floor(c / 3),
+        : n.kind === "diag"
+          ? r === c
+          : n.kind === "anti"
+            ? r + c === 8
+            : Math.floor(n.r / 3) === Math.floor(r / 3) &&
+              Math.floor(n.c / 3) === Math.floor(c / 3),
   );
 }
 
@@ -126,6 +143,7 @@ function hasConflict(r: number, c: number): boolean {
         :show-errors="showErrors"
         :is-candidate="isCandidate(r, c)"
         :is-nudged="isNudged(r, c)"
+        :is-diagonal="!!diagBits(r, c)"
         :note-digit="noteDigit(r, c)"
         :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
@@ -145,6 +163,7 @@ function hasConflict(r: number, c: number): boolean {
 .board[data-theme="tiles"] {
   --cell-bg: #fdfdfb;
   --cell-peer: #e3ebf7;
+  --cell-diag: #eff1f5;
   --cell-line: #b9c8de;
   --cell-box: #17294a;
   --cell-frame: #17294a;
@@ -155,6 +174,7 @@ function hasConflict(r: number, c: number): boolean {
 .dark .board[data-theme="tiles"] {
   --cell-bg: #222c36;
   --cell-peer: #2e3a47;
+  --cell-diag: #28313c;
   --cell-line: #3d4a59;
   --cell-box: #cdd5de;
   --cell-frame: #e6eaef;
@@ -166,6 +186,7 @@ function hasConflict(r: number, c: number): boolean {
 .board[data-theme="newsprint"] {
   --cell-bg: #f1f0ec;
   --cell-peer: #e2dfd6;
+  --cell-diag: #e9e7e1;
   --cell-line: #b7b3a8;
   --cell-box: #2b2a27;
   --cell-frame: #1e1d1a;
@@ -176,6 +197,7 @@ function hasConflict(r: number, c: number): boolean {
 .dark .board[data-theme="newsprint"] {
   --cell-bg: #22211e;
   --cell-peer: #34322d;
+  --cell-diag: #2b2a26;
   --cell-line: #47443d;
   --cell-box: #b8b2a4;
   --cell-frame: #cfc9bb;
@@ -190,6 +212,7 @@ function hasConflict(r: number, c: number): boolean {
 .board[data-theme="contrast"] {
   --cell-bg: #ffffff;
   --cell-peer: #e3e3e3;
+  --cell-diag: #f0f0f0;
   --cell-line: #6b6b6b;
   --cell-box: #000000;
   --cell-frame: #000000;
@@ -200,6 +223,7 @@ function hasConflict(r: number, c: number): boolean {
 .dark .board[data-theme="contrast"] {
   --cell-bg: #000000;
   --cell-peer: #2b2b2b;
+  --cell-diag: #161616;
   --cell-line: #8a8a8a;
   --cell-box: #ffffff;
   --cell-frame: #ffffff;
@@ -214,6 +238,10 @@ function hasConflict(r: number, c: number): boolean {
 .board .cell {
   background-color: var(--cell-bg);
   border-color: var(--cell-line);
+}
+/* X-Sudoku's diagonals: a shade between the paper and the peer highlight, which wins over it. */
+.board .cell-diag {
+  background-color: var(--cell-diag);
 }
 .board .cell-peer {
   background-color: var(--cell-peer);

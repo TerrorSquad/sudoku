@@ -127,10 +127,11 @@ describe("decide", () => {
   });
 });
 
-describe("the Daily's save and the display size stay on the device", () => {
+describe("the Daily's and X-Sudoku's saves and the display size stay on the device", () => {
   const daily = {
     sudoku_v1_save_daily: "{}",
     sudoku_v1_save_daily_hard: "{}",
+    sudoku_v1_save_x_medium: "{}",
     sudoku_v1_pref_ui_scale: "1.5",
   };
 

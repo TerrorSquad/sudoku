@@ -1,6 +1,6 @@
 // Every generator job utils/puzzlePool.ts hands out, run the same way in the worker
 // (puzzleWorker.ts) and in place: one function, so a seed gives the same board on either path.
-import type { Difficulty } from "../types/sudoku";
+import type { Difficulty, Variant } from "../types/sudoku";
 import type { TechniqueId } from "./sudokuGrader";
 
 import { generateDailyBoard } from "../composables/useDailyPuzzle";
@@ -10,7 +10,7 @@ import { makeRng } from "./sudokuCore";
 import { generateGradedPuzzle } from "./sudokuGrader";
 
 export type PuzzleJob =
-  | { difficulty: string } // a new game
+  | { difficulty: string; variant?: Variant } // a new game
   | { daily: string; level: Difficulty } // the Daily for a date key
   | { practice: TechniqueId; seed: number } // a full practice puzzle
   | { lesson: TechniqueId; seed: number; quick?: boolean }; // a guided lesson, or a Spot it one
@@ -20,6 +20,11 @@ export async function runPuzzleJob(job: PuzzleJob) {
   if ("practice" in job) return generatePracticePuzzle(job.practice, makeRng(job.seed));
   if ("lesson" in job)
     return (job.quick ? quickLesson : generateLesson)(job.lesson, makeRng(job.seed));
-  const { puzzle, solution } = generateGradedPuzzle(job.difficulty);
+  const { puzzle, solution } = generateGradedPuzzle(
+    job.difficulty,
+    undefined,
+    undefined,
+    job.variant,
+  );
   return { puzzle, solution };
 }
