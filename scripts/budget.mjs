@@ -19,8 +19,9 @@ for (const page of ["index.html", "200.html"]) {
   }
 }
 
-const WARN_AT = { js: 1100, css: 180 }; // KB, raw: 922 and 142 at v1.6.0 (pattern lines, lessons)
-const FAIL_AT = { js: 1300, css: 200 }; // KB, raw: 1027 and 144 at v1.11.0
+// Totals, lazy chunks included (first load is far smaller: the entry was ~213 KB at v1.12.0).
+const WARN_AT = { js: 1300, css: 180 }; // KB, raw: 1197 and 154 at v1.12.0 (Diagonal, XY-Chain, levels)
+const FAIL_AT = { js: 1500, css: 220 }; // KB
 const strict = process.env.BUDGET_STRICT === "1";
 let over = false;
 const dir = ".output/public/_nuxt";
