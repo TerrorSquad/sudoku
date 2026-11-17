@@ -93,7 +93,13 @@ test("Show me walks an elimination lesson through; only the ruled-out marks can 
   await show.click(); // the pattern itself
   await expect(coach).toContainText("Step 2 of 2");
   await expect(coach.getByRole("status")).toHaveText("Here's the pattern. Now use it.");
+  // The why, with this board's box and line; the conclusion waits for Show me.
+  const why = coach.getByTestId("lesson-why");
+  await expect(why).toContainText(`can only go in`);
+  await expect(why).toContainText(/In box \d/);
+  await expect(why).not.toContainText("So no other cell");
   await show.click(); // the cells to change
+  await expect(why).toContainText("So no other cell");
   const toClear = page.locator(`${BOARD} [data-cell][class*="bg-rose-500/30"]`);
   const count = await toClear.count();
   expect(count).toBeGreaterThan(0);

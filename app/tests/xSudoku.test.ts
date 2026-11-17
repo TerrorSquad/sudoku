@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Grid } from "../types/sudoku";
 
+import en from "../../i18n/locales/en.json";
+import { narrate } from "../utils/explain";
 import { patternMarks } from "../utils/patternMarks";
 import {
   countSolutions,
@@ -20,6 +22,10 @@ import {
   type DigitAt,
   type SolveMove,
 } from "../utils/sudokuGrader";
+
+const messages = en as Record<string, string>;
+const t = (key: string, params: Record<string, unknown> = {}) =>
+  (messages[key] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? `{${k}}`));
 
 const empty = (): Grid => Array.from({ length: 9 }, () => Array(9).fill(0));
 const diagonals = (g: Grid) => [g.map((row, i) => row[i]!), g.map((row, i) => row[8 - i]!)];
@@ -75,6 +81,12 @@ describe("X-Sudoku hints", () => {
         expect(move.technique).not.toBe("unique-rectangle");
         expect(move.technique).not.toBe("bug-plus-one");
         seen.add(move.unit ? `${move.technique}:${move.unit}` : move.technique);
+        // Told in words too, with a sentence for every diagonal unit.
+        const cands = getGridCandidates(board, "x");
+        const has = (r: number, c: number, n: number) =>
+          cands[r]![c]!.includes(n) && !elims.some((e) => e.r === r && e.c === c && e.num === n);
+        for (const { text } of narrate(move, has, t, String, "x"))
+          expect(text).not.toMatch(/[{}]|explain\./);
         if (move.placement) {
           const { r, c, num } = move.placement;
           expect(num).toBe(solution[r]![c]);

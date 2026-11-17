@@ -10,7 +10,7 @@ test("Watch it steps an X-Wing through its beats, by button and by key", async (
   const caption = watch.getByTestId("watch-caption");
   const step = watch.getByText(/^Step \d of \d$/);
 
-  // At rest it's the whole move, as before: the board-accurate caption.
+  // At rest it's the whole move, told with the example's real rows and columns.
   await expect(step).toHaveText("Step 4 of 4");
   const full = await caption.textContent();
 
@@ -19,17 +19,21 @@ test("Watch it steps an X-Wing through its beats, by button and by key", async (
   await expect(caption).toContainText("two candidate cells");
   await expect(watch.getByTestId("pattern-overlay")).toHaveCount(0); // no frames for a fish
   await watch.getByRole("button", { name: "Step forward" }).click();
-  await expect(caption).toHaveText("These cells form the pattern.");
+  await expect(caption).toHaveText(
+    /^In (rows|columns) \d and \d, 6 can only go in (rows|columns) \d and \d\.$/,
+  );
   await expect(watch.locator(".pm-ring")).toHaveCount(4);
   await expect(watch.locator(".pm-cross")).toHaveCount(0);
 
   // ←/→ step once the example has focus.
   await watch.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(caption).toContainText("Solid lines");
+  await expect(caption).toContainText("The base is");
   await page.keyboard.press("ArrowRight");
   await expect(step).toHaveText("Step 4 of 4");
-  await expect(caption).toHaveText(full ?? "");
+  // The last beat tells the result: the end of the whole move's words.
+  await expect(caption).toHaveText(/^So no other cell in (rows|columns) /);
+  expect(full).toContain(await caption.textContent());
   await expect(watch.locator(".pm-cross").first()).toBeVisible();
   await page.keyboard.press("ArrowLeft");
   await expect(step).toHaveText("Step 3 of 4");
