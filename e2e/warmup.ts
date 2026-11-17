@@ -7,7 +7,11 @@ import { chromium, type FullConfig } from "@playwright/test";
 export default async function warmup(config: FullConfig) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await page.goto(config.projects[0]!.use.baseURL!);
-  await page.getByRole("button", { name: "New Game" }).waitFor({ timeout: 60_000 });
-  await browser.close();
+  // A cold CI runner took over 30 s (goto's default) just to fire "load".
+  try {
+    await page.goto(config.projects[0]!.use.baseURL!, { timeout: 120_000 });
+    await page.getByRole("button", { name: "New Game" }).waitFor({ timeout: 120_000 });
+  } finally {
+    await browser.close();
+  }
 }
