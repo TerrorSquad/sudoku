@@ -27,6 +27,40 @@ const messages = en as Record<string, string>;
 const t = (key: string, params: Record<string, unknown> = {}) =>
   (messages[key] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? `{${k}}`));
 
+type Has = (r: number, c: number, n: number) => boolean;
+/**
+ * A colouring move is a wrap when its removals belong to the chain: reached from its triggers
+ * over strong links (a row, column or box with two spots for the digit). Told apart without sight.
+ */
+function isWrap(move: SolveMove, has: Has): boolean {
+  const d = move.digits[0]!;
+  const units = (p: { r: number; c: number }) => [
+    (q: { r: number; c: number }) => q.r === p.r,
+    (q: { r: number; c: number }) => q.c === p.c,
+    (q: { r: number; c: number }) =>
+      Math.floor(q.r / 3) === Math.floor(p.r / 3) && Math.floor(q.c / 3) === Math.floor(p.c / 3),
+  ];
+  const spots = Array.from({ length: 81 }, (_, i) => ({ r: Math.floor(i / 9), c: i % 9 })).filter(
+    (q) => has(q.r, q.c, d),
+  );
+  const key = (q: { r: number; c: number }) => q.r * 9 + q.c;
+  const reached = new Set(move.triggers.map(key));
+  const queue = [...move.triggers];
+  while (queue.length) {
+    const p = queue.shift()!;
+    for (const inUnit of units(p)) {
+      const two = spots.filter(inUnit);
+      if (two.length !== 2) continue;
+      for (const q of two)
+        if (!reached.has(key(q))) {
+          reached.add(key(q));
+          queue.push(q);
+        }
+    }
+  }
+  return move.eliminations.every((e) => reached.has(key(e)));
+}
+
 const empty = (): Grid => Array.from({ length: 9 }, () => Array(9).fill(0));
 const diagonals = (g: Grid) => [g.map((row, i) => row[i]!), g.map((row, i) => row[8 - i]!)];
 const isXSolution = (g: Grid) =>
@@ -71,6 +105,7 @@ describe("X-Sudoku hints", () => {
   // solution contradicts, and never a uniqueness argument (the diagonals can break its swap).
   it("never contradicts the solution", () => {
     const seen = new Set<string>();
+    let colorings = 0;
     for (let seed = 1; seed <= 200; seed++) {
       const { puzzle, solution } = generatePuzzle(54 + (seed % 7), makeRng(seed * 7919), "x");
       const board = puzzle.map((row) => [...row]);
@@ -85,8 +120,14 @@ describe("X-Sudoku hints", () => {
         const cands = getGridCandidates(board, "x");
         const has = (r: number, c: number, n: number) =>
           cands[r]![c]!.includes(n) && !elims.some((e) => e.r === r && e.c === c && e.num === n);
-        for (const { text } of narrate(move, has, t, String, "x"))
-          expect(text).not.toMatch(/[{}]|explain\./);
+        const story = narrate(move, has, t, String, "x");
+        for (const { text } of story) expect(text).not.toMatch(/[{}]|explain\./);
+        if (move.technique === "simple-coloring") {
+          colorings++;
+          expect(story.some((s) => s.text.startsWith("Two cells of one set"))).toBe(
+            isWrap(move, has),
+          );
+        }
         if (move.placement) {
           const { r, c, num } = move.placement;
           expect(num).toBe(solution[r]![c]);
@@ -99,6 +140,35 @@ describe("X-Sudoku hints", () => {
     }
     // The diagonal units are really used.
     expect([...seen].some((k) => k.endsWith(":diag") || k.endsWith(":anti"))).toBe(true);
+    expect(colorings).toBeGreaterThan(0);
+  });
+
+  it("tells a colouring wrap whose clash is only along a diagonal", () => {
+    // Seed 195's X board, step 7: one set of 9s has r8c2 and r3c7, which share only the
+    // anti-diagonal. Told with row/column/box sight alone it would read as a trap.
+    const { puzzle } = generatePuzzle(58, makeRng(195), "x");
+    const board = puzzle.map((row) => [...row]);
+    const elims: DigitAt[] = [];
+    let move = nextHint(board, elims, "x")!;
+    for (let step = 0; step < 7; step++) {
+      if (move.placement) board[move.placement.r]![move.placement.c] = move.placement.num;
+      else elims.push(...move.eliminations);
+      move = nextHint(board, elims, "x")!;
+    }
+    expect(move.technique).toBe("simple-coloring");
+    const cands = getGridCandidates(board, "x");
+    const has = (r: number, c: number, n: number) =>
+      cands[r]![c]!.includes(n) && !elims.some((e) => e.r === r && e.c === c && e.num === n);
+    expect(isWrap(move, has)).toBe(true);
+    const story = narrate(move, has, t, String, "x").map((s) => s.text);
+    expect(story).toContain(
+      "Two cells of one set, row 8, column 2 and row 3, column 7, see each other, so that set can't be 9.",
+    );
+    expect(
+      narrate(move, has, t, String)
+        .map((s) => s.text)
+        .join(" "),
+    ).not.toContain("Two cells");
   });
 
   it("finds a box-diagonal intersection", () => {

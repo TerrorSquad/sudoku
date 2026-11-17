@@ -27,9 +27,13 @@ export interface Sentence {
 
 export const boxOf = (p: CellRC) => Math.floor(p.r / 3) * 3 + Math.floor(p.c / 3);
 const same = (a: CellRC, b: CellRC) => a.r === b.r && a.c === b.c;
-/** Two different cells in one row, column or box. */
-export const sees = (a: CellRC, b: CellRC) =>
-  !same(a, b) && (a.r === b.r || a.c === b.c || boxOf(a) === boxOf(b));
+/** Two different cells in one row, column or box (or in X-Sudoku, on one long diagonal). */
+export const sees = (a: CellRC, b: CellRC, variant: Variant = "classic") =>
+  !same(a, b) &&
+  (a.r === b.r ||
+    a.c === b.c ||
+    boxOf(a) === boxOf(b) ||
+    (variant === "x" && ((a.r === a.c && b.r === b.c) || (a.r + a.c === 8 && b.r + b.c === 8))));
 const sameUnit = (k: Kind, p: CellRC, q: CellRC) =>
   k === "row"
     ? p.r === q.r
@@ -104,11 +108,14 @@ export function finnedSides(move: Move, k: number) {
  * Simple colouring's chain in its two sets. A colour wraps when two of its cells see each other:
  * the grader then clears that whole set and keeps the other as the triggers, whose cells never see
  * each other. Else (a trap) any two chain cells that see each other are opposite colours, so the
- * triggers 2-colour by "sees".
+ * triggers 2-colour by "sees", the grader's own peers for the variant.
  */
-export function colorSets(move: Move): { sets: [CellRC[], CellRC[]]; wrap: boolean } {
+export function colorSets(
+  move: Move,
+  variant: Variant = "classic",
+): { sets: [CellRC[], CellRC[]]; wrap: boolean } {
   const tr = uniq(move.triggers);
-  const wrap = !tr.some((a) => tr.some((b) => sees(a, b)));
+  const wrap = !tr.some((a) => tr.some((b) => sees(a, b, variant)));
   if (wrap) return { sets: [tr, uniq(move.eliminations)], wrap };
   const tone = new Map<number, 0 | 1>();
   for (let s = 0; s < tr.length; s++) {
@@ -118,7 +125,7 @@ export function colorSets(move: Move): { sets: [CellRC[], CellRC[]]; wrap: boole
     while (queue.length) {
       const i = queue.shift()!;
       tr.forEach((q, j) => {
-        if (!tone.has(j) && sees(tr[i]!, q)) {
+        if (!tone.has(j) && sees(tr[i]!, q, variant)) {
           tone.set(j, tone.get(i) === 0 ? 1 : 0);
           queue.push(j);
         }
@@ -392,10 +399,11 @@ export function narrate(
       const {
         sets: [a, b],
         wrap,
-      } = colorSets(move);
+      } = colorSets(move, variant);
       say("cells", "color.cells", { d: D, n: a.length + b.length });
       say("links", "color.link", { d: D, a: cells(a), b: cells(b) });
-      const pair = wrap && choose(b, 2).find(([u, v]) => sees(u!, v!));
+      // In X the clashing pair may see each other only along a diagonal.
+      const pair = wrap && choose(b, 2).find(([u, v]) => sees(u!, v!, variant));
       if (pair) {
         say("links", "color.wrap", { d: D, a: cell(pair[0]!), b: cell(pair[1]!) });
         say("result", "color.wrapResult", { d: D, cells: cells(elCells) });
