@@ -31,6 +31,8 @@ const visual = {
 
 export default defineConfig({
   testDir: "./e2e",
+  // Warms a cold dev server (compiles the app) so the first test doesn't time out.
+  globalSetup: "./e2e/warmup.ts",
   // A single dev-mode Nuxt server backs every test; parallel workers contend
   // for it and cause flaky timeouts, so run serially instead.
   workers: 1,
