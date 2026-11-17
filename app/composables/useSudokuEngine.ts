@@ -1,7 +1,7 @@
 import { ref, computed, onScopeDispose, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-import type { Grid, NotesGrid, CellCoord, HintCoordinate } from "../types/sudoku";
+import type { Grid, NotesGrid, CellCoord, HintCoordinate, Variant } from "../types/sudoku";
 
 import { narrate } from "../utils/explain";
 import { emptyNotes } from "../utils/gridNav";
@@ -41,6 +41,8 @@ export function useSudokuEngine(
   colorMode: Ref<boolean> = ref(false),
   // "Highlight mistakes" off: remaining-digit counts must not reveal which entries are wrong.
   countWrongDigits: Ref<boolean> = ref(false),
+  // X-Sudoku: the diagonals join conflicts, candidates, notes clearing, completions and hints.
+  variant: Ref<Variant> = ref("classic"),
 ) {
   const { t } = useI18n();
 
@@ -81,7 +83,7 @@ export function useSudokuEngine(
     // The last step is the one that says what to remove or place.
     const showsResult = !!hint && currentStepIndex.value === hint.steps.length - 1;
     if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
-    const cands = getGridCandidates(currentBoard.value);
+    const cands = getGridCandidates(currentBoard.value, variant.value);
     const has = (r: number, c: number, n: number) => {
       const notes = notesBoard.value[r]![c]!;
       return notes.some(Boolean) ? !!notes[n] : cands[r]![c]!.includes(n);
@@ -109,7 +111,7 @@ export function useSudokuEngine(
   // chain silently and the solver looks again, so a hint never asks to remove what's gone.
   function nextUsefulHint(): SolveMove | null {
     for (let i = 0; i < 300; i++) {
-      const move = nextHint(currentBoard.value, appliedEliminations.value);
+      const move = nextHint(currentBoard.value, appliedEliminations.value, variant.value);
       if (!move || move.placement) return move;
       const todo = move.eliminations.filter(({ r, c, num }) => {
         const notes = notesBoard.value[r]![c]!;
@@ -191,7 +193,7 @@ export function useSudokuEngine(
 
   // Conflicts and candidates live in utils/sudokuCore (pure, unit-tested).
   function getConflictCells(row: number, col: number, num: number): CellCoord[] {
-    return findConflictCells(currentBoard.value, row, col, num);
+    return findConflictCells(currentBoard.value, row, col, num, variant.value);
   }
 
   // --- GAME MANAGEMENT ---
@@ -208,7 +210,12 @@ export function useSudokuEngine(
   /** `generated` comes from utils/puzzlePool in the app; tests let it generate in place. */
   function startNewGame(
     difficulty: string,
-    generated: { puzzle: Grid; solution: Grid } = generateGradedPuzzle(difficulty),
+    generated: { puzzle: Grid; solution: Grid } = generateGradedPuzzle(
+      difficulty,
+      undefined,
+      undefined,
+      variant.value,
+    ),
   ) {
     const { puzzle, solution } = generated;
 
@@ -255,6 +262,17 @@ export function useSudokuEngine(
         notesBoard.value[startRow + i]![startCol + j]![num] = false;
       }
     }
+    for (const unit of diagonalsAt(row, col))
+      for (const p of unit) notesBoard.value[p.r]![p.c]![num] = false;
+  }
+
+  // The long diagonals through (r, c) in X-Sudoku (none in classic, both at the centre).
+  function diagonalsAt(r: number, c: number): CellCoord[][] {
+    if (variant.value !== "x") return [];
+    const out: CellCoord[][] = [];
+    if (r === c) out.push(Array.from({ length: 9 }, (_, i) => ({ r: i, c: i })));
+    if (r + c === 8) out.push(Array.from({ length: 9 }, (_, i) => ({ r: i, c: 8 - i })));
+    return out;
   }
 
   function saveHistory() {
@@ -301,7 +319,7 @@ export function useSudokuEngine(
   // Every empty cell's notes become exactly its candidates; filled cells keep theirs.
   function autoFillNotes() {
     saveHistory();
-    const cands = getGridCandidates(currentBoard.value);
+    const cands = getGridCandidates(currentBoard.value, variant.value);
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         if (currentBoard.value[r]![c] !== 0) continue;
@@ -312,7 +330,7 @@ export function useSudokuEngine(
     }
   }
 
-  // What the digit at (r, c) completes: each row, column or box through it whose every cell
+  // What the digit at (r, c) completes: each row, column, box (or X diagonal) through it whose every cell
   // matches the solution (not just non-empty: a wrong-but-unconflicting digit can sit unflagged),
   // and the digit itself once all nine are in and right. A cell in two of them is listed twice.
   function completedAt(r: number, c: number) {
@@ -324,6 +342,7 @@ export function useSudokuEngine(
       Array.from({ length: 9 }, (_, i) => ({ r, c: i })),
       Array.from({ length: 9 }, (_, i) => ({ r: i, c })),
       Array.from({ length: 9 }, (_, i) => ({ r: boxR + Math.floor(i / 3), c: boxC + (i % 3) })),
+      ...diagonalsAt(r, c),
     ].filter((unit) => unit.every((p) => board[p.r]![p.c] === solved[p.r]![p.c]));
     const num = board[r]![c]!;
     const digitCells = solved.flatMap((row, sr) =>
@@ -356,15 +375,20 @@ export function useSudokuEngine(
     const digit = (n: number) => digitLabel(n, colorMode.value, t);
     const digitsStr = move.digits.map(digit).join(", ");
     // Told against the solver's own marks: the board's candidates less the removals made so far.
-    const cands = getGridCandidates(currentBoard.value);
+    const cands = getGridCandidates(currentBoard.value, variant.value);
     const has = (r: number, c: number, n: number) =>
       cands[r]![c]!.includes(n) &&
       !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
-    const story = narrate(move, has, t, digit);
+    const story = narrate(move, has, t, digit, variant.value);
     // The last step names the cells to change: the result, and reasoning that already names them.
     const told = (last: boolean) =>
       story.filter((s) => (s.step === "result" || !!s.answer) === last).map((s) => s.text);
-    const findDesc = t(`hint.move.${tech}.desc`, {
+    // In X a naked single's other digits may sit on a diagonal too.
+    const descKey =
+      tech === "naked-single" && variant.value === "x"
+        ? "hint.move.naked-single.descX"
+        : `hint.move.${tech}.desc`;
+    const findDesc = t(descKey, {
       num: digitLabel(move.digits[0] ?? 0, colorMode.value, t),
       digits: digitsStr,
       count: move.eliminations.length,
@@ -489,7 +513,7 @@ export function useSudokuEngine(
       // Elimination: cross the digit out of the player's notes. A cell without notes first
       // gets its candidates (minus earlier removals) so the deduction is visible. The removal
       // persists via appliedEliminations (replayed by the next hint).
-      const baseCands = getGridCandidates(currentBoard.value);
+      const baseCands = getGridCandidates(currentBoard.value, variant.value);
       for (const { r, c, num } of move.eliminations) {
         const notes = notesBoard.value[r]![c]!;
         if (!notes.some(Boolean)) {
@@ -543,6 +567,7 @@ export function useSudokuEngine(
   }
 
   return {
+    variant,
     currentBoard,
     initialBoard,
     solvedBoard,

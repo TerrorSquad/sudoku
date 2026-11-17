@@ -26,6 +26,8 @@ const props = defineProps<{
   noteDigit?: number;
   /** "Nudge first" hint: this cell is in the box being pointed at. */
   isNudged?: boolean;
+  /** X-Sudoku: the cell is on a long diagonal, shaded. */
+  isDiagonal?: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
 }>();
@@ -98,6 +100,7 @@ const cellClasses = computed(() => {
     "cell-given font-bold": props.isInitial,
     "cell-entry font-semibold": !props.isInitial && props.value !== 0 && !isWrong.value,
     "dark:text-rose-300 text-rose-600 dark:!bg-rose-900/40 !bg-rose-100": isWrong.value,
+    "cell-diag": props.isDiagonal,
     "cell-peer": props.isHighlighted && !props.isSelected,
     "dark:!bg-violet-500/35 !bg-violet-200 ring-1 ring-inset dark:ring-violet-400/70 ring-violet-400":
       props.isSameValue && props.value !== 0 && !props.isSelected,

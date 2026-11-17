@@ -2,7 +2,7 @@
 // can dig 150 boards): new games, with one per difficulty kept ready, the Dailies, practice puzzles
 // and lessons (Spot it's too). Without workers (tests, or a host that blocks them) it generates in
 // place, on demand, as before; both paths run utils/puzzleJobs.ts, so a seed gives the same board.
-import type { Difficulty, Grid } from "../types/sudoku";
+import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { Lesson } from "./lesson";
 import type { generatePracticePuzzle } from "./practice";
 import type { Level } from "./progression";
@@ -65,26 +65,28 @@ function run<T>(job: PuzzleJob): Promise<T> {
   });
 }
 
-const generate = (difficulty: string) => run<NewPuzzle>({ difficulty });
+const generate = (difficulty: string, variant: Variant) => run<NewPuzzle>({ difficulty, variant });
 
 /**
  * Start generating a puzzle for `difficulty` now, if one isn't already on its way. Only with a
  * worker: generating in place would freeze the page for boards that may never be played.
  */
-export function prefetchPuzzle(difficulty: string): void {
+export function prefetchPuzzle(difficulty: string, variant: Variant = "classic"): void {
   if (typeof Worker === "undefined" || !getWorker()) return;
-  if (ready.has(difficulty)) return;
-  const next = generate(difficulty);
+  const key = `${variant}:${difficulty}`;
+  if (ready.has(key)) return;
+  const next = generate(difficulty, variant);
   // A failed one isn't kept (or reported, unless someone takes it).
-  next.catch(() => ready.get(difficulty) === next && ready.delete(difficulty));
-  ready.set(difficulty, next);
+  next.catch(() => ready.get(key) === next && ready.delete(key));
+  ready.set(key, next);
 }
 
 /** A fresh puzzle for `difficulty` (instant when prefetched); the next one starts right away. */
-export function takePuzzle(difficulty: string): Promise<NewPuzzle> {
-  const next = ready.get(difficulty) ?? generate(difficulty);
-  ready.delete(difficulty);
-  prefetchPuzzle(difficulty);
+export function takePuzzle(difficulty: string, variant: Variant = "classic"): Promise<NewPuzzle> {
+  const key = `${variant}:${difficulty}`;
+  const next = ready.get(key) ?? generate(difficulty, variant);
+  ready.delete(key);
+  prefetchPuzzle(difficulty, variant);
   return next;
 }
 

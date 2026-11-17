@@ -44,6 +44,8 @@ function create() {
     showCandidates: pref("show_candidates", true),
     /** New games start in Zen: no timer, no mistake limit, no score. */
     zen: pref("zen", false),
+    /** New games are X-Sudoku: both long diagonals hold 1–9 too. */
+    diagonal: pref("diagonal", false),
     boardTheme: pref<BoardTheme>("board_theme", "tiles"),
     uiScale: pref<UiScale>("ui_scale", 1),
     /** The menu's "New to sudoku?" prompt, until dismissed (or the basics are done). */

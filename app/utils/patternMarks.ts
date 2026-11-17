@@ -41,17 +41,35 @@ export const anchor = (r: number, c: number, n: number): Pt => ({
 const centre = ({ r, c }: CellRC): Pt => ({ x: c + 0.5, y: r + 0.5 });
 
 const box = (p: CellRC) => Math.floor(p.r / 3) * 3 + Math.floor(p.c / 3);
-type Kind = "row" | "col" | "box";
-const unitKey = (kind: Kind, p: CellRC) => (kind === "row" ? p.r : kind === "col" ? p.c : box(p));
+/** diag, anti: X-Sudoku's long diagonals (r = c, and r + c = 8). */
+type Kind = "row" | "col" | "box" | "diag" | "anti";
+const sameUnit = (kind: Kind, p: CellRC, q: CellRC) =>
+  kind === "row"
+    ? p.r === q.r
+    : kind === "col"
+      ? p.c === q.c
+      : kind === "box"
+        ? box(p) === box(q)
+        : kind === "diag"
+          ? p.r === p.c && q.r === q.c
+          : p.r + p.c === 8 && q.r + q.c === 8;
+// A diagonal has no rectangle to frame: a thin dashed line runs corner to corner instead.
 const frame = (kind: Kind, p: CellRC): Mark =>
   kind === "row"
     ? { kind: "frame", x: 0, y: p.r, w: 9, h: 1 }
     : kind === "col"
       ? { kind: "frame", x: p.c, y: 0, w: 1, h: 9 }
-      : { kind: "frame", x: p.c - (p.c % 3), y: p.r - (p.r % 3), w: 3, h: 3 };
-/** The row, column or box (in that order) holding every cell, if any. */
-function sharedUnit(cells: CellRC[], order: Kind[] = ["row", "col", "box"]): Kind | null {
-  return order.find((k) => cells.every((p) => unitKey(k, p) === unitKey(k, cells[0]!))) ?? null;
+      : kind === "box"
+        ? { kind: "frame", x: p.c - (p.c % 3), y: p.r - (p.r % 3), w: 3, h: 3 }
+        : kind === "diag"
+          ? { kind: "line", a: { x: 0.1, y: 0.1 }, b: { x: 8.9, y: 8.9 }, style: "weak" }
+          : { kind: "line", a: { x: 8.9, y: 0.1 }, b: { x: 0.1, y: 8.9 }, style: "weak" };
+/** The row, column, box or diagonal (in that order) holding every cell, if any. */
+function sharedUnit(
+  cells: CellRC[],
+  order: Kind[] = ["row", "col", "box", "diag", "anti"],
+): Kind | null {
+  return order.find((k) => cells.every((p) => sameUnit(k, p, cells[0]!))) ?? null;
 }
 const uniq = (cells: CellRC[]) =>
   cells
@@ -141,9 +159,7 @@ function coloring(move: PatternMove, n: number, has: HasMark): Mark[] {
   const cells = uniq([...triggers, ...move.eliminations]);
   const strong = (a: CellRC, b: CellRC) =>
     (["row", "col", "box"] as Kind[]).some(
-      (k) =>
-        unitKey(k, a) === unitKey(k, b) &&
-        UNIT_CELLS(k, a).filter((p) => has(p.r, p.c, n)).length === 2,
+      (k) => sameUnit(k, a, b) && UNIT_CELLS(k, a).filter((p) => has(p.r, p.c, n)).length === 2,
     );
   const tone = new Map<number, "pattern" | "alt">();
   const marks: Mark[] = [];
@@ -222,7 +238,7 @@ function draw(move: PatternMove, has: HasMark, result: boolean): Mark[] {
       ];
     }
     case "box-line": {
-      const kind = sharedUnit(t, ["row", "col"]) ?? "row";
+      const kind = sharedUnit(t, ["row", "col", "diag", "anti"]) ?? "row";
       return [
         frame(kind, t[0]!),
         frame("box", t[0]!),

@@ -1,3 +1,5 @@
+import type { Variant } from "../types/sudoku";
+
 import { saveSlotOf } from "../utils/progressBackup";
 import { LADDER, withZenWins, type WinsByDifficulty } from "../utils/progression";
 import { readJSON, writeJSON } from "../utils/safeJson";
@@ -30,21 +32,21 @@ interface RecordResult {
 /**
  * The stats row a win is recorded under. A Daily's best time and score are its own: a quick Daily
  * mustn't become the time to beat in an ordinary game. Medium's Daily (the original one) keeps
- * the plain "daily" row; the other levels' are daily_<level>.
+ * the plain "daily" row; the other levels' are daily_<level>. X-Sudoku's are x_<level>.
  */
-export function statsKey(difficulty: string, daily: boolean): string {
-  return saveSlotOf({ daily, difficulty }); // named like the game's save slot
+export function statsKey(difficulty: string, daily: boolean, variant?: Variant): string {
+  return saveSlotOf({ daily, difficulty, variant }); // named like the game's save slot
 }
 
 /**
  * Wins at a level, for anything that counts games rather than times (Specialist, unlocks): a
- * level's Daily is a board of that level, so its wins count with the level's, as before they had
- * two rows. `key` is a level or its Daily's row.
+ * level's Daily and X-Sudoku games are boards of that level, so their wins count with the level's.
+ * `key` is a level or one of its other rows.
  */
 export function winsAt(perDifficulty: Record<string, { wins: number } | undefined>, key: string) {
   const wins = (k: string) => perDifficulty[k]?.wins ?? 0;
-  const level = key === "daily" ? "medium" : key.replace(/^daily_/, "");
-  return wins(level) + wins(statsKey(level, true));
+  const level = key === "daily" ? "medium" : key.replace(/^(daily|x)_/, "");
+  return wins(level) + wins(statsKey(level, true)) + wins(statsKey(level, false, "x"));
 }
 
 export function useScore() {
@@ -98,10 +100,11 @@ export function useScore() {
   /** Every win that counts toward opening difficulties: scored ones plus Zen ones. */
   function unlockWins(): WinsByDifficulty {
     const per = getStats().perDifficulty;
-    // A Daily has its own stats row (statsKey); it still opens the next level like any win.
+    // A Daily or X game has its own stats row (statsKey); it still opens the next level.
     const wins: WinsByDifficulty = { ...per };
     for (const d of LADDER)
-      if (per[statsKey(d, true)]) wins[d] = { ...per[d], wins: winsAt(per, d) };
+      if (per[statsKey(d, true)] || per[statsKey(d, false, "x")])
+        wins[d] = { ...per[d], wins: winsAt(per, d) };
     return withZenWins(wins, readJSON<unknown>(ZEN_KEY, {}));
   }
 

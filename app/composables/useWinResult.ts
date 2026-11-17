@@ -1,4 +1,4 @@
-import type { Difficulty, Grid } from "../types/sudoku";
+import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { NewRecord, Snapshot } from "../utils/records";
 import type { ScoreBreakdown } from "../utils/score";
 import type { TechniqueId } from "../utils/sudokuGrader";
@@ -25,6 +25,7 @@ import { formatTime } from "./useTimer";
 /** The game as it was won. */
 export interface WinGame {
   difficulty: Difficulty;
+  variant?: Variant; // classic when unset
   daily: boolean;
   dailyDate: string; // the Daily's own day: a game started before midnight can end after it
   zen: boolean;
@@ -68,12 +69,12 @@ export function useWinResult(t: Translate) {
    */
   function recordWin(game: WinGame) {
     const { difficulty, daily, zen, practice: practised, seconds, mistakes, hints } = game;
-    const key = statsKey(difficulty, daily);
+    const key = statsKey(difficulty, daily, game.variant);
     // A few ms even for Master (measured), so no worker: the modal fades in after the win wave.
     // The save is already cleared, so a grader failure must cost this list, not the win.
     let needed: ReturnType<typeof neededTechniques> = [];
     try {
-      needed = neededTechniques(game.initialBoard);
+      needed = neededTechniques(game.initialBoard, game.variant);
     } catch {
       needed = [];
     }
@@ -155,7 +156,9 @@ export function useWinResult(t: Translate) {
         hintsUsed: hints,
       });
       const recorded = score.record(key, breakdown.total, seconds);
-      submitWin({ difficulty, seconds, mistakes, hints, daily: daily ? game.dailyDate : null });
+      // X-Sudoku has no leaderboards: its times must never land on the classic boards.
+      if (game.variant !== "x")
+        submitWin({ difficulty, seconds, mistakes, hints, daily: daily ? game.dailyDate : null });
       result.score = breakdown;
       result.isNewBest = recorded.isNewBest;
       result.lifetimeTotal = recorded.stats.total;
@@ -185,7 +188,14 @@ export function useWinResult(t: Translate) {
     if (!practised) saveToCloud();
     // After the score is safe: a damaged log must cost the stuck moments, not the win.
     try {
-      if (!zen) result.stuck = stuckMoments(game.initialBoard, game.placements);
+      if (!zen)
+        result.stuck = stuckMoments(
+          game.initialBoard,
+          game.placements,
+          undefined,
+          undefined,
+          game.variant,
+        );
     } catch {
       result.stuck = [];
     }

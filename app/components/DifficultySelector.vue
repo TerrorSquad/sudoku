@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Difficulty } from "../types/sudoku";
+import type { Difficulty, Variant } from "../types/sudoku";
 
 // `daily`: the same tiles pick one of today's Dailies (one per level, a locked level's locked too).
 // `busy`: the level whose board is still generating; no other pick meanwhile.
@@ -9,17 +9,23 @@ const props = defineProps<{
   busy?: Difficulty | null;
 }>();
 
-const { zen } = usePreferences();
+const { zen, diagonal } = usePreferences();
+const variant = computed<Variant>(() => (diagonal.value ? "x" : "classic"));
 
 // Levels with a save in progress, so the player sees where a resume prompt will appear.
 const { loadDifficulty } = useGameSave();
 const dailyPuzzle = useDailyPuzzle();
 // Read in setup, not onMounted, so a locked level never flashes open (or the reverse).
 const saved = new Set(LADDER.filter((k) => loadDifficulty(k) !== null));
+const savedX = new Set(LADDER.filter((k) => loadDifficulty(gameSlot(k, "x")) !== null));
 const today = dailyPuzzle.todayKey();
-const inProgress = props.daily
-  ? new Set(LADDER.filter((k) => loadDifficulty(dailySlot(k))?.daily === today))
-  : saved;
+const dailyInProgress = new Set(
+  LADDER.filter((k) => loadDifficulty(dailySlot(k))?.daily === today),
+);
+// The resume prompt follows the Diagonal switch: X games have their own saves.
+const inProgress = computed(() =>
+  props.daily ? dailyInProgress : variant.value === "x" ? savedX : saved,
+);
 // Today's finished Dailies, with their time.
 const done = new Map<Difficulty, number>();
 for (const k of LADDER) {
@@ -28,11 +34,15 @@ for (const k of LADDER) {
 }
 const isDone = (d: Difficulty) => done.has(d);
 const wins = useScore().unlockWins();
-const lockFor = (d: Difficulty) => lockOf(d, wins, saved.has(d));
-onMounted(() => {
-  // Have a board ready for every open level by the time one is picked (Dailies generate on start).
-  if (!props.daily) for (const d of TILES) if (!lockFor(d.key)) prefetchPuzzle(d.key);
-});
+const lockFor = (d: Difficulty) => lockOf(d, wins, saved.has(d) || savedX.has(d));
+// Have a board ready for every open level by the time one is picked (Dailies generate on start),
+// in the rules the switch is on.
+function prefetchAll() {
+  if (!props.daily)
+    for (const d of TILES) if (!lockFor(d.key)) prefetchPuzzle(d.key, variant.value);
+}
+onMounted(prefetchAll);
+watch(variant, prefetchAll);
 
 const emit = defineEmits<{
   (e: "select-difficulty", level: Difficulty): void;
@@ -115,6 +125,21 @@ function pick(d: Difficulty) {
           }}</span>
         </span>
         <USwitch v-model="zen" />
+      </label>
+
+      <label
+        v-if="!daily"
+        class="panel flex cursor-pointer items-center justify-between gap-4 px-4 py-3"
+      >
+        <span>
+          <span class="block text-sm font-bold text-zinc-900 dark:text-zinc-100">{{
+            $t("difficulty.diagonal")
+          }}</span>
+          <span class="block text-xs text-zinc-500 dark:text-zinc-400">{{
+            $t("difficulty.diagonalDesc")
+          }}</span>
+        </span>
+        <USwitch v-model="diagonal" data-testid="diagonal-switch" />
       </label>
 
       <div class="grid grid-cols-2 gap-3">

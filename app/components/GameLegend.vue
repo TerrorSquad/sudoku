@@ -1,4 +1,11 @@
 <!-- The wide-screen (3xl) left sidebar: every game key and what the board's colours mean. -->
+<script setup lang="ts">
+import type { BoardTheme } from "../utils/preferenceValues";
+
+// `diagonal`: an X-Sudoku game, whose shaded diagonals get a swatch in the board's own colours.
+defineProps<{ diagonal?: boolean; theme?: BoardTheme }>();
+</script>
+
 <template>
   <div class="sticky top-3 hidden flex-col gap-6 3xl:col-span-1 3xl:flex">
     <div>
@@ -40,6 +47,14 @@
             class="h-4 w-4 shrink-0 border-2 border-amber-500 bg-amber-200 dark:border-amber-300 dark:bg-amber-400/30"
           />
           {{ $t("sidebar.legendSelected") }}
+        </li>
+        <li v-if="diagonal" class="flex items-center gap-3">
+          <!-- .board supplies the theme's --cell-diag (and its frame colour for the border). -->
+          <span
+            :data-theme="theme ?? 'tiles'"
+            class="board h-4 w-4 shrink-0 border bg-(--cell-diag)"
+          />
+          {{ $t("sidebar.legendDiagonal") }}
         </li>
       </ul>
     </div>

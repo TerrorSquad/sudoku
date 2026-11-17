@@ -9,7 +9,8 @@ import { patternUnit, unitNumber, type BoardUnit, type TechniqueId } from "../ut
 // pattern sits in (or the box holding a wrong entry); pressing again (or the banner's Explain
 // button) gives the full step-by-step explanation.
 export function useNudge(
-  engine: Pick<ReturnType<typeof useSudokuEngine>, "currentBoard" | "peekHint">,
+  engine: Pick<ReturnType<typeof useSudokuEngine>, "currentBoard" | "peekHint"> &
+    Partial<Pick<ReturnType<typeof useSudokuEngine>, "variant">>,
   hintsUsed: Ref<number>,
   inGame: Ref<boolean>,
 ) {
@@ -38,7 +39,7 @@ export function useNudge(
     const peek = engine.peekHint();
     if (!peek) return false;
     nudge.value = peek.move
-      ? { unit: patternUnit(peek.move), technique: peek.move.technique }
+      ? { unit: patternUnit(peek.move, engine.variant?.value), technique: peek.move.technique }
       : { unit: { kind: "box", ...peek.at }, technique: null };
     hintsUsed.value++;
     paid = true;

@@ -32,6 +32,7 @@ const DIFFICULTY_ORDER = [
   "master",
   "daily",
   ...LADDER.filter((d) => d !== "medium").map((d) => statsKey(d, true)),
+  ...LADDER.map((d) => statsKey(d, false, "x")),
   "custom",
 ];
 

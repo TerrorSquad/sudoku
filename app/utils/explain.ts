@@ -3,9 +3,11 @@
 // sentence is tagged with the Watch it beat it belongs to (the pattern's cells, its links, the
 // result), so a step's words match what it draws. Pure; unit-tested in tests/explain.test.ts.
 
+import type { Variant } from "../types/sudoku";
 import type { CellRC, SolveMove } from "./sudokuGrader";
 
-type Kind = "row" | "col" | "box";
+/** diag, anti: X-Sudoku's long diagonals (r = c, and r + c = 8). */
+type Kind = "row" | "col" | "box" | "diag" | "anti";
 export type Translate = (key: string, params?: Record<string, unknown>) => string;
 /** Whether (r, c) has pencil mark n; empty or filled cells have none. */
 export type HasMark = (r: number, c: number, n: number) => boolean;
@@ -25,25 +27,43 @@ export interface Sentence {
 
 export const boxOf = (p: CellRC) => Math.floor(p.r / 3) * 3 + Math.floor(p.c / 3);
 const same = (a: CellRC, b: CellRC) => a.r === b.r && a.c === b.c;
-/** Two different cells in one row, column or box. */
-export const sees = (a: CellRC, b: CellRC) =>
-  !same(a, b) && (a.r === b.r || a.c === b.c || boxOf(a) === boxOf(b));
-const unitKey = (k: Kind, p: CellRC) => (k === "row" ? p.r : k === "col" ? p.c : boxOf(p));
+/** Two different cells in one row, column or box (or in X-Sudoku, on one long diagonal). */
+export const sees = (a: CellRC, b: CellRC, variant: Variant = "classic") =>
+  !same(a, b) &&
+  (a.r === b.r ||
+    a.c === b.c ||
+    boxOf(a) === boxOf(b) ||
+    (variant === "x" && ((a.r === a.c && b.r === b.c) || (a.r + a.c === 8 && b.r + b.c === 8))));
+const sameUnit = (k: Kind, p: CellRC, q: CellRC) =>
+  k === "row"
+    ? p.r === q.r
+    : k === "col"
+      ? p.c === q.c
+      : k === "box"
+        ? boxOf(p) === boxOf(q)
+        : k === "diag"
+          ? p.r === p.c && q.r === q.c
+          : p.r + p.c === 8 && q.r + q.c === 8;
 export const unitCells = (k: Kind, p: CellRC): CellRC[] =>
   Array.from({ length: 9 }, (_, i) =>
     k === "row"
       ? { r: p.r, c: i }
       : k === "col"
         ? { r: i, c: p.c }
-        : { r: p.r - (p.r % 3) + Math.floor(i / 3), c: p.c - (p.c % 3) + (i % 3) },
+        : k === "diag"
+          ? { r: i, c: i }
+          : k === "anti"
+            ? { r: i, c: 8 - i }
+            : { r: p.r - (p.r % 3) + Math.floor(i / 3), c: p.c - (p.c % 3) + (i % 3) },
   );
 /** The cells of p's row, column or box that still have mark d. */
 export const spotsIn = (has: HasMark, k: Kind, p: CellRC, d: number) =>
   unitCells(k, p).filter((q) => has(q.r, q.c, d));
 const uniq = (cells: CellRC[]) =>
   cells.filter((p, i) => cells.findIndex((q) => same(p, q)) === i).map(({ r, c }) => ({ r, c }));
-const sharedUnit = (cells: CellRC[], order: Kind[] = ["row", "col", "box"]) =>
-  order.find((k) => cells.every((p) => unitKey(k, p) === unitKey(k, cells[0]!))) ?? null;
+// The diagonals come last: a classic pattern lying on one by chance is still told by its own unit.
+const sharedUnit = (cells: CellRC[], order: Kind[] = ["row", "col", "box", "diag", "anti"]) =>
+  order.find((k) => cells.every((p) => sameUnit(k, p, cells[0]!))) ?? null;
 const sorted = (ns: number[]) => [...new Set(ns)].toSorted((a, b) => a - b);
 function choose<T>(items: T[], k: number): T[][] {
   if (k === 0) return [[]];
@@ -88,11 +108,14 @@ export function finnedSides(move: Move, k: number) {
  * Simple colouring's chain in its two sets. A colour wraps when two of its cells see each other:
  * the grader then clears that whole set and keeps the other as the triggers, whose cells never see
  * each other. Else (a trap) any two chain cells that see each other are opposite colours, so the
- * triggers 2-colour by "sees".
+ * triggers 2-colour by "sees", the grader's own peers for the variant.
  */
-export function colorSets(move: Move): { sets: [CellRC[], CellRC[]]; wrap: boolean } {
+export function colorSets(
+  move: Move,
+  variant: Variant = "classic",
+): { sets: [CellRC[], CellRC[]]; wrap: boolean } {
   const tr = uniq(move.triggers);
-  const wrap = !tr.some((a) => tr.some((b) => sees(a, b)));
+  const wrap = !tr.some((a) => tr.some((b) => sees(a, b, variant)));
   if (wrap) return { sets: [tr, uniq(move.eliminations)], wrap };
   const tone = new Map<number, 0 | 1>();
   for (let s = 0; s < tr.length; s++) {
@@ -102,7 +125,7 @@ export function colorSets(move: Move): { sets: [CellRC[], CellRC[]]; wrap: boole
     while (queue.length) {
       const i = queue.shift()!;
       tr.forEach((q, j) => {
-        if (!tone.has(j) && sees(tr[i]!, q)) {
+        if (!tone.has(j) && sees(tr[i]!, q, variant)) {
           tone.set(j, tone.get(i) === 0 ? 1 : 0);
           queue.push(j);
         }
@@ -162,6 +185,7 @@ export function narrate(
   has: HasMark,
   t: Translate,
   digit: (n: number) => string,
+  variant: Variant = "classic",
 ): Sentence[] {
   const out: Sentence[] = [];
   const say = (step: Sentence["step"], key: string, params: Record<string, unknown> = {}) =>
@@ -177,7 +201,9 @@ export function narrate(
   // A unit's spots, named by what varies along it: columns in a row, rows in a column.
   const along = (k: Kind, ps: CellRC[]) =>
     k === "row" ? cols(ps) : k === "col" ? rows(ps) : cells(ps);
-  const unitNo = (k: Kind, p: CellRC) => (k === "row" ? p.r + 1 : k === "col" ? p.c + 1 : boxNo(p));
+  // A diagonal's sentences name it in words, so it needs no number.
+  const unitNo = (k: Kind, p: CellRC) =>
+    k === "row" ? p.r + 1 : k === "col" ? p.c + 1 : k === "box" ? boxNo(p) : 0;
   const where = (k: Kind, p: CellRC) => t(`lesson.where.${k}`, { n: unitNo(k, p) });
   const two = (k: Kind, a: CellRC, b: CellRC, n: number) =>
     say("cells", `two.${k}`, { n: unitNo(k, a), d: digit(n), at: along(k, [a, b]) });
@@ -195,7 +221,11 @@ export function narrate(
 
   switch (move.technique) {
     case "naked-single":
-      say("cells", "nakedSingle", { r: p!.r + 1, c: p!.c + 1, d: D });
+      say("cells", variant === "x" ? "nakedSingleX" : "nakedSingle", {
+        r: p!.r + 1,
+        c: p!.c + 1,
+        d: D,
+      });
       break;
     case "hidden-single": {
       const k = move.unit ?? "box";
@@ -203,7 +233,7 @@ export function narrate(
       break;
     }
     case "pointing": {
-      const k = sharedUnit(tr, ["row", "col"]) ?? "row";
+      const k = sharedUnit(tr, ["row", "col", "diag", "anti"]) ?? "row";
       const n = unitNo(k, tr[0]!);
       say("cells", `pointing.${k}`, { b: boxNo(tr[0]!), n, d: D, at: along(k, tr) });
       say("links", `pointing.link.${k}`, { b: boxNo(tr[0]!), n, d: D });
@@ -211,7 +241,7 @@ export function narrate(
       break;
     }
     case "box-line": {
-      const k = sharedUnit(tr, ["row", "col"]) ?? "row";
+      const k = sharedUnit(tr, ["row", "col", "diag", "anti"]) ?? "row";
       const b = boxNo(tr[0]!);
       say("cells", `boxLine.${k}`, { b, n: unitNo(k, tr[0]!), d: D, at: along(k, tr) });
       say("links", `boxLine.link.${k}`, { b, n: unitNo(k, tr[0]!), d: D });
@@ -237,7 +267,7 @@ export function narrate(
     case "hidden-quad": {
       // The unit where the digits are only in these cells.
       const k =
-        (["row", "col", "box"] as Kind[]).find(
+        (["row", "col", "box", "diag", "anti"] as Kind[]).find(
           (u) =>
             sharedUnit(tr, [u]) &&
             unitCells(u, tr[0]!).every(
@@ -369,10 +399,11 @@ export function narrate(
       const {
         sets: [a, b],
         wrap,
-      } = colorSets(move);
+      } = colorSets(move, variant);
       say("cells", "color.cells", { d: D, n: a.length + b.length });
       say("links", "color.link", { d: D, a: cells(a), b: cells(b) });
-      const pair = wrap && choose(b, 2).find(([u, v]) => sees(u!, v!));
+      // In X the clashing pair may see each other only along a diagonal.
+      const pair = wrap && choose(b, 2).find(([u, v]) => sees(u!, v!, variant));
       if (pair) {
         say("links", "color.wrap", { d: D, a: cell(pair[0]!), b: cell(pair[1]!) });
         say("result", "color.wrapResult", { d: D, cells: cells(elCells) });
