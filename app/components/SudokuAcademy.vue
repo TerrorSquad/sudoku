@@ -39,7 +39,11 @@ const countOf = (id: TechniqueId) => techStats.getCount(id);
 // Each lesson's best stars; a finished lesson also counts toward mastery (see utils/mastery.ts).
 const lessonStars = path.getStars();
 const starsOf = (id: TechniqueId) => lessonStars[id] ?? 0;
-const masteryOf = (id: TechniqueId) => masteryFor(countOf(id), starsOf(id));
+// The highest lesson level finished (0: none), shown as pips.
+const levelStars = ([3, 2] as const).map((n) => [n, path.getStars(n)] as const);
+const levelOf = (id: TechniqueId) =>
+  levelStars.find(([, s]) => s[id])?.[0] ?? (starsOf(id) ? 1 : 0);
+const masteryOf = (id: TechniqueId) => masteryFor(countOf(id), starsOf(id), levelOf(id));
 const masteryTitle = (id: TechniqueId) =>
   countOf(id) === 0
     ? t(`academy.mastery.${masteryOf(id)}`)
@@ -271,6 +275,25 @@ const total = computed(() => techniques.length);
                     class="text-xs tracking-tight text-amber-700 dark:text-amber-400"
                     >{{ "★".repeat(starsOf(tech.id)) + "☆".repeat(3 - starsOf(tech.id)) }}</span
                   >
+                  <span
+                    v-if="levelOf(tech.id)"
+                    data-testid="card-levels"
+                    role="img"
+                    :aria-label="$t('lesson.levelsDone', { n: levelOf(tech.id) })"
+                    :title="$t('lesson.levelsDone', { n: levelOf(tech.id) })"
+                    class="flex gap-0.5"
+                  >
+                    <span
+                      v-for="n in 3"
+                      :key="n"
+                      :class="
+                        n <= levelOf(tech.id)
+                          ? 'bg-violet-600 dark:bg-violet-400'
+                          : 'bg-zinc-300 dark:bg-zinc-700'
+                      "
+                      class="h-1.5 w-1.5 rounded-full"
+                    />
+                  </span>
                   <span
                     v-if="masteryOf(tech.id) > 0"
                     :class="MASTERY_STYLE[masteryOf(tech.id)]"

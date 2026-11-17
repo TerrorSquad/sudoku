@@ -5,6 +5,7 @@
 import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { Lesson } from "./lesson";
 import type { generatePracticePuzzle } from "./practice";
+import type { Level } from "./progression";
 import type { PuzzleJob } from "./puzzleJobs";
 import type { TechniqueId } from "./sudokuGrader";
 
@@ -97,9 +98,9 @@ export const makeDailyBoard = (daily: string, level: Difficulty) =>
 export const practicePuzzle = (technique: TechniqueId, seed: number) =>
   run<Awaited<ReturnType<typeof generatePracticePuzzle>>>({ practice: technique, seed });
 
-/** A guided lesson for `technique` (generateLesson), the same for the same seed. */
-export const guidedLesson = (technique: TechniqueId, seed: number) =>
-  run<Lesson>({ lesson: technique, seed });
+/** A guided lesson for `technique` at `level` (generateLesson), the same for the same seed. */
+export const guidedLesson = (technique: TechniqueId, seed: number, level: Level) =>
+  run<Lesson>({ lesson: technique, seed, level });
 
 /** A Spot it position for `technique` (quickLesson), the same for the same seed. */
 export const makeLesson = (technique: TechniqueId, seed: number) =>

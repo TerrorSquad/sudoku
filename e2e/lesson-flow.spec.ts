@@ -107,3 +107,67 @@ test("a wrong tap says why, Show me (H) walks to step 2, and R deals another exa
   expect(await boardLabels(page)).not.toEqual(before);
   await expect(page.getByRole("heading", { name: "Lesson: Naked Single" })).toBeVisible();
 });
+
+/** Plays a naked-single lesson's step 1 and 2 by tapping the cell and typing its digit. */
+async function playNakedSingle(page: Page) {
+  const coach = page.getByTestId("coach");
+  await expect(coach).toContainText("Step 1 of 2", { timeout: 30_000 });
+  const { at, digit } = await nakedSingle(page);
+  await page.locator(`${BOARD} [data-cell]`).nth(at).click();
+  await page.keyboard.press(digit);
+  await expect(coach).toContainText("Well done!");
+}
+
+test("levels: finishing one opens the next, and on your own names no line", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Academy/ }).click();
+  await page.getByRole("button", { name: "Next challenge: Naked Single" }).click();
+  const coach = page.getByTestId("coach");
+  const level = (n: number) => coach.getByTestId(`level-${n}`);
+  await expect(level(1)).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
+  await expect(level(2)).toBeDisabled();
+  await expect(level(3)).toBeDisabled();
+
+  await playNakedSingle(page);
+  await expect(level(1)).toHaveAccessibleName("Guided, 3 of 3 stars");
+  await expect(level(2)).toBeEnabled();
+  // Enter goes on to the next level (N still to the next technique).
+  await expect(coach.getByRole("button", { name: "Next level: Less help" })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(level(2)).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Lesson: Naked Single" })).toBeVisible();
+
+  await playNakedSingle(page);
+  expect(await page.evaluate(() => localStorage.getItem("sudoku_v1_lesson_stars_2"))).toBe(
+    '{"naked-single":3}',
+  );
+  await page.keyboard.press("Enter");
+  await expect(level(3)).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
+  await expect(coach).toContainText("On your own: look for the Naked Single.");
+  await expect(coach).not.toContainText(/in (row|column|box) \d/);
+
+  // The Academy card's pips: two levels done.
+  await page.keyboard.press("Escape");
+  await expect(
+    page.locator("#lesson-naked-single").getByTestId("card-levels"),
+  ).toHaveAccessibleName("Levels done: 2 of 3");
+});
+
+test("level 2 of an X-Wing is the other way round: its columns", async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("sudoku_v1_lesson_stars", JSON.stringify({ "x-wing": 2 })),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: /Academy/ }).click();
+  await page
+    .locator("#lesson-x-wing")
+    .getByRole("button", { name: "Learn it step by step" })
+    .click();
+  const coach = page.getByTestId("coach");
+  // Opened at the first level not finished yet.
+  await expect(coach.getByTestId("level-2")).toHaveAttribute("aria-pressed", "true", {
+    timeout: 30_000,
+  });
+  await expect(coach.getByTestId("level-2")).toHaveAccessibleName("Other way round");
+  await expect(coach).toContainText(/X-Wing on \d in columns \d and \d\./);
+});

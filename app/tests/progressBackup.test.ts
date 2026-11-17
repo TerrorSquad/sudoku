@@ -161,6 +161,9 @@ describe("progress backup", () => {
     expect(bad(stars, [3])).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, 3)).toEqual({ ok: false, error: "invalid" });
     expect(bad(stars, null)).toEqual({ ok: false, error: "invalid" });
+    // Levels 2 and 3 keep theirs in the same shape.
+    expect(bad("sudoku_v1_lesson_stars_3", { "x-wing": 2 })).toMatchObject({ ok: true });
+    expect(bad("sudoku_v1_lesson_stars_2", [2])).toEqual({ ok: false, error: "invalid" });
     // Spot it bests: shape only too, for the same reason.
     expect(bad("sudoku_v1_spot_best", { Basic: 31.4, Master: 99 })).toMatchObject({ ok: true });
     expect(bad("sudoku_v1_spot_best", [31.4])).toEqual({ ok: false, error: "invalid" });

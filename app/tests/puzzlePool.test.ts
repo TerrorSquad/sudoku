@@ -65,8 +65,8 @@ describe("puzzlePool's worker and in-place paths", () => {
     const practice = await generatePracticePuzzle("pointing", makeRng(7));
     expect(await pool.practicePuzzle("pointing", 7)).toEqual(practice);
     expect(await inWorker({ practice: "pointing", seed: 7 })).toEqual(practice);
-    const lesson = await generateLesson("x-wing", makeRng(3));
-    expect(await pool.guidedLesson("x-wing", 3)).toEqual(lesson);
-    expect(await inWorker({ lesson: "x-wing", seed: 3 })).toEqual(lesson);
+    const lesson = await generateLesson("x-wing", makeRng(3), 2);
+    expect(await pool.guidedLesson("x-wing", 3, 2)).toEqual(lesson);
+    expect(await inWorker({ lesson: "x-wing", seed: 3, level: 2 })).toEqual(lesson);
   });
 });
