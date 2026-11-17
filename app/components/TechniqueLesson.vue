@@ -5,20 +5,22 @@
 
 import type { CellCoord, FlashCell, NotesGrid } from "../types/sudoku";
 import type { Lesson } from "../utils/lesson";
-import type { Stars } from "../utils/progression";
+import type { Level, Stars } from "../utils/progression";
 import type { DigitAt, TechniqueId } from "../utils/sudokuGrader";
 
 // inGame: opened from a paused game, so Back returns to it and there's no "full puzzle" (it
 // would replace that game).
+// level: how much step 1 tells (guideOf).
 const props = defineProps<{
   lesson: Lesson;
+  level: Level;
   inGame?: boolean;
 }>();
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "practice"): void;
-  /** Another lesson: the next technique, or a fresh position for this one. */
-  (e: "lesson", id: TechniqueId): void;
+  /** Another lesson: the next technique, or a fresh position for this one (at `level`). */
+  (e: "lesson", id: TechniqueId, level?: Level): void;
   (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
 }>();
 const { t } = useI18n();
@@ -53,8 +55,20 @@ const stars = ref<Stars>(3);
 const bestBefore = ref<Stars | undefined>();
 const next = ref<TechniqueId | null>(null);
 
+// The levels: each one's best stars; one opens once the level before it is finished.
+const path = useTechniquePath();
+const LEVELS = [1, 2, 3] as const;
+const levelStars = ref(LEVELS.map((n) => path.getStars(n)[id]));
+const nextLevel = computed(() =>
+  props.level < 3 && levelStars.value[props.level - 1] ? ((props.level + 1) as Level) : null,
+);
+const guide = guideOf(id, props.level);
+// Level 2's name says what changes: the way round, or how much is told.
+const levelName = (n: Level) =>
+  t(`lesson.level.${n === 2 && guideOf(id, 2) === "marked" ? "turn" : n}`);
+
 const prompt = computed(() => {
-  if (step.value === "find") return findPrompt(L, t, digit);
+  if (step.value === "find") return findPrompt(L, t, digit, props.level);
   if (step.value === "apply")
     return L.placement
       ? t("lesson.apply.place", { num: digit(L.placement.num) })
@@ -159,10 +173,10 @@ function slip(cell: CellCoord, text: string) {
 function finish() {
   step.value = "done";
   selected.value = null;
-  const path = useTechniquePath();
   credited.value = path.recordLesson(id);
   stars.value = lessonStarsFor(slips.value);
-  bestBefore.value = path.recordStars(id, stars.value);
+  bestBefore.value = path.recordStars(id, stars.value, props.level);
+  levelStars.value = LEVELS.map((n) => path.getStars(n)[id]);
   path.scheduleReview(id);
   next.value = nextLesson(id, path.getDone(), credited.value);
   feedback.value = null;
@@ -201,6 +215,7 @@ const target = computed(() =>
 const keys = computed(() =>
   step.value === "done"
     ? [
+        ...(nextLevel.value ? [{ key: "Enter", desc: t("lesson.key.nextLevel") }] : []),
         ...(next.value ? [{ key: "N", desc: t("lesson.key.next") }] : []),
         { key: "R", desc: t("lesson.key.again") },
         { key: "P", desc: t("lesson.key.practice") },
@@ -249,20 +264,27 @@ const lookable = id !== "naked-single";
 const lookDigit = computed(() =>
   step.value === "find" && reveal.value && lookable ? (L.digits[0] ?? null) : null,
 );
-const units = lessonUnits(L);
-const nudge = computed(() => (step.value === "find" && reveal.value >= 2 ? units : null));
+// A "marked" level shows where to look from the start; else Show me's second stage does.
+const units = guide === "marked" ? guideUnits(L) : lessonUnits(L);
+const nudge = computed(() =>
+  step.value === "find" && (guide === "marked" || reveal.value >= 2) ? units : null,
+);
 
 // Arrows or WASD walk the grid, Enter or Space taps, 1–9 enters, Backspace crosses out, H shows,
-// Esc leaves. Once done: Enter or N for the next lesson, R another example, P a full puzzle.
+// Esc leaves. Once done: Enter for the next level (else the next lesson), N the next lesson, R
+// another example, P a full puzzle.
 function onKey(e: KeyboardEvent) {
   const key = boardKey(e, () => emit("back"));
   if (!key) return;
   if (step.value === "done") {
     // Enter on a focused button is that button's own click.
-    if ((key === "Enter" && !onButton(e)) || key === "n") {
+    if (key === "Enter" && !onButton(e) && nextLevel.value) {
+      e.preventDefault();
+      emit("lesson", id, nextLevel.value);
+    } else if ((key === "Enter" && !onButton(e)) || key === "n") {
       e.preventDefault();
       if (next.value) emit("lesson", next.value);
-    } else if (key === "r") emit("lesson", id);
+    } else if (key === "r") emit("lesson", id, props.level);
     else if (key === "p" && !props.inGame) emit("practice");
     return;
   }
@@ -307,6 +329,31 @@ useEventListener(window, "keydown", onKey);
         class="panel order-first flex flex-col gap-3 p-4 lg:order-last lg:col-span-5 lg:self-start"
         data-testid="coach"
       >
+        <div class="flex gap-1.5" role="group" :aria-label="$t('lesson.levels')">
+          <button
+            v-for="n in LEVELS"
+            :key="n"
+            :data-testid="`level-${n}`"
+            :aria-pressed="n === level"
+            :disabled="n > 1 && !levelStars[n - 2]"
+            :title="n > 1 && !levelStars[n - 2] ? $t('lesson.levelLocked') : undefined"
+            :aria-label="
+              levelStars[n - 1]
+                ? `${levelName(n)}, ${$t('lesson.starsLabel', { n: levelStars[n - 1] })}`
+                : levelName(n)
+            "
+            :class="n === level ? 'tile-primary' : ''"
+            class="tile flex min-w-0 flex-1 flex-col items-center justify-center px-1.5 py-1 text-center text-xs leading-tight font-bold"
+            @click="emit('lesson', id, n)"
+          >
+            <span>{{ levelName(n) }}</span>
+            <span aria-hidden="true" class="text-[0.625rem] tracking-widest">{{
+              levelStars[n - 1]
+                ? "★".repeat(levelStars[n - 1]!) + "☆".repeat(3 - levelStars[n - 1]!)
+                : "☆☆☆"
+            }}</span>
+          </button>
+        </div>
         <div v-if="step !== 'done'" class="flex gap-1.5" aria-hidden="true">
           <div
             v-for="n in 2"
@@ -376,14 +423,22 @@ useEventListener(window, "keydown", onKey);
           </p>
           <div class="flex flex-wrap gap-2">
             <button
+              v-if="nextLevel"
+              @click="emit('lesson', id, nextLevel)"
+              class="tile tile-primary w-full px-4 py-2.5 text-sm font-bold"
+            >
+              {{ $t("lesson.nextLevel", { name: levelName(nextLevel) }) }}
+            </button>
+            <button
               v-if="next"
               @click="emit('lesson', next)"
-              class="tile tile-primary w-full px-4 py-2.5 text-sm font-bold"
+              :class="nextLevel ? '' : 'tile-primary'"
+              class="tile w-full px-4 py-2.5 text-sm font-bold"
             >
               {{ $t("lesson.next", { name: $t(`hint.move.${next}.name`) }) }}
             </button>
             <button
-              @click="emit('lesson', id)"
+              @click="emit('lesson', id, level)"
               class="tile min-w-[8.5rem] flex-1 px-3 py-2 text-sm font-bold"
             >
               {{ $t("lesson.again") }}

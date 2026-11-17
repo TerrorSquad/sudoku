@@ -4,7 +4,15 @@ import type { Lesson } from "../utils/lesson";
 
 import en from "../../i18n/locales/en.json";
 import { lineKind, narrate, sees } from "../utils/explain";
-import { lessonFromExample, missReason, shuffleLesson } from "../utils/lesson";
+import {
+  findPrompt,
+  guideOf,
+  guideUnits,
+  lessonFromExample,
+  missReason,
+  shuffleLesson,
+  turnFor,
+} from "../utils/lesson";
 import { ACADEMY_TECHNIQUES } from "../utils/progression";
 import { makeRng } from "../utils/sudokuCore";
 
@@ -306,7 +314,12 @@ describe("missReason's facts", () => {
       const base = lessonFromExample(id)!;
       // A pattern cell gets no reason at all.
       expect(missReason(base, base.pattern[0]!).key).toBe("lesson.miss");
-      for (const L of [base, shuffleLesson(base, makeRng(7))]) {
+      // Transposed as well, as a lesson level may (turnFor).
+      for (const L of [
+        base,
+        shuffleLesson(base, makeRng(7)),
+        shuffleLesson(base, makeRng(8), true),
+      ]) {
         for (let i = 0; i < 81; i++) {
           const p = { r: Math.floor(i / 9), c: i % 9 };
           const why = missReason(L, p);
@@ -342,4 +355,53 @@ describe("missReason's facts", () => {
       }
     });
   }
+});
+
+describe("lesson levels", () => {
+  const way = (L: Lesson) =>
+    lineKind(L.move) ?? (L.unit && L.unit.kind !== "box" ? L.unit.kind : null);
+  for (const { id } of ACADEMY_TECHNIQUES) {
+    it(`${id}: levels 1 and 2 go on rows, then columns, and still tell the truth`, () => {
+      const base = lessonFromExample(id)!;
+      for (const level of [1, 2] as const)
+        for (const seed of [1, 2]) {
+          const L = shuffleLesson(base, makeRng(seed), turnFor(base, level));
+          if (way(base)) expect(way(L)).toBe(level === 1 ? "row" : "col");
+          const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
+          const lines = narrate(L.move, has, t, String);
+          const texts = lines.map((s) => s.text);
+          for (const s of lines) factCheck(L, s.text, texts);
+          const prompt = findPrompt(L, t, String, level);
+          expect(prompt).not.toMatch(/[{}]|lesson\./);
+          if (guideOf(id, level) !== "marked") continue;
+          // It names the lines it marks, and none across a pattern built along the other way.
+          const units = guideUnits(L);
+          expect(units.length).toBeGreaterThan(0);
+          if (lineKind(L.move))
+            expect(prompt).not.toMatch(level === 1 ? /\bcolumns?\b/ : /\brows?\b/);
+          for (const u of units) {
+            const n = u.kind === "row" ? u.r + 1 : u.kind === "col" ? u.c + 1 : 0;
+            if (n)
+              expect(prompt).toMatch(
+                new RegExp(`${u.kind === "row" ? "row" : "column"}s? [^.]*\\b${n}\\b`),
+              );
+          }
+        }
+      // On your own: no line, box or digit named.
+      const own = findPrompt(base, t, String, 3).replace(t(`hint.move.${id}.name`), "");
+      expect(own).toMatch(/^On your own/);
+      expect(own).not.toMatch(/\b(rows?|columns?|box(es)?)\b|\d/);
+    });
+  }
+
+  it("level 2 of a pattern built along lines tells it with columns", () => {
+    for (const id of ["x-wing", "swordfish", "skyscraper", "pointing", "box-line"] as const) {
+      const base = lessonFromExample(id)!;
+      const L = shuffleLesson(base, makeRng(3), turnFor(base, 2));
+      const has = (r: number, c: number, n: number) => !!L.notes[r]?.[c]?.includes(n);
+      expect(lineKind(L.move)).toBe("col");
+      expect(narrate(L.move, has, t, String)[0]!.text).toContain("column");
+      expect(findPrompt(L, t, String, 2)).toMatch(/\bcolumns? \d/);
+    }
+  });
 });

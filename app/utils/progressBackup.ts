@@ -4,7 +4,7 @@
 
 import { BASICS_KEY } from "./basics";
 import { BOARD_THEMES, UI_SCALES } from "./preferenceValues";
-import { LESSON_STARS_KEY } from "./progression";
+import { LESSON_STARS_KEYS } from "./progression";
 import { REVIEW_KEY } from "./review";
 import { RUSH_BEST_KEY, SPOT_BEST_KEY } from "./spotIt";
 
@@ -75,7 +75,7 @@ export function validEntry(key: string, value: string): boolean {
   if (key === "sudoku_v1_pref_ui_scale") return (UI_SCALES as readonly unknown[]).includes(parsed);
   if (key.startsWith("sudoku_v1_pref_")) return typeof parsed === "boolean";
   if (
-    key === LESSON_STARS_KEY ||
+    Object.values(LESSON_STARS_KEYS).includes(key) ||
     key === SPOT_BEST_KEY ||
     key === RUSH_BEST_KEY ||
     key === REVIEW_KEY

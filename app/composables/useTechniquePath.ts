@@ -3,10 +3,11 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 import { BASICS_KEY, mergeBasics, readBasics, type BasicsId } from "../utils/basics";
 import {
   ACADEMY_TECHNIQUES,
-  LESSON_STARS_KEY,
+  LESSON_STARS_KEYS,
   completesChallenge,
   mergeStars,
   readStars,
+  type Level,
   type Stars,
 } from "../utils/progression";
 import {
@@ -59,16 +60,21 @@ export function useTechniquePath() {
     return true;
   }
 
-  /** Each lesson's best stars (a cloud sync max-merges them, see cloudSync's mergedBests). */
-  const getStars = () => readStars(readJSON<unknown>(LESSON_STARS_KEY, {}));
+  /** Each lesson's best stars at `level` (a cloud sync max-merges them, see cloudSync's mergedBests). */
+  const getStars = (level: Level = 1) => readStars(readJSON<unknown>(LESSON_STARS_KEYS[level], {}));
 
   /** Keeps the better of `stars` and the stored best; returns the best before this lesson. */
-  function recordStars(id: TechniqueId, stars: Stars): Stars | undefined {
+  function recordStars(id: TechniqueId, stars: Stars, level: Level = 1): Stars | undefined {
     // Merged into the raw entry, so entries this version can't read survive.
-    const stored = readJSON<unknown>(LESSON_STARS_KEY, {});
-    writeJSON(LESSON_STARS_KEY, mergeStars(stored, { [id]: stars }));
+    const key = LESSON_STARS_KEYS[level];
+    const stored = readJSON<unknown>(key, {});
+    writeJSON(key, mergeStars(stored, { [id]: stars }));
     return readStars(stored)[id];
   }
+
+  /** The level a lesson opens at: the first not finished yet, else on your own. */
+  const lessonLevel = (id: TechniqueId): Level =>
+    ([1, 2] as const).find((n) => !getStars(n)[id]) ?? 3;
 
   /** The "How to play" lessons finished (the path's step 0). */
   const getBasics = () => readBasics(readJSON<unknown>(BASICS_KEY, []));
@@ -114,6 +120,7 @@ export function useTechniquePath() {
     markWeekDone,
     getStars,
     recordStars,
+    lessonLevel,
     getBasics,
     recordBasics,
   };

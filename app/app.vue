@@ -12,7 +12,7 @@ import type { CellCoord, Difficulty, FlashCell, Grid } from "./types/sudoku";
 import type { BasicsId } from "./utils/basics";
 import type { Lesson } from "./utils/lesson";
 import type { BoardTheme } from "./utils/preferenceValues";
-import type { Tier, Week } from "./utils/progression";
+import type { Level, Tier, Week } from "./utils/progression";
 import type { Placement } from "./utils/stuckMoments";
 import type { DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
@@ -156,6 +156,7 @@ const practiceWeek = ref<string | null>(null);
 const techniquePath = useTechniquePath();
 // The guided lesson on the lesson screen (TechniqueLesson keeps its own board).
 const activeLesson = ref<Lesson | null>(null);
+const lessonLevel = ref<Level>(1);
 // The "How to play" lesson on the basics screen.
 const activeBasics = ref<BasicsId>("rule");
 function openBasics(id: BasicsId) {
@@ -848,15 +849,18 @@ async function handlePractice(technique: TechniqueId, week: Week | null = null) 
 }
 
 // A guided lesson: the same search as practice, then the solver's replay to where it applies.
-async function handleLesson(technique: TechniqueId) {
+// Opened from elsewhere, at the first level not finished yet.
+async function handleLesson(technique: TechniqueId, level?: Level) {
   if (practiceLoading.value) return;
   practiceLoading.value = true;
   const token = ++practiceToken;
   try {
     const from = currentScreen.value; // the Academy, or a finished lesson's next one
-    const lesson = await guidedLesson(technique, randomSeed());
+    const at = level ?? techniquePath.lessonLevel(technique);
+    const lesson = await guidedLesson(technique, randomSeed(), at);
     if (token !== practiceToken || currentScreen.value !== from) return;
     activeLesson.value = lesson;
+    lessonLevel.value = at;
     currentScreen.value = "lesson";
   } finally {
     practiceLoading.value = false;
@@ -1187,8 +1191,9 @@ onUnmounted(() => {
         <!-- GUIDED LESSON -->
         <LazyTechniqueLesson
           v-else-if="currentScreen === 'lesson' && activeLesson"
-          :key="activeLesson.technique + activeLesson.board.flat().join('')"
+          :key="activeLesson.technique + lessonLevel + activeLesson.board.flat().join('')"
           :lesson="activeLesson"
+          :level="lessonLevel"
           @cue="academyCue"
           :in-game="academyFromGame"
           @back="

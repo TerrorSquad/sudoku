@@ -4,7 +4,7 @@
 
 import { BASICS_KEY, mergeBasics } from "./basics";
 import { BACKUP_PREFIX, parseBackup, validEntry, type Backup } from "./progressBackup";
-import { LESSON_STARS_KEY, mergeStars } from "./progression";
+import { LESSON_STARS_KEYS, mergeStars } from "./progression";
 import { RECORDS_KEY, mergeRecords, readRecords } from "./records";
 import { REVIEW_KEY, mergeReview } from "./review";
 import { RUSH_BEST_KEY, SPOT_BEST_KEY, mergeSpotBest } from "./spotIt";
@@ -49,7 +49,7 @@ export function mergedRecords(kept: Record<string, string>, replaced: Record<str
 }
 
 /**
- * The bests (personal records, lesson stars, Spot it times and rushes, the review schedule, basics
+ * The bests (personal records, each level's lesson stars, Spot it times and rushes, the review schedule, basics
  * done) of
  * `kept` merged with
  * `replaced`'s, as entries to
@@ -59,10 +59,9 @@ export function mergedRecords(kept: Record<string, string>, replaced: Record<str
 export function mergedBests(kept: Record<string, string>, replaced: Record<string, string>) {
   const out: Record<string, string> = {};
   if (replaced[RECORDS_KEY]) out[RECORDS_KEY] = JSON.stringify(mergedRecords(kept, replaced));
-  if (replaced[LESSON_STARS_KEY])
-    out[LESSON_STARS_KEY] = JSON.stringify(
-      mergeStars(parseJson(kept[LESSON_STARS_KEY]), parseJson(replaced[LESSON_STARS_KEY])),
-    );
+  for (const key of Object.values(LESSON_STARS_KEYS))
+    if (replaced[key])
+      out[key] = JSON.stringify(mergeStars(parseJson(kept[key]), parseJson(replaced[key])));
   if (replaced[SPOT_BEST_KEY])
     out[SPOT_BEST_KEY] = JSON.stringify(
       mergeSpotBest(parseJson(kept[SPOT_BEST_KEY]), parseJson(replaced[SPOT_BEST_KEY])),

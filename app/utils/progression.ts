@@ -212,6 +212,18 @@ export const MAP_COLUMN: Record<TechniqueId, number> = {
 export const LESSON_STARS_KEY = "sudoku_v1_lesson_stars";
 export type Stars = 1 | 2 | 3;
 
+/** A lesson's levels (lesson.ts's guideOf): 1 guided, 2 the other way round or less help, 3 on your own. */
+export type Level = 1 | 2 | 3;
+/**
+ * Each level's best stars, one key per level in LESSON_STARS_KEY's shape: level 1's is that key,
+ * so stars from before levels keep their meaning (and older versions keep reading them).
+ */
+export const LESSON_STARS_KEYS: Record<Level, string> = {
+  1: LESSON_STARS_KEY,
+  2: "sudoku_v1_lesson_stars_2",
+  3: "sudoku_v1_lesson_stars_3",
+};
+
 export const lessonStarsFor = (slips: number): Stars => (slips === 0 ? 3 : slips === 1 ? 2 : 1);
 
 /** Stored stars, keeping only known techniques and 1–3 (the value comes from storage or sync). */

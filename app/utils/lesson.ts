@@ -19,7 +19,7 @@ import {
   spotsIn,
 } from "./explain";
 import { generatePracticePuzzle } from "./practice";
-import { RARE_IN_PUZZLES } from "./progression";
+import { RARE_IN_PUZZLES, type Level } from "./progression";
 import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
 import {
   nextHint,
@@ -181,10 +181,14 @@ export function lessonFromExample(technique: TechniqueId): Lesson | null {
   return lessonAt(ex.board, elims, move);
 }
 
-/** A fresh position from a puzzle that needs the technique, else the Academy's example. */
+/**
+ * A fresh position from a puzzle that needs the technique, else the Academy's example; for a
+ * `level`, turned the way that level wants it (turnFor).
+ */
 export async function generateLesson(
   technique: TechniqueId,
   rng: Rng = Math.random,
+  level?: Level,
 ): Promise<Lesson> {
   const p = await generatePracticePuzzle(technique, rng);
   const lesson =
@@ -192,7 +196,9 @@ export async function generateLesson(
     lessonFromExample(technique);
   if (!lesson) throw new Error(`No lesson for technique: ${technique}`);
   // The example is one fixed position; a symmetry of it keeps "Another example" from repeating.
-  return p.kind === "puzzle" ? lesson : shuffleLesson(lesson, rng);
+  // A puzzle's position is only transposed, when the level wants it the other way round.
+  const turn = turnFor(lesson, level);
+  return p.kind === "puzzle" && !turn ? lesson : shuffleLesson(lesson, rng, turn);
 }
 
 /**
@@ -204,14 +210,61 @@ export async function quickLesson(technique: TechniqueId, rng: Rng = Math.random
   return example ? shuffleLesson(example, rng) : generateLesson(technique, rng);
 }
 
+// ---- Levels --------------------------------------------------------------------------------
+
+/** Built along rows or columns (lineKind): level 2 is level 1's help, the other way round. */
+const ALONG = new Set<TechniqueId>([
+  "pointing",
+  "box-line",
+  "x-wing",
+  "swordfish",
+  "jellyfish",
+  "finned-x-wing",
+  "finned-swordfish",
+  "skyscraper",
+  "empty-rectangle",
+]);
+
+/**
+ * How much a level's step 1 tells, by family ("marked": the prompt names the rows, columns and
+ * boxes to look in, and the board marks them; "named": the prompt names its one unit, as before
+ * levels; "digit": only the digit; "none": only the technique):
+ *
+ *   family                                1             2                     3
+ *   built along lines (ALONG)             marked, rows  marked, columns       none
+ *   in one unit (singles, subsets)        marked, row   named, column         none
+ *   spread out (kite, wings, chains, UR)  marked        digit                 none
+ *
+ * Rows and columns are where the position has a way round (turnFor); a box stays a box.
+ */
+export function guideOf(
+  technique: TechniqueId,
+  level: Level,
+): "marked" | "named" | "digit" | "none" {
+  if (level === 3) return "none";
+  if (level === 1 || ALONG.has(technique)) return "marked";
+  return UNIT_KINDS[technique] || technique === "hidden-single" ? "named" : "digit";
+}
+
+/**
+ * Whether `level` wants `L` transposed: levels 1 and 2 put a pattern built along lines, or sitting
+ * in one row or column, on rows, then on columns. Undefined when either way will do.
+ */
+export function turnFor(L: Lesson, level?: Level): boolean | undefined {
+  const way = lineKind(L.move) ?? (L.unit && L.unit.kind !== "box" ? L.unit.kind : null);
+  if (!way || !level || level === 3) return undefined;
+  return way !== (level === 1 ? "row" : "col");
+}
+
 // ---- Variations ----------------------------------------------------------------------------
 
 /**
  * The same lesson under a sudoku symmetry: digits relabelled, maybe transposed, the bands and the
  * rows (columns) inside them reordered. Every deduction survives, so a technique whose only
- * source is the Academy's one example still gets a fresh-looking position each time.
+ * source is the Academy's one example still gets a fresh-looking position each time. `turn`
+ * decides the transpose instead of a coin toss.
  */
-export function shuffleLesson(L: Lesson, rng: Rng = Math.random): Lesson {
+export function shuffleLesson(L: Lesson, rng: Rng = Math.random, turn?: boolean): Lesson {
   const shuffle = <T>(xs: T[]) => {
     const a = [...xs];
     for (let i = a.length - 1; i > 0; i--) {
@@ -231,7 +284,8 @@ export function shuffleLesson(L: Lesson, rng: Rng = Math.random): Lesson {
   const R = lineMap();
   const C = lineMap();
   const sigma = [0, ...shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9])];
-  const flip = rng() < 0.5;
+  const coin = rng() < 0.5; // tossed either way, so a seed deals the same board as before levels
+  const flip = turn ?? coin;
   const cell = ({ r, c }: CellRC): CellRC => {
     const [a, b] = flip ? [c, r] : [r, c];
     return { r: R[a]!, c: C[b]! };
@@ -662,11 +716,35 @@ function unitLabel(L: Lesson, t: Translate): string {
   return t(`lesson.where.${u.kind}`, { n: unitNumber(u) });
 }
 
-/** Step 1's prompt: what to look for and where. `digit` renders a digit (or its colour). */
-export function findPrompt(L: Lesson, t: Translate, digit: (n: number) => string): string {
-  const where = unitLabel(L, t);
-  const digits = L.digits.map(digit).join(", ");
+/** "in rows 2 and 7", "in row 2, column 5 and box 3": a level's marked units, by kind. */
+function linesLabel(units: BoardUnit[], t: Translate): string {
+  const parts = (["row", "col", "box"] as const).flatMap((k) => {
+    const ns = units
+      .filter((u) => u.kind === k)
+      .map(unitNumber)
+      .toSorted((a, b) => a - b);
+    if (!ns.length) return [];
+    return [t(`lesson.lines.${k}${ns.length > 1 ? "Many" : ""}`, { n: wordList(ns, t) })];
+  });
+  return t("lesson.where.lines", { lines: wordList(parts, t) });
+}
+
+/**
+ * Step 1's prompt: what to look for and where, as much as `level` tells (guideOf; none given:
+ * as before levels, which Spot it keeps). `digit` renders a digit (or its colour).
+ */
+export function findPrompt(
+  L: Lesson,
+  t: Translate,
+  digit: (n: number) => string,
+  level?: Level,
+): string {
+  const guide = level && guideOf(L.technique, level);
   const technique = t(`hint.move.${L.technique}.name`);
+  if (guide === "none")
+    return t(L.placement ? "lesson.find.ownCell" : "lesson.find.own", { technique });
+  const where = guide === "marked" ? linesLabel(guideUnits(L), t) : unitLabel(L, t);
+  const digits = L.digits.map(digit).join(", ");
   if (L.technique === "naked-single") return t("lesson.find.nakedSingle", { where });
   if (L.technique === "hidden-single") return t("lesson.find.hiddenSingle", { num: digits, where });
   if (L.placement) return t("lesson.find.cell", { technique, where });
@@ -727,4 +805,17 @@ export function lessonUnits(L: Lesson): BoardUnit[] {
       else if (inUnit("box", a, b)) add({ kind: "box", ...a });
     }
   return units.length ? units : [{ kind: "box", ...L.pattern[0]! }];
+}
+
+/**
+ * The units a "marked" level names and marks from the start: lessonUnits, less the lines across a
+ * pattern built along the other way (a fish's cover lines would give its corners away), plus the
+ * line a pointing pair points along (its box alone wouldn't say which way).
+ */
+export function guideUnits(L: Lesson): BoardUnit[] {
+  const way = lineKind(L.move);
+  const units = lessonUnits(L).filter(
+    (u) => !way || u.kind === way || (u.kind === "box" && !FISH_SIZE[L.technique]),
+  );
+  return L.technique === "pointing" && way ? [...units, { kind: way, ...L.pattern[0]! }] : units;
 }
