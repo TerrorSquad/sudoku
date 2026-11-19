@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repo uses **pnpm** (`pnpm-lock.yaml`), not npm or yarn. Running `npm install` against it will produce peer-dependency resolution errors — always use `pnpm`. A hook in `.claude/settings.json` blocks `npm` and `npx` commands.
 
-Node and pnpm versions come from `mise.toml` (major only; `mise upgrade` takes the newest). To upgrade dependencies: `pnpm update --latest --include-github-actions`. It skips the pins in `pnpm-workspace.yaml`'s `updateConfig` (`nuxt`, `typescript`, `@vueuse/nuxt`; reasons there and in `docs/adr/0002-dependency-pins.md`), so don't override them by hand. `tailwindcss` is not a direct dependency: it comes with `@nuxt/ui`. A `@playwright/test` bump also needs the image tag in `package.json`'s `visual` script and both workflows (`visualImage.test.ts` fails otherwise) and `pnpm exec playwright install chromium`.
+Node and pnpm versions come from `mise.toml` (major only; `mise upgrade` takes the newest). To upgrade dependencies: `pnpm update --latest --include-github-actions`. It skips the pins in `pnpm-workspace.yaml`'s `updateConfig` (`nuxt`, `typescript`, `@vueuse/nuxt`; reasons there and in `docs/adr/0002-dependency-pins.md`), so don't override them by hand. `tailwindcss` is not a direct dependency: it comes with `@nuxt/ui`. A `@playwright/test` bump also needs the image tag in `package.json`'s `visual` script and `check.yml` (`visualImage.test.ts` fails otherwise) and `pnpm exec playwright install chromium`.
 
 ## Commands
 
@@ -102,10 +102,10 @@ Two locales: `en` and `rs` (`code: "rs"`, not `"sr"` — renamed from `sr` becau
 ```bash
 pnpm visual          # compare against baselines (in Docker)
 pnpm visual:update   # accept intentional UI changes, then commit the PNGs
-pnpm visual:run      # the bare Playwright run, used inside the container and by CI
+pnpm visual:run      # the bare Playwright run, used inside the container
 ```
 
-Baselines are Linux renders from the official Playwright image (`mcr.microsoft.com/playwright`, tag = the installed `@playwright/test`; `app/tests/visualImage.test.ts` fails if they drift). `pnpm visual` runs the suite in that image via `scripts/visual-docker.sh` (Docker required; always `linux/amd64`, emulated and slower on an Apple Silicon Mac, because arm64 rasterizes differently from CI; `.nuxt` and `.data` stay in the container; node_modules is a volume per checkout). `pnpm test:all` ends with `pnpm visual`, so it needs Docker too, and `.github/workflows/visual.yml` runs `pnpm visual:run` in the same image on every PR, uploading `test-results/` (expected/actual/diff PNGs) when it fails. Never run `pnpm visual:run` on the host to update baselines: host font rendering differs. Any PR that changes how the UI looks must run `pnpm visual:update` and commit the changed baselines. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers.
+Baselines are Linux renders from the official Playwright image (`mcr.microsoft.com/playwright`, tag = the installed `@playwright/test`; `app/tests/visualImage.test.ts` fails if they drift). `pnpm visual` runs the suite in that image via `scripts/visual-docker.sh` (Docker required; always `linux/amd64`, emulated and slower on an Apple Silicon Mac, because arm64 rasterizes differently from CI; `.nuxt` and `.data` stay in the container; node_modules is a volume per checkout). `pnpm test:all` ends with `pnpm visual`, so it needs Docker too. CI doesn't run it (no runner minutes to spare): it's a local check, before a release or when a UI change wants a look. `pnpm visual:update -g <name>` re-renders only the matching screens. Never run `pnpm visual:run` on the host to update baselines: host font rendering differs. Baselines go stale between runs; whoever runs it next updates the ones a deliberate change moved. Never reuse a running dev server for these runs (the config forbids it): Nuxt DevTools is disabled only for fresh servers.
 
 ### Performance
 
@@ -121,7 +121,7 @@ Laptops with integrated graphics (an i7 + Iris Xe) are the low end. Measure befo
 
 - `app/tests/*.test.ts` (vitest) — pure logic: solver, grader, scoring, daily-puzzle seeding. No DOM.
 - `e2e/*.spec.ts` (Playwright Test) — full browser flows: new game/win, the resume-prompt's three branches, preference persistence, the pause overlay. Costs nothing to re-run once written, unlike manual browser-driven verification. Shared helpers (`BOARD`, `SOLVED`, `blank`, `grid`, `savedGame`, `playCustom`, …) live in `e2e/seed.ts`.
-- Which to run: the unit file and the e2e specs that cover what changed (grep `e2e/` for the component or testid). The full e2e suite takes ~7 minutes: run it once before a release (it's the only place separately-tested PRs meet), not after every change. CI runs `pnpm check` and the visual suite on every PR.
+- Which to run: the unit file and the e2e specs that cover what changed (grep `e2e/` for the component or testid). The full e2e suite takes ~7 minutes: run it once before a release (it's the only place separately-tested PRs meet), not after every change. CI runs `pnpm check` on every PR.
 - e2e runs against the dev server, so it can't catch a broken production build. `pnpm test:prod` does: it builds for Wavedash, serves `.output/public` under `/game/` (`scripts/serve-static.mjs`, the way Wavedash serves it) and runs `e2e/prod.spec.ts` (`playwright.prod.config.ts`; plain `pnpm test:e2e` skips it): it loads with no page or console error, starts an Easy game, opens an Academy card and Stats. CI runs it on every PR (`check.yml`) and the release runs it before upload. For anything else build-specific, extend that spec.
 
 ### Releasing
