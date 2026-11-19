@@ -29,6 +29,7 @@ const emit = defineEmits<{
   close: [];
   lesson: [id: TechniqueId];
   cue: [kind: "tick" | "stamp", ...n: number[]];
+  replay: [frame: { board: Grid; placed: Placement | null } | null];
 }>();
 
 const { t } = useI18n();
@@ -141,8 +142,10 @@ function handleModalKey(e: KeyboardEvent) {
     emit("close");
   }
 }
-// "Watch your solve", over the modal: its keys are its own (Esc closes it, back to here).
+// "Watch your solve", over the modal: its keys are its own (Esc closes it, back to here). It plays
+// on the game's own board (`replay` frames), so the modal steps aside while it's open.
 const watching = ref(false);
+watch(watching, (on) => on || emit("replay", null));
 const canWatch = computed(() => props.win && props.placements.some((p) => !p.restored));
 function onKey(e: KeyboardEvent) {
   // The real dialog state: its close event (which clears `watching`) comes a task after Esc.
@@ -162,11 +165,15 @@ onMounted(() => {
   <div
     data-end-modal
     data-pad-scope
-    :class="[win ? 'modal-delay' : '', { 'win-done': winSkipped }]"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+    :class="[
+      win ? 'modal-delay' : '',
+      { 'win-done': winSkipped, 'bg-black/80 backdrop-blur-sm': !watching },
+    ]"
+    class="fixed inset-0 z-50 flex items-center justify-center px-4"
     @pointerdown="winStep && skipWinSteps()"
   >
     <div
+      v-show="!watching"
       class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
       :class="win ? '!border-t-emerald-500' : '!border-t-rose-500'"
     >
@@ -331,7 +338,7 @@ onMounted(() => {
     </div>
     <SheetDialog
       v-model:open="watching"
-      class="panel m-auto max-h-[calc(100dvh-2rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-5 text-inherit backdrop:bg-black/50"
+      class="panel mx-auto mt-auto mb-4 max-h-[calc(100dvh-2rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4 text-inherit backdrop:bg-transparent lg:mr-8 lg:mb-8"
       :aria-label="$t('modal.watch')"
     >
       <SolveReplay
@@ -341,6 +348,7 @@ onMounted(() => {
         :stuck="result.stuck"
         :zen="zen"
         @lesson="(id) => emit('lesson', id)"
+        @frame="(board, placed) => emit('replay', { board, placed })"
       />
       <button @click="watching = false" class="tile mt-3 w-full py-2 text-sm font-bold">
         {{ $t("modal.close") }}

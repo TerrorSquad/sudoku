@@ -4,6 +4,7 @@ import type { Grid } from "../types/sudoku";
 
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
 import {
+  availableTechniques,
   solveLogically,
   gradePuzzle,
   generateGradedPuzzle,
@@ -212,5 +213,22 @@ describe("sudokuGrader — patternUnit", () => {
       eliminations: [{ r: 4, c: 7, num: 1 }],
     });
     expect(patternUnit(xWing)).toEqual({ kind: "box", r: 4, c: 7 });
+  });
+});
+
+describe("availableTechniques", () => {
+  it("lists the next hint's technique first, then every other finder that applies", () => {
+    expect.hasAssertions();
+    for (const seed of [3, 7, 12]) {
+      const { puzzle } = generateGradedPuzzle("expert", makeRng(seed));
+      const found = availableTechniques(puzzle);
+      expect(found[0]).toBe(nextHint(puzzle)!.technique);
+      expect(new Set(found).size).toBe(found.length);
+    }
+  });
+
+  it("lists nothing on a solved board", () => {
+    const { solution } = generatePuzzle(40, makeRng(1));
+    expect(availableTechniques(solution)).toEqual([]);
   });
 });

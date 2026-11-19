@@ -37,6 +37,8 @@ Press **N** (or the Notes button) to toggle pencil-mark mode. In this mode, numb
 
 The hint system detects whichever technique applies to the current board state and walks you through it step by step — from the simplest to the most advanced.
 
+On wide screens, the idle hint panel also lists every technique that applies to the board right now, by name only, so you know what to look for without being told where.
+
 ### 1 · Naked Single
 
 **When:** Only one number is possible in a cell.
