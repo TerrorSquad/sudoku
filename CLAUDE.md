@@ -34,7 +34,7 @@ The e2e suite spins up its own dev server on port 3110 (`E2E_PORT` overrides it,
 
 ## Architecture
 
-This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generated and shipped to Wavedash (`pnpm wavedash`). There is no `pages/` directory — `app/app.vue` is the entire app. It's a single root component that owns all game state (board, timer, modals, preferences) and switches between screens itself via a `currentScreen` ref (`"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats"`), not Nuxt routing.
+This is a client-only SPA (`ssr: false` in `nuxt.config.ts`), statically generated and shipped to Wavedash (`pnpm wavedash`). There is no `pages/` directory — `app/app.vue` is the entire app. It's a single root component that owns the game's state and flow (the board via `useSudokuEngine`, the clock and pause via `useGameSession`, input via `useGameInput`, the modals, wins and saves) and switches between screens itself via a `currentScreen` ref (`"menu" | "difficulty" | "game" | "academy" | "custom-import" | "stats"`), not Nuxt routing.
 
 Imports: `.vue` files rely on Nuxt auto-imports (vue APIs, components, `composables/`, top-level `utils/` exports) and import only types and external packages; oxlint's `no-restricted-imports` enforces it. `.ts` files (utils, composables, plugins, tests) keep explicit imports, because vitest runs them without Nuxt.
 
@@ -48,6 +48,8 @@ Imports: `.vue` files rely on Nuxt auto-imports (vue APIs, components, `composab
 
 ### State composables
 
+- **`useGameSession.ts`** — the game clock (`useTimer`) and what's around it: the pause, Settings over the paused game, the shortcuts sheet, the controls tour, pausing when the tab is hidden. The clock is never started or stopped directly: **`useClockHolds.ts`** keeps a set of hold reasons (`"paused"`, the player's, the only one with the pause overlay, also set by a hidden tab or a lesson opened from the game; `"tour"`, a first controls tour; `"finished"`, the end modal or Finish) and it runs iff the game screen is up and the set is empty. A new reason to stop the clock is a new hold, not a `stopTimer` call.
+- **`useGameInput.ts`** — the numpad, cell taps and game keys: digit-first arming (`activeDigit`), the picked digit, `handleKeyDown`. What a digit does to the board stays in `app.vue` (`handleInputNumber`), passed in with the other actions.
 - **`useSudokuEngine.ts`** — the board/notes/history/hint state machine. Takes `colorMode` (a `Ref<boolean>`) so hint text can route digits through `digitLabel()` and say "red" instead of "5" when color mode is on.
 - **`useGameSave.ts`** — one save slot per difficulty (`sudoku_v1_save_<difficulty>`), via `safeJson.ts`. There's no global "continue" — picking a difficulty that already has a save triggers a resume-or-restart prompt (`pendingResume` in `app.vue`) instead.
 - **`useDailyPuzzle.ts`** — date-seeded (`seedFromString` + `makeRng`) puzzle, same for everyone on a given local calendar day; tracks completion/streak.
@@ -76,7 +78,7 @@ Progress features are all derived from a win, with the rules in **pure, unit-tes
 
 - **`composables/usePreferences.ts`** is the single owner of every player setting (`sudoku_v1_pref_*`; module-level singleton refs shared by the game and Settings). Add a setting there, then read it where needed.
 - **`cue(kind)` in `app.vue`** is how game events produce feedback: it plays the sound (`utils/sound.ts`, synthesized) and the vibration (`utils/haptics.ts`), each behind its own preference. Use it rather than calling `playX` directly.
-- **Digit-first input** (`activeDigit` in `app.vue`) arms a digit from the numpad; `handleSelectCell` places it, but arrow keys set `selectedCell` directly so they never place.
+- **Digit-first input** (`activeDigit` in `useGameInput`) arms a digit from the numpad; `handleSelectCell` places it, but arrow keys set `selectedCell` directly so they never place.
 - **Completion flashes** carry a per-cell `delay` (`FlashCell`): a ripple from the placed digit, and a diagonal wave on a win (the win modal fades in after it via `.modal-delay`).
 - **`utils/progressBackup.ts`** exports/imports every `sudoku_v1_*` key as a JSON file (Settings → Your data). It validates strictly (right app/version, our prefix only, JSON values, size cap) and import _replaces_ then reloads. New storage keys must keep the `sudoku_v1_` prefix to be backed up.
 - Component styles that need a dark variant must use Tailwind `dark:` classes or a **non-scoped** `.dark .x` rule: scoped `:global(.dark) .x` silently failed (axe caught it).
