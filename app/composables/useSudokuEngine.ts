@@ -17,6 +17,7 @@ import {
   generateGradedPuzzle,
   nextHint,
   type SolveMove,
+  type BoardUnit,
   type DigitAt,
 } from "../utils/sudokuGrader";
 
@@ -338,21 +339,32 @@ export function useSudokuEngine(
     const solved = solvedBoard.value;
     const boxR = r - (r % 3);
     const boxC = c - (c % 3);
-    const units = [
-      Array.from({ length: 9 }, (_, i) => ({ r, c: i })),
-      Array.from({ length: 9 }, (_, i) => ({ r: i, c })),
-      Array.from({ length: 9 }, (_, i) => ({ r: boxR + Math.floor(i / 3), c: boxC + (i % 3) })),
-      ...diagonalsAt(r, c),
-    ].filter((unit) => unit.every((p) => board[p.r]![p.c] === solved[p.r]![p.c]));
+    const units: [BoardUnit["kind"], CellCoord[]][] = [
+      ["row", Array.from({ length: 9 }, (_, i) => ({ r, c: i }))],
+      ["col", Array.from({ length: 9 }, (_, i) => ({ r: i, c }))],
+      [
+        "box",
+        Array.from({ length: 9 }, (_, i) => ({ r: boxR + Math.floor(i / 3), c: boxC + (i % 3) })),
+      ],
+      ...diagonalsAt(r, c).map((d): [BoardUnit["kind"], CellCoord[]] => [
+        d[0]!.c === 0 ? "diag" : "anti",
+        d,
+      ]),
+    ];
+    const done = units.filter(([, unit]) =>
+      unit.every((p) => board[p.r]![p.c] === solved[p.r]![p.c]),
+    );
     const num = board[r]![c]!;
     const digitCells = solved.flatMap((row, sr) =>
       row.flatMap((v, sc) => (v === num ? [{ r: sr, c: sc }] : [])),
     );
     const digitDone = digitCells.every((p) => board[p.r]![p.c] === num);
     return {
-      units: units.length,
+      units: done.length,
+      /** Each finished unit, for its pen stroke. */
+      done: done.map(([kind]): BoardUnit => ({ kind, r, c })),
       digitDone,
-      cells: [...units.flat(), ...(digitDone ? digitCells : [])] as CellCoord[],
+      cells: [...done.flatMap(([, unit]) => unit), ...(digitDone ? digitCells : [])],
     };
   }
 

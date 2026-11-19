@@ -113,3 +113,13 @@ test("a digit brought back through the move history is in the replay too", async
   await expect(stepText(page)).toContainText("Move 2 of 2");
   await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
 });
+
+test("See it in 3D opens the skyline over the replay, and closes back to it", async ({ page }) => {
+  await winStuckGame(page);
+  await page.getByTestId("open-skyline").click();
+  await expect(page.getByTestId("solve-skyline")).toBeVisible();
+  await expect(page.getByTestId("skyline-save")).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("solve-skyline")).toBeHidden();
+  await expect(page.getByTestId("solve-replay")).toBeVisible();
+});

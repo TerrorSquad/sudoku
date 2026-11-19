@@ -204,6 +204,94 @@
   --tile-lip: rgb(255 255 255 / 0.45);
 }
 
+/* Blueprint: a cyanotype print by day (Prussian-blue lines on white), the classic deep-blue sheet
+   with white lines at night. */
+:root[data-theme="blueprint"] {
+  --color-zinc-50: #f8fbff;
+  --color-zinc-100: #edf3fb;
+  --color-zinc-200: #d9e5f4;
+  --color-zinc-300: #bccfe8;
+  --color-zinc-400: #7f9cc4;
+  --color-zinc-500: #3f5f8f;
+  --color-zinc-600: #33527f;
+  --color-zinc-700: #24406a;
+  --color-zinc-800: #1a3258;
+  --color-zinc-900: #122646;
+  --color-zinc-950: #0b1a33;
+  --ground: #eef4fb;
+  --grid-fine: rgb(31 82 160 / 0.09);
+  --grid-bold: rgb(31 82 160 / 0.18);
+  --tray: rgb(255 255 255 / 0.5);
+  --tray-line: #122646;
+  --tile: #fbfdff;
+  --tile-edge: rgb(18 38 70 / 0.3);
+  --tile-lip: rgb(18 38 70 / 0.16);
+}
+:root.dark[data-theme="blueprint"] {
+  --color-zinc-50: #f6f9fd;
+  --color-zinc-100: #e9f0fa;
+  --color-zinc-200: #d6e3f4;
+  --color-zinc-300: #bcd0ec;
+  --color-zinc-400: #9db6dc;
+  --color-zinc-500: #a7c0e3;
+  --color-zinc-600: #5d87bf;
+  --color-zinc-700: #2c64a3;
+  --color-zinc-800: #174a80;
+  --color-zinc-900: #0d3159;
+  --color-zinc-950: #08223f;
+  --ground: #0c3260;
+  --grid-fine: rgb(255 255 255 / 0.06);
+  --grid-bold: rgb(255 255 255 / 0.12);
+  --tray: rgb(0 0 0 / 0.18);
+  --tray-line: #d6e3f4;
+  --tile: #0f3766;
+  --tile-edge: rgb(255 255 255 / 0.25);
+  --tile-lip: rgb(0 0 0 / 0.35);
+}
+/* Chalkboard: green exercise-book paper by day, chalk on a green board at night. */
+:root[data-theme="chalkboard"] {
+  --color-zinc-50: #f8faf7;
+  --color-zinc-100: #eef2ec;
+  --color-zinc-200: #dce4d8;
+  --color-zinc-300: #c2cfbd;
+  --color-zinc-400: #869680;
+  --color-zinc-500: #4a5a45;
+  --color-zinc-600: #3f4e3b;
+  --color-zinc-700: #2f3b2c;
+  --color-zinc-800: #232d21;
+  --color-zinc-900: #182017;
+  --color-zinc-950: #0f150e;
+  --ground: #eef3ec;
+  --grid-fine: rgb(47 96 64 / 0.08);
+  --grid-bold: rgb(47 96 64 / 0.15);
+  --tray: rgb(255 255 255 / 0.5);
+  --tray-line: #182017;
+  --tile: #fbfcfa;
+  --tile-edge: rgb(24 32 23 / 0.3);
+  --tile-lip: rgb(24 32 23 / 0.16);
+}
+:root.dark[data-theme="chalkboard"] {
+  --color-zinc-50: #f4f6f2;
+  --color-zinc-100: #e7ebe4;
+  --color-zinc-200: #d0d8cc;
+  --color-zinc-300: #b6c1b0;
+  --color-zinc-400: #9aa794;
+  --color-zinc-500: #a3af9d;
+  --color-zinc-600: #61705b;
+  --color-zinc-700: #3e4b3a;
+  --color-zinc-800: #2f3a2c;
+  --color-zinc-900: #263128;
+  --color-zinc-950: #1a231d;
+  --ground: #1f2b25;
+  --grid-fine: rgb(255 255 255 / 0.03);
+  --grid-bold: rgb(255 255 255 / 0.06);
+  --tray: rgb(0 0 0 / 0.2);
+  --tray-line: #d0d8cc;
+  --tile: #2b3830;
+  --tile-edge: rgb(244 246 242 / 0.2);
+  --tile-lip: rgb(0 0 0 / 0.35);
+}
+
 /* Settings over the game: a sheet on the right, a bottom sheet on phones; the board stays in view. */
 .settings-sheet {
   margin: 0 0 0 auto;

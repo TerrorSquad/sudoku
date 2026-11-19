@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import type { Placement } from "../utils/stuckMoments";
 
-import { boardAt, replayOf } from "../utils/replay";
+import { boardAt, hardMoves, replayOf } from "../utils/replay";
+import { makeRng } from "../utils/sudokuCore";
+import { generateGradedPuzzle, nextHint, type DigitAt } from "../utils/sudokuGrader";
 
 const empty = () => Array.from({ length: 9 }, () => Array<number>(9).fill(0));
 
@@ -43,5 +45,26 @@ describe("boardAt", () => {
     expect([one[1]![1], one[2]![2]]).toEqual([5, 0]);
     expect(boardAt(start, moves, 2)[2]![2]).toBe(6);
     expect(start).toEqual(empty());
+  });
+});
+
+describe("hardMoves", () => {
+  it("marks only the placements that took more than a single", () => {
+    // The solver's own order: its singles stay unmarked, its harder placements are named.
+    const { puzzle } = generateGradedPuzzle("expert", makeRng(3));
+    const board = puzzle.map((row) => [...row]);
+    const elims: DigitAt[] = [];
+    const moves: Placement[] = [];
+    for (let move = nextHint(board); move; move = nextHint(board, elims)) {
+      if (!move.placement) elims.push(...move.eliminations);
+      else {
+        moves.push({ ...move.placement, t: moves.length });
+        board[move.placement.r]![move.placement.c] = move.placement.num;
+      }
+    }
+    const hard = hardMoves(puzzle, moves);
+    expect(hard.length).toBeGreaterThan(0);
+    expect(hard.length).toBeLessThan(moves.length);
+    for (const { step } of hard) expect(step).toBeGreaterThan(0);
   });
 });
