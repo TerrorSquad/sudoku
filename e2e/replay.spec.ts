@@ -24,6 +24,10 @@ test("the replay steps through the moves and names what would have broken the st
 }) => {
   await winStuckGame(page);
   await expect(stepText(page)).toHaveText("The givens");
+  // It plays on the game's own board: the givens alone, the modal out of the way.
+  const board = page.getByTestId("replay-board");
+  await expect(board.locator('[data-cell][aria-label$="empty"]')).toHaveCount(18);
+  await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeHidden();
   await page.getByRole("button", { name: "Step forward" }).click();
   await expect(stepText(page)).toHaveText("Move 1 of 18 · 00:05");
   await page.keyboard.press("ArrowRight");
@@ -41,6 +45,7 @@ test("the replay steps through the moves and names what would have broken the st
   // Esc closes the replay, not the win modal.
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("solve-replay")).toBeHidden();
+  await expect(board).toBeHidden();
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
 
   // The technique opens its lesson.
@@ -86,7 +91,7 @@ test("a digit brought back by redo is in the replay, which ends on the solution"
   await page.getByRole("button", { name: "Step forward" }).click();
   await page.getByRole("button", { name: "Step forward" }).click();
   await expect(stepText(page)).toContainText("Move 2 of 2");
-  const replay = page.getByTestId("solve-replay");
+  const replay = page.getByTestId("replay-board");
   await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
 });
 
@@ -102,9 +107,19 @@ test("a digit brought back through the move history is in the replay too", async
   await place(page, 50, "4");
   await expect(page.getByRole("heading", { name: "Puzzle solved!" })).toBeVisible();
   await page.getByTestId("watch-solve").click();
-  const replay = page.getByTestId("solve-replay");
+  const replay = page.getByTestId("replay-board");
   await page.getByRole("button", { name: "Step forward" }).click();
   await page.getByRole("button", { name: "Step forward" }).click();
   await expect(stepText(page)).toContainText("Move 2 of 2");
   await expect(replay.locator('[data-cell][aria-label$="empty"]')).toHaveCount(0);
+});
+
+test("See it in 3D opens the skyline over the replay, and closes back to it", async ({ page }) => {
+  await winStuckGame(page);
+  await page.getByTestId("open-skyline").click();
+  await expect(page.getByTestId("solve-skyline")).toBeVisible();
+  await expect(page.getByTestId("skyline-save")).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("solve-skyline")).toBeHidden();
+  await expect(page.getByTestId("solve-replay")).toBeVisible();
 });

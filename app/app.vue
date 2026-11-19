@@ -11,10 +11,11 @@ import type { WinResult } from "./composables/useWinResult";
 import type { CellCoord, Difficulty, FlashCell, Grid, Variant } from "./types/sudoku";
 import type { BasicsId } from "./utils/basics";
 import type { Lesson } from "./utils/lesson";
+import type { Mark } from "./utils/patternMarks";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { Level, Tier, Week } from "./utils/progression";
 import type { Placement } from "./utils/stuckMoments";
-import type { DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
+import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 
 const { t, locale, locales } = useI18n();
 
@@ -49,6 +50,8 @@ const THEME_COLORS: Record<BoardTheme, [light: string, dark: string]> = {
   tiles: ["#17294a", "#1c252f"],
   newsprint: ["#1e1d1a", "#1d1c19"],
   contrast: ["#000000", "#000000"],
+  blueprint: ["#122646", "#0c3260"],
+  chalkboard: ["#182017", "#1f2b25"],
 };
 useHead(() => {
   const colors = THEME_COLORS[boardTheme.value] ?? THEME_COLORS.tiles; // a hand-edited value
@@ -230,6 +233,9 @@ const showModal = ref<boolean>(false);
 const modalTitle = ref<string>("");
 const modalMessage = ref<string>("");
 const isWinState = ref<boolean>(false);
+// "Watch your solve" plays on the game's own board: the step the win modal's replay is showing.
+const replayFrame = ref<{ board: Grid; placed: Placement | null } | null>(null);
+const noNotes = emptyNotes();
 
 const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
@@ -299,6 +305,48 @@ const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
 });
+// The hint panel's "on this board" list: technique names only, never where. Only while the panel
+// is on screen (lg+) and idle; a wrong entry is left out, as the solver takes every digit as true.
+// It reads the player's notes, so a single their marks leave shows up.
+const widePanel = useMediaQuery("(min-width: 1024px)");
+const boardTechniques = computed<TechniqueId[]>(() => {
+  if (!widePanel.value || activeComplexHint.value || currentScreen.value !== "game") return [];
+  const board = rightDigits();
+  return availableTechniques(board, notesEliminations(board, notesBoard.value), gameVariant.value);
+});
+function rightDigits(): Grid {
+  return currentBoard.value.map((row, r) =>
+    row.map((v, c) => (v && solvedBoard.value[r]![c] && v !== solvedBoard.value[r]![c] ? 0 : v)),
+  );
+}
+
+// "You spotted it": a technique the player finished by hand (its last pencil mark taken out), drawn
+// in pen over the board for a moment and named. Once per technique per game, so a common one
+// doesn't keep interrupting.
+const spotted = ref<{ technique: TechniqueId; marks: Mark[] } | null>(null);
+const spottedSeen = new Set<TechniqueId>();
+let spottedTimeout: ReturnType<typeof setTimeout> | undefined;
+// Before the mark goes: the move is read off the notes that still hold it.
+function spottedBy(r: number, c: number, num: number): SolveMove | null {
+  const move = spottedMove(rightDigits(), notesBoard.value, { r, c, num }, gameVariant.value);
+  return move && !spottedSeen.has(move.technique) ? move : null;
+}
+function showSpotted(move: SolveMove) {
+  spottedSeen.add(move.technique);
+  const notes = notesBoard.value;
+  const cands = getGridCandidates(currentBoard.value, gameVariant.value);
+  const noted = (r: number, c: number) => notes[r]![c]!.some(Boolean);
+  const has = (r: number, c: number, n: number) =>
+    noted(r, c) ? !!notes[r]![c]![n] : cands[r]![c]!.includes(n);
+  spotted.value = {
+    technique: move.technique,
+    marks: withGhosts(patternMarks(move, has, true), noted),
+  };
+  say(t("game.spotted", { name: t(`hint.move.${move.technique}.name`) }));
+  cue("unlock");
+  clearTimeout(spottedTimeout);
+  spottedTimeout = setTimeout(() => (spotted.value = null), 2800);
+}
 
 // Auto-save on every meaningful state change while a game is active.
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
@@ -369,8 +417,10 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   toastIds.value.push(...toasts);
   justUnlocked.value ??= opened;
   if (unlock) cue("unlock");
+  // Drops of the board's inks rather than paper confetti.
   confetti({
     disableForReducedMotion: true,
+    shapes: ["circle"],
     particleCount: 160,
     spread: 80,
     origin: { y: 0.55 },
@@ -478,6 +528,8 @@ function beginGame(
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
   techniqueLog.value = [];
+  spottedSeen.clear();
+  spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
   timer.resetTimer();
   if (save) timer.timerSeconds.value = save.timerSeconds;
@@ -587,8 +639,13 @@ watch(numberCounts, (counts) => {
 function flashCompletedUnits(r: number, c: number) {
   // Cells ripple outward from the digit just placed: 45 ms per step of distance.
   const RIPPLE_MS = 45;
-  const { units, digitDone, cells } = engine.completedAt(r, c);
+  const { units, done, digitDone, cells } = engine.completedAt(r, c);
   if (!cells.length) return;
+  if (done.length) {
+    clearTimeout(doneTimeout);
+    doneUnits.value = done;
+    doneTimeout = setTimeout(() => (doneUnits.value = []), 2000);
+  }
   const num = currentBoard.value[r]![c]!;
   if (units) cue("complete", units, num);
   if (digitDone) cue("digit", num);
@@ -599,6 +656,10 @@ function flashCompletedUnits(r: number, c: number) {
     })),
   );
 }
+
+// The pen strokes for the units a digit just finished, cleared once they've faded.
+const doneUnits = ref<BoardUnit[]>([]);
+let doneTimeout: ReturnType<typeof setTimeout> | undefined;
 
 // Longest delay + the 0.7 s animation, with headroom, then clear so the next flash can replay.
 function runFlash(cells: FlashCell[]) {
@@ -635,7 +696,9 @@ function handleInputNumber(num: number) {
 
   if (notesMode.value) {
     if (currentBoard.value[r]![c] !== 0) return;
+    const spot = notesBoard.value[r]![c]![num] ? spottedBy(r, c, num) : null;
     notesBoard.value[r]![c]![num] = !notesBoard.value[r]![c]![num];
+    if (spot) showSpotted(spot);
   } else {
     if (currentBoard.value[r]![c] === num) {
       currentBoard.value[r]![c] = 0;
@@ -1331,7 +1394,37 @@ onUnmounted(() => {
 
             <!-- Finish fills the board by itself: inert holds every tap and key until the win. -->
             <div class="relative flex flex-col gap-3" :inert="finishing">
+              <!-- Read out by say(); this is the sighted copy, over the board's top edge. -->
+              <Transition name="spot">
+                <p
+                  v-if="spotted"
+                  aria-hidden="true"
+                  data-testid="spotted"
+                  class="pointer-events-none absolute top-2 left-1/2 z-30 -translate-x-1/2 border border-emerald-600/40 bg-emerald-50 px-3 py-1 text-sm font-bold whitespace-nowrap text-emerald-800 shadow-md dark:border-emerald-400/40 dark:bg-emerald-950 dark:text-emerald-200"
+                >
+                  {{ $t("game.spotted", { name: $t(`hint.move.${spotted.technique}.name`) }) }}
+                </p>
+              </Transition>
               <SudokuGrid
+                v-if="replayFrame && showModal"
+                data-testid="replay-board"
+                :current-board="replayFrame.board"
+                :initial-board="initialBoard"
+                :solved-board="solvedBoard"
+                :notes-board="noNotes"
+                :selected-cell="null"
+                :active-hint-cell="replayFrame.placed"
+                :hint-triggers="[]"
+                :hint-eliminations="[]"
+                :conflict-cells="[]"
+                :color-mode="colorMode"
+                :flash-cells="[]"
+                :show-errors="false"
+                :theme="boardTheme"
+                :diagonal="gameVariant === 'x'"
+              />
+              <SudokuGrid
+                v-else
                 :current-board="currentBoard"
                 :initial-board="initialBoard"
                 :solved-board="solvedBoard"
@@ -1349,8 +1442,9 @@ onUnmounted(() => {
                 :plain-notes="!noteHighlight"
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
-                :marks="hintMarks"
+                :marks="spotted?.marks ?? hintMarks"
                 :diagonal="gameVariant === 'x'"
+                :done="doneUnits"
                 @select-cell="handleSelectCell"
               />
               <div class="flex flex-col gap-2.5">
@@ -1401,6 +1495,7 @@ onUnmounted(() => {
               @cancel="cancelComplexHint"
               :technique="engine.activeMove.value?.technique ?? null"
               :learned="lessonsDone"
+              :available="boardTechniques"
               @learn="openGameLesson"
             />
           </div>
@@ -1512,10 +1607,12 @@ onUnmounted(() => {
         :technique-log="techniqueLog"
         :next-level="nextLevel"
         :next-loading="nextLoading"
+        :variant="gameVariant"
         @next="handleNextPuzzle"
         @close="handleModalClose"
         @lesson="openLesson"
         @cue="cue"
+        @replay="(frame) => (replayFrame = frame)"
       />
 
       <!-- RESUME PROMPT -->
@@ -1533,6 +1630,19 @@ onUnmounted(() => {
 
 <!-- Non-scoped: the .dark ancestor lives on <html>, outside this component's scope. -->
 <style>
+/* "You spotted it": drops in over the board, then goes. */
+.spot-enter-active,
+.spot-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.spot-enter-from,
+.spot-leave-to {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+}
+
 /* Screen changes: a short fade with a small settle, not a slide. */
 .screen-enter-active,
 .screen-leave-active {

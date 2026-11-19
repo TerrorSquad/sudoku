@@ -19,3 +19,16 @@ test("a placement hint marks its target green, not as the yellow selection", asy
   // Below the general description, this move on this board, by its real row and column.
   await expect(page.getByTestId("hint-detail")).toContainText(/row 1, column [1-5]\b/);
 });
+
+test("the idle hint panel names what applies on the board, and steps aside for a hint", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(FIVE_BLANKS);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  const list = page.getByTestId("board-techniques");
+  await expect(list.getByRole("listitem")).toHaveText(["Naked Single", "Hidden Single"]);
+  await page.getByRole("button", { name: "Hint" }).first().click();
+  await expect(list).toBeHidden();
+});

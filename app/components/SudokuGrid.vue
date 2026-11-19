@@ -33,6 +33,8 @@ const props = defineProps<{
   marksKey?: number;
   /** X-Sudoku: both long diagonals are units, shaded, and count as peers and for candidates. */
   diagonal?: boolean;
+  /** Units the last digit finished, each ticked off in pen. */
+  done?: BoardUnit[];
 }>();
 
 // Which long diagonals (r = c, r + c = 8) a cell is on, as bits; none outside X-Sudoku.
@@ -154,6 +156,7 @@ function hasConflict(r: number, c: number): boolean {
       />
     </div>
     <PatternOverlay v-if="marks?.length" :key="marksKey ?? 0" :marks="marks" />
+    <UnitStrokes v-if="done?.length" :units="done" />
   </div>
 </template>
 
@@ -232,6 +235,83 @@ function hasConflict(r: number, c: number): boolean {
   --cell-given: #ffffff;
   --cell-entry: #8cb8ff;
   --cell-note: #ececec;
+}
+
+/* Blueprint: drafting lines and a technical hand; your marks in a red-orange markup pencil, yellow
+   on the night sheet. */
+.board[data-theme="blueprint"] {
+  --cell-bg: #fbfdff;
+  --cell-peer: #dde9f8;
+  --cell-diag: #edf3fb;
+  --cell-line: #a8c1e2;
+  --cell-box: #1f52a0;
+  --cell-frame: #1f52a0;
+  --cell-given: #122646;
+  --cell-entry: #c2410c;
+  --cell-note: #3f5f8f;
+}
+.dark .board[data-theme="blueprint"] {
+  --cell-bg: #134479;
+  --cell-peer: #1d5591;
+  --cell-diag: #174c86;
+  --cell-line: #3f6ea6;
+  --cell-box: #e9f0fa;
+  --cell-frame: #f6f9fd;
+  --cell-given: #ffffff;
+  --cell-entry: #ffd479;
+  --cell-note: #c9daf2;
+}
+.board[data-theme="blueprint"] .font-game {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+/* Chalkboard: ink on green-ruled paper; at night, chalk with yellow chalk for your entries. */
+.board[data-theme="chalkboard"] {
+  --cell-bg: #fbfcfa;
+  --cell-peer: #e1ecdc;
+  --cell-diag: #eef3ec;
+  --cell-line: #b5c9ad;
+  --cell-box: #2f5a3c;
+  --cell-frame: #24452e;
+  --cell-given: #182017;
+  --cell-entry: #1f4fa8;
+  --cell-note: #4a5a45;
+}
+.dark .board[data-theme="chalkboard"] {
+  --cell-bg: #2a3a31;
+  --cell-peer: #36493d;
+  --cell-diag: #304237;
+  --cell-line: #4b5f52;
+  --cell-box: #e7ebe4;
+  --cell-frame: #f4f6f2;
+  --cell-given: #f7f7f2;
+  --cell-entry: #f6d27a;
+  --cell-note: #c3cdbd;
+}
+.board[data-theme="chalkboard"] .font-game {
+  font-family: "Chalkboard SE", Chalkduster, "Comic Sans MS", "Comic Neue", cursive;
+}
+.dark .board[data-theme="chalkboard"] .font-game {
+  text-shadow: 0 0 0.06em currentColor;
+}
+/* Paper you can feel: a fine grain over newsprint and the chalkboard (chalk dust at night), one
+   static layer over the cells, under the pen. */
+.board[data-theme="newsprint"]::after,
+.board[data-theme="chalkboard"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.18;
+  mix-blend-mode: multiply;
+  box-shadow: inset 0 0 1.5rem rgb(0 0 0 / 0.06);
+}
+.dark .board[data-theme="newsprint"]::after,
+.dark .board[data-theme="chalkboard"]::after {
+  filter: invert(1);
+  opacity: 0.08;
+  mix-blend-mode: screen;
 }
 
 .board {

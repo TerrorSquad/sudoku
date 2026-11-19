@@ -20,8 +20,9 @@ for (const page of ["index.html", "200.html"]) {
 }
 
 // Totals, lazy chunks included (first load is far smaller: the entry was ~213 KB at v1.12.0).
-const WARN_AT = { js: 1300, css: 180 }; // KB, raw: 1197 and 154 at v1.12.0 (Diagonal, XY-Chain, levels)
-const FAIL_AT = { js: 1500, css: 220 }; // KB
+// js +530: the lazy three.js chunk for the 3D skyline (522 KB), loaded only on that screen.
+const WARN_AT = { js: 1830, css: 180 }; // KB, raw: 1197 and 154 at v1.12.0 (Diagonal, XY-Chain, levels)
+const FAIL_AT = { js: 2030, css: 220 }; // KB
 const strict = process.env.BUDGET_STRICT === "1";
 let over = false;
 const dir = ".output/public/_nuxt";

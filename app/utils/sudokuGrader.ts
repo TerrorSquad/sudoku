@@ -1189,33 +1189,38 @@ function findXYChainMove(s: SolveState): SolveMove | null {
 }
 
 // Easiest-first dispatch — mirrors the grading tier order.
+const FINDERS: ((s: SolveState) => SolveMove | null)[] = [
+  findNakedSingleMove,
+  findHiddenSingleMove,
+  findBoxLineMove,
+  (s) => findNakedSubsetMove(s, 2),
+  (s) => findHiddenSubsetMove(s, 2),
+  (s) => findNakedSubsetMove(s, 3),
+  (s) => findHiddenSubsetMove(s, 3),
+  (s) => findFishMove(s, 2),
+  (s) => findNakedSubsetMove(s, 4),
+  (s) => findHiddenSubsetMove(s, 4),
+  (s) => findFishMove(s, 3),
+  (s) => findTurbotMove(s, false),
+  (s) => findTurbotMove(s, true),
+  (s) => findFinnedFishMove(s, 2),
+  findUniqueRectangleMove,
+  findXYWingMove,
+  findWWingMove,
+  findEmptyRectangleMove,
+  (s) => findFishMove(s, 4),
+  (s) => findFinnedFishMove(s, 3),
+  findXYZWingMove,
+  findSimpleColoringMove,
+  findBugPlusOneMove,
+  findXYChainMove,
+];
 function findNextMove(s: SolveState): SolveMove | null {
-  return (
-    findNakedSingleMove(s) ??
-    findHiddenSingleMove(s) ??
-    findBoxLineMove(s) ??
-    findNakedSubsetMove(s, 2) ??
-    findHiddenSubsetMove(s, 2) ??
-    findNakedSubsetMove(s, 3) ??
-    findHiddenSubsetMove(s, 3) ??
-    findFishMove(s, 2) ??
-    findNakedSubsetMove(s, 4) ??
-    findHiddenSubsetMove(s, 4) ??
-    findFishMove(s, 3) ??
-    findTurbotMove(s, false) ??
-    findTurbotMove(s, true) ??
-    findFinnedFishMove(s, 2) ??
-    findUniqueRectangleMove(s) ??
-    findXYWingMove(s) ??
-    findWWingMove(s) ??
-    findEmptyRectangleMove(s) ??
-    findFishMove(s, 4) ??
-    findFinnedFishMove(s, 3) ??
-    findXYZWingMove(s) ??
-    findSimpleColoringMove(s) ??
-    findBugPlusOneMove(s) ??
-    findXYChainMove(s)
-  );
+  for (const find of FINDERS) {
+    const move = find(s);
+    if (move) return move;
+  }
+  return null;
 }
 
 /** Grading runs the structured finders too: apply a found move's placement or eliminations. */
@@ -1224,6 +1229,15 @@ function applyMove(s: SolveState, move: SolveMove | null): boolean {
   if (move.placement) place(s, idx(move.placement.r, move.placement.c), move.placement.num);
   for (const e of move.eliminations) s.cands[idx(e.r, e.c)]! &= ~bit(e.num);
   return true;
+}
+
+function stateWith(board: Grid, eliminations: DigitAt[], variant: Variant): SolveState {
+  const s = initState(board, variant);
+  for (const e of eliminations) {
+    const i = idx(e.r, e.c);
+    if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
+  }
+  return s;
 }
 
 /**
@@ -1237,12 +1251,98 @@ export function nextHint(
   appliedEliminations: DigitAt[] = [],
   variant: Variant = "classic",
 ): SolveMove | null {
-  const s = initState(board, variant);
-  for (const e of appliedEliminations) {
-    const i = idx(e.r, e.c);
-    if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
-  }
+  const s = stateWith(board, appliedEliminations, variant);
   return findNextMove(s);
+}
+
+/**
+ * Every technique that applies to the board right now, easiest first: what the game's side panel
+ * lists, names only. Same candidates as `nextHint`.
+ */
+// ponytail: one finder covers pointing and box-line and returns the first it meets, so a board
+// with both lists only pointing; split findBoxLineMove if that matters.
+export function availableTechniques(
+  board: Grid,
+  appliedEliminations: DigitAt[] = [],
+  variant: Variant = "classic",
+): TechniqueId[] {
+  return [...new Set(movesNow(board, appliedEliminations, variant).map((m) => m.technique))];
+}
+
+/** The first move of every kind the finders see on the board, easiest first. */
+export function movesNow(
+  board: Grid,
+  appliedEliminations: DigitAt[] = [],
+  variant: Variant = "classic",
+): SolveMove[] {
+  const s = stateWith(board, appliedEliminations, variant);
+  return FINDERS.map((find) => find(s)).filter((m) => m !== null);
+}
+
+/**
+ * The technique a player just finished by hand: taking pencil mark `removed` out of `notes` (the
+ * notes before it goes) was the last removal of a move the finders see on the board those notes
+ * show. Removal moves past the singles only: those are the ones worth naming.
+ */
+// ponytail: each finder reports its first instance only, so a second X-Wing done by hand while
+// another stands untouched goes unnamed; collect every instance per finder if that matters.
+export function spottedMove(
+  board: Grid,
+  notes: boolean[][][],
+  removed: DigitAt,
+  variant: Variant = "classic",
+): SolveMove | null {
+  const moves = movesNow(board, notesEliminations(board, notes), variant);
+  return (
+    moves.find(
+      (m) =>
+        m.tier >= 2 &&
+        !m.placement &&
+        m.eliminations.length === 1 &&
+        m.eliminations[0]!.r === removed.r &&
+        m.eliminations[0]!.c === removed.c &&
+        m.eliminations[0]!.num === removed.num,
+    ) ?? null
+  );
+}
+
+/**
+ * What it took to place `cell` from `board`: the hardest technique the solver used on its way
+ * there, or null when it was a single (or the solver got stuck first).
+ */
+// ponytail: the solver goes easiest-first across the whole board, so a detour it takes elsewhere
+// can overstate a placement; replay from the cell's own units if that shows.
+export function techniqueFor(
+  board: Grid,
+  cell: CellRC,
+  variant: Variant = "classic",
+): TechniqueId | null {
+  const s = initState(board, variant);
+  let hardest: SolveMove | null = null;
+  while (!s.board[idx(cell.r, cell.c)]) {
+    const move = findNextMove(s);
+    if (!move) return null;
+    if (!hardest || move.tier > hardest.tier) hardest = move;
+    applyMove(s, move);
+  }
+  return hardest && hardest.tier > 1 ? hardest.technique : null;
+}
+
+/**
+ * What a player's pencil marks rule out: in an empty cell with notes, every digit they don't show
+ * (a cell without notes rules out nothing). For `availableTechniques`, so its list matches the
+ * board the player sees; never fed to hints, which don't take a note's gap as a deduction.
+ */
+export function notesEliminations(board: Grid, notes: boolean[][][]): DigitAt[] {
+  const out: DigitAt[] = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const n = notes[r]![c]!;
+      if (board[r]![c] || !n.some(Boolean)) continue;
+      for (let num = 1; num <= 9; num++) if (!n[num]) out.push({ r, c, num });
+    }
+  }
+  return out;
 }
 
 /**

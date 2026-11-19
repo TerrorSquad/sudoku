@@ -1,7 +1,9 @@
 // "Watch your solve": a won game's placement log replayed over its givens, move by move.
 // Pure, unit-tested in tests/replay.test.ts.
-import type { Grid } from "../types/sudoku";
+import type { Grid, Variant } from "../types/sudoku";
 import type { Placement, StuckMoment } from "./stuckMoments";
+
+import { techniqueFor, type TechniqueId } from "./sudokuGrader";
 
 /**
  * The board the replay starts from (digits restored from an older save were already on it, at an
@@ -23,4 +25,19 @@ export function boardAt(start: Grid, moves: Placement[], step: number): Grid {
   const board = start.map((row) => [...row]);
   for (const p of moves.slice(0, step)) board[p.r]![p.c] = p.num;
   return board;
+}
+
+/**
+ * The moves that took more than a single: the step that shows each (its digit just placed) and the
+ * hardest technique the solver needed to get there from the board before it.
+ */
+export function hardMoves(
+  start: Grid,
+  moves: Placement[],
+  variant: Variant = "classic",
+): { step: number; technique: TechniqueId }[] {
+  return moves.flatMap((p, i) => {
+    const technique = techniqueFor(boardAt(start, moves, i), p, variant);
+    return technique ? [{ step: i + 1, technique }] : [];
+  });
 }

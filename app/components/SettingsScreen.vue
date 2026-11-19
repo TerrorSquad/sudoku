@@ -129,6 +129,8 @@ const style = computed({
             <option value="tiles">{{ $t("settings.boardTiles") }}</option>
             <option value="newsprint">{{ $t("settings.boardNewsprint") }}</option>
             <option value="contrast">{{ $t("settings.boardContrast") }}</option>
+            <option value="blueprint">{{ $t("settings.boardBlueprint") }}</option>
+            <option value="chalkboard">{{ $t("settings.boardChalkboard") }}</option>
           </select>
         </label>
 

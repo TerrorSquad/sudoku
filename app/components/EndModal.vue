@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WinResult } from "../composables/useWinResult";
-import type { Difficulty, Grid } from "../types/sudoku";
+import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
 import type { Placement } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
@@ -23,12 +23,14 @@ const props = defineProps<{
   techniqueLog: TechniqueId[];
   nextLevel: Difficulty | null;
   nextLoading: boolean;
+  variant?: Variant;
 }>();
 const emit = defineEmits<{
   next: [];
   close: [];
   lesson: [id: TechniqueId];
   cue: [kind: "tick" | "stamp", ...n: number[]];
+  replay: [frame: { board: Grid; placed: Placement | null } | null];
 }>();
 
 const { t } = useI18n();
@@ -141,8 +143,10 @@ function handleModalKey(e: KeyboardEvent) {
     emit("close");
   }
 }
-// "Watch your solve", over the modal: its keys are its own (Esc closes it, back to here).
+// "Watch your solve", over the modal: its keys are its own (Esc closes it, back to here). It plays
+// on the game's own board (`replay` frames), so the modal steps aside while it's open.
 const watching = ref(false);
+watch(watching, (on) => on || emit("replay", null));
 const canWatch = computed(() => props.win && props.placements.some((p) => !p.restored));
 function onKey(e: KeyboardEvent) {
   // The real dialog state: its close event (which clears `watching`) comes a task after Esc.
@@ -162,13 +166,21 @@ onMounted(() => {
   <div
     data-end-modal
     data-pad-scope
-    :class="[win ? 'modal-delay' : '', { 'win-done': winSkipped }]"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+    :class="[
+      win ? 'modal-delay' : '',
+      { 'win-done': winSkipped, 'bg-black/80 backdrop-blur-sm': !watching },
+    ]"
+    class="fixed inset-0 z-50 flex items-center justify-center px-4"
     @pointerdown="winStep && skipWinSteps()"
   >
+    <!-- invisible, not v-show: hiding it for the replay mustn't replay its entrance. A win turns
+         the page to the result; a game over just pops up. -->
     <div
-      class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
-      :class="win ? '!border-t-emerald-500' : '!border-t-rose-500'"
+      class="panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
+      :class="[
+        win ? 'page-turn !border-t-emerald-500' : 'modal-pop !border-t-rose-500',
+        { invisible: watching },
+      ]"
     >
       <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
         {{ title }}
@@ -331,7 +343,7 @@ onMounted(() => {
     </div>
     <SheetDialog
       v-model:open="watching"
-      class="panel m-auto max-h-[calc(100dvh-2rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-5 text-inherit backdrop:bg-black/50"
+      class="panel mx-auto mt-auto mb-4 max-h-[calc(100dvh-2rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto p-4 text-inherit backdrop:bg-transparent lg:mr-8 lg:mb-8"
       :aria-label="$t('modal.watch')"
     >
       <SolveReplay
@@ -340,7 +352,9 @@ onMounted(() => {
         :placements="placements"
         :stuck="result.stuck"
         :zen="zen"
+        :variant="variant"
         @lesson="(id) => emit('lesson', id)"
+        @frame="(board, placed) => emit('replay', { board, placed })"
       />
       <button @click="watching = false" class="tile mt-3 w-full py-2 text-sm font-bold">
         {{ $t("modal.close") }}
@@ -394,8 +408,28 @@ onMounted(() => {
   }
 }
 
-/* "Perfect!" in the teacher's red pen, stamped on at a slant. */
+/* A win turns the puzzle book's page: the result is printed on the next one. It starts once the
+   win wave has swept the board (.modal-delay). */
+.page-turn {
+  transform-origin: left center;
+  animation: page-turn 0.6s 0.9s cubic-bezier(0.2, 0.75, 0.3, 1) both;
+}
+@keyframes page-turn {
+  from {
+    opacity: 0;
+    transform: perspective(75rem) rotateY(-80deg);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    transform: perspective(75rem) rotateY(0);
+  }
+}
+
+/* "Perfect!" in the teacher's red pen, stamped on at a slant, over a blot of its ink. */
 .perfect-stamp {
+  position: relative;
   display: inline-block;
   padding: 0.2rem 0.8rem;
   border: 0.25rem double currentColor;
@@ -410,6 +444,25 @@ onMounted(() => {
 }
 .dark .perfect-stamp {
   color: var(--color-rose-300);
+}
+.perfect-stamp::before {
+  content: "";
+  position: absolute;
+  inset: -55% -22%;
+  z-index: -1;
+  background: currentColor;
+  opacity: 0.13;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Cpath d='M50 8c8 0 10 6 17 5s14 3 13 11 8 9 3 15-12 4-15 9-12 5-19 2-13 1-17-5-14-6-12-13 2-9 9-13 9-11 20-12z'/%3E%3Ccircle cx='88' cy='14' r='3'/%3E%3Ccircle cx='12' cy='46' r='2.5'/%3E%3Ccircle cx='93' cy='44' r='1.8'/%3E%3Ccircle cx='20' cy='10' r='1.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0);
+}
+.stamp-in::before {
+  animation: ink-blot 0.3s 0.12s ease-out forwards;
+}
+@keyframes ink-blot {
+  to {
+    transform: scale(1);
+  }
 }
 .stamp-in {
   animation: stamp-in 0.3s cubic-bezier(0.3, 1.3, 0.5, 1) both;
@@ -429,10 +482,15 @@ onMounted(() => {
 }
 
 /* Skipped (a tap or a key): everything is already in place. */
+.win-done .page-turn,
 .win-done .win-in,
 .win-done .star-pop,
-.win-done .stamp-in {
+.win-done .stamp-in,
+.win-done .stamp-in::before {
   animation: none;
+}
+.win-done .stamp-in::before {
+  transform: scale(1);
 }
 
 @keyframes score-badge {

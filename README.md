@@ -37,6 +37,12 @@ Press **N** (or the Notes button) to toggle pencil-mark mode. In this mode, numb
 
 The hint system detects whichever technique applies to the current board state and walks you through it step by step — from the simplest to the most advanced.
 
+On wide screens, the idle hint panel also lists every technique that applies to the board right now, by name only, so you know what to look for without being told where. Finish a technique yourself (take out the last pencil mark it removes) and the game names it and draws the pattern in pen.
+
+After a win, **Watch your solve** replays your moves on the board, marks the ones that took more than a single, and can show the finished board in 3D.
+
+Themes: Graph paper, Newsprint, High contrast, Blueprint and Chalkboard, each with a light and a dark look.
+
 ### 1 · Naked Single
 
 **When:** Only one number is possible in a cell.
