@@ -77,3 +77,38 @@ test("a tapped pencil mark or numpad digit lights that candidate up everywhere",
   await expect(chip(2, 4)).toHaveClass(/bg-violet-600/);
   await expect(chip(2, 3)).not.toHaveClass(/bg-violet-600/);
 });
+
+test("Settings can turn off picking a digit by tapping a mark, and the mark highlight", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("switch", { name: "Tap a note to pick its digit" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
+  await playCustom(page, blank(0, 1, 2, 3, 4));
+  const chip = (n: number, d: number) => cell(page, n).locator(`[data-note="${d}"] span`);
+  await page.keyboard.press("n");
+  await cell(page, 0).click();
+  await page.keyboard.press("3");
+  await cell(page, 2).click();
+  await page.keyboard.press("3");
+
+  // A tapped mark only selects its cell.
+  await cell(page, 0).locator('[data-note="3"]').click();
+  await expect(cell(page, 0)).toHaveAttribute("aria-selected", "true");
+  await expect(chip(2, 3)).not.toHaveClass(/bg-violet-600/);
+
+  // The numpad still picks its digit (pencilling 3 into cell 1), and the marks light up...
+  await cell(page, 1).click();
+  await page.getByTestId("numpad").getByRole("button", { name: /^3,/ }).click();
+  await expect(chip(2, 3)).toHaveClass(/bg-violet-600/);
+
+  // ...until the highlight is turned off, from Settings over the paused game.
+  await page.getByLabel("Pause").click();
+  await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("switch", { name: "Highlight digit in notes" }).click();
+  await page.keyboard.press("Escape");
+  await page.locator(".pause-overlay").getByRole("button", { name: "Resume" }).click();
+  await expect(chip(2, 3)).toHaveText("3");
+  await expect(chip(2, 3)).not.toHaveClass(/bg-violet-600/);
+});

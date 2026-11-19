@@ -128,7 +128,7 @@ test.describe("Display size", () => {
     await expect(page.locator("[data-cell]")).toHaveCount(81);
     await expect.poll(rootSize).toBe("16px");
     await page.getByLabel("Pause").click();
-    // Settings slides over the game, so it keeps the game's size too: resizing would shift the board.
+    // Settings opens over the game, so it keeps the game's size too: resizing would shift the board.
     await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
     await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
     await expect.poll(rootSize).toBe("16px");

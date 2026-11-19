@@ -3,8 +3,8 @@ import type { HintStyle, MistakeLimit } from "../composables/usePreferences";
 import type { Backup } from "../utils/progressBackup";
 
 // Opened over the game (app.vue's sheet): back returns to it, and the settings a game is started
-// with (colour mode, the mistake limit) stay locked until it ends. `timed`: its clock is running.
-defineProps<{ inGame?: boolean; timed?: boolean }>();
+// with (colour mode, the mistake limit) stay locked until it ends.
+defineProps<{ inGame?: boolean }>();
 const emit = defineEmits<{ (e: "back-to-menu"): void; (e: "tour"): void }>();
 
 const {
@@ -17,6 +17,8 @@ const {
   highlightErrors,
   hintStyle,
   showCandidates,
+  noteHighlight,
+  noteTap,
   boardTheme,
   uiScale,
   controlsTour,
@@ -98,8 +100,7 @@ const style = computed({
         >
           {{ $t("settings.title") }}
         </h1>
-        <p v-if="inGame && timed" class="text-xs text-zinc-500">{{ $t("settings.clockRuns") }}</p>
-        <p v-else class="hidden text-xs text-zinc-500 sm:block">{{ $t("settings.subtitle") }}</p>
+        <p class="hidden text-xs text-zinc-500 sm:block">{{ $t("settings.subtitle") }}</p>
       </div>
     </ScreenHeader>
 
@@ -171,6 +172,22 @@ const style = computed({
             <span class="s-hint">{{ $t("settings.showCandidatesHint") }}</span>
           </span>
           <USwitch v-model="showCandidates" />
+        </label>
+
+        <label class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.noteHighlight") }}</span>
+            <span class="s-hint">{{ $t("settings.noteHighlightHint") }}</span>
+          </span>
+          <USwitch v-model="noteHighlight" />
+        </label>
+
+        <label class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.noteTap") }}</span>
+            <span class="s-hint">{{ $t("settings.noteTapHint") }}</span>
+          </span>
+          <USwitch v-model="noteTap" />
         </label>
 
         <label class="s-row">
