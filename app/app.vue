@@ -304,13 +304,14 @@ const lessonsDone = computed(() => {
 });
 // The hint panel's "on this board" list: technique names only, never where. Only while the panel
 // is on screen (lg+) and idle; a wrong entry is left out, as the solver takes every digit as true.
+// It reads the player's notes, so a single their marks leave shows up.
 const widePanel = useMediaQuery("(min-width: 1024px)");
 const boardTechniques = computed<TechniqueId[]>(() => {
   if (!widePanel.value || activeComplexHint.value || currentScreen.value !== "game") return [];
   const board = currentBoard.value.map((row, r) =>
     row.map((v, c) => (v && solvedBoard.value[r]![c] && v !== solvedBoard.value[r]![c] ? 0 : v)),
   );
-  return availableTechniques(board, [], gameVariant.value);
+  return availableTechniques(board, notesEliminations(board, notesBoard.value), gameVariant.value);
 });
 
 // Auto-save on every meaningful state change while a game is active.
