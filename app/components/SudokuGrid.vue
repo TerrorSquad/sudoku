@@ -59,6 +59,16 @@ function isCellHighlighted(r: number, c: number): boolean {
   return r === selR || c === selC || inSameBox || !!(diagBits(r, c) & diagBits(selR, selC));
 }
 
+// The Tab stop with nothing selected: the cell shown top-left.
+const corner = computed(() => unturnCell({ r: 0, c: 0 }, props.turn ?? 0));
+// Only a turn forward animates: a new board's reset to 0 snaps back instead of spinning through
+// every turn so far.
+const spinning = ref(false);
+watch(
+  () => props.turn ?? 0,
+  (now, before) => (spinning.value = now > before),
+);
+
 function flashFor(r: number, c: number): FlashCell | undefined {
   return props.flashCells.find((cell) => cell.r === r && cell.c === c);
 }
@@ -129,7 +139,7 @@ function hasConflict(r: number, c: number): boolean {
     :aria-label="$t('a11y.board')"
     :data-theme="theme ?? 'tiles'"
     :data-turn="turn ? ((turn % 4) + 4) % 4 : undefined"
-    :class="{ turned: turn }"
+    :class="{ turned: turn, spinning }"
     :style="turn ? { '--turn': turn } : undefined"
     class="board @container relative grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[0.1875rem] select-none lg:mx-auto lg:max-w-[calc(100vh-18.75rem)]"
   >
@@ -158,7 +168,11 @@ function hasConflict(r: number, c: number): boolean {
         :is-diagonal="!!diagBits(r, c)"
         :note-digit="noteDigit(r, c)"
         :turn="turn"
-        :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
+        :tab-stop="
+          selectedCell
+            ? selectedCell.r === r && selectedCell.c === c
+            : r === corner.r && c === corner.c
+        "
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
         @click="(note?: number) => emit('select-cell', { r, c }, note)"
@@ -335,8 +349,8 @@ function hasConflict(r: number, c: number): boolean {
   rotate: calc(var(--turn) * -90deg);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .board,
-  .board .cell > * {
+  .board.spinning,
+  .board.spinning .cell > * {
     transition: rotate 0.3s ease-in-out;
   }
 }
