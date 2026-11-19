@@ -18,6 +18,7 @@ export function useGameInput({
   hasKeys,
   paused,
   finishing,
+  turn,
   act,
 }: {
   digitFirst: Ref<boolean>;
@@ -33,12 +34,15 @@ export function useGameInput({
   hasKeys: () => boolean;
   paused: () => boolean;
   finishing: () => boolean;
+  /** Quarter turns of the board on screen (utils/boardTurn): arrows move the way it shows. */
+  turn?: Ref<number>;
   act: {
     input: (num: number) => void;
     erase: () => void;
     undo: () => void;
     redo: () => void;
     hint: () => void;
+    turn: () => void;
     autoNotes: () => void;
     history: () => void;
     pause: () => void;
@@ -109,7 +113,8 @@ export function useGameInput({
       return;
     }
     // Arrows and WASD walk the grid (so auto-fill notes lives on F, not A).
-    const to = stepCell(selectedCell.value, e.key.length === 1 ? e.key.toLowerCase() : e.key);
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const to = stepCell(selectedCell.value, key, turn?.value);
     if (to) {
       e.preventDefault();
       focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
@@ -127,6 +132,8 @@ export function useGameInput({
       act.hint();
     } else if (e.key.toLowerCase() === "f") {
       act.autoNotes();
+    } else if (e.key.toLowerCase() === "r") {
+      act.turn();
     } else if (e.shiftKey && e.key.toLowerCase() === "z") {
       act.history();
     }

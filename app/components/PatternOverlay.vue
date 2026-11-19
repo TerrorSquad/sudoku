@@ -5,16 +5,27 @@
 
 import type { Mark } from "../utils/patternMarks";
 
-const props = defineProps<{ marks: Mark[] }>();
+// turn: the board's quarter turns. Pencil marks turn back upright inside their cells, so the pen
+// moves with them (turnSlot) and a written digit turns back too.
+const props = defineProps<{ marks: Mark[]; turn?: number }>();
 
 const ORDER: Record<Mark["kind"], number> = { frame: 0, line: 1, ring: 2, cross: 3, place: 3 };
 const drawn = computed(() =>
   props.marks
-    .map((m) => ({ m, key: JSON.stringify(m) }))
+    .map((m) => ({ m: turned(m), key: JSON.stringify(m) }))
     .filter((d, i, all) => all.findIndex((e) => e.key === d.key) === i)
     .toSorted((a, b) => ORDER[a.m.kind] - ORDER[b.m.kind])
     .map((d, i) => ({ ...d, delay: `${Math.min(i, 14) * 60}ms` })),
 );
+function turned(m: Mark): Mark {
+  const q = props.turn ?? 0;
+  if (!q) return m;
+  if (m.kind === "line") return { ...m, a: turnSlot(m.a, q), b: turnSlot(m.b, q) };
+  return m.kind === "ring" || m.kind === "cross" ? { ...m, at: turnSlot(m.at, q) } : m;
+}
+// Turns a ring's or cross's own drawing back upright about its point.
+const upright = (at: { x: number; y: number }) =>
+  props.turn ? `rotate(${-90 * props.turn} ${at.x} ${at.y})` : undefined;
 // A cross: a short pen stroke rising through the mark.
 const S = 0.13;
 </script>
@@ -49,7 +60,11 @@ const S = 0.13;
         :y2="m.b.y"
         pathLength="1"
       />
-      <g v-else-if="m.kind === 'ring'" :class="m.tone === 'alt' ? 'pm-alt' : ''">
+      <g
+        v-else-if="m.kind === 'ring'"
+        :class="m.tone === 'alt' ? 'pm-alt' : ''"
+        :transform="upright(m.at)"
+      >
         <text
           v-if="m.ghost"
           class="pm-ghost-digit pm-ink"
@@ -69,7 +84,7 @@ const S = 0.13;
           pathLength="1"
         />
       </g>
-      <g v-else-if="m.kind === 'cross'" :class="{ 'pm-ghost': m.fade }">
+      <g v-else-if="m.kind === 'cross'" :class="{ 'pm-ghost': m.fade }" :transform="upright(m.at)">
         <text
           v-if="m.ghost"
           class="pm-ghost-digit"

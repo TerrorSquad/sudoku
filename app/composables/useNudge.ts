@@ -3,6 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { useSudokuEngine } from "./useSudokuEngine";
 
+import { turnUnit } from "../utils/boardTurn";
 import { patternUnit, unitNumber, type BoardUnit, type TechniqueId } from "../utils/sudokuGrader";
 
 // "Nudge first" hint style: the first press names the technique and the row, column or box its
@@ -10,15 +11,16 @@ import { patternUnit, unitNumber, type BoardUnit, type TechniqueId } from "../ut
 // button) gives the full step-by-step explanation.
 export function useNudge(
   engine: Pick<ReturnType<typeof useSudokuEngine>, "currentBoard" | "peekHint"> &
-    Partial<Pick<ReturnType<typeof useSudokuEngine>, "variant">>,
+    Partial<Pick<ReturnType<typeof useSudokuEngine>, "variant" | "turn">>,
   hintsUsed: Ref<number>,
   inGame: Ref<boolean>,
 ) {
   const { t } = useI18n();
   const nudge = ref<{ unit: BoardUnit; technique: TechniqueId | null } | null>(null);
   const nudgeUnit = computed(() => {
-    const u = nudge.value?.unit;
-    if (!u) return "";
+    const unit = nudge.value?.unit;
+    if (!unit) return "";
+    const u = turnUnit(unit, engine.turn?.value ?? 0); // as the player sees the board
     return t(`hint.nudge.unit.${u.kind}`, { n: unitNumber(u) });
   });
   // Set once a nudge has counted as a hint: explaining and applying that same step is free.

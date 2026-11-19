@@ -98,6 +98,7 @@ const {
   solvedBoard,
   notesBoard,
   selectedCell,
+  turn,
   conflictCells,
   numberCounts,
   activeHintCell,
@@ -267,7 +268,8 @@ const inGame = computed(
 );
 // The Academy lesson to open on, when a win-modal chip led there.
 const academyFocus = ref<TechniqueId | null>(null);
-const mistakeExplainer = ref<string>("");
+// Built when shown, so its row and column follow a turn of the board.
+const mistakeExplainer = ref<(() => string) | null>(null);
 // Every correct digit that went in, on the clock, for "Where you got stuck" on the win modal.
 const placements = ref<Placement[]>([]);
 function logPlacement({ r, c, num }: DigitAt) {
@@ -528,7 +530,7 @@ function beginGame(
   activeDifficulty.value = difficulty;
   mistakes.value = save?.mistakes ?? 0;
   say(t(save ? "game.ready" : "game.newBoard"));
-  mistakeExplainer.value = "";
+  mistakeExplainer.value = null;
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
@@ -622,12 +624,14 @@ const { activeDigit, pickedDigit, handleNumpad, handleSelectCell, handleKeyDown 
     !practiceLoading.value,
   paused: () => isPaused.value,
   finishing: () => finishing.value,
+  turn,
   act: {
     input: handleInputNumber,
     erase: () => eraseCell(selectedCell.value),
     undo,
     redo,
     hint: handleTriggerHint,
+    turn: () => turn.value++,
     autoNotes: handleAutoFillNotes,
     history: openHistory,
     pause: togglePause,
@@ -672,11 +676,15 @@ function runFlash(cells: FlashCell[]) {
   }, longest + 900);
 }
 
-// Winning sweeps a diagonal wave across the whole board before the result appears.
+// Winning sweeps a diagonal wave across the whole board, from its top-left corner as shown,
+// before the result appears.
 function flashWin() {
   const cells: FlashCell[] = [];
   for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) cells.push({ r, c, delay: (r + c) * 45 });
+    for (let c = 0; c < 9; c++) {
+      const p = turnCell({ r, c }, turn.value);
+      cells.push({ r, c, delay: (p.r + p.c) * 45 });
+    }
   }
   runFlash(cells);
 }
@@ -718,8 +726,10 @@ function handleInputNumber(num: number) {
         } else {
           cue("mistake");
           if (conflicts.length > 0) {
-            const inRow = conflicts.some((cc) => cc.r === r);
-            const inCol = conflicts.some((cc) => cc.c === c);
+            // Named as the board shows: a turned board's data row is a column on screen.
+            const at = turnCell({ r, c }, turn.value);
+            const inRow = conflicts.some((cc) => turnCell(cc, turn.value).r === at.r);
+            const inCol = conflicts.some((cc) => turnCell(cc, turn.value).c === at.c);
             const sameBox = (cc: CellCoord) =>
               Math.floor(cc.r / 3) === Math.floor(r / 3) &&
               Math.floor(cc.c / 3) === Math.floor(c / 3);
@@ -727,9 +737,9 @@ function handleInputNumber(num: number) {
             // X-Sudoku: what's left clashes only along a diagonal.
             const inDiag = conflicts.some((cc) => cc.r !== r && cc.c !== c && !sameBox(cc));
             const where = inRow
-              ? t("game.whereRow", { n: r + 1 })
+              ? t("game.whereRow", { n: at.r + 1 })
               : inCol
-                ? t("game.whereCol", { n: c + 1 })
+                ? t("game.whereCol", { n: at.c + 1 })
                 : inBox
                   ? t("game.whereBox")
                   : inDiag
@@ -737,19 +747,16 @@ function handleInputNumber(num: number) {
                     : t("game.whereCell");
             say(t("game.conflictWith", { where }));
             const first = conflicts[0]!;
-            mistakeExplainer.value = t(
-              gameVariant.value === "x" ? "game.whyConflictX" : "game.whyConflict",
-              {
-                num: digitLabel(num, colorMode.value, t),
-                r: first.r + 1,
-                c: first.c + 1,
-              },
-            );
+            const key = gameVariant.value === "x" ? "game.whyConflictX" : "game.whyConflict";
+            const label = digitLabel(num, colorMode.value, t);
+            mistakeExplainer.value = () => {
+              const p = turnCell(first, turn.value);
+              return t(key, { num: label, r: p.r + 1, c: p.c + 1 });
+            };
           } else {
             say(t("game.wrongDigit"));
-            mistakeExplainer.value = t("game.whyWrong", {
-              num: digitLabel(num, colorMode.value, t),
-            });
+            const text = t("game.whyWrong", { num: digitLabel(num, colorMode.value, t) });
+            mistakeExplainer.value = () => text;
           }
           if (!gameZen.value && mistakeLimit.value > 0 && mistakes.value >= mistakeLimit.value) {
             triggerLocalModal(
@@ -760,7 +767,7 @@ function handleInputNumber(num: number) {
         }
       } else {
         cue("place", num);
-        mistakeExplainer.value = "";
+        mistakeExplainer.value = null;
         clearRelationalNotes(r, c, num);
         logPlacement({ r, c, num });
         // The ripple and its chime confirm correctness, so they're off with mistake highlighting.
@@ -1061,6 +1068,7 @@ function padKeys(digit: number): PadKeys {
       pause: "p",
       help: "?",
       history: "Z",
+      turn: "r",
     };
   // A presses a focused button; How to play has no cells to tap, so there A enters the digit too.
   return {
@@ -1252,6 +1260,7 @@ onUnmounted(() => {
               :show-mistakes="highlightErrors && !gameZen"
               :difficulty="difficultyLabel"
               @toggle-pause="!finishing && togglePause()"
+              @turn="turn++"
               @exit-game="exitToMenu"
             />
 
@@ -1271,9 +1280,9 @@ onUnmounted(() => {
               v-if="mistakeExplainer"
               class="flex items-start justify-between gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-700 dark:text-rose-300"
             >
-              <p>{{ mistakeExplainer }}</p>
+              <p>{{ mistakeExplainer() }}</p>
               <button
-                @click="mistakeExplainer = ''"
+                @click="mistakeExplainer = null"
                 :aria-label="$t('modal.close')"
                 class="shrink-0 px-1 font-bold transition-colors hover:text-rose-900 dark:hover:text-rose-100"
               >
@@ -1311,6 +1320,7 @@ onUnmounted(() => {
                 :show-errors="false"
                 :theme="boardTheme"
                 :diagonal="gameVariant === 'x'"
+                :turn="turn"
               />
               <SudokuGrid
                 v-else
@@ -1333,6 +1343,7 @@ onUnmounted(() => {
                 :nudge="nudge?.unit"
                 :marks="spotted?.marks ?? hintMarks"
                 :diagonal="gameVariant === 'x'"
+                :turn="turn"
                 :done="doneUnits"
                 @select-cell="handleSelectCell"
               />
