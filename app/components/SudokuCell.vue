@@ -30,6 +30,8 @@ const props = defineProps<{
   isDiagonal?: boolean;
   /** The single Tab stop in the grid: the selected cell, or the first when nothing is selected. */
   tabStop: boolean;
+  /** The board's quarter turns: the label names the row and column as shown. */
+  turn?: number;
 }>();
 
 const emit = defineEmits<{
@@ -87,7 +89,8 @@ watch(
 
 // Screen-reader description: position, state and value (colour name in colour mode), plus notes.
 const label = computed(() => {
-  const pos = t("a11y.cellPos", { r: props.row + 1, c: props.col + 1 });
+  const at = turnCell({ r: props.row, c: props.col }, props.turn ?? 0);
+  const pos = t("a11y.cellPos", { r: at.r + 1, c: at.c + 1 });
   if (props.value !== 0) {
     const v = digitLabel(props.value, props.colorMode, t);
     const kind = props.isInitial

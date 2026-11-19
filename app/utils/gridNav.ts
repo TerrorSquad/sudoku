@@ -2,6 +2,8 @@ import { nextTick } from "vue";
 
 import type { CellCoord, NotesGrid } from "../types/sudoku";
 
+import { turnCell, unturnCell } from "./boardTurn";
+
 // Arrows and WASD both walk the grid, so no board puts another shortcut on W, A, S or D.
 const STEPS: Record<string, [number, number]> = {
   ArrowUp: [-1, 0],
@@ -40,12 +42,17 @@ export function boardKey(e: KeyboardEvent, onBack: () => void): string | null {
 
 /**
  * The cell `key` (a letter lower-cased) moves to from `cur`, clamped at the edges, or null when
- * it isn't a move key. With nothing selected, the first press lands on the top-left cell.
+ * it isn't a move key. With nothing selected, the first press lands on the top-left cell. On a
+ * board turned `turn` quarters (utils/boardTurn) it moves the way the player sees it.
  */
-export function stepCell(cur: CellCoord | null, key: string): CellCoord | null {
+export function stepCell(cur: CellCoord | null, key: string, turn = 0): CellCoord | null {
   const step = STEPS[key];
   if (!step) return null;
-  return cur ? { r: clamp(cur.r + step[0]), c: clamp(cur.c + step[1]) } : { r: 0, c: 0 };
+  const at = cur && turnCell(cur, turn);
+  return unturnCell(
+    at ? { r: clamp(at.r + step[0]), c: clamp(at.c + step[1]) } : { r: 0, c: 0 },
+    turn,
+  );
 }
 
 /** A wrong tap's shake; none with reduced motion. */

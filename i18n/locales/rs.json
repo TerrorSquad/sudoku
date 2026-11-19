@@ -37,6 +37,7 @@
   "game.pausedTitle": "Pauzirano",
   "game.pause": "Pauziraj",
   "game.resume": "Nastavi",
+  "game.turn": "Okreni tablu",
   "game.newBoard": "Nova tabla učitana!",
   "game.spotted": "Uočio si: {name}",
   "game.notesFilled": "Beleške automatski popunjene!",
@@ -839,6 +840,7 @@
   "lesson.cellDone": "Tu je sve obrisano što treba.",
   "modal.nextPuzzle": "Sledeća tabla: {level}",
   "sidebar.shortcutPause": "Pauza / nastavak",
+  "sidebar.shortcutTurn": "Okreni tablu za četvrt kruga",
   "sidebar.shortcutHelp": "Sve prečice",
   "sidebar.tour": "Pokaži obilazak kontrola",
   "modal.share": "Podeli rezultat",
@@ -971,6 +973,6 @@
   "challenge.won": "🏁 Brži si od prijatelja za {time}!",
   "challenge.lost": "Prijatelj je bio brži za {time}. Još jednom?",
   "challenge.tie": "🏁 Nerešeno sa prijateljem, u sekund!",
-  "pad.game": "A upiši · LB/RB cifra · X beleške · B obriši · Y pomoć · LT istorija · Start pauza",
+  "pad.game": "A upiši · LB/RB cifra · X beleške · B obriši · Y pomoć · LT istorija · RT okreni · Start pauza",
   "pad.academy": "A izaberi · X upiši cifru · LB/RB cifra · Y pokaži · B nazad"
 }

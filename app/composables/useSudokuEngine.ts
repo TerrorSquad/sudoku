@@ -1,8 +1,9 @@
-import { ref, computed, onScopeDispose, type Ref } from "vue";
+import { ref, computed, onScopeDispose, watch, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate, Variant } from "../types/sudoku";
 
+import { turnCell, turnHas, turnMove } from "../utils/boardTurn";
 import { narrate } from "../utils/explain";
 import { emptyNotes } from "../utils/gridNav";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "../utils/patternMarks";
@@ -58,6 +59,9 @@ export function useSudokuEngine(
   const redoHistory = ref<{ board: Grid; notes: NotesGrid }[]>([]);
 
   const selectedCell = ref<CellCoord | null>(null);
+  // Quarter turns of the board on screen (utils/boardTurn), clockwise, back to 0 on every board.
+  // Display only: the words for a position (hints) follow it, nothing stored does.
+  const turn = ref(0);
 
   const activeComplexHint = ref<ComplexHint | null>(null);
   const currentStepIndex = ref<number>(0);
@@ -139,10 +143,11 @@ export function useSudokuEngine(
   }
 
   function buildWrongEntryHint({ r, c }: CellCoord): ComplexHint {
+    const at = turnCell({ r, c }, turn.value);
     const params = {
       num: digitLabel(currentBoard.value[r]![c]!, colorMode.value, t),
-      row: r + 1,
-      col: c + 1,
+      row: at.r + 1,
+      col: at.c + 1,
     };
     return {
       title: t("hint.wrong.name"),
@@ -203,6 +208,7 @@ export function useSudokuEngine(
     boardHistory.value = [];
     redoHistory.value = [];
     selectedCell.value = null;
+    turn.value = 0;
     cancelComplexHint();
     resetHintChain();
     clearApplied();
@@ -391,7 +397,14 @@ export function useSudokuEngine(
     const has = (r: number, c: number, n: number) =>
       cands[r]![c]!.includes(n) &&
       !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
-    const story = narrate(move, has, t, digit, variant.value);
+    // Told on the board as the player sees it: turned, its rows and columns are named as shown.
+    const story = narrate(
+      turnMove(move, turn.value),
+      turnHas(has, turn.value),
+      t,
+      digit,
+      variant.value,
+    );
     // The last step names the cells to change: the result, and reasoning that already names them.
     const told = (last: boolean) =>
       story.filter((s) => (s.step === "result" || !!s.answer) === last).map((s) => s.text);
@@ -415,12 +428,13 @@ export function useSudokuEngine(
     let actionStep: ExplanationStep;
     if (move.placement) {
       targetCell = { r: move.placement.r, c: move.placement.c };
+      const at = turnCell(targetCell, turn.value);
       actionStep = {
         label: t("hint.move.placeLabel"),
         description: t("hint.move.placeStep", {
           num: digitLabel(move.placement.num, colorMode.value, t),
-          row: move.placement.r + 1,
-          col: move.placement.c + 1,
+          row: at.r + 1,
+          col: at.c + 1,
         }),
         detail: told(true),
         highlightCoords: [], // the target is drawn on its own, in the legend's green
@@ -488,6 +502,15 @@ export function useSudokuEngine(
     updateStepHighlights();
     return hint.title;
   }
+
+  // Turning the board retells an open hint in the rows and columns the player now sees.
+  watch(turn, () => {
+    const hint = activeComplexHint.value;
+    if (hint?.wrongEntry && hint.targetCell)
+      activeComplexHint.value = buildWrongEntryHint(hint.targetCell);
+    else if (hint && activeMove.value)
+      activeComplexHint.value = buildHintFromMove(activeMove.value);
+  });
 
   function nextHintStep(onComplete: () => void) {
     if (!activeComplexHint.value) return;
@@ -585,6 +608,7 @@ export function useSudokuEngine(
     solvedBoard,
     notesBoard,
     selectedCell,
+    turn,
     conflictCells,
     numberCounts,
     activeHintCell,

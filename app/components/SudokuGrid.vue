@@ -35,6 +35,11 @@ const props = defineProps<{
   diagonal?: boolean;
   /** Units the last digit finished, each ticked off in pen. */
   done?: BoardUnit[];
+  /**
+   * Clockwise quarter turns (utils/boardTurn). The whole board turns as one, its pen with it; each
+   * cell's contents turn back so digits stay upright and pencil marks keep their slots.
+   */
+  turn?: number;
 }>();
 
 // Which long diagonals (r = c, r + c = 8) a cell is on, as bits; none outside X-Sudoku.
@@ -53,6 +58,16 @@ function isCellHighlighted(r: number, c: number): boolean {
     Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3);
   return r === selR || c === selC || inSameBox || !!(diagBits(r, c) & diagBits(selR, selC));
 }
+
+// The Tab stop with nothing selected: the cell shown top-left.
+const corner = computed(() => unturnCell({ r: 0, c: 0 }, props.turn ?? 0));
+// Only a turn forward animates: a new board's reset to 0 snaps back instead of spinning through
+// every turn so far.
+const spinning = ref(false);
+watch(
+  () => props.turn ?? 0,
+  (now, before) => (spinning.value = now > before),
+);
 
 function flashFor(r: number, c: number): FlashCell | undefined {
   return props.flashCells.find((cell) => cell.r === r && cell.c === c);
@@ -123,6 +138,9 @@ function hasConflict(r: number, c: number): boolean {
     role="grid"
     :aria-label="$t('a11y.board')"
     :data-theme="theme ?? 'tiles'"
+    :data-turn="turn ? ((turn % 4) + 4) % 4 : undefined"
+    :class="{ turned: turn, spinning }"
+    :style="turn ? { '--turn': turn } : undefined"
     class="board @container relative grid aspect-square w-full grid-cols-9 grid-rows-9 overflow-hidden rounded-xl border-[0.1875rem] select-none lg:mx-auto lg:max-w-[calc(100vh-18.75rem)]"
   >
     <!-- display: contents keeps the visual grid flat while giving screen readers real rows. -->
@@ -149,13 +167,18 @@ function hasConflict(r: number, c: number): boolean {
         :is-nudged="isNudged(r, c)"
         :is-diagonal="!!diagBits(r, c)"
         :note-digit="noteDigit(r, c)"
-        :tab-stop="selectedCell ? selectedCell.r === r && selectedCell.c === c : r === 0 && c === 0"
+        :turn="turn"
+        :tab-stop="
+          selectedCell
+            ? selectedCell.r === r && selectedCell.c === c
+            : r === corner.r && c === corner.c
+        "
         :is-hint-trigger="hintTriggers.some((h) => h.r === r && h.c === c)"
         :is-hint-elimination="hintEliminations.some((h) => h.r === r && h.c === c)"
         @click="(note?: number) => emit('select-cell', { r, c }, note)"
       />
     </div>
-    <PatternOverlay v-if="marks?.length" :key="marksKey ?? 0" :marks="marks" />
+    <PatternOverlay v-if="marks?.length" :key="marksKey ?? 0" :marks="marks" :turn="turn" />
     <UnitStrokes v-if="done?.length" :units="done" />
   </div>
 </template>
@@ -316,6 +339,20 @@ function hasConflict(r: number, c: number): boolean {
 
 .board {
   border-color: var(--cell-frame);
+}
+/* Turned: one transform on the board; the cells' contents turn back by the same amount (static
+   between turns, so a move starts no transition on the cells). Without a turn neither is set. */
+.board.turned {
+  rotate: calc(var(--turn) * 90deg);
+}
+.board.turned .cell > * {
+  rotate: calc(var(--turn) * -90deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .board.spinning,
+  .board.spinning .cell > * {
+    transition: rotate 0.3s ease-in-out;
+  }
 }
 .board .cell {
   background-color: var(--cell-bg);

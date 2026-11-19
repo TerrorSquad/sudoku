@@ -19,6 +19,7 @@ defineProps<{
 defineEmits<{
   (e: "toggle-pause"): void;
   (e: "exit-game"): void;
+  (e: "turn"): void;
 }>();
 </script>
 
@@ -67,6 +68,19 @@ defineEmits<{
           ></span
         >
       </div>
+      <!-- A quarter turn clockwise, to see the position another way (rows scan easier). -->
+      <button
+        data-testid="turn-board"
+        @click="$emit('turn')"
+        :aria-label="$t('game.turn')"
+        :title="`${$t('game.turn')} (R)`"
+        class="rounded p-1 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800"
+      >
+        <AppIcon
+          class="h-4 w-4 text-zinc-600 dark:text-zinc-400"
+          path="M20 12a8 8 0 1 1-8-8m0 0L9 1m3 3L9 7"
+        />
+      </button>
       <button
         @click="$emit('toggle-pause')"
         :aria-label="isPaused ? $t('game.resume') : $t('game.pause')"

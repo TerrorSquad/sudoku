@@ -11,6 +11,7 @@ const SHORTCUTS = [
   { key: "N", desc: "sidebar.shortcutToggleNotes" },
   { key: "H", desc: "sidebar.shortcutGetHint" },
   { key: "F", desc: "sidebar.shortcutAutoFillNotes" },
+  { key: "R", desc: "sidebar.shortcutTurn" },
   { key: "P", desc: "sidebar.shortcutPause" },
   { key: "Ctrl+Z", desc: "sidebar.shortcutUndo" },
   { key: "Ctrl+Y", desc: "sidebar.shortcutRedo" },
