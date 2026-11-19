@@ -78,8 +78,9 @@ const CUES = {
   tick: [playTick, null],
   stamp: [playStamp, "stamp"],
 } as const;
-// `arg` tunes the sound: the digit for a placement or a finished digit, units completed at once
-// for a completion, the star's number for a tick.
+// `arg` tunes the sound: the digit for a placement, units completed at once and the digit for a
+// completion, the digit and those units for a finished digit (it waits for their chord), the
+// star's number for a tick.
 function cue(kind: keyof typeof CUES, ...arg: number[]) {
   const [sound, vibration] = CUES[kind];
   if (soundEnabled.value) (sound as (...a: number[]) => void)(...arg);
@@ -648,7 +649,7 @@ function flashCompletedUnits(r: number, c: number) {
   }
   const num = currentBoard.value[r]![c]!;
   if (units) cue("complete", units, num);
-  if (digitDone) cue("digit", num);
+  if (digitDone) cue("digit", num, units);
   runFlash(
     cells.map((p) => ({
       ...p,
