@@ -26,6 +26,7 @@ function setup() {
     numberCounts: ref(Array(10).fill(0) as number[]),
     notesMode: ref(false),
     inGame: ref(true),
+    turn: ref(0),
     keys: true,
     isPaused: false,
     isFinishing: false,
@@ -89,6 +90,16 @@ describe("useGameInput", () => {
     g.handleKeyDown(key("d"));
     expect(g.s.selectedCell.value).toEqual({ r: 0, c: 1 });
     expect(g.s.log).toEqual([]);
+  });
+
+  it("R turns the board, and arrows then move the way it shows", () => {
+    const g = setup();
+    g.handleKeyDown(key("r"));
+    expect(g.s.log).toEqual(["turn"]);
+    g.s.turn.value = 1; // data (4, 0) shows at the top, fifth from the left
+    g.s.selectedCell.value = { r: 4, c: 0 };
+    g.handleKeyDown(key("ArrowRight"));
+    expect(g.s.selectedCell.value).toEqual({ r: 3, c: 0 });
   });
 
   it("keys: P pauses, and a paused or finishing game takes no moves", () => {
