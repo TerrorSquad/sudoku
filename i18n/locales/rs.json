@@ -105,6 +105,7 @@
   "sidebar.legendDiagonal": "Dijagonala",
   "hint.panelTitle": "Nagoveštaji",
   "hint.panelDesc": "Zaglavio si se? Pritisni Nagoveštaj (H) i ovde ćeš videti sledeći logičan korak, zaključak po zaključak.",
+  "hint.onThisBoard": "Na tabli upravo sada",
   "hint.detectedTechnique": "Otkrivena tehnika",
   "hint.step": "Korak {n}",
   "hint.targetCell": "Ciljno polje (polje koje se rešava)",

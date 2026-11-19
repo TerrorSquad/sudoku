@@ -284,9 +284,9 @@ for (const theme of ["light", "dark"] as const) {
       await place(page, 73, "4");
       await page.getByTestId("watch-solve").click();
       await page.getByRole("button", { name: "Stuck at 00:50" }).click();
-      await settle(page);
-      // The dialog alone: confetti may still be falling behind it.
-      await expect(page.locator("dialog[open]")).toHaveScreenshot(`${theme}/solve-replay.png`);
+      // The whole screen, as it plays on the game's board: once the confetti has fallen.
+      await expect(page.locator("canvas")).toHaveCount(0, { timeout: 15_000 });
+      await shot(page, "solve-replay");
     });
   });
 }

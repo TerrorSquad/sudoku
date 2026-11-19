@@ -5,27 +5,26 @@ import type { TechniqueId } from "../utils/sudokuGrader";
 
 // "Watch your solve" (the win modal): the game's placements replayed over its givens, with the
 // stuck moments marked on the timeline and, at each one, the technique that would have broken it.
-// One board re-rendered per step, no cell animations.
+// The controls only: each step's board goes out as `frame`, for the game's own board to show.
 const props = defineProps<{
   puzzle: Grid;
   placements: Placement[];
   stuck: StuckMoment[];
   zen: boolean; // no clock
 }>();
-const emit = defineEmits<{ lesson: [id: TechniqueId] }>();
+const emit = defineEmits<{
+  lesson: [id: TechniqueId];
+  frame: [board: Grid, placed: Placement | null];
+}>();
 
-const { colorMode, boardTheme } = usePreferences();
 const { start, moves, marks } = replayOf(props.puzzle, props.placements, props.stuck);
 const last = moves.length;
-const solved = boardAt(start, moves, last);
-const noNotes = Array.from({ length: 9 }, () =>
-  Array.from({ length: 9 }, () => Array<boolean>(10).fill(false)),
-);
 
 const step = ref(0);
 const board = computed(() => boardAt(start, moves, step.value));
 const placed = computed(() => moves[step.value - 1] ?? null);
 const mark = computed(() => marks.find((m) => m.step === step.value));
+watch([board, placed], ([b, p]) => emit("frame", b, p), { immediate: true });
 
 const playing = ref(false);
 // Reduced motion: no autoplay, just the step controls. Read once, like WatchExample.
@@ -83,28 +82,9 @@ function onKey(e: KeyboardEvent) {
     data-testid="solve-replay"
     @keydown="onKey"
   >
-    <h2 class="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-50">{{ $t("modal.watch") }}</h2>
-    <!-- Read-only: the caption below says what each step put in. -->
-    <div inert class="mx-auto max-w-[18rem]">
-      <SudokuGrid
-        :current-board="board"
-        :initial-board="puzzle"
-        :solved-board="solved"
-        :notes-board="noNotes"
-        :selected-cell="null"
-        :active-hint-cell="placed"
-        :hint-triggers="[]"
-        :hint-eliminations="[]"
-        :conflict-cells="[]"
-        :color-mode="colorMode"
-        :flash-cells="[]"
-        :show-errors="false"
-        :theme="boardTheme"
-      />
-    </div>
-
+    <h2 class="mb-2 text-lg font-bold text-zinc-900 dark:text-zinc-50">{{ $t("modal.watch") }}</h2>
     <p
-      class="mt-3 text-center text-xs font-semibold text-zinc-600 tabular-nums dark:text-zinc-400"
+      class="text-center text-xs font-semibold text-zinc-600 tabular-nums dark:text-zinc-400"
       aria-live="polite"
       data-testid="replay-step"
     >

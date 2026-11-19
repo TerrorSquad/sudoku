@@ -228,6 +228,9 @@ const showModal = ref<boolean>(false);
 const modalTitle = ref<string>("");
 const modalMessage = ref<string>("");
 const isWinState = ref<boolean>(false);
+// "Watch your solve" plays on the game's own board: the step the win modal's replay is showing.
+const replayFrame = ref<{ board: Grid; placed: Placement | null } | null>(null);
+const noNotes = emptyNotes();
 
 const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
@@ -298,6 +301,16 @@ const bestTime = computed(() => {
 const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
+});
+// The hint panel's "on this board" list: technique names only, never where. Only while the panel
+// is on screen (lg+) and idle; a wrong entry is left out, as the solver takes every digit as true.
+const widePanel = useMediaQuery("(min-width: 1024px)");
+const boardTechniques = computed<TechniqueId[]>(() => {
+  if (!widePanel.value || activeComplexHint.value || currentScreen.value !== "game") return [];
+  const board = currentBoard.value.map((row, r) =>
+    row.map((v, c) => (v && solvedBoard.value[r]![c] && v !== solvedBoard.value[r]![c] ? 0 : v)),
+  );
+  return availableTechniques(board, [], gameVariant.value);
 });
 
 // Auto-save on every meaningful state change while a game is active.
@@ -1333,6 +1346,25 @@ onUnmounted(() => {
             <!-- Finish fills the board by itself: inert holds every tap and key until the win. -->
             <div class="relative flex flex-col gap-3" :inert="finishing">
               <SudokuGrid
+                v-if="replayFrame && showModal"
+                data-testid="replay-board"
+                :current-board="replayFrame.board"
+                :initial-board="initialBoard"
+                :solved-board="solvedBoard"
+                :notes-board="noNotes"
+                :selected-cell="null"
+                :active-hint-cell="replayFrame.placed"
+                :hint-triggers="[]"
+                :hint-eliminations="[]"
+                :conflict-cells="[]"
+                :color-mode="colorMode"
+                :flash-cells="[]"
+                :show-errors="false"
+                :theme="boardTheme"
+                :diagonal="gameVariant === 'x'"
+              />
+              <SudokuGrid
+                v-else
                 :current-board="currentBoard"
                 :initial-board="initialBoard"
                 :solved-board="solvedBoard"
@@ -1401,6 +1433,7 @@ onUnmounted(() => {
               @cancel="cancelComplexHint"
               :technique="engine.activeMove.value?.technique ?? null"
               :learned="lessonsDone"
+              :available="boardTechniques"
               @learn="openGameLesson"
             />
           </div>
@@ -1517,6 +1550,7 @@ onUnmounted(() => {
         @close="handleModalClose"
         @lesson="openLesson"
         @cue="cue"
+        @replay="(frame) => (replayFrame = frame)"
       />
 
       <!-- RESUME PROMPT -->

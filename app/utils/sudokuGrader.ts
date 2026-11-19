@@ -1189,33 +1189,38 @@ function findXYChainMove(s: SolveState): SolveMove | null {
 }
 
 // Easiest-first dispatch — mirrors the grading tier order.
+const FINDERS: ((s: SolveState) => SolveMove | null)[] = [
+  findNakedSingleMove,
+  findHiddenSingleMove,
+  findBoxLineMove,
+  (s) => findNakedSubsetMove(s, 2),
+  (s) => findHiddenSubsetMove(s, 2),
+  (s) => findNakedSubsetMove(s, 3),
+  (s) => findHiddenSubsetMove(s, 3),
+  (s) => findFishMove(s, 2),
+  (s) => findNakedSubsetMove(s, 4),
+  (s) => findHiddenSubsetMove(s, 4),
+  (s) => findFishMove(s, 3),
+  (s) => findTurbotMove(s, false),
+  (s) => findTurbotMove(s, true),
+  (s) => findFinnedFishMove(s, 2),
+  findUniqueRectangleMove,
+  findXYWingMove,
+  findWWingMove,
+  findEmptyRectangleMove,
+  (s) => findFishMove(s, 4),
+  (s) => findFinnedFishMove(s, 3),
+  findXYZWingMove,
+  findSimpleColoringMove,
+  findBugPlusOneMove,
+  findXYChainMove,
+];
 function findNextMove(s: SolveState): SolveMove | null {
-  return (
-    findNakedSingleMove(s) ??
-    findHiddenSingleMove(s) ??
-    findBoxLineMove(s) ??
-    findNakedSubsetMove(s, 2) ??
-    findHiddenSubsetMove(s, 2) ??
-    findNakedSubsetMove(s, 3) ??
-    findHiddenSubsetMove(s, 3) ??
-    findFishMove(s, 2) ??
-    findNakedSubsetMove(s, 4) ??
-    findHiddenSubsetMove(s, 4) ??
-    findFishMove(s, 3) ??
-    findTurbotMove(s, false) ??
-    findTurbotMove(s, true) ??
-    findFinnedFishMove(s, 2) ??
-    findUniqueRectangleMove(s) ??
-    findXYWingMove(s) ??
-    findWWingMove(s) ??
-    findEmptyRectangleMove(s) ??
-    findFishMove(s, 4) ??
-    findFinnedFishMove(s, 3) ??
-    findXYZWingMove(s) ??
-    findSimpleColoringMove(s) ??
-    findBugPlusOneMove(s) ??
-    findXYChainMove(s)
-  );
+  for (const find of FINDERS) {
+    const move = find(s);
+    if (move) return move;
+  }
+  return null;
 }
 
 /** Grading runs the structured finders too: apply a found move's placement or eliminations. */
@@ -1224,6 +1229,15 @@ function applyMove(s: SolveState, move: SolveMove | null): boolean {
   if (move.placement) place(s, idx(move.placement.r, move.placement.c), move.placement.num);
   for (const e of move.eliminations) s.cands[idx(e.r, e.c)]! &= ~bit(e.num);
   return true;
+}
+
+function stateWith(board: Grid, eliminations: DigitAt[], variant: Variant): SolveState {
+  const s = initState(board, variant);
+  for (const e of eliminations) {
+    const i = idx(e.r, e.c);
+    if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
+  }
+  return s;
 }
 
 /**
@@ -1237,12 +1251,24 @@ export function nextHint(
   appliedEliminations: DigitAt[] = [],
   variant: Variant = "classic",
 ): SolveMove | null {
-  const s = initState(board, variant);
-  for (const e of appliedEliminations) {
-    const i = idx(e.r, e.c);
-    if (s.board[i] === 0) s.cands[i]! &= ~bit(e.num);
-  }
+  const s = stateWith(board, appliedEliminations, variant);
   return findNextMove(s);
+}
+
+/**
+ * Every technique that applies to the board right now, easiest first: what the game's side panel
+ * lists, names only. Same candidates as `nextHint`.
+ */
+// ponytail: one finder covers pointing and box-line and returns the first it meets, so a board
+// with both lists only pointing; split findBoxLineMove if that matters.
+export function availableTechniques(
+  board: Grid,
+  appliedEliminations: DigitAt[] = [],
+  variant: Variant = "classic",
+): TechniqueId[] {
+  const s = stateWith(board, appliedEliminations, variant);
+  const found = FINDERS.map((find) => find(s)?.technique).filter((t) => t !== undefined);
+  return [...new Set(found)];
 }
 
 /**

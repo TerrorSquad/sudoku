@@ -105,6 +105,7 @@
   "sidebar.legendDiagonal": "Diagonal",
   "hint.panelTitle": "Hints",
   "hint.panelDesc": "Stuck? Press Hint (H) and this panel walks you through the next logical step, one deduction at a time.",
+  "hint.onThisBoard": "On the board right now",
   "hint.detectedTechnique": "Detected Technique",
   "hint.step": "Step {n}",
   "hint.targetCell": "Target cell (the cell being solved)",
