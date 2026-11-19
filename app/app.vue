@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Component } from "vue";
-
 // Nuxt UI has no Serbian: its own strings stay English. Importing every locale cost 228 KB.
 import { en as uiLocale } from "@nuxt/ui/locale";
 import confetti from "canvas-confetti";
@@ -39,7 +37,6 @@ const {
   diagonal,
   boardTheme,
   uiScale,
-  controlsTour,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
@@ -94,7 +91,6 @@ const engine = useSudokuEngine(
   computed(() => !highlightErrors.value),
   gameVariant,
 );
-const timer = useTimer();
 
 const {
   currentBoard,
@@ -199,6 +195,25 @@ const currentScreen = ref<
   | "basics"
   | "spot"
 >("menu");
+// The clock, its holds, the pause and what goes over the paused game (useGameSession).
+const {
+  timer,
+  clockHolds,
+  isPaused,
+  togglePause,
+  settingsOverGame,
+  SettingsSheet,
+  openGameSettings,
+  shortcutsOpen,
+  touring,
+  startTour,
+  onScreenEntered,
+  ControlsTour,
+} = useGameSession({
+  live: () => currentScreen.value === "game",
+  finishing: () => finishing.value,
+  onAway: () => (historyOpen.value = false),
+});
 // The Spot it tier being played (the spot screen).
 const spotTier = ref<Tier>("Basic");
 // Set when the spot screen plays the Daily review (these techniques) instead of a tier.
@@ -242,18 +257,6 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
-// Settings opened from the pause screen open over it: the game stays paused and the board covered.
-const settingsOverGame = ref(false);
-// Loaded before the sheet opens: showModal() focuses its first button, so that must be there.
-const SettingsSheet = shallowRef<Component>();
-async function openGameSettings() {
-  // A dynamic import, not an auto-import's duplicate: the same lazy chunk as the Settings screen.
-  // oxlint-disable-next-line eslint/no-restricted-imports
-  SettingsSheet.value ??= (await import("./components/SettingsScreen.vue")).default;
-  // The player may have left the game (or resumed it) while it loaded.
-  if (currentScreen.value !== "game" || !timer.isPaused.value) return;
-  settingsOverGame.value = true;
-}
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
@@ -383,7 +386,7 @@ function triggerLocalModal(title: string, message: string, win: boolean = false)
   winResult.value = null;
   showModal.value = true;
   activeDigit.value = pickedDigit.value = null;
-  timer.stopTimer();
+  clockHolds.add("finished");
   const practised = practiceTechnique.value;
   // Read before this game's save is cleared: a level open only through it isn't news.
   const lockedBefore =
@@ -480,7 +483,8 @@ function closeModal() {
   justUnlocked.value = null;
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  timer.resetTimer();
+  clockHolds.clear();
+  timer.timerSeconds.value = 0;
 }
 function handleModalClose() {
   closeModal();
@@ -532,9 +536,9 @@ function beginGame(
   spottedSeen.clear();
   spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
-  timer.resetTimer();
-  if (save) timer.timerSeconds.value = save.timerSeconds;
-  timer.startTimer();
+  // On the game screen with nothing holding it, the clock runs.
+  clockHolds.clear();
+  timer.timerSeconds.value = save?.timerSeconds ?? 0;
   currentScreen.value = "game";
 }
 
@@ -597,42 +601,38 @@ function handleResumeDecline() {
   pendingResume.value = null;
 }
 
-// Digit-first input: the numpad arms a digit, and tapping a cell places it. Tapping a given
-// does nothing but select; tapping a cell that already holds the armed digit removes it.
-const activeDigit = ref<number | null>(null);
-// A digit lit up everywhere, its pencil marks too: picked by tapping a pencil mark, or on the
-// numpad or keys outside digit-first. Selecting a cell any other way drops it.
-const pickedDigit = ref<number | null>(null);
-
-function handleNumpad(num: number) {
-  if (digitFirst.value) {
-    activeDigit.value = activeDigit.value === num ? null : num;
-    pickedDigit.value = null;
-    return;
-  }
-  pickedDigit.value = num;
-  handleInputNumber(num);
-}
-
-function handleSelectCell(coord: CellCoord, note?: number) {
-  selectedCell.value = coord;
-  pickedDigit.value = (noteTap.value && note) || null;
-  if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
-    return;
-  // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
-  // different entry must not silently replace it (and cost a mistake).
-  const held = currentBoard.value[coord.r]![coord.c];
-  if (held === 0 || held === activeDigit.value) handleInputNumber(activeDigit.value);
-}
-
-// An armed digit is meaningless once the player leaves the game, turns the mode off, or has
-// placed all nine of it.
-watch([inGame, digitFirst], () => {
-  if (!inGame.value || !digitFirst.value) activeDigit.value = null;
-  if (!inGame.value) pickedDigit.value = null;
-});
-watch(numberCounts, (counts) => {
-  if (activeDigit.value && counts[activeDigit.value]! >= 9) activeDigit.value = null;
+const { activeDigit, pickedDigit, handleNumpad, handleSelectCell, handleKeyDown } = useGameInput({
+  digitFirst,
+  noteTap,
+  selectedCell,
+  initialBoard,
+  currentBoard,
+  numberCounts,
+  notesMode,
+  inGame,
+  // A sheet over the game takes the keys. Read the real dialog state, not the v-models: Esc
+  // closes a dialog at once but its close event (which clears the model) comes a task later, so a
+  // key pressed right after Esc would be dropped.
+  // practiceLoading: a lesson opening over the paused game must keep it paused.
+  hasKeys: () =>
+    !showModal.value && // EndModal's own keys
+    currentScreen.value === "game" &&
+    !document.body.classList.contains("driver-active") && // the tour has the keys
+    !document.querySelector("dialog[open]") &&
+    !practiceLoading.value,
+  paused: () => isPaused.value,
+  finishing: () => finishing.value,
+  act: {
+    input: handleInputNumber,
+    erase: () => eraseCell(selectedCell.value),
+    undo,
+    redo,
+    hint: handleTriggerHint,
+    autoNotes: handleAutoFillNotes,
+    history: openHistory,
+    pause: togglePause,
+    shortcuts: () => (shortcutsOpen.value = true),
+  },
 });
 
 // A correct placement may finish a row, column, and/or box, or the last of a digit — flash every
@@ -682,7 +682,7 @@ function flashWin() {
 }
 
 function handleInputNumber(num: number) {
-  if (timer.isPaused.value || showModal.value || finishing.value || !selectedCell.value) return;
+  if (isPaused.value || showModal.value || finishing.value || !selectedCell.value) return;
   const { r, c } = selectedCell.value;
 
   if (initialBoard.value[r]![c] !== 0) return;
@@ -808,7 +808,7 @@ watch(currentScreen, () => (finishing.value = false));
 // and the lesson's Back returns to it.
 function openGameLesson(id: TechniqueId | null | undefined) {
   if (!id || practiceLoading.value) return;
-  if (!timer.isPaused.value) timer.togglePause();
+  clockHolds.add("paused");
   academyFromGame.value = true;
   academyFocus.value = id;
   handleLesson(id, 1); // stuck on it in a game: learned from the start, guided
@@ -855,9 +855,9 @@ const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 // flash and placement cue (all at once under reduced motion), then the usual win flow runs.
 async function handleFinish() {
   const path = finishPath.value;
-  if (!path || finishing.value || timer.isPaused.value) return;
+  if (!path || finishing.value || isPaused.value) return;
   finishing.value = true;
-  timer.stopTimer();
+  clockHolds.add("finished");
   cancelComplexHint();
   engine.resetHintChain();
   nudge.value = null;
@@ -879,7 +879,7 @@ async function handleFinish() {
   if (!checkWin()) {
     // Shouldn't happen (the board is inert meanwhile), but never leave the game locked.
     finishing.value = false;
-    timer.startTimer();
+    clockHolds.delete("finished");
   }
 }
 
@@ -982,8 +982,7 @@ function exitToMenu() {
   academyFromGame.value = false; // the game is over: no lesson or Academy returns to it
   practiceTechnique.value = null;
   isDailyMode.value = false;
-  timer.stopTimer();
-  cancelComplexHint();
+  cancelComplexHint(); // off the game screen, the clock stops
   currentScreen.value = "menu";
 }
 
@@ -1025,121 +1024,11 @@ function openHistory() {
   if (historyLength.value && !showModal.value && !practiceLoading.value) historyOpen.value = true;
 }
 function jumpHistory(step: number) {
-  if (showModal.value || practiceLoading.value || timer.isPaused.value) return;
+  if (showModal.value || practiceLoading.value || isPaused.value) return;
   const before = currentBoard.value.map((row) => [...row]);
   engine.jumpTo(step);
   logRestored(before);
   checkWin();
-}
-
-const shortcutsOpen = ref(false);
-// The controls tour (ControlsTour): once on a new player's first game, again from Settings or the
-// ? sheet. A paused game resumes so the controls show. The first one holds the clock (without the
-// pause overlay, which would cover the controls); a replay doesn't: no free look at the board.
-const touring = ref(false);
-let tourHoldsClock = false;
-async function startTour(holdClock = false) {
-  controlsTour.value = false;
-  shortcutsOpen.value = false;
-  settingsOverGame.value = false;
-  if (timer.isPaused.value) timer.togglePause();
-  tourHoldsClock = holdClock;
-  if (holdClock) timer.stopTimer();
-  await nextTick(); // a closing sheet hands focus back first, then the tour takes it
-  touring.value = true;
-}
-watch(touring, (on) => {
-  if (on || !tourHoldsClock) return;
-  tourHoldsClock = false;
-  const live = currentScreen.value === "game" && !timer.isPaused.value;
-  if (live && !finishing.value && !showModal.value) timer.startTimer();
-});
-function onScreenEntered() {
-  if (currentScreen.value === "game" && controlsTour.value) startTour(true);
-}
-// driver.js loads with the tour; if it can't, the tour is off, never a game stuck without keys.
-const ControlsTour = defineAsyncComponent({
-  // oxlint-disable-next-line eslint/no-restricted-imports -- LazyControlsTour has no onError
-  loader: () => import("./components/ControlsTour.vue"),
-  onError(_error, _retry, fail) {
-    touring.value = false;
-    fail();
-  },
-});
-
-function handleKeyDown(e: KeyboardEvent) {
-  if (showModal.value) return; // EndModal's own keys
-  // A sheet over the game takes the keys. Read the real dialog state, not the v-models: Esc
-  // closes a dialog at once but its close event (which clears the model) comes a task later, so a
-  // key pressed right after Esc would be dropped.
-  // practiceLoading: a lesson opening over the paused game must keep it paused.
-  if (
-    currentScreen.value !== "game" ||
-    document.body.classList.contains("driver-active") || // the tour has the keys
-    document.querySelector("dialog[open]") ||
-    practiceLoading.value
-  )
-    return;
-  if (e.key === "?") {
-    shortcutsOpen.value = true;
-    return;
-  }
-  if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey && !finishing.value) {
-    timer.togglePause();
-    return;
-  }
-  if (timer.isPaused.value) return;
-  if (showModal.value || practiceLoading.value || finishing.value) return;
-  // Browser/OS shortcuts (Cmd+R, Ctrl+A, Cmd+N…) must not trigger game actions; only
-  // undo/redo are claimed: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y.
-  if (e.metaKey || e.ctrlKey) {
-    const k = e.key.toLowerCase();
-    if (k === "z" && !e.shiftKey) undo();
-    else if ((k === "z" && e.shiftKey) || k === "y") redo();
-    else return;
-    e.preventDefault();
-    return;
-  }
-  if (e.key === "Escape" && (activeDigit.value || pickedDigit.value)) {
-    activeDigit.value = pickedDigit.value = null;
-    return;
-  }
-  // Arrows and WASD walk the grid (so auto-fill notes lives on F, not A).
-  const to = stepCell(selectedCell.value, e.key.length === 1 ? e.key.toLowerCase() : e.key);
-  if (to) {
-    e.preventDefault();
-    focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
-    pickedDigit.value = null;
-    return;
-  }
-  if (e.key >= "1" && e.key <= "9") {
-    if (!digitFirst.value) pickedDigit.value = parseInt(e.key);
-    handleInputNumber(parseInt(e.key));
-  } else if (e.key === "Backspace" || e.key === "Delete") {
-    eraseCell(selectedCell.value);
-  } else if (e.key.toLowerCase() === "n") {
-    notesMode.value = !notesMode.value;
-  } else if (e.key.toLowerCase() === "h") {
-    handleTriggerHint();
-  } else if (e.key.toLowerCase() === "f") {
-    handleAutoFillNotes();
-  } else if (e.shiftKey && e.key.toLowerCase() === "z") {
-    openHistory();
-  }
-}
-
-// Switching tabs/apps shouldn't quietly burn time against the player's score.
-function handlePageHidden() {
-  if (
-    document.hidden &&
-    currentScreen.value === "game" &&
-    !timer.isPaused.value &&
-    !finishing.value
-  ) {
-    timer.togglePause();
-    settingsOverGame.value = false; // back on the pause screen, which a paused clock needs
-    historyOpen.value = false;
-  }
 }
 
 // Controllers (usePad): B off the board needs to know the screens, and each board's keys.
@@ -1187,7 +1076,7 @@ const { connected: padConnected, digit: padDigit } = usePad({
   onBoard: () =>
     BOARD_SCREENS.has(currentScreen.value) &&
     padScope() === document &&
-    !(currentScreen.value === "game" && timer.isPaused.value),
+    !(currentScreen.value === "game" && isPaused.value),
   boardKeys: padKeys,
   onBack: padBack,
   onPause: () => {
@@ -1196,7 +1085,6 @@ const { connected: padConnected, digit: padDigit } = usePad({
 });
 
 useEventListener(window, "keydown", handleKeyDown);
-useEventListener(document, "visibilitychange", handlePageHidden);
 onMounted(() => {
   // Progress made before these achievements existed, or just restored from the cloud.
   checkAcademyAchievements();
@@ -1354,7 +1242,7 @@ onUnmounted(() => {
           <div class="flex w-full flex-col 3xl:col-span-1 lg:gap-3 lg:max-3xl:col-span-7">
             <GameDashboard
               :formatted-time="timer.formatTime(timer.timerSeconds.value)"
-              :is-paused="timer.isPaused.value"
+              :is-paused="isPaused"
               :mistakes="mistakes"
               :max-mistakes="mistakeLimit"
               :show-timer="showTimer && !gameZen"
@@ -1363,7 +1251,7 @@ onUnmounted(() => {
               :past-best="bestTime > 0 && timer.timerSeconds.value > bestTime"
               :show-mistakes="highlightErrors && !gameZen"
               :difficulty="difficultyLabel"
-              @toggle-pause="!finishing && timer.togglePause()"
+              @toggle-pause="!finishing && togglePause()"
               @exit-game="exitToMenu"
             />
 
@@ -1460,7 +1348,7 @@ onUnmounted(() => {
                   @toggle-notes="notesMode = !notesMode"
                   @trigger-hint="handleTriggerHint"
                   @auto-notes="handleAutoFillNotes"
-                  :can-finish="(!!finishPath || finishing) && !timer.isPaused.value"
+                  :can-finish="(!!finishPath || finishing) && !isPaused"
                   @finish="handleFinish"
                 />
 
@@ -1474,8 +1362,8 @@ onUnmounted(() => {
               </div>
 
               <PauseOverlay
-                v-if="timer.isPaused.value"
-                @resume="timer.togglePause()"
+                v-if="isPaused"
+                @resume="togglePause()"
                 @settings="openGameSettings"
                 @shortcuts="shortcutsOpen = true"
               />

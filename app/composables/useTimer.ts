@@ -8,9 +8,9 @@ export function formatTime(seconds: number): string {
   return `${min}:${sec}`;
 }
 
+// The game clock. When it runs is useClockHolds' call, not its callers'.
 export function useTimer() {
   const timerSeconds = ref<number>(0);
-  const isPaused = ref<boolean>(false);
   const {
     pause: stopTimer,
     resume,
@@ -20,31 +20,7 @@ export function useTimer() {
   function startTimer() {
     if (isActive.value) return; // resume() would restart the second under way
     resume();
-    isPaused.value = false;
   }
 
-  function resetTimer() {
-    stopTimer();
-    timerSeconds.value = 0;
-    isPaused.value = false;
-  }
-
-  function togglePause() {
-    if (isPaused.value) {
-      startTimer();
-    } else {
-      stopTimer();
-      isPaused.value = true;
-    }
-  }
-
-  return {
-    timerSeconds,
-    isPaused,
-    startTimer,
-    stopTimer,
-    resetTimer,
-    togglePause,
-    formatTime,
-  };
+  return { timerSeconds, startTimer, stopTimer, formatTime };
 }
