@@ -28,10 +28,6 @@ test("Settings opens over the paused game, and a theme change shows on the board
   await page.goto("/");
   await page.getByRole("button", { name: "New Game" }).click();
   await page.getByRole("button", { name: /Hard/ }).click();
-  // Selected before Settings opens, so a key leaking through would fill it.
-  const empty = page.locator('[data-cell][aria-label*="empty"]').first();
-  const at = await empty.getAttribute("data-cell");
-  await empty.click();
   await page.getByLabel("Pause").click();
 
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
@@ -51,9 +47,10 @@ test("Settings opens over the paused game, and a theme change shows on the board
   await expect(page.locator("html")).toHaveAttribute("data-theme", "newsprint");
   await expect(page.locator(".board")).toHaveAttribute("data-theme", "newsprint");
 
-  // Keys typed in the sheet never reach the board.
-  await page.keyboard.press("5");
-  await expect(page.locator(`[data-cell="${at}"]`)).toHaveAttribute("aria-label", /empty/);
+  // Keys typed in the sheet never reach the game: P would resume it behind the sheet.
+  await page.keyboard.press("p");
+  await expect(page.locator(".pause-overlay")).toBeVisible();
+  await expect(page.getByTestId("timer")).toHaveText(before ?? "");
 
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();

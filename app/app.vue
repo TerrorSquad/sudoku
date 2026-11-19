@@ -971,8 +971,7 @@ function jumpHistory(step: number) {
 const shortcutsOpen = ref(false);
 // The controls tour (ControlsTour): once on a new player's first game, again from Settings or the
 // ? sheet. A paused game resumes so the controls show. The first one holds the clock (without the
-// pause overlay, which would cover the controls); a replay doesn't, as with Settings over the game:
-// no free look at the board.
+// pause overlay, which would cover the controls); a replay doesn't: no free look at the board.
 const touring = ref(false);
 let tourHoldsClock = false;
 async function startTour(holdClock = false) {

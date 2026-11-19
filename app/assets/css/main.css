@@ -204,7 +204,6 @@
   --tile-lip: rgb(255 255 255 / 0.45);
 }
 
-/* Settings over the game: a sheet on the right, a bottom sheet on phones; the board stays in view. */
 /* Over the paused game (whose overlay already covers the board): centred, the bottom on phones. */
 .settings-sheet {
   margin: auto;
