@@ -33,8 +33,8 @@ const fresh =
 const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
 
 // Seasonal paper: a few pen-drawn bits drift down behind the menu (snow, leaves, petals; nothing in
-// summer). Tests pin the season with window.season.
-const season = (window as { season?: Season }).season ?? seasonFor(new Date());
+// summer). Tests pin the season with window.season; anything else there is ignored.
+const pinned = (window as { season?: Season }).season;
 const SNOW = { d: "M5 1v8M1.5 3l7 4M1.5 7l7-4", fill: 0 };
 const DOT = { d: "M3.4 5a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0", fill: 1 };
 const LEAF = {
@@ -73,7 +73,7 @@ const DRIFT = [
   [94, 24, 0.45, 0.65, -1, -110],
   [4, 29, 0.7, 0.85, 1.8, 150],
 ] as const;
-const look = LOOKS[season];
+const look = (pinned && LOOKS[pinned]) || LOOKS[seasonFor(new Date())];
 const bits = DRIFT.slice(0, look.count).map(([x, dur, phase, size, sway, spin], i) => ({
   ...look.shapes[i % look.shapes.length]!,
   tone: look.tones[i % look.tones.length],
@@ -379,8 +379,8 @@ const bits = DRIFT.slice(0, look.count).map(([x, dur, phase, size, sway, spin], 
     transform: perspective(60rem) rotateX(50deg) rotateZ(360deg);
   }
 }
-/* Seasonal bits: transform and opacity only, hidden unless animating (so reduced motion, or a
-   paused animation, shows plain paper). */
+/* Seasonal bits: transform and opacity only, at opacity 0 unless animating (so reduced
+   motion, or a cancelled animation, shows plain paper). */
 .season-bit {
   position: absolute;
   top: -1.5rem;

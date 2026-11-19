@@ -197,7 +197,7 @@ test("the menu's seasonal paper is decoration only, and still under reduced moti
   await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
   const bits = page.locator(".season-bit");
   await expect(bits).toHaveCount(9);
-  await expect(bits.first()).toBeVisible();
+  await expect.poll(() => bits.first().evaluate((el) => el.getAnimations().length)).toBe(1);
   await scan(page, "menu (winter)");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(bits.first()).toBeHidden();
