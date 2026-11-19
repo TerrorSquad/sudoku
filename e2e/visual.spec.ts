@@ -65,6 +65,8 @@ for (const theme of ["light", "dark"] as const) {
 
     test.beforeEach(async ({ page }) => {
       await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
+      // The menu's seasonal paper follows the date: pin plain paper so baselines never drift.
+      await page.addInitScript(() => ((window as { season?: string }).season = "summer"));
       await page.addInitScript((save) => {
         // A real clear must not wipe the seeded save on reload, so only seed once per tab.
         if (!sessionStorage.getItem("seeded")) {
