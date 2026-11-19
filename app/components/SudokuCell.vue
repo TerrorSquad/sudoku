@@ -66,6 +66,25 @@ function onAnimationEnd(e: AnimationEvent) {
 // animationend never fires if the cell mounts hidden or the screen transition is interrupted.
 onMounted(() => setTimeout(() => (entering.value = false), 1500));
 
+// Pencil marks just taken out stay a moment under a red-pen stroke (a placed digit's own marks
+// just go). A digit erased from the selected cell smudges away; other clears (undo, a new
+// puzzle in place) don't, or the whole board would smear at once.
+const struck = ref<number[]>([]);
+watch(
+  () => props.notes.slice(),
+  (now, was) => {
+    if (!props.value) struck.value = was.flatMap((on, n) => (on && !now[n] ? [n] : []));
+  },
+);
+const smudge = ref(0);
+watch(
+  () => props.value,
+  (now, was) => {
+    struck.value = [];
+    if (was && !now && props.isSelected) smudge.value = was;
+  },
+);
+
 // Screen-reader description: position, state and value (colour name in colour mode), plus notes.
 const label = computed(() => {
   const pos = t("a11y.cellPos", { r: props.row + 1, c: props.col + 1 });
@@ -139,6 +158,8 @@ const cellClasses = computed(() => {
     :class="cellClasses"
     class="cell relative flex cursor-pointer items-center justify-center p-0.5 text-3xl font-bold select-none 3xl:text-[length:max(2.25rem,4.6cqw)] 3xl:leading-[calc(2.5/2.25)]"
   >
+    <!-- Givens print in; your digits are written in, a quick stroke of ink (a colour dot pops:
+         its shape is a clip-path the ink's own would override). -->
     <div
       v-if="value !== 0 && colorMode"
       :key="value"
@@ -149,7 +170,7 @@ const cellClasses = computed(() => {
       v-else-if="value !== 0"
       :key="value"
       class="font-game"
-      :class="isWrong ? 'cell-shake' : 'cell-pop'"
+      :class="isWrong ? 'cell-shake' : isInitial ? 'cell-pop' : 'cell-ink'"
       >{{ value }}</span
     >
 
@@ -164,6 +185,13 @@ const cellClasses = computed(() => {
         class="flex items-center justify-center leading-none"
       >
         <span
+          v-if="!notes[n] && struck.includes(n)"
+          class="note-struck relative"
+          @animationend.self="struck = struck.filter((x) => x !== n)"
+          >{{ n }}</span
+        >
+        <span
+          v-else
           :class="
             n === noteDigit
               ? 'rounded-sm bg-violet-600 px-px text-white dark:bg-violet-400 dark:text-zinc-950'
@@ -173,6 +201,20 @@ const cellClasses = computed(() => {
         >
       </div>
     </div>
+    <template v-if="smudge && !value">
+      <div
+        v-if="colorMode"
+        :class="dotClass(smudge)"
+        class="cell-smudge absolute h-[60%] w-[60%]"
+        @animationend.self="smudge = 0"
+      />
+      <span
+        v-else
+        class="cell-entry cell-smudge absolute font-game"
+        @animationend.self="smudge = 0"
+        >{{ smudge }}</span
+      >
+    </template>
   </div>
 </template>
 
@@ -207,6 +249,70 @@ const cellClasses = computed(() => {
 }
 .cell-pop {
   animation: cell-pop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+/* Written in: the ink runs left to right and settles from a slight bleed. */
+@keyframes cell-ink {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    filter: blur(1.5px);
+  }
+  70% {
+    filter: blur(0.3px);
+  }
+  100% {
+    clip-path: inset(0);
+    filter: none;
+  }
+}
+.cell-ink {
+  animation: cell-ink 0.28s cubic-bezier(0.3, 0.7, 0.4, 1) backwards;
+}
+/* Erased: the digit smears sideways and fades. */
+@keyframes cell-smudge {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateX(6px) scaleX(1.25);
+  }
+}
+.cell-smudge {
+  animation: cell-smudge 0.35s ease-out forwards;
+  pointer-events: none;
+}
+/* A pencil mark taken out: a red stroke through it, then it goes. */
+@keyframes note-gone {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.note-struck {
+  color: var(--color-rose-500);
+  animation: note-gone 0.6s ease-in forwards;
+}
+.note-struck::after {
+  content: "";
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 50%;
+  height: 0.09em;
+  min-height: 1px;
+  background: currentColor;
+  transform: rotate(-35deg) scaleX(0);
+  transform-origin: left center;
+  animation: note-strike 0.16s ease-out forwards;
+}
+@keyframes note-strike {
+  to {
+    transform: rotate(-35deg) scaleX(1);
+  }
 }
 @keyframes cell-shake {
   0% {

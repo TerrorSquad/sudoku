@@ -332,6 +332,7 @@ describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
 
     expect(engine.completedAt(0, 0)).toEqual({
       units: 3,
+      done: (["row", "col", "box"] as const).map((kind) => ({ kind, r: 0, c: 0 })),
       digitDone: true, // all nine 5s are in
       cells: expect.any(Array),
     });

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WinResult } from "../composables/useWinResult";
-import type { Difficulty, Grid } from "../types/sudoku";
+import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
 import type { Placement } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
@@ -23,6 +23,7 @@ const props = defineProps<{
   techniqueLog: TechniqueId[];
   nextLevel: Difficulty | null;
   nextLoading: boolean;
+  variant?: Variant;
 }>();
 const emit = defineEmits<{
   next: [];
@@ -172,10 +173,14 @@ onMounted(() => {
     class="fixed inset-0 z-50 flex items-center justify-center px-4"
     @pointerdown="winStep && skipWinSteps()"
   >
+    <!-- invisible, not v-show: hiding it for the replay mustn't replay its entrance. A win turns
+         the page to the result; a game over just pops up. -->
     <div
-      v-show="!watching"
-      class="modal-pop panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
-      :class="win ? '!border-t-emerald-500' : '!border-t-rose-500'"
+      class="panel max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto !rounded-2xl border-t-[0.375rem] p-6 text-center shadow-2xl"
+      :class="[
+        win ? 'page-turn !border-t-emerald-500' : 'modal-pop !border-t-rose-500',
+        { invisible: watching },
+      ]"
     >
       <h3 class="mb-2 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
         {{ title }}
@@ -347,6 +352,7 @@ onMounted(() => {
         :placements="placements"
         :stuck="result.stuck"
         :zen="zen"
+        :variant="variant"
         @lesson="(id) => emit('lesson', id)"
         @frame="(board, placed) => emit('replay', { board, placed })"
       />
@@ -402,8 +408,28 @@ onMounted(() => {
   }
 }
 
-/* "Perfect!" in the teacher's red pen, stamped on at a slant. */
+/* A win turns the puzzle book's page: the result is printed on the next one. It starts once the
+   win wave has swept the board (.modal-delay). */
+.page-turn {
+  transform-origin: left center;
+  animation: page-turn 0.6s 0.9s cubic-bezier(0.2, 0.75, 0.3, 1) both;
+}
+@keyframes page-turn {
+  from {
+    opacity: 0;
+    transform: perspective(75rem) rotateY(-80deg);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    transform: perspective(75rem) rotateY(0);
+  }
+}
+
+/* "Perfect!" in the teacher's red pen, stamped on at a slant, over a blot of its ink. */
 .perfect-stamp {
+  position: relative;
   display: inline-block;
   padding: 0.2rem 0.8rem;
   border: 0.25rem double currentColor;
@@ -418,6 +444,25 @@ onMounted(() => {
 }
 .dark .perfect-stamp {
   color: var(--color-rose-300);
+}
+.perfect-stamp::before {
+  content: "";
+  position: absolute;
+  inset: -55% -22%;
+  z-index: -1;
+  background: currentColor;
+  opacity: 0.13;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Cpath d='M50 8c8 0 10 6 17 5s14 3 13 11 8 9 3 15-12 4-15 9-12 5-19 2-13 1-17-5-14-6-12-13 2-9 9-13 9-11 20-12z'/%3E%3Ccircle cx='88' cy='14' r='3'/%3E%3Ccircle cx='12' cy='46' r='2.5'/%3E%3Ccircle cx='93' cy='44' r='1.8'/%3E%3Ccircle cx='20' cy='10' r='1.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0);
+}
+.stamp-in::before {
+  animation: ink-blot 0.3s 0.12s ease-out forwards;
+}
+@keyframes ink-blot {
+  to {
+    transform: scale(1);
+  }
 }
 .stamp-in {
   animation: stamp-in 0.3s cubic-bezier(0.3, 1.3, 0.5, 1) both;
@@ -437,10 +482,15 @@ onMounted(() => {
 }
 
 /* Skipped (a tap or a key): everything is already in place. */
+.win-done .page-turn,
 .win-done .win-in,
 .win-done .star-pop,
-.win-done .stamp-in {
+.win-done .stamp-in,
+.win-done .stamp-in::before {
   animation: none;
+}
+.win-done .stamp-in::before {
+  transform: scale(1);
 }
 
 @keyframes score-badge {

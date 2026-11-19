@@ -109,7 +109,7 @@ for (const scheme of ["light", "dark"] as const) {
       await scan(page, "stats (records)");
     });
 
-    for (const theme of ["newsprint", "contrast"]) {
+    for (const theme of ["newsprint", "contrast", "blueprint", "chalkboard"]) {
       test(`${theme} theme: menu, game and Settings over it`, async ({ page }) => {
         await page.addInitScript(
           (t) => localStorage.setItem("sudoku_v1_pref_board_theme", JSON.stringify(t)),

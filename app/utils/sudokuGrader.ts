@@ -1266,9 +1266,66 @@ export function availableTechniques(
   appliedEliminations: DigitAt[] = [],
   variant: Variant = "classic",
 ): TechniqueId[] {
+  return [...new Set(movesNow(board, appliedEliminations, variant).map((m) => m.technique))];
+}
+
+/** The first move of every kind the finders see on the board, easiest first. */
+export function movesNow(
+  board: Grid,
+  appliedEliminations: DigitAt[] = [],
+  variant: Variant = "classic",
+): SolveMove[] {
   const s = stateWith(board, appliedEliminations, variant);
-  const found = FINDERS.map((find) => find(s)?.technique).filter((t) => t !== undefined);
-  return [...new Set(found)];
+  return FINDERS.map((find) => find(s)).filter((m) => m !== null);
+}
+
+/**
+ * The technique a player just finished by hand: taking pencil mark `removed` out of `notes` (the
+ * notes before it goes) was the last removal of a move the finders see on the board those notes
+ * show. Removal moves past the singles only: those are the ones worth naming.
+ */
+// ponytail: each finder reports its first instance only, so a second X-Wing done by hand while
+// another stands untouched goes unnamed; collect every instance per finder if that matters.
+export function spottedMove(
+  board: Grid,
+  notes: boolean[][][],
+  removed: DigitAt,
+  variant: Variant = "classic",
+): SolveMove | null {
+  const moves = movesNow(board, notesEliminations(board, notes), variant);
+  return (
+    moves.find(
+      (m) =>
+        m.tier >= 2 &&
+        !m.placement &&
+        m.eliminations.length === 1 &&
+        m.eliminations[0]!.r === removed.r &&
+        m.eliminations[0]!.c === removed.c &&
+        m.eliminations[0]!.num === removed.num,
+    ) ?? null
+  );
+}
+
+/**
+ * What it took to place `cell` from `board`: the hardest technique the solver used on its way
+ * there, or null when it was a single (or the solver got stuck first).
+ */
+// ponytail: the solver goes easiest-first across the whole board, so a detour it takes elsewhere
+// can overstate a placement; replay from the cell's own units if that shows.
+export function techniqueFor(
+  board: Grid,
+  cell: CellRC,
+  variant: Variant = "classic",
+): TechniqueId | null {
+  const s = initState(board, variant);
+  let hardest: SolveMove | null = null;
+  while (!s.board[idx(cell.r, cell.c)]) {
+    const move = findNextMove(s);
+    if (!move) return null;
+    if (!hardest || move.tier > hardest.tier) hardest = move;
+    applyMove(s, move);
+  }
+  return hardest && hardest.tier > 1 ? hardest.technique : null;
 }
 
 /**

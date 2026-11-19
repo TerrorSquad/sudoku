@@ -2,9 +2,18 @@ import { describe, it, expect } from "vitest";
 
 import type { Grid } from "../types/sudoku";
 
-import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
+import {
+  makeRng,
+  generatePuzzle,
+  getGridCandidates,
+  hasUniqueSolution,
+  solveBoard,
+} from "../utils/sudokuCore";
 import {
   availableTechniques,
+  movesNow,
+  spottedMove,
+  techniqueFor,
   notesEliminations,
   solveLogically,
   gradePuzzle,
@@ -269,5 +278,37 @@ describe("availableTechniques", () => {
   it("lists nothing on a solved board", () => {
     const { solution } = generatePuzzle(40, makeRng(1));
     expect(availableTechniques(solution)).toEqual([]);
+  });
+});
+
+describe("spottedMove", () => {
+  it("names a technique when the player takes out its last pencil mark, not before", () => {
+    const { puzzle } = generateGradedPuzzle("expert", makeRng(3));
+    const cands = getGridCandidates(puzzle);
+    const notes = cands.map((row) =>
+      row.map((cs) => Array.from({ length: 10 }, (_v, n) => cs.includes(n))),
+    );
+    const move = movesNow(puzzle).find((m) => m.tier >= 2 && m.eliminations.length >= 2)!;
+    const [first, ...rest] = move.eliminations;
+    expect(spottedMove(puzzle, notes, first!)).toBeNull();
+    for (const e of rest.slice(0, -1).concat(first!)) notes[e.r]![e.c]![e.num] = false;
+    const last = rest.at(-1)!;
+    expect(spottedMove(puzzle, notes, last)?.technique).toBe(move.technique);
+  });
+});
+
+describe("techniqueFor", () => {
+  it("is null for a single and names what a harder placement took", () => {
+    const { puzzle, solution } = generateGradedPuzzle("expert", makeRng(3));
+    const single = nextHint(puzzle)!.placement!;
+    expect(techniqueFor(puzzle, single)).toBeNull();
+    // A cell the solver only reaches past the singles names a technique above them.
+    const found = puzzle
+      .flatMap((row, r) => row.map((v, c) => ({ r, c, v })))
+      .filter(({ v }) => v === 0)
+      .map(({ r, c }) => techniqueFor(puzzle, { r, c }))
+      .filter((t) => t !== null);
+    expect(found.length).toBeGreaterThan(0);
+    expect(solution[single.r]![single.c]).toBe(single.num);
   });
 });

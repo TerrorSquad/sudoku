@@ -32,7 +32,48 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
 </script>
 
 <template>
-  <div class="relative flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+  <div class="relative isolate flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+    <!-- A puzzle page drifting behind the menu: one element, turning slowly; still with reduced
+         motion (it ends where it started). -->
+    <div
+      class="pointer-events-none absolute inset-0 -z-10 grid place-items-center overflow-hidden"
+      aria-hidden="true"
+    >
+      <svg
+        class="menu-drift w-[min(110vw,44rem)] text-zinc-900 opacity-[0.07] dark:text-zinc-100"
+        viewBox="-0.1 -0.1 9.2 9.2"
+      >
+        <g fill="none" stroke="currentColor">
+          <path
+            stroke-width="0.02"
+            d="M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9"
+          />
+          <path stroke-width="0.07" d="M3 0V9M6 0V9M0 3H9M0 6H9" />
+          <rect width="9" height="9" stroke-width="0.1" />
+        </g>
+        <g
+          fill="currentColor"
+          font-size="0.6"
+          font-weight="700"
+          text-anchor="middle"
+          dominant-baseline="central"
+          class="font-game"
+        >
+          <text x="1.5" y="0.55">5</text>
+          <text x="4.5" y="1.55">3</text>
+          <text x="7.5" y="2.55">8</text>
+          <text x="0.5" y="3.55">1</text>
+          <text x="4.5" y="4.55">9</text>
+          <text x="8.5" y="5.55">6</text>
+          <text x="2.5" y="6.55">4</text>
+          <text x="5.5" y="7.55">7</text>
+          <text x="7.5" y="8.55">2</text>
+          <text x="6.5" y="0.55">9</text>
+          <text x="1.5" y="4.55">8</text>
+          <text x="3.5" y="8.55">5</text>
+        </g>
+      </svg>
+    </div>
     <button
       @click="emit('go', 'settings')"
       :aria-label="$t('menu.settings')"
@@ -248,6 +289,19 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
   }
   to {
     transform: skewX(-8deg) rotate(-0.8deg) scaleX(1);
+  }
+}
+</style>
+
+<style>
+/* The page behind the menu turns once every two minutes, tilted away like a book on a desk. */
+.menu-drift {
+  transform: perspective(60rem) rotateX(50deg) rotateZ(0deg);
+  animation: menu-drift 120s linear infinite;
+}
+@keyframes menu-drift {
+  to {
+    transform: perspective(60rem) rotateX(50deg) rotateZ(360deg);
   }
 }
 </style>
