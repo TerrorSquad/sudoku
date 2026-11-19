@@ -5,6 +5,7 @@ import type { Grid } from "../types/sudoku";
 import { makeRng, generatePuzzle, hasUniqueSolution, solveBoard } from "../utils/sudokuCore";
 import {
   availableTechniques,
+  notesEliminations,
   solveLogically,
   gradePuzzle,
   generateGradedPuzzle,
@@ -225,6 +226,44 @@ describe("availableTechniques", () => {
       expect(found[0]).toBe(nextHint(puzzle)!.technique);
       expect(new Set(found).size).toBe(found.length);
     }
+  });
+
+  it("counts the player's pencil marks: a single the notes leave is listed", () => {
+    // A Master board as reported: r8c3 is {6, 9} by the digits, but its notes keep only the 6.
+    const board: Grid = [
+      [0, 0, 0, 5, 4, 2, 6, 8, 3],
+      [2, 0, 0, 1, 3, 9, 5, 7, 4],
+      [5, 3, 4, 8, 7, 6, 2, 9, 1],
+      [4, 0, 0, 9, 2, 3, 1, 6, 7],
+      [9, 7, 3, 6, 8, 1, 4, 2, 5],
+      [0, 0, 2, 4, 5, 7, 8, 3, 9],
+      [8, 2, 1, 3, 9, 5, 7, 4, 6],
+      [0, 4, 0, 7, 1, 8, 0, 5, 2],
+      [0, 0, 0, 2, 6, 4, 0, 1, 8],
+    ];
+    const noted: Record<string, number[]> = {
+      "0-0": [1, 7],
+      "0-1": [1, 9],
+      "0-2": [7, 9],
+      "1-1": [6, 8],
+      "1-2": [6, 8],
+      "3-1": [5, 8],
+      "3-2": [5, 8],
+      "5-0": [1, 6],
+      "5-1": [1, 6],
+      "7-0": [3, 6],
+      "7-2": [6],
+      "7-6": [3, 9],
+      "8-0": [3, 7],
+      "8-1": [5, 9],
+      "8-2": [5, 7, 9],
+      "8-6": [3, 9],
+    };
+    const notes = board.map((row, r) =>
+      row.map((_, c) => Array.from({ length: 10 }, (_v, n) => !!noted[`${r}-${c}`]?.includes(n))),
+    );
+    expect(availableTechniques(board)).not.toContain("naked-single");
+    expect(availableTechniques(board, notesEliminations(board, notes))).toContain("naked-single");
   });
 
   it("lists nothing on a solved board", () => {
