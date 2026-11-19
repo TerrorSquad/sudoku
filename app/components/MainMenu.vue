@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Season } from "../utils/season";
+
 // The menu is itself a 3×3 box, New game filling four of its cells.
 const emit = defineEmits<{
   go: [screen: "settings" | "difficulty" | "stats" | "achievements" | "custom-import"];
@@ -29,6 +31,61 @@ const fresh =
   lessonsDone.length === 0 &&
   techniquePath.getBasics().length === 0;
 const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
+
+// Seasonal paper: a few pen-drawn bits drift down behind the menu (snow, leaves, petals; nothing in
+// summer). Tests pin the season with window.season.
+const season = (window as { season?: Season }).season ?? seasonFor(new Date());
+const SNOW = { d: "M5 1v8M1.5 3l7 4M1.5 7l7-4", fill: 0 };
+const DOT = { d: "M3.4 5a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0", fill: 1 };
+const LEAF = {
+  d: "M5 8.4C1.4 7 1.4 3 5 .6c3.6 2.4 3.6 6.4 0 7.8ZM5 9.8V2.6M5 6 3.2 4.6M5 6l1.8-1.4M5 4.2 3.8 3.2M5 4.2l1.2-1",
+  fill: 0.2,
+};
+const PETAL = { d: "M5 9.5C1.8 7.6 1.4 4 3 1.2L5 2.8 7 1.2c1.6 2.8 1.2 6.4-2 8.3Z", fill: 0.4 };
+const LOOKS: Record<
+  Season,
+  { count: number; shapes: (typeof SNOW)[]; tones: string[]; scale: number }
+> = {
+  winter: {
+    count: 9,
+    shapes: [SNOW, DOT],
+    tones: ["text-zinc-400 dark:text-zinc-300"],
+    scale: 1.5,
+  },
+  autumn: {
+    count: 5,
+    shapes: [LEAF],
+    tones: ["text-amber-600 dark:text-amber-300", "text-orange-700 dark:text-orange-300"],
+    scale: 2.2,
+  },
+  spring: { count: 7, shapes: [PETAL], tones: ["text-pink-400 dark:text-pink-300"], scale: 1.7 },
+  summer: { count: 0, shapes: [], tones: [], scale: 1 },
+};
+// x %, fall seconds, phase 0–1, size rem, sway rem, spin deg; the first few are already spread out.
+const DRIFT = [
+  [10, 22, 0.1, 0.7, 2, 120],
+  [60, 27, 0.6, 0.55, -1.5, -90],
+  [35, 19, 0.35, 0.9, 2.5, 160],
+  [85, 25, 0.8, 0.6, -2, -140],
+  [22, 30, 0.5, 0.8, 1.5, 100],
+  [72, 21, 0.2, 0.5, -2.5, -180],
+  [47, 26, 0.9, 0.75, 2, 130],
+  [94, 24, 0.45, 0.65, -1, -110],
+  [4, 29, 0.7, 0.85, 1.8, 150],
+] as const;
+const look = LOOKS[season];
+const bits = DRIFT.slice(0, look.count).map(([x, dur, phase, size, sway, spin], i) => ({
+  ...look.shapes[i % look.shapes.length]!,
+  tone: look.tones[i % look.tones.length],
+  style: {
+    left: `${x}%`,
+    width: `${size * look.scale}rem`,
+    "--dur": `${dur}s`,
+    "--at": `${-phase * dur}s`,
+    "--sway": `${sway}rem`,
+    "--spin": `${spin}deg`,
+  },
+}));
 </script>
 
 <template>
@@ -72,6 +129,24 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
           <text x="1.5" y="4.55">8</text>
           <text x="3.5" y="8.55">5</text>
         </g>
+      </svg>
+      <svg
+        v-for="(bit, i) in bits"
+        :key="i"
+        class="season-bit"
+        :class="bit.tone"
+        :style="bit.style"
+        viewBox="0 0 10 10"
+      >
+        <path
+          :d="bit.d"
+          fill="currentColor"
+          :fill-opacity="bit.fill"
+          stroke="currentColor"
+          stroke-width="0.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
     </div>
     <button
@@ -302,6 +377,42 @@ const showBasicsPrompt = computed(() => basicsPrompt.value && fresh);
 @keyframes menu-drift {
   to {
     transform: perspective(60rem) rotateX(50deg) rotateZ(360deg);
+  }
+}
+/* Seasonal bits: transform and opacity only, hidden unless animating (so reduced motion, or a
+   paused animation, shows plain paper). */
+.season-bit {
+  position: absolute;
+  top: -1.5rem;
+  opacity: 0;
+  animation: season-fall var(--dur) ease-in-out var(--at) infinite;
+}
+@keyframes season-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 0.7;
+  }
+  25% {
+    transform: translate3d(var(--sway), 25vh, 0) rotate(calc(var(--spin) * 0.25));
+  }
+  50% {
+    transform: translate3d(0, 50vh, 0) rotate(calc(var(--spin) * 0.5));
+  }
+  75% {
+    transform: translate3d(calc(var(--sway) * -1), 75vh, 0) rotate(calc(var(--spin) * 0.75));
+  }
+  100% {
+    transform: translate3d(0, calc(100vh + 1.5rem), 0) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .season-bit {
+    display: none;
   }
 }
 </style>

@@ -189,6 +189,20 @@ test("arrow keys move the selection and focus, clamped at the edges", async ({ p
   await expect(cell(1, 0)).toBeFocused();
 });
 
+test("the menu's seasonal paper is decoration only, and still under reduced motion", async ({
+  page,
+}) => {
+  await page.addInitScript(() => ((window as { season?: string }).season = "winter"));
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "New Game" })).toBeVisible();
+  const bits = page.locator(".season-bit");
+  await expect(bits).toHaveCount(9);
+  await expect(bits.first()).toBeVisible();
+  await scan(page, "menu (winter)");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(bits.first()).toBeHidden();
+});
+
 test("reduced motion removes animation durations", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
