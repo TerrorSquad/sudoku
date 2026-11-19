@@ -95,7 +95,7 @@ export function playComplete(units = 1, digit = 1): void {
 
 /**
  * All nine of a digit are in: its note twinkles up two octaves, quick and bright. When the same
- * placement completed `afterUnits` units, it starts after their chord's top note, not on top of it.
+ * placement completed `afterUnits` units, it starts 60 ms after their chord's top note starts, not with the chord.
  */
 export function playDigitDone(digit = 1, afterUnits = 0): void {
   const f = digitFreq(digit);
