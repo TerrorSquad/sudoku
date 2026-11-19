@@ -22,6 +22,8 @@ const props = defineProps<{
   activeDigit?: number | null;
   /** Outline the empty cells where the focused digit can still go. */
   showCandidates?: boolean;
+  /** Pencil marks never mark the focused digit (Settings). */
+  plainNotes?: boolean;
   /** "Nudge first" hints: the row, column or box to point at (a lesson's Show me: several). */
   nudge?: BoardUnit | BoardUnit[] | null;
   /** Board style from Settings: colours and digit face, see the styles below. */
@@ -89,7 +91,7 @@ function isCandidate(r: number, c: number): boolean {
 
 // Every empty cell still pencilled with the focused digit shows it as a chip.
 function noteDigit(r: number, c: number): number {
-  const d = focusDigit.value;
+  const d = props.plainNotes ? 0 : focusDigit.value;
   return d && props.currentBoard[r]![c] === 0 && props.notesBoard[r]![c]![d] ? d : 0;
 }
 

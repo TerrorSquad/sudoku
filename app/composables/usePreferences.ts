@@ -42,6 +42,10 @@ function create() {
     hintStyle: pref<HintStyle>("hint_style", "full"),
     /** Selecting a digit outlines the empty cells where it can still go. */
     showCandidates: pref("show_candidates", true),
+    /** The focused digit is marked in pencil marks too. */
+    noteHighlight: pref("note_highlight", true),
+    /** Tapping a pencil mark lights its digit up everywhere (off: the tap only selects the cell). */
+    noteTap: pref("note_tap", true),
     /** New games start in Zen: no timer, no mistake limit, no score. */
     zen: pref("zen", false),
     /** New games are X-Sudoku: both long diagonals hold 1–9 too. */

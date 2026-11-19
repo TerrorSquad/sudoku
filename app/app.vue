@@ -32,6 +32,8 @@ const {
   highlightErrors,
   hintStyle,
   showCandidates,
+  noteHighlight,
+  noteTap,
   zen,
   diagonal,
   boardTheme,
@@ -233,8 +235,7 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
 const techniqueLog = ref<TechniqueId[]>([]);
-// Settings opened from the game slide over it, so a new theme shows on the real board. The board is
-// in view, so the clock runs while it's open (a paused clock would be a free look at the board).
+// Settings opened from the pause screen open over it: the game stays paused and the board covered.
 const settingsOverGame = ref(false);
 // Loaded before the sheet opens: showModal() focuses its first button, so that must be there.
 const SettingsSheet = shallowRef<Component>();
@@ -242,9 +243,8 @@ async function openGameSettings() {
   // A dynamic import, not an auto-import's duplicate: the same lazy chunk as the Settings screen.
   // oxlint-disable-next-line eslint/no-restricted-imports
   SettingsSheet.value ??= (await import("./components/SettingsScreen.vue")).default;
-  // The player may have left the game (or the tab) while it loaded: don't open it or restart the clock.
-  if (currentScreen.value !== "game" || document.hidden) return;
-  if (timer.isPaused.value) timer.togglePause();
+  // The player may have left the game (or resumed it) while it loaded.
+  if (currentScreen.value !== "game" || !timer.isPaused.value) return;
   settingsOverGame.value = true;
 }
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
@@ -563,7 +563,7 @@ function handleNumpad(num: number) {
 
 function handleSelectCell(coord: CellCoord, note?: number) {
   selectedCell.value = coord;
-  pickedDigit.value = note ?? null;
+  pickedDigit.value = (noteTap.value && note) || null;
   if (!digitFirst.value || !activeDigit.value || initialBoard.value[coord.r]![coord.c] !== 0)
     return;
   // Only into an empty cell, or onto the armed digit to take it back out: a stray tap on a
@@ -1347,6 +1347,7 @@ onUnmounted(() => {
                 :show-errors="highlightErrors"
                 :active-digit="activeDigit ?? pickedDigit"
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
+                :plain-notes="!noteHighlight"
                 :theme="boardTheme"
                 :nudge="nudge?.unit"
                 :marks="hintMarks"
@@ -1407,7 +1408,7 @@ onUnmounted(() => {
         </div>
       </Transition>
 
-      <!-- Settings over the game: a sheet at the side (the bottom on phones), the board in view. -->
+      <!-- Settings over the paused game: centred (the bottom on phones). -->
       <SheetDialog
         v-model:open="settingsOverGame"
         class="settings-sheet"
@@ -1417,7 +1418,6 @@ onUnmounted(() => {
           :is="SettingsSheet"
           v-if="settingsOverGame"
           in-game
-          :timed="!gameZen"
           @back-to-menu="settingsOverGame = false"
           @tour="startTour()"
         />

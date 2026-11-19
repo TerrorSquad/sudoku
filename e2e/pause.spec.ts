@@ -22,7 +22,7 @@ test("pausing shows the overlay and freezes the timer; resume hides it", async (
   await expect(page.getByText("Paused")).toBeHidden();
 });
 
-test("Settings slides over the running game, and a theme change shows on the board", async ({
+test("Settings opens over the paused game, and a theme change shows on the board", async ({
   page,
 }) => {
   await page.goto("/");
@@ -37,11 +37,11 @@ test("Settings slides over the running game, and a theme change shows on the boa
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
   const sheet = page.getByRole("dialog", { name: "Settings" });
   await expect(sheet).toBeVisible();
-  // The board is in view, so the clock runs: no pause overlay, no free look.
-  await expect(page.getByText("Paused")).toBeHidden();
-  await expect(sheet.getByText("The clock keeps running")).toBeVisible();
+  // The game stays paused, its overlay covering the board.
+  await expect(page.locator(".pause-overlay")).toBeVisible();
   const before = await page.getByTestId("timer").textContent();
-  await expect(page.getByTestId("timer")).not.toHaveText(before ?? "", { timeout: 3000 });
+  await page.waitForTimeout(1500);
+  await expect(page.getByTestId("timer")).toHaveText(before ?? "");
 
   // Language, colour mode and the mistake limit stay put until the game ends; data tools are hidden.
   await expect(sheet.getByText("Locked until this game ends")).toHaveCount(3);
@@ -57,7 +57,7 @@ test("Settings slides over the running game, and a theme change shows on the boa
 
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
-  await expect(page.getByText("Paused")).toBeHidden();
+  await expect(page.locator(".pause-overlay")).toBeVisible();
 });
 
 test("the Settings detour keeps an armed digit and a shown nudge", async ({ page }) => {
@@ -82,6 +82,7 @@ test("the Settings detour keeps an armed digit and a shown nudge", async ({ page
   await page.getByLabel("Pause").click();
   await page.locator(".pause-overlay").getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Back to game" }).click();
+  await page.locator(".pause-overlay").getByRole("button", { name: "Resume" }).click();
 
   await expect(three).toHaveAttribute("aria-pressed", "true");
   await expect(nudge).toBeVisible();
