@@ -37,7 +37,6 @@ const {
   diagonal,
   boardTheme,
   uiScale,
-  controlsTour,
 } = usePreferences();
 
 // The theme-color metas (nuxt.config.ts) follow the system scheme; a theme forced in Settings must
