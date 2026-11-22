@@ -1399,12 +1399,15 @@ interface LogicalSolveResult {
   grade: Grade;
   solved: boolean;
   board: Grid;
+  /** Moves made per tier (index = tier; 0 unused): how much work, where `grade` is only the peak. */
+  moves: number[];
 }
 
 /** Solve as far as pure logic allows; grade = hardest tier that was needed. */
 export function solveLogically(puzzle: Grid, variant: Variant = "classic"): LogicalSolveResult {
   const s = initState(puzzle, variant);
   let grade: Grade = 1;
+  const moves = [0, 0, 0, 0, 0, 0];
 
   const tiers: { tier: Grade; run: () => boolean }[] = [
     { tier: 1, run: () => placeNakedSingles(s) || placeHiddenSingles(s) },
@@ -1446,6 +1449,7 @@ export function solveLogically(puzzle: Grid, variant: Variant = "classic"): Logi
     for (const { tier, run } of tiers) {
       if (run()) {
         if (tier > grade) grade = tier;
+        moves[tier]!++;
         continue outer;
       }
     }
@@ -1455,7 +1459,7 @@ export function solveLogically(puzzle: Grid, variant: Variant = "classic"): Logi
 
   const board: Grid = [];
   for (let r = 0; r < 9; r++) board.push(s.board.slice(r * 9, r * 9 + 9));
-  return { grade, solved: s.board.every((v) => v !== 0), board };
+  return { grade, solved: s.board.every((v) => v !== 0), board, moves };
 }
 
 export function gradePuzzle(puzzle: Grid, variant: Variant = "classic"): Grade {
@@ -1471,6 +1475,11 @@ interface DifficultyTarget {
   min: Grade; // lowest acceptable tier (inclusive)
   max: Grade; // highest acceptable tier (inclusive)
   ideal: Grade; // preferred tier; closest-to-ideal solved board is the fallback
+  // Acceptable count of moves at tier 3 and up, [min, max]. The tier is only the peak: without
+  // this, Hard and Expert were both "one tier-4 move" boards and Master was "one tier-5 move".
+  // ponytail: a move is a solver pass, and subsets and fish clear every instance in one pass, so
+  // three triples count 1. Count instances if a subset-heavy Hard ever plays too long.
+  hard?: [number, number];
   attempts?: number; // digs to try before falling back (default 60)
 }
 
@@ -1478,32 +1487,36 @@ interface DifficultyTarget {
 // generated board is fully solvable by logic alone. Random digging yields
 // mostly easy boards even at high clue counts, so harder tiers rely on the
 // retry loop keeping the closest-to-ideal solved board.
+// Share of digs that fit, from 3000 per depth (attempts keep a miss under 0.5%):
+// Medium 2.9%, Hard 11%, Expert 5.1%, Master 3.3%. A dig costs 0.2 ms (50 cells) to 1.3 ms (60).
 const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   beginner: { removeTarget: 38, min: 1, max: 1, ideal: 1 },
   easy: { removeTarget: 44, min: 1, max: 2, ideal: 1 },
-  medium: { removeTarget: 50, min: 2, max: 3, ideal: 2 },
-  hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
-  expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  // Only ~8% of 60-cell digs grade 5 (1.2% before XY-Chain), so Master digs longer to find one.
-  master: { removeTarget: 60, min: 5, max: 5, ideal: 5, attempts: 150 },
+  // 60 attempts left 1 Medium in 5 singles-only.
+  medium: { removeTarget: 50, min: 2, max: 3, ideal: 2, hard: [0, 1], attempts: 250 },
+  hard: { removeTarget: 56, min: 3, max: 4, ideal: 4, hard: [1, 2], attempts: 120 },
+  expert: { removeTarget: 58, min: 4, max: 4, ideal: 4, hard: [3, 99], attempts: 150 },
+  master: { removeTarget: 60, min: 5, max: 5, ideal: 5, hard: [5, 99], attempts: 300 },
 };
 // X-Sudoku: the diagonals give more away, so the same tiers come from different digs, and it
 // grades differently: tier 3 almost never decides a board (Hard is mostly tier 4) and STUCK is
-// common. 300 X digs of 58 cells graded 1/2/3/4/5/STUCK 28/10/0/16/7/40%. Master takes ~60 ms.
+// common. 3000 X digs of 58 cells graded 1/2/3/4/5/STUCK 24/12/0/14/5/44%; Hard fits 9.5% of its
+// digs, Expert 4.3%, Master 3.2% (1.7 ms a dig).
 const X_TARGETS: Record<string, DifficultyTarget> = {
   beginner: { removeTarget: 46, min: 1, max: 1, ideal: 1 },
   easy: { removeTarget: 52, min: 1, max: 2, ideal: 1 },
-  medium: { removeTarget: 56, min: 2, max: 3, ideal: 2 },
-  hard: { removeTarget: 56, min: 3, max: 4, ideal: 3 },
-  expert: { removeTarget: 58, min: 4, max: 5, ideal: 4 },
-  master: { removeTarget: 58, min: 5, max: 5, ideal: 5, attempts: 150 },
+  medium: { removeTarget: 56, min: 2, max: 3, ideal: 2, hard: [0, 1] },
+  hard: { removeTarget: 56, min: 3, max: 4, ideal: 4, hard: [1, 2], attempts: 120 },
+  expert: { removeTarget: 58, min: 4, max: 4, ideal: 4, hard: [3, 99], attempts: 150 },
+  master: { removeTarget: 58, min: 5, max: 5, ideal: 5, hard: [5, 99], attempts: 300 },
 };
 
 /**
  * Generate a puzzle matching the requested difficulty. Always returns a board
- * that is fully solvable by logic (never STUCK): the first attempt whose grade
- * lands in [min, max] wins; otherwise the closest-to-ideal SOLVED board seen is
- * returned, so difficulty degrades gracefully rather than ever shipping a
+ * that is fully solvable by logic (never STUCK): the first attempt that fits the
+ * target (its tier in [min, max], its count of hard moves in `hard`) wins;
+ * otherwise the closest SOLVED board seen is returned (nearest tier, then nearest
+ * amount), so difficulty degrades gracefully rather than ever shipping a
  * guess-only puzzle.
  */
 export function generateGradedPuzzle(
@@ -1512,13 +1525,11 @@ export function generateGradedPuzzle(
   maxAttempts?: number,
   variant: Variant = "classic",
 ): GradedPuzzle {
-  const target = (variant === "x" ? X_TARGETS : DIFFICULTY_TARGETS)[difficulty] ?? {
-    removeTarget: 42,
-    min: 1 as Grade,
-    max: STUCK,
-    ideal: 3 as Grade,
-  };
+  const target: DifficultyTarget = (variant === "x" ? X_TARGETS : DIFFICULTY_TARGETS)[
+    difficulty
+  ] ?? { removeTarget: 42, min: 1, max: STUCK, ideal: 3 };
   const removeTarget = target.removeTarget;
+  const [minHard, maxHard] = target.hard ?? [0, Infinity];
   maxAttempts ??= target.attempts ?? 60;
 
   let best: GradedPuzzle | null = null;
@@ -1526,12 +1537,14 @@ export function generateGradedPuzzle(
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const gp = generatePuzzle(removeTarget, rng, variant);
-    const grade = gradePuzzle(gp.puzzle, variant);
+    const { grade, moves } = solveLogically(gp.puzzle, variant);
+    const hard = moves[3]! + moves[4]! + moves[5]!;
+    const off = Math.max(minHard - hard, hard - maxHard, 0);
     const graded: GradedPuzzle = { ...gp, puzzle: cloneGrid(gp.puzzle), grade };
-    if (grade >= target.min && grade <= target.max) return graded;
+    if (grade >= target.min && grade <= target.max && off === 0) return graded;
     // Only solved boards (grade < STUCK) are eligible fallbacks.
     if (grade < STUCK) {
-      const dist = Math.abs(grade - target.ideal);
+      const dist = Math.abs(grade - target.ideal) * 100 + off;
       if (dist < bestDist) {
         bestDist = dist;
         best = graded;
