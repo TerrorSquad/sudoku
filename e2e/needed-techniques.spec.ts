@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 
 import { BOARD, blank, grid, playCustom, resumeMedium, savedGame } from "./seed";
 
-// generateGradedPuzzle("expert", makeRng(7)): its givens need an XY-Wing, a Hidden Pair and a
-// Pointing Pair (pinned in sudokuGrader.test.ts).
+// Its givens need an XY-Wing, a Hidden Pair and a Pointing Pair (the same board is pinned in
+// sudokuGrader.test.ts).
 const PUZZLE = [
   ".7.....5.",
   "...85.2..",

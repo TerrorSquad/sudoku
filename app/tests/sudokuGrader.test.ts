@@ -97,6 +97,27 @@ describe("sudokuGrader — graded generation", () => {
     expect(avg("beginner")).toBeLessThanOrEqual(avg("hard"));
     expect(avg("easy")).toBeLessThanOrEqual(avg("expert"));
   });
+
+  it("the top levels differ in how much hard work a board holds, not only in its hardest move", () => {
+    // Graded on the peak alone, Hard and Expert were both "one tier-4 move" boards and Master was
+    // "one tier-5 move": a Master could play lighter than a Hard.
+    const work = (d: string, seed: number) => {
+      const r = solveLogically(generateGradedPuzzle(d, makeRng(seed)).puzzle);
+      return { grade: r.grade, hard: r.moves[3]! + r.moves[4]! + r.moves[5]! };
+    };
+    for (let seed = 1; seed <= 10; seed++) {
+      expect(work("medium", seed).grade).toBeGreaterThanOrEqual(2);
+      const hard = work("hard", seed);
+      expect([3, 4]).toContain(hard.grade);
+      expect(hard.hard).toBeLessThanOrEqual(2);
+      const expert = work("expert", seed);
+      expect(expert.grade).toBe(4);
+      expect(expert.hard).toBeGreaterThanOrEqual(3);
+      const master = work("master", seed);
+      expect(master.grade).toBe(5);
+      expect(master.hard).toBeGreaterThanOrEqual(5);
+    }
+  });
 });
 
 describe("sudokuGrader — neededTechniques", () => {
@@ -107,7 +128,18 @@ describe("sudokuGrader — neededTechniques", () => {
   });
 
   it("drops the singles and puts the hardest technique first", () => {
-    const { puzzle } = generateGradedPuzzle("expert", makeRng(7));
+    // The board e2e/needed-techniques.spec.ts wins on.
+    const puzzle: Grid = [
+      ".7.....5.",
+      "...85.2..",
+      "...6..8.3",
+      "4....9..7",
+      "..13.....",
+      "..9..53.6",
+      "......642",
+      "15.4.....",
+      "2........",
+    ].map((row) => [...row].map((ch) => (ch === "." ? 0 : Number(ch))));
     // The solver met these easiest-first: hidden single, pointing, hidden pair, xy-wing, naked single.
     expect([...techniquesRequired(puzzle)!]).toContain("naked-single");
     expect(neededTechniques(puzzle)).toEqual(["xy-wing", "hidden-pair", "pointing"]);
