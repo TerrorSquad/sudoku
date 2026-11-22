@@ -1,5 +1,5 @@
 // Puzzles are generated in a Web Worker, so the main thread never blocks on the generator (Master
-// can dig 150 boards): new games, with one per difficulty kept ready, the Dailies, practice puzzles
+// can dig 300 boards): new games, with one per difficulty kept ready, the Dailies, practice puzzles
 // and lessons (Spot it's too). Without workers (tests, or a host that blocks them) it generates in
 // place, on demand, as before; both paths run utils/puzzleJobs.ts, so a seed gives the same board.
 import type { Difficulty, Grid, Variant } from "../types/sudoku";

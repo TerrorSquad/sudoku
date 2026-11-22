@@ -1477,6 +1477,8 @@ interface DifficultyTarget {
   ideal: Grade; // preferred tier; closest-to-ideal solved board is the fallback
   // Acceptable count of moves at tier 3 and up, [min, max]. The tier is only the peak: without
   // this, Hard and Expert were both "one tier-4 move" boards and Master was "one tier-5 move".
+  // ponytail: a move is a solver pass, and subsets and fish clear every instance in one pass, so
+  // three triples count 1. Count instances if a subset-heavy Hard ever plays too long.
   hard?: [number, number];
   attempts?: number; // digs to try before falling back (default 60)
 }
@@ -1491,7 +1493,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
   beginner: { removeTarget: 38, min: 1, max: 1, ideal: 1 },
   easy: { removeTarget: 44, min: 1, max: 2, ideal: 1 },
   // 60 attempts left 1 Medium in 5 singles-only.
-  medium: { removeTarget: 50, min: 2, max: 3, ideal: 2, attempts: 250 },
+  medium: { removeTarget: 50, min: 2, max: 3, ideal: 2, hard: [0, 1], attempts: 250 },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 4, hard: [1, 2], attempts: 120 },
   expert: { removeTarget: 58, min: 4, max: 4, ideal: 4, hard: [3, 99], attempts: 150 },
   master: { removeTarget: 60, min: 5, max: 5, ideal: 5, hard: [5, 99], attempts: 300 },
@@ -1503,7 +1505,7 @@ const DIFFICULTY_TARGETS: Record<string, DifficultyTarget> = {
 const X_TARGETS: Record<string, DifficultyTarget> = {
   beginner: { removeTarget: 46, min: 1, max: 1, ideal: 1 },
   easy: { removeTarget: 52, min: 1, max: 2, ideal: 1 },
-  medium: { removeTarget: 56, min: 2, max: 3, ideal: 2 },
+  medium: { removeTarget: 56, min: 2, max: 3, ideal: 2, hard: [0, 1] },
   hard: { removeTarget: 56, min: 3, max: 4, ideal: 4, hard: [1, 2], attempts: 120 },
   expert: { removeTarget: 58, min: 4, max: 4, ideal: 4, hard: [3, 99], attempts: 150 },
   master: { removeTarget: 58, min: 5, max: 5, ideal: 5, hard: [5, 99], attempts: 300 },
