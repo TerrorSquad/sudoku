@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import type { Grid, NotesGrid, CellCoord, HintCoordinate, Variant } from "../types/sudoku";
 
 import { turnCell, turnHas, turnMove, turnUnit } from "../utils/boardTurn";
-import { narrate } from "../utils/explain";
+import { narrate, unitCells } from "../utils/explain";
 import { emptyNotes } from "../utils/gridNav";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "../utils/patternMarks";
 import { digitLabel } from "../utils/sudokuColors";
@@ -18,6 +18,7 @@ import {
   generateGradedPuzzle,
   nextHint,
   movesNow,
+  patternCells,
   patternUnit,
   unitNumber,
   type SolveMove,
@@ -88,6 +89,13 @@ export function useSudokuEngine(
       ? patternUnit(activeMove.value, variant.value)
       : null,
   );
+  // On the look step the player may tap the pattern's cells (`tapPeek`), as a lesson's step 1 asks.
+  // Found without a miss or a look at the pattern first, applying it is free (`peekFree`): they did
+  // the finding. `peekNote` is the last tap's verdict, for the hint panel.
+  const peekTaps = ref<CellCoord[]>([]);
+  const peekFree = ref(false);
+  const peekNote = ref("");
+  let peekEarned = true;
 
   // The hint's pattern in pen on the board once a step shows it (what it removes or places only on
   // the step that says so). Applying a hint strikes the removed marks through, or circles the placed
@@ -99,7 +107,9 @@ export function useSudokuEngine(
     const hint = activeComplexHint.value;
     // The last step is the one that says what to remove or place.
     const showsResult = !!hint && currentStepIndex.value === hint.steps.length - 1;
-    if (!move || (!hintTriggers.value.length && !showsResult)) return appliedMarks.value;
+    // The look step's triggers are only the player's taps: the pattern stays undrawn.
+    if (!move || lookUnit.value || (!hintTriggers.value.length && !showsResult))
+      return appliedMarks.value;
     const cands = getGridCandidates(currentBoard.value, variant.value);
     const has = (r: number, c: number, n: number) => {
       const notes = notesBoard.value[r]![c]!;
@@ -563,6 +573,55 @@ export function useSudokuEngine(
     return hint.title;
   }
 
+  /**
+   * A tap on the board during a peek's look step: marks (or unmarks) the cell as part of the
+   * pattern (patternCells: a lesson's step 1), and once all are marked moves on to the pattern step.
+   * A miss costs no hint but makes applying this one a hint again. Returns the line to announce.
+   */
+  function tapPeek(cell: CellCoord): string {
+    const move = activeMove.value;
+    if (!lookUnit.value || !move) return "";
+    const pattern = patternCells(move);
+    const same = (p: CellCoord) => p.r === cell.r && p.c === cell.c;
+    if (peekTaps.value.some(same)) peekTaps.value = peekTaps.value.filter((p) => !same(p));
+    else if (pattern.some(same)) peekTaps.value = [...peekTaps.value, cell];
+    else {
+      peekEarned = false;
+      return (peekNote.value = peekMiss(move, pattern, cell));
+    }
+    if (peekTaps.value.length === pattern.length) {
+      peekFree.value = peekEarned;
+      currentStepIndex.value++;
+      peekNote.value = t(peekEarned ? "hint.peek.found" : "hint.peek.foundLate");
+    } else {
+      peekNote.value = peekTaps.value.length
+        ? t("lesson.found", { n: peekTaps.value.length, total: pattern.length })
+        : "";
+    }
+    updateStepHighlights();
+    return peekNote.value;
+  }
+
+  // Why a tap missed, from checks that are true of any cell and name nothing the look step didn't:
+  // a filled cell, one outside the named unit, a naked single's cell with more than one candidate.
+  function peekMiss(move: SolveMove, pattern: CellCoord[], { r, c }: CellCoord): string {
+    if (currentBoard.value[r]![c]) return t("lesson.why.filled");
+    const u = patternUnit(move, variant.value);
+    if (u.kind === "row" || u.kind === "col" || u.kind === "box") {
+      const cells = unitCells(u.kind, u);
+      const inside = (p: CellCoord) => cells.some((q) => q.r === p.r && q.c === p.c);
+      if (pattern.every(inside) && !inside({ r, c })) {
+        const v = turnUnit(u, turn.value);
+        return t("lesson.why.outside", {
+          where: t(`lesson.where.${v.kind}`, { n: unitNumber(v) }),
+        });
+      }
+    }
+    const n = getGridCandidates(currentBoard.value, variant.value)[r]![c]!.length;
+    if (move.technique === "naked-single" && n > 1) return t("lesson.why.manyMarks", { n });
+    return t("lesson.miss");
+  }
+
   // Turning the board retells an open hint in the rows and columns the player now sees.
   watch(turn, () => {
     const hint = activeComplexHint.value;
@@ -574,6 +633,9 @@ export function useSudokuEngine(
 
   function nextHintStep(onComplete: () => void) {
     if (!activeComplexHint.value) return;
+    // Shown the pattern rather than finding it: applying is a hint, even if tapped in later.
+    if (lookUnit.value) peekEarned = false;
+    peekNote.value = "";
 
     if (currentStepIndex.value < activeComplexHint.value.steps.length - 1) {
       currentStepIndex.value++;
@@ -586,6 +648,7 @@ export function useSudokuEngine(
 
   function prevHintStep() {
     if (!activeComplexHint.value || currentStepIndex.value === 0) return;
+    peekNote.value = "";
     currentStepIndex.value--;
     updateStepHighlights();
   }
@@ -629,6 +692,10 @@ export function useSudokuEngine(
     activeComplexHint.value = null;
     activeMove.value = null;
     peeking.value = false;
+    peekTaps.value = [];
+    peekFree.value = false;
+    peekNote.value = "";
+    peekEarned = true;
     currentStepIndex.value = 0;
     activeHintCell.value = null;
     hintTriggers.value = [];
@@ -646,7 +713,9 @@ export function useSudokuEngine(
     if (!step) return;
     // Where to look doesn't give the target away.
     activeHintCell.value = lookUnit.value ? null : activeComplexHint.value.targetCell;
-    hintTriggers.value = step.highlightCoords.filter((c) => c.type === "trigger");
+    hintTriggers.value = lookUnit.value
+      ? peekTaps.value.map((p) => ({ ...p, type: "trigger" as const }))
+      : step.highlightCoords.filter((c) => c.type === "trigger");
     hintEliminations.value = step.highlightCoords.filter((c) => c.type === "elimination");
   }
 
@@ -699,6 +768,9 @@ export function useSudokuEngine(
     peekMove,
     peekMoves,
     lookUnit,
+    tapPeek,
+    peekFree,
+    peekNote,
     peekHint,
     findWrongEntry,
     nextHintStep,
@@ -707,6 +779,7 @@ export function useSudokuEngine(
     cancelComplexHint,
     resetHintChain,
     activeMove,
+    appliedEliminations,
     hintMarks,
     showApplied,
   };

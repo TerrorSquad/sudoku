@@ -4,6 +4,7 @@ import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { NewRecord } from "../utils/records";
 import type { Placement } from "../utils/stuckMoments";
 import type { TechniqueId } from "../utils/sudokuGrader";
+import type { Hinted } from "../utils/winRecap";
 
 // The end of a game: the win (stars, score, what it took) or the game over. Mounted per showing.
 const props = defineProps<{
@@ -21,6 +22,7 @@ const props = defineProps<{
   placements: Placement[]; // the replay's moves
   result: WinResult | null; // null for a game over
   techniqueLog: TechniqueId[];
+  hinted: Hinted;
   nextLevel: Difficulty | null;
   nextLoading: boolean;
   variant?: Variant;
@@ -29,6 +31,7 @@ const emit = defineEmits<{
   next: [];
   close: [];
   lesson: [id: TechniqueId];
+  learn: [id: TechniqueId]; // the recap's: its lesson at the first level not finished
   cue: [kind: "tick" | "stamp", ...n: number[]];
   replay: [frame: { board: Grid; placed: Placement | null } | null];
 }>();
@@ -81,6 +84,18 @@ const {
   total: () => props.result?.score?.total,
   cue: (kind, ...n) => emit("cue", kind, ...n),
 });
+
+// "What you needed help with": what this game's hints were for, each with its lesson. Not after a
+// practice board, which drilled its technique already.
+const techniquePath = useTechniquePath();
+const recap = computed(() =>
+  props.win && !props.practice
+    ? hintRecap(props.hinted, [
+        ...techniquePath.getDone(),
+        ...Object.keys(techniquePath.getStars()),
+      ])
+    : [],
+);
 
 const GAME_URL = "https://wavedash.com/games/sudoku-pro";
 
@@ -305,6 +320,35 @@ onMounted(() => {
         :technique-log="techniqueLog"
         @lesson="(id) => emit('lesson', id)"
       />
+
+      <!-- After the steps, like the stamp: what to learn next -->
+      <section
+        v-if="recap.length"
+        data-testid="hint-recap"
+        :class="winStep >= winStepCount ? 'win-in' : 'opacity-0'"
+        class="mb-5 border border-zinc-200 px-3 py-2 text-left dark:border-zinc-800"
+      >
+        <h4 class="mb-2 text-xs font-semibold text-zinc-500">{{ $t("modal.recap") }}</h4>
+        <ul class="space-y-1.5">
+          <li
+            v-for="row in recap"
+            :key="row.id"
+            class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
+          >
+            <span :id="`recap-${row.id}`" class="text-xs text-zinc-700 dark:text-zinc-300"
+              ><span class="font-bold">{{ $t(`hint.move.${row.id}.name`) }}</span> ·
+              {{ $t("modal.recapHinted", { n: row.n }) }}</span
+            >
+            <button
+              @click="emit('learn', row.id)"
+              :aria-describedby="`recap-${row.id}`"
+              class="min-h-6 border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-300"
+            >
+              {{ $t(row.learned ? "hint.learnAgain" : "modal.recapLearn") }}
+            </button>
+          </li>
+        </ul>
+      </section>
 
       <button
         v-if="canWatch"

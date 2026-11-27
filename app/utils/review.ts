@@ -5,7 +5,8 @@
 // with at most one wrong tap moves it up a box, a worse one (or a skip) back to box 1; each box
 // waits INTERVALS[box - 1] days.
 
-import type { TechniqueId } from "./sudokuGrader";
+import type { Grid } from "../types/sudoku";
+import type { DigitAt, TechniqueId } from "./sudokuGrader";
 
 import { ACADEMY_TECHNIQUES } from "./progression";
 
@@ -96,7 +97,11 @@ export function reviewCard(card: Card | undefined, passed: boolean, today: strin
   return { box, next: addDays(today, INTERVALS[box - 1]!) };
 }
 
-/** A finished lesson's card: box 1, due tomorrow, unless the technique is already scheduled. */
+/**
+ * A finished lesson's card, or a hinted technique's (one needed in a game is one to practise):
+ * box 1, due tomorrow, unless the technique is already scheduled. A hint is not a review miss, so
+ * it never resets a card.
+ */
 export const lessonCard = (card: Card | undefined, today: string): Card =>
   card ?? { box: 1, next: addDays(today, INTERVALS[0]) };
 
@@ -120,6 +125,66 @@ export function mergeReview(a: unknown, b: unknown): Record<string, Card> {
       if (!have || mine > theirs || (mine === theirs && card.box < have.box))
         out[id] = { box: card.box, next: card.next };
     }
+  }
+  return out;
+}
+
+// ---- Positions from the player's own games --------------------------------------------------
+
+/** The newest position each technique was hinted at in a game: {id: StuckPosition}. */
+export const POSITIONS_KEY = "sudoku_v1_review_positions";
+
+/**
+ * Where a game needed a hint past the singles, before it was applied: the board's right digits
+ * (81 characters, 0 for empty), the removals the hint chain had made (r, c, digit per three
+ * characters) so the move is still next when replayed, and the local day. Compact, as one is kept
+ * per technique. Untrusted when read back (imports, other versions): lesson.ts's
+ * lessonFromPosition checks it before it's played.
+ */
+export interface StuckPosition {
+  board: string;
+  elims: string;
+  date: string;
+}
+
+const BOARD = /^\d{81}$/;
+const ELIMS = /^(?:[0-8][0-8][1-9])*$/;
+
+export const isStuckPosition = (v: unknown): v is StuckPosition =>
+  !!v &&
+  typeof v === "object" &&
+  typeof (v as StuckPosition).board === "string" &&
+  BOARD.test((v as StuckPosition).board) &&
+  typeof (v as StuckPosition).elims === "string" &&
+  ELIMS.test((v as StuckPosition).elims) &&
+  typeof (v as StuckPosition).date === "string" &&
+  DATE.test((v as StuckPosition).date);
+
+export function stuckPosition(board: Grid, elims: readonly DigitAt[], date: string): StuckPosition {
+  const triples = new Set(elims.map(({ r, c, num }) => `${r}${c}${num}`));
+  return { board: board.flat().join(""), elims: [...triples].join(""), date };
+}
+
+/** The stored positions, keeping only known techniques and well-formed entries. */
+export function readPositions(raw: unknown): Partial<Record<TechniqueId, StuckPosition>> {
+  const out: Partial<Record<TechniqueId, StuckPosition>> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [id, p] of Object.entries(raw))
+    if (KNOWN.has(id) && isStuckPosition(p)) out[id as TechniqueId] = p;
+  return out;
+}
+
+/**
+ * Two stores as one: per technique the newer position (on the same day, `b`'s). Well-formed
+ * entries this version doesn't know pass through, as mergeReview's do.
+ */
+export function mergePositions(a: unknown, b: unknown): Record<string, StuckPosition> {
+  const out: Record<string, StuckPosition> = {};
+  for (const raw of [a, b]) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    for (const [id, p] of Object.entries(raw))
+      if (isStuckPosition(p) && !(out[id] && out[id].date > p.date))
+        out[id] = { board: p.board, elims: p.elims, date: p.date };
   }
   return out;
 }

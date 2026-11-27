@@ -4,11 +4,14 @@ import {
   addDays,
   dueToday,
   lessonCard,
+  mergePositions,
   mergeReview,
   nextReviewDay,
+  readPositions,
   readReview,
   reviewCard,
   reviewPassed,
+  stuckPosition,
   withLearned,
 } from "../utils/review";
 
@@ -145,5 +148,58 @@ describe("readReview and mergeReview", () => {
       swordfish: { box: 1, next: "2026-11-16" },
     });
     expect(mergeReview(null, "junk")).toEqual({});
+  });
+});
+
+describe("the player's own positions", () => {
+  const board = Array.from({ length: 9 }, (_, r) =>
+    [0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (r + c) % 10),
+  );
+  const p = (date: string) => stuckPosition(board, [], date);
+
+  it("stores a board as 81 digits and the removals as r, c, digit triples, once each", () => {
+    const pos = stuckPosition(
+      board,
+      [
+        { r: 0, c: 4, num: 7 },
+        { r: 8, c: 8, num: 1 },
+        { r: 0, c: 4, num: 7 },
+      ],
+      "2026-11-20",
+    );
+    expect(pos).toEqual({ board: board.flat().join(""), elims: "047881", date: "2026-11-20" });
+    expect(pos.board).toHaveLength(81);
+  });
+
+  it("reads only known techniques' well-formed positions", () => {
+    const good = p("2026-11-20");
+    expect(
+      readPositions({
+        "x-wing": good,
+        "future-technique": good,
+        swordfish: { ...good, board: "123" },
+        skyscraper: { ...good, elims: "0490" },
+        "naked-pair": { ...good, date: "yesterday" },
+      }),
+    ).toEqual({ "x-wing": good });
+    expect(readPositions([good])).toEqual({});
+  });
+
+  it("merges to the newer position per technique, keeping a later version's", () => {
+    const [old, mid, recent] = [p("2026-11-10"), p("2026-11-15"), p("2026-11-20")];
+    const merged = mergePositions(
+      { "x-wing": recent, pointing: old, "future-technique": mid },
+      { "x-wing": old, pointing: mid, swordfish: { board: "x" } },
+    );
+    expect(merged).toEqual({ "x-wing": recent, pointing: mid, "future-technique": mid });
+    expect(mergePositions({ "x-wing": old }, { "x-wing": recent })).toEqual({ "x-wing": recent });
+    expect(mergePositions(null, "junk")).toEqual({});
+  });
+
+  it("a hinted technique joins the schedule in box 1, due tomorrow, and never resets a card", () => {
+    // A hint uses the finished lesson's rule (useTechniquePath's rememberStuck).
+    expect(lessonCard(undefined, "2026-11-20")).toEqual({ box: 1, next: "2026-11-21" });
+    const card = { box: 4, next: "2026-12-01" };
+    expect(lessonCard(card, "2026-11-20")).toBe(card);
   });
 });

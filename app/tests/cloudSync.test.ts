@@ -232,6 +232,22 @@ describe("personal records on restore", () => {
     expect(JSON.parse(mergedBests(local, cloud).sudoku_v1_review!)).toEqual(merged);
   });
 
+  it("keeps each technique's newer own review position both ways", () => {
+    const pos = (date: string) => ({ board: "0".repeat(81), elims: "", date });
+    const local = {
+      ...A,
+      sudoku_v1_review_positions: rec({ "x-wing": pos("2026-11-20"), pointing: pos("2026-11-01") }),
+    };
+    const cloud = {
+      ...B,
+      sudoku_v1_review_positions: rec({ "x-wing": pos("2026-11-10"), pointing: pos("2026-11-12") }),
+    };
+    const merged = { "x-wing": pos("2026-11-20"), pointing: pos("2026-11-12") };
+    const key = "sudoku_v1_review_positions";
+    expect(JSON.parse(withLocalOnly(file(cloud, 5), local).data[key]!)).toEqual(merged);
+    expect(JSON.parse(mergedBests(local, cloud)[key]!)).toEqual(merged);
+  });
+
   it("unions the basics done both ways", () => {
     const local = { ...A, sudoku_v1_basics_done: rec(["rule", "notes"]) };
     const cloud = { ...B, sudoku_v1_basics_done: rec(["notes", "scan"]) };

@@ -20,9 +20,18 @@ import {
 } from "./explain";
 import { generatePracticePuzzle } from "./practice";
 import { RARE_IN_PUZZLES, type Level } from "./progression";
-import { cloneGrid, getGridCandidates, type Rng } from "./sudokuCore";
+import { isStuckPosition, type StuckPosition } from "./review";
+import {
+  cloneGrid,
+  getGridCandidates,
+  hasUniqueSolution,
+  isValidPlacement,
+  solveBoard,
+  type Rng,
+} from "./sudokuCore";
 import {
   nextHint,
+  patternCells,
   unitNumber,
   type BoardUnit,
   type CellRC,
@@ -109,12 +118,8 @@ function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
       cands.filter((n) => !elims.some((e) => e.r === r && e.c === c && e.num === n)),
     ),
   );
-  // A single's (or BUG+1's) "pattern" in the solver is every filled cell around it; the player
-  // finds the cell itself.
   const p = move.placement;
-  const pattern = p
-    ? [{ r: p.r, c: p.c }]
-    : uniqueCells(move.triggers.map(({ r, c }) => ({ r, c })));
+  const pattern = patternCells(move);
   return {
     technique: move.technique,
     board: cloneGrid(board),
@@ -130,11 +135,16 @@ function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
 
 /**
  * Replays the solver over `puzzle` to where `technique` is next. Prefers an occurrence that sits
- * in one named unit, so "look in box 4" points at exactly one instance.
+ * in one named unit, so "look in box 4" points at exactly one instance. `made`: removals already
+ * made on `puzzle`.
  */
-export function lessonFromPuzzle(puzzle: Grid, technique: TechniqueId): Lesson | null {
+export function lessonFromPuzzle(
+  puzzle: Grid,
+  technique: TechniqueId,
+  made: readonly DigitAt[] = [],
+): Lesson | null {
   const board = cloneGrid(puzzle);
-  const elims: DigitAt[] = [];
+  const elims: DigitAt[] = [...made];
   let first: Lesson | null = null;
   for (let step = 0; step < 600; step++) {
     const move = nextHint(board, elims);
@@ -148,6 +158,25 @@ export function lessonFromPuzzle(puzzle: Grid, technique: TechniqueId): Lesson |
     else elims.push(...move.eliminations);
   }
   return first;
+}
+
+/**
+ * A position the player needed a hint at in a game (review.ts's StuckPosition), replayed to where
+ * `technique` is next, as lessonFromPuzzle does. Null when it isn't sound: a board that breaks a
+ * rule or hasn't exactly one solution, a removal of a filled cell or of its answer, or no
+ * `technique` on the way. It comes from storage, so it may be from an import or another version.
+ */
+export function lessonFromPosition(p: StuckPosition, technique: TechniqueId): Lesson | null {
+  if (!isStuckPosition(p)) return null;
+  const board: Grid = Array.from({ length: 9 }, (_, r) =>
+    Array.from(p.board.slice(r * 9, r * 9 + 9), Number),
+  );
+  const clash = board.some((row, r) => row.some((v, c) => v && !isValidPlacement(board, r, c, v)));
+  if (clash || !hasUniqueSolution(board)) return null;
+  const solution = solveBoard(board)!;
+  const elims = (p.elims.match(/.../g) ?? []).map((s) => ({ r: +s[0]!, c: +s[1]!, num: +s[2]! }));
+  if (elims.some(({ r, c, num }) => board[r]![c] || solution[r]![c] === num)) return null;
+  return lessonFromPuzzle(board, technique, elims);
 }
 
 /** The Academy's worked example as a lesson: its pencil marks are the removals made so far. */

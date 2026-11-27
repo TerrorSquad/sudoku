@@ -10,7 +10,7 @@ import type { Grid } from "../types/sudoku";
 import { useSudokuEngine } from "../composables/useSudokuEngine";
 import { circled } from "../utils/patternMarks";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
-import { generateGradedPuzzle, nextHint } from "../utils/sudokuGrader";
+import { generateGradedPuzzle, nextHint, patternCells } from "../utils/sudokuGrader";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
   let engine: ReturnType<typeof useSudokuEngine>;
@@ -397,6 +397,64 @@ describe("peekMove: a technique picked from the panel's list", () => {
     // The next plain hint is back to two steps.
     engine.triggerComplexHint();
     expect(engine.activeComplexHint.value!.steps).toHaveLength(2);
+  });
+
+  function peekGame() {
+    const engine = useSudokuEngine();
+    const { puzzle, solution } = generateGradedPuzzle("expert", makeRng(3));
+    engine.currentBoard.value = puzzle.map((row) => [...row]);
+    engine.initialBoard.value = puzzle.map((row) => [...row]);
+    engine.solvedBoard.value = solution;
+    // A removal: its pattern is several cells (a placement's is the cell it fills).
+    const move = engine.peekMoves().find((m) => !m.placement && patternCells(m).length > 1)!;
+    engine.peekMove(move);
+    return { engine, move, pattern: patternCells(move) };
+  }
+
+  it("tapping the pattern's cells finds it: on to the pattern step, and free to apply", () => {
+    const { engine, move, pattern } = peekGame();
+    const [first, ...rest] = pattern;
+    engine.tapPeek(first!);
+    // Marked on the board, the pattern itself still undrawn.
+    expect(engine.hintTriggers.value).toEqual([{ ...first!, type: "trigger" }]);
+    expect(engine.hintMarks.value).toEqual([]);
+    engine.tapPeek(first!); // a second tap takes it back
+    expect(engine.hintTriggers.value).toEqual([]);
+    for (const p of pattern) engine.tapPeek(p);
+    expect(engine.currentStep.value!.label).toBe("hint.move.findLabel");
+    expect(engine.peekNote.value).toBe("hint.peek.found");
+    expect(engine.peekFree.value).toBe(true);
+    expect(rest.length).toBeGreaterThan(0);
+
+    engine.nextHintStep(() => {});
+    engine.nextHintStep(() => {});
+    const { r, c, num } = move.eliminations[0]!;
+    expect(engine.notesBoard.value[r]![c]![num]).toBe(false);
+    expect(engine.peekFree.value).toBe(false); // reset with the hint
+  });
+
+  it("a wrong tap stays on where to look, and makes applying it a hint again", () => {
+    const { engine, pattern } = peekGame();
+    const filled = engine.currentBoard.value
+      .flatMap((row, r) => row.map((v, c) => ({ r, c, v })))
+      .find((p) => p.v)!;
+    expect(engine.tapPeek(filled)).toBe("lesson.why.filled");
+    expect(engine.currentStep.value!.label).toBe("hint.peek.lookLabel");
+    for (const p of pattern) engine.tapPeek(p);
+    expect(engine.currentStep.value!.label).toBe("hint.move.findLabel");
+    expect(engine.peekNote.value).toBe("hint.peek.foundLate");
+    expect(engine.peekFree.value).toBe(false);
+  });
+
+  it("Next shows the pattern instead: tapping it in after going back isn't free", () => {
+    const { engine, pattern } = peekGame();
+    engine.nextHintStep(() => {});
+    engine.prevHintStep();
+    for (const p of pattern) engine.tapPeek(p);
+    expect(engine.currentStep.value!.label).toBe("hint.move.findLabel");
+    expect(engine.peekFree.value).toBe(false);
+    // Past the look step a tap means nothing to the hint.
+    expect(engine.tapPeek(pattern[0]!)).toBe("");
   });
 });
 

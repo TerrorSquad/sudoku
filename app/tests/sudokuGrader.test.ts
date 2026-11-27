@@ -13,6 +13,7 @@ import {
   availableTechniques,
   featuredTechnique,
   movesNow,
+  removerOf,
   spottedMove,
   techniqueFor,
   notesEliminations,
@@ -25,6 +26,7 @@ import {
   singlesPath,
   techniquesRequired,
   STUCK,
+  type DigitAt,
   type SolveMove,
 } from "../utils/sudokuGrader";
 
@@ -347,6 +349,25 @@ describe("spottedMove", () => {
     expect(spottedMove(puzzle, notes, last)?.technique).toBe(move.technique);
   });
 });
+
+describe("removerOf", () => {
+  it("finds the move that removes a pencil mark, and nothing for a mark no move touches", () => {
+    const { puzzle } = generateGradedPuzzle("expert", makeRng(3));
+    const moves = movesNow(puzzle);
+    const move = moves.find((m) => m.tier >= 2 && !m.placement)!;
+    const mark = move.eliminations[0]!;
+    // The first move that removes it, easiest first (an earlier finder may get there too).
+    expect(removerOf(moves, mark)?.eliminations).toContainEqual(mark);
+    expect(moves.indexOf(removerOf(moves, mark)!)).toBeLessThanOrEqual(moves.indexOf(move));
+    const cands = getGridCandidates(puzzle);
+    const kept = cands
+      .flatMap((row, r) => row.flatMap((cs, c) => cs.map((num) => ({ r, c, num }))))
+      .find((at) => !moves.some((m) => m.eliminations.some((e) => sameDigitAt(e, at))))!;
+    expect(removerOf(moves, kept)).toBeNull();
+    expect(removerOf([], mark)).toBeNull();
+  });
+});
+const sameDigitAt = (a: DigitAt, b: DigitAt) => a.r === b.r && a.c === b.c && a.num === b.num;
 
 describe("techniqueFor", () => {
   it("is null for a single and names what a harder placement took", () => {

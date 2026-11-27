@@ -48,10 +48,11 @@ export function useNudge(
     return true;
   }
 
-  // Counts one hint per step, whether it ended at the nudge or went on to the explanation.
-  function chargeHint() {
+  // Counts one hint per step, whether it ended at the nudge or went on to the explanation. `free`:
+  // the player found this step's pattern themselves (a peek), so only a nudge already paid covers it.
+  function chargeHint(free = false) {
     if (paid) paid = false;
-    else hintsUsed.value++;
+    else if (!free) hintsUsed.value++;
   }
 
   return { nudge, nudgeUnit, showNudge, chargeHint };

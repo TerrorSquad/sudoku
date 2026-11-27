@@ -2,10 +2,11 @@
 // (puzzleWorker.ts) and in place: one function, so a seed gives the same board on either path.
 import type { Difficulty, Grid, Variant } from "../types/sudoku";
 import type { Level } from "./progression";
+import type { StuckPosition } from "./review";
 import type { TechniqueId } from "./sudokuGrader";
 
 import { generateDailyBoard } from "../composables/useDailyPuzzle";
-import { generateLesson, quickLesson } from "./lesson";
+import { generateLesson, lessonFromPosition, quickLesson } from "./lesson";
 import { generatePracticePuzzle } from "./practice";
 import { makeRng } from "./sudokuCore";
 import { featuredTechnique, generateGradedPuzzle } from "./sudokuGrader";
@@ -15,6 +16,7 @@ export type PuzzleJob =
   | { daily: string; level: Difficulty } // the Daily for a date key
   | { practice: TechniqueId; seed: number } // a full practice puzzle
   | { lesson: TechniqueId; seed: number; quick?: boolean; level?: Level } // a guided lesson, or a Spot it one
+  | { lesson: TechniqueId; from: StuckPosition } // a review on the player's own position, or null
   | { featured: Grid; variant?: Variant }; // a board's featured technique (a resumed or custom one)
 
 // A new game and a Daily carry their featured technique (featuredTechnique), worked out here so
@@ -26,6 +28,7 @@ export async function runPuzzleJob(job: PuzzleJob) {
     return { puzzle, technique: featuredTechnique(puzzle) };
   }
   if ("practice" in job) return generatePracticePuzzle(job.practice, makeRng(job.seed));
+  if ("from" in job) return lessonFromPosition(job.from, job.lesson);
   if ("lesson" in job)
     return job.quick
       ? quickLesson(job.lesson, makeRng(job.seed))
