@@ -123,4 +123,15 @@ describe("useGameInput", () => {
     g.handleKeyDown(key("?"));
     expect(g.s.log.slice(4)).toEqual([]);
   });
+
+  it("Enter or Space taps the selected cell, not on a button", () => {
+    const g = setup();
+    // No DOM here: a target is only asked whether it sits in a button.
+    const on = (button: boolean) => ({ target: { closest: () => button } }) as never;
+    g.handleKeyDown(key("Enter", on(false))); // nothing selected
+    g.s.selectedCell.value = { r: 1, c: 1 };
+    g.handleKeyDown(key(" ", on(false)));
+    g.handleKeyDown(key("Enter", on(true)));
+    expect(g.s.log).toEqual(["tap [object Object]"]); // the selected cell
+  });
 });

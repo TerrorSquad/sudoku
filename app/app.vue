@@ -641,6 +641,7 @@ const { activeDigit, pickedDigit, handleNumpad, handleSelectCell, handleKeyDown 
     undo,
     redo,
     hint: handleTriggerHint,
+    tap: tapPeek,
     turn: () => turn.value++,
     autoNotes: handleAutoFillNotes,
     history: openHistory,
@@ -790,7 +791,7 @@ function handleInputNumber(num: number) {
 
 // Stepped through, or applied at once: the hint's move goes in the log and costs a hint, then the
 // game is won or the status line says what changed.
-function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
+function afterHint(move: SolveMove | null, applied: string, winMsg?: string, free = false) {
   const tech = move?.technique; // none for a wrong-entry hint
   const placed = move?.placement;
   engine.showApplied(move);
@@ -799,7 +800,7 @@ function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
     if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
     techStats.record(tech);
   }
-  chargeHint();
+  chargeHint(free);
   if (placed) cue("place", placed.num);
   if (!checkWin(winMsg))
     say(t(!tech ? "game.wrongCleared" : placed ? applied : "game.candidatesCleared"));
@@ -807,6 +808,7 @@ function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
 
 function handleNextStep() {
   const move = engine.activeMove.value; // gone once the hint is applied
+  const free = engine.peekFree.value;
   nextHintStep(() =>
     afterHint(
       move,
@@ -814,9 +816,20 @@ function handleNextStep() {
       gameZen.value
         ? undefined
         : t("modal.winHintMsg", { time: timer.formatTime(timer.timerSeconds.value) }),
+      free,
     ),
   );
 }
+
+// On a peek's "where to look", a tap (or Enter/Space on the selected cell) marks a pattern cell
+// instead of selecting it or placing an armed digit. False otherwise.
+function tapPeek(cell: CellCoord): boolean {
+  if (!engine.lookUnit.value) return false;
+  const note = engine.tapPeek(cell);
+  if (note) say(note);
+  return true;
+}
+const tapCell = (cell: CellCoord, note?: number) => tapPeek(cell) || handleSelectCell(cell, note);
 
 const { nudge, nudgeUnit, showNudge, chargeHint } = useNudge(engine, hintsUsed, inGame);
 watch(currentScreen, () => (finishing.value = false));
@@ -861,8 +874,9 @@ function handlePeek(id: TechniqueId) {
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const move = engine.activeMove.value;
+  const free = engine.peekFree.value;
   engine.applyComplexHint();
-  afterHint(move, "game.instantApplied", t("modal.winInstantMsg"));
+  afterHint(move, "game.instantApplied", t("modal.winInstantMsg"), free);
 }
 
 // Finish: with only a few cells left, all of them plain singles from here (by the solver, not the
@@ -1367,7 +1381,7 @@ onUnmounted(() => {
                 :diagonal="gameVariant === 'x'"
                 :turn="turn"
                 :done="doneUnits"
-                @select-cell="handleSelectCell"
+                @select-cell="tapCell"
               />
               <div class="flex flex-col gap-2.5">
                 <ControlPanel
@@ -1421,6 +1435,7 @@ onUnmounted(() => {
               @learn="openGameLesson"
               :peekable="peekable"
               @peek="handlePeek"
+              :note="engine.peekNote.value"
             />
           </div>
         </div>

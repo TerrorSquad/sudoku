@@ -13,6 +13,8 @@ const props = defineProps<{
   available?: TechniqueId[];
   /** Those of them that open as a peek; the rest (only the player's notes say so) stay names. */
   peekable?: TechniqueId[];
+  /** A peek's verdict on the player's last tap on the board. */
+  note?: string;
 }>();
 
 const emit = defineEmits<{
@@ -131,6 +133,13 @@ const isLastStep = computed(() => {
         </h4>
         <p class="text-sm leading-relaxed text-zinc-700 3xl:text-base dark:text-zinc-300">
           {{ currentStep.description }}
+        </p>
+        <p
+          v-if="note"
+          class="text-sm font-semibold text-violet-700 3xl:text-base dark:text-violet-300"
+          data-testid="peek-note"
+        >
+          {{ note }}
         </p>
         <!-- This move on this board: its real rows, columns and boxes. -->
         <ul
