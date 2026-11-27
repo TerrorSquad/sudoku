@@ -47,8 +47,11 @@ test("a technique picked from the panel's list opens at where to look, then show
   await expect(page.getByRole("heading", { name: "Hidden Single" })).toBeVisible();
   await expect(page.locator(".ring-emerald-500[data-cell]")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Next" }).click();
+  // The picked button is gone, so focus moved to Next; the Hint key steps on instead of applying.
+  await expect(page.getByRole("button", { name: "Next" })).toBeFocused();
+  await page.keyboard.press("h");
   await expect(page.locator(".ring-emerald-500[data-cell]")).toHaveCount(1);
+  await expect(page.locator('[data-cell][aria-label*="your entry"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Apply" }).click();
   // Applied: one digit in, and the list is back.

@@ -110,7 +110,7 @@
   "hint.onThisBoard": "Na tabli upravo sada",
   "hint.peek.pick": "Izaberi tehniku da vidiš gde je.",
   "hint.peek.lookLabel": "Gde da gledaš",
-  "hint.peek.look": "Pogledaj {unit}: tu je {technique}. Probaj da pronađeš obrazac pre nego što nastaviš.",
+  "hint.peek.look": "Pogledaj {unit}: {technique} ti tu daje potez. Probaj da pronađeš obrazac pre nego što nastaviš.",
   "hint.detectedTechnique": "Otkrivena tehnika",
   "hint.step": "Korak {n}",
   "hint.targetCell": "Ciljno polje (polje koje se rešava)",

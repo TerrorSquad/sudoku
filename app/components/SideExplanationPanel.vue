@@ -9,8 +9,10 @@ const props = defineProps<{
   /** The hint's technique (none for a wrong entry), and the lessons done, for "Learn it". */
   technique?: string | null;
   learned?: string[];
-  /** What applies on the board right now, shown while no hint is open: each opens as a peek. */
+  /** What applies on the board right now, shown while no hint is open. */
   available?: TechniqueId[];
+  /** Those of them that open as a peek; the rest (only the player's notes say so) stay names. */
+  peekable?: TechniqueId[];
 }>();
 
 const emit = defineEmits<{
@@ -20,6 +22,14 @@ const emit = defineEmits<{
   (e: "learn", id: TechniqueId): void;
   (e: "peek", id: TechniqueId): void;
 }>();
+
+// The picked button goes away with the list: hand its focus to Next.
+const nextButton = ref<HTMLButtonElement | null>(null);
+async function peek(id: TechniqueId) {
+  emit("peek", id);
+  await nextTick();
+  nextButton.value?.focus();
+}
 
 const isLastStep = computed(() => {
   if (!props.activeComplexHint) return false;
@@ -55,16 +65,25 @@ const isLastStep = computed(() => {
         <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("hint.onThisBoard") }}
         </p>
-        <p class="mt-1 mb-3 text-[0.6875rem] text-zinc-500">{{ $t("hint.peek.pick") }}</p>
-        <ul class="flex flex-wrap justify-center gap-1.5">
+        <p v-if="peekable?.length" class="mt-1 text-[0.6875rem] text-zinc-500">
+          {{ $t("hint.peek.pick") }}
+        </p>
+        <ul class="mt-3 flex flex-wrap justify-center gap-1.5">
           <li v-for="id in available" :key="id">
             <button
+              v-if="peekable?.includes(id)"
               type="button"
-              class="border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 hover:bg-violet-500/20 dark:text-violet-300"
-              @click="emit('peek', id)"
+              class="border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[0.6875rem] font-semibold text-violet-700 hover:bg-violet-500/20 dark:text-violet-300"
+              @click="peek(id)"
             >
               {{ $t(`hint.move.${id}.name`) }}
             </button>
+            <span
+              v-else
+              class="block border border-dashed border-zinc-400/50 px-2.5 py-1.5 text-[0.6875rem] font-semibold text-zinc-600 dark:text-zinc-400"
+            >
+              {{ $t(`hint.move.${id}.name`) }}
+            </span>
           </li>
         </ul>
       </div>
@@ -160,6 +179,7 @@ const isLastStep = computed(() => {
           </button>
 
           <button
+            ref="nextButton"
             @click="emit('next-step')"
             :class="isLastStep ? 'tile-apply' : 'tile-amber'"
             class="tile py-2.5 text-xs font-black 3xl:py-3 3xl:text-sm"

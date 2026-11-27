@@ -17,6 +17,7 @@ import {
 import {
   generateGradedPuzzle,
   nextHint,
+  movesNow,
   patternUnit,
   unitNumber,
   type SolveMove,
@@ -79,7 +80,7 @@ export function useSudokuEngine(
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
   // The open hint is a technique picked from the panel's list (`peekMove`), not the next hint: it
-  // is told against the player's own pencil marks, and opens a step earlier, on where to look.
+  // opens a step earlier, on where to look.
   const peeking = ref(false);
   /** While a peek is on its first step: the row, column or box to search, for the board to frame. */
   const lookUnit = computed<BoardUnit | null>(() =>
@@ -405,14 +406,8 @@ export function useSudokuEngine(
     const digitsStr = move.digits.map(digit).join(", ");
     // Told against the solver's own marks: the board's candidates less the removals made so far.
     const cands = getGridCandidates(currentBoard.value, variant.value);
-    // A peeked move was found on the player's notes, so a mark they took out is gone here too.
-    const noted = (r: number, c: number, n: number) => {
-      const notes = notesBoard.value[r]![c]!;
-      return !peeking.value || !notes.some(Boolean) || !!notes[n];
-    };
     const has = (r: number, c: number, n: number) =>
       cands[r]![c]!.includes(n) &&
-      noted(r, c, n) &&
       !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
     // Told on the board as the player sees it: turned, its rows and columns are named as shown.
     const story = narrate(
@@ -536,8 +531,25 @@ export function useSudokuEngine(
   }
 
   /**
-   * Opens `move` (one the list of what's on the board found, on the player's notes) as a hint that
-   * starts at where to look. A wrong entry comes first, as for any hint. Returns the status line.
+   * The first move of each kind that can be opened as a peek: by the solver's own candidates, like
+   * a hint (never the answer key, and never a gap in the player's notes, which may be a guess),
+   * less the removals their notes already show.
+   */
+  function peekMoves(): SolveMove[] {
+    return movesNow(currentBoard.value, appliedEliminations.value, variant.value)
+      .map((move) => ({
+        ...move,
+        eliminations: move.eliminations.filter(({ r, c, num }) => {
+          const notes = notesBoard.value[r]![c]!;
+          return !notes.some(Boolean) || notes[num];
+        }),
+      }))
+      .filter((m) => m.placement || m.eliminations.length);
+  }
+
+  /**
+   * Opens `move` (one of `peekMoves`) as a hint that starts at where to look. A wrong entry comes
+   * first, as for any hint. Returns the status line.
    */
   function peekMove(move: SolveMove): string {
     if (findWrongEntry()) return triggerComplexHint();
@@ -685,6 +697,7 @@ export function useSudokuEngine(
     completedAt,
     triggerComplexHint,
     peekMove,
+    peekMoves,
     lookUnit,
     peekHint,
     findWrongEntry,

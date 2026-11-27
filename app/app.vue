@@ -311,23 +311,25 @@ const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
 });
-// The hint panel's "on this board" list: technique names, each a button that opens it as a hint
-// starting at where to look (`handlePeek`). Only while the panel is on screen (lg+) and idle; a
-// wrong entry is left out, as the solver takes every digit as true. It reads the player's notes,
-// so a single their marks leave shows up; a move that only mistaken notes allow (it would place a
-// wrong digit or remove a right one) is left out, since a peek can be applied.
+// The hint panel's "on this board" list: technique names. Only while the panel is on screen (lg+)
+// and idle; a wrong entry is left out, as the solver takes every digit as true. It reads the
+// player's notes, so a single their marks leave shows up.
 const widePanel = useMediaQuery("(min-width: 1024px)");
-const boardMoves = computed<SolveMove[]>(() => {
-  if (!widePanel.value || activeComplexHint.value || currentScreen.value !== "game") return [];
+const panelIdle = () =>
+  widePanel.value && !activeComplexHint.value && currentScreen.value === "game";
+const boardTechniques = computed<TechniqueId[]>(() => {
+  if (!panelIdle()) return [];
   const board = rightDigits();
-  const answer = (d: DigitAt) => solvedBoard.value[d.r]![d.c]!;
-  return movesNow(board, notesEliminations(board, notesBoard.value), gameVariant.value).filter(
-    (m) =>
-      (!m.placement || !answer(m.placement) || answer(m.placement) === m.placement.num) &&
-      m.eliminations.every((e) => answer(e) !== e.num),
-  );
+  return availableTechniques(board, notesEliminations(board, notesBoard.value), gameVariant.value);
 });
-const boardTechniques = computed(() => [...new Set(boardMoves.value.map((m) => m.technique))]);
+// The names that are buttons: a pick opens that move as a hint starting at where to look
+// (`handlePeek`). By the solver's own candidates, as hints are: a name only the player's notes
+// put on the list stays text, since their marks may be a guess (and checking them against the
+// answer would tell which guesses are right).
+// ponytail: runs the finders a second time per move; share one pass while the notes rule out
+// nothing the solver hasn't, if it ever shows in a profile.
+const peekMoves = computed<SolveMove[]>(() => (panelIdle() ? engine.peekMoves() : []));
+const peekable = computed(() => peekMoves.value.map((m) => m.technique));
 function rightDigits(): Grid {
   return currentBoard.value.map((row, r) =>
     row.map((v, c) => (v && solvedBoard.value[r]![c] && v !== solvedBoard.value[r]![c] ? 0 : v)),
@@ -831,6 +833,8 @@ function openGameLesson(id: TechniqueId | null | undefined) {
 const openNudgeLesson = () => openGameLesson(nudge.value?.technique);
 
 function handleTriggerHint() {
+  // On a peek's "where to look", Hint shows the pattern: applying there would skip the lesson.
+  if (engine.lookUnit.value) return handleNextStep();
   if (activeComplexHint.value) {
     handleInstantApplyHint();
     return;
@@ -847,7 +851,7 @@ function handleTriggerHint() {
 // A technique picked from the panel's list: its hint, from "where to look" on. Free to look at,
 // a hint once applied, like any other.
 function handlePeek(id: TechniqueId) {
-  const move = boardMoves.value.find((m) => m.technique === id);
+  const move = peekMoves.value.find((m) => m.technique === id);
   if (!move || finishing.value || isPaused.value) return;
   nudge.value = null;
   cue("hint");
@@ -1415,6 +1419,7 @@ onUnmounted(() => {
               :learned="lessonsDone"
               :available="boardTechniques"
               @learn="openGameLesson"
+              :peekable="peekable"
               @peek="handlePeek"
             />
           </div>

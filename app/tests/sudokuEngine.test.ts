@@ -10,7 +10,7 @@ import type { Grid } from "../types/sudoku";
 import { useSudokuEngine } from "../composables/useSudokuEngine";
 import { circled } from "../utils/patternMarks";
 import { makeRng, solveBoard } from "../utils/sudokuCore";
-import { generateGradedPuzzle, movesNow, nextHint } from "../utils/sudokuGrader";
+import { generateGradedPuzzle, nextHint } from "../utils/sudokuGrader";
 
 describe("Sudoku Engine Unit Tests - Sveobuhvatne Tehnike Rešavanja", () => {
   let engine: ReturnType<typeof useSudokuEngine>;
@@ -376,7 +376,7 @@ describe("peekMove: a technique picked from the panel's list", () => {
     engine.initialBoard.value = puzzle.map((row) => [...row]);
     engine.solvedBoard.value = solution;
     // Not the next hint: the last kind of move on the board that places a digit.
-    const move = movesNow(puzzle).findLast((m) => m.placement)!;
+    const move = engine.peekMoves().findLast((m) => m.placement)!;
 
     engine.peekMove(move);
     expect(engine.activeComplexHint.value!.steps).toHaveLength(3);
@@ -397,5 +397,39 @@ describe("peekMove: a technique picked from the panel's list", () => {
     // The next plain hint is back to two steps.
     engine.triggerComplexHint();
     expect(engine.activeComplexHint.value!.steps).toHaveLength(2);
+  });
+});
+
+describe("peekMoves", () => {
+  it("goes by the solver's candidates, not a lone pencil mark, and skips removals already made", () => {
+    const engine = useSudokuEngine();
+    const { puzzle, solution } = generateGradedPuzzle("expert", makeRng(3));
+    engine.currentBoard.value = puzzle.map((row) => [...row]);
+    engine.initialBoard.value = puzzle.map((row) => [...row]);
+    engine.solvedBoard.value = solution;
+    const before = engine.peekMoves();
+    const removal = before.find((m) => !m.placement)!;
+
+    // A guess pencilled alone into a cell with several candidates changes nothing.
+    const cands = engine.getGridCandidates(puzzle);
+    const nine = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    const [r, c] = nine
+      .flatMap((y) => nine.map((x) => [y, x] as const))
+      .find(
+        ([y, x]) =>
+          cands[y]![x]!.length > 2 && !removal.eliminations.some((e) => e.r === y && e.c === x),
+      )!;
+    engine.notesBoard.value[r]![c]![solution[r]![c]!] = true;
+    expect(engine.peekMoves()).toEqual(before);
+    engine.notesBoard.value[r]![c]![solution[r]![c]!] = false;
+
+    // Its marks already taken out by hand: nothing left to show for that move.
+    for (const e of removal.eliminations) {
+      for (const n of cands[e.r]![e.c]!) engine.notesBoard.value[e.r]![e.c]![n] = true;
+    }
+    for (const e of removal.eliminations) engine.notesBoard.value[e.r]![e.c]![e.num] = false;
+    expect(engine.peekMoves()).not.toContainEqual(
+      expect.objectContaining({ triggers: removal.triggers, technique: removal.technique }),
+    );
   });
 });
