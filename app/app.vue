@@ -851,11 +851,58 @@ function handleTriggerHint() {
 // A technique picked from the panel's list: its hint, from "where to look" on. Free to look at,
 // a hint once applied, like any other.
 function handlePeek(id: TechniqueId) {
-  const move = peekMoves.value.find((m) => m.technique === id);
+  openPeek(peekMoves.value.find((m) => m.technique === id));
+}
+function openPeek(move: SolveMove | null | undefined) {
   if (!move || finishing.value || isPaused.value) return;
   nudge.value = null;
   cue("hint");
   say(engine.peekMove(move));
+}
+
+// "Can this go?": the selected cell's pencil marks, each a question whether anything on the board
+// rules it out: a digit its units already hold, or a move a peek would open (by the solver's
+// candidates, never the answer key, so it can't tell a right guess from a wrong one). Free to ask;
+// opening the move is a peek, a hint once applied.
+const canGoDigits = computed(() => {
+  const at = selectedCell.value;
+  if (!at || activeComplexHint.value || isPaused.value || finishing.value) return [];
+  if (currentBoard.value[at.r]![at.c]) return [];
+  return notesBoard.value[at.r]![at.c]!.flatMap((on, n) => (on ? [n] : []));
+});
+const canGo = ref<{ num: number; clash: CellCoord | null; move: SolveMove | null } | null>(null);
+// Any other cell or any change to the board makes the answer stale.
+watch(selectedCell, () => (canGo.value = null));
+watch(boardHistory, () => (canGo.value = null), { deep: 1 });
+const canGoAnswer = computed(() => {
+  if (!canGo.value) return "";
+  const { num, clash, move } = canGo.value;
+  const label = digitLabel(num, colorMode.value, t);
+  if (clash) {
+    const p = turnCell(clash, turn.value);
+    return t("hint.canGo.clash", { num: label, r: p.r + 1, c: p.c + 1 });
+  }
+  return move
+    ? t("hint.canGo.yes", { num: label, name: t(`hint.move.${move.technique}.name`) })
+    : t("hint.canGo.no", { num: label });
+});
+function askCanGo(num: number) {
+  const at = selectedCell.value;
+  if (!at) return;
+  const clash = engine.getConflictCells(at.r, at.c, num)[0] ?? null;
+  canGo.value = {
+    num,
+    clash,
+    move: clash ? null : removerOf(engine.peekMoves(), { ...at, num }),
+  };
+  say(canGoAnswer.value);
+}
+// The strip goes with the selection: hand focus to the opened hint's Next.
+const hintPanel = ref<{ focusNext: () => void } | null>(null);
+async function showCanGo() {
+  openPeek(canGo.value?.move);
+  await nextTick();
+  hintPanel.value?.focusNext();
 }
 
 function handleInstantApplyHint() {
@@ -1403,12 +1450,15 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Right / hint panel — on mobile only takes space once a hint is active -->
+          <!-- Right / hint panel — on mobile only takes space once a hint is active, or for
+               "Can this go?" (under the numpad there) -->
           <div
-            :class="activeComplexHint ? 'block' : 'hidden lg:block'"
+            :class="activeComplexHint || canGoDigits.length ? 'block' : 'hidden lg:block'"
             class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
           >
             <SideExplanationPanel
+              ref="hintPanel"
+              :class="{ 'max-lg:hidden': !activeComplexHint }"
               :active-complex-hint="activeComplexHint"
               :current-step-index="currentStepIndex"
               :current-step="currentStep"
@@ -1421,6 +1471,16 @@ onUnmounted(() => {
               @learn="openGameLesson"
               :peekable="peekable"
               @peek="handlePeek"
+            />
+            <CanThisGo
+              v-if="canGoDigits.length"
+              :digits="canGoDigits"
+              :color-mode="colorMode"
+              :asked="canGo?.num ?? null"
+              :answer="canGoAnswer"
+              :can-show="!!canGo?.move"
+              @ask="askCanGo"
+              @show="showCanGo"
             />
           </div>
         </div>

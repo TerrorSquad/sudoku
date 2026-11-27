@@ -25,6 +25,7 @@ const emit = defineEmits<{
 
 // The picked button goes away with the list: hand its focus to Next.
 const nextButton = ref<HTMLButtonElement | null>(null);
+defineExpose({ focusNext: () => nextButton.value?.focus() });
 async function peek(id: TechniqueId) {
   emit("peek", id);
   await nextTick();
