@@ -9,7 +9,7 @@ const props = defineProps<{
   /** The hint's technique (none for a wrong entry), and the lessons done, for "Learn it". */
   technique?: string | null;
   learned?: string[];
-  /** What applies on the board right now, shown while no hint is open: names only. */
+  /** What applies on the board right now, shown while no hint is open: each opens as a peek. */
   available?: TechniqueId[];
 }>();
 
@@ -18,6 +18,7 @@ const emit = defineEmits<{
   (e: "prev-step"): void;
   (e: "cancel"): void;
   (e: "learn", id: TechniqueId): void;
+  (e: "peek", id: TechniqueId): void;
 }>();
 
 const isLastStep = computed(() => {
@@ -51,16 +52,19 @@ const isLastStep = computed(() => {
         class="mt-6 w-full border-t border-zinc-200 pt-4 dark:border-zinc-800"
         data-testid="board-techniques"
       >
-        <p class="mb-3 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+        <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">
           {{ $t("hint.onThisBoard") }}
         </p>
+        <p class="mt-1 mb-3 text-[0.6875rem] text-zinc-500">{{ $t("hint.peek.pick") }}</p>
         <ul class="flex flex-wrap justify-center gap-1.5">
-          <li
-            v-for="id in available"
-            :key="id"
-            class="border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 dark:text-violet-300"
-          >
-            {{ $t(`hint.move.${id}.name`) }}
+          <li v-for="id in available" :key="id">
+            <button
+              type="button"
+              class="border border-violet-500/30 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-semibold text-violet-700 hover:bg-violet-500/20 dark:text-violet-300"
+              @click="emit('peek', id)"
+            >
+              {{ $t(`hint.move.${id}.name`) }}
+            </button>
           </li>
         </ul>
       </div>

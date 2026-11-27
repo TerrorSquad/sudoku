@@ -311,15 +311,23 @@ const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
 });
-// The hint panel's "on this board" list: technique names only, never where. Only while the panel
-// is on screen (lg+) and idle; a wrong entry is left out, as the solver takes every digit as true.
-// It reads the player's notes, so a single their marks leave shows up.
+// The hint panel's "on this board" list: technique names, each a button that opens it as a hint
+// starting at where to look (`handlePeek`). Only while the panel is on screen (lg+) and idle; a
+// wrong entry is left out, as the solver takes every digit as true. It reads the player's notes,
+// so a single their marks leave shows up; a move that only mistaken notes allow (it would place a
+// wrong digit or remove a right one) is left out, since a peek can be applied.
 const widePanel = useMediaQuery("(min-width: 1024px)");
-const boardTechniques = computed<TechniqueId[]>(() => {
+const boardMoves = computed<SolveMove[]>(() => {
   if (!widePanel.value || activeComplexHint.value || currentScreen.value !== "game") return [];
   const board = rightDigits();
-  return availableTechniques(board, notesEliminations(board, notesBoard.value), gameVariant.value);
+  const answer = (d: DigitAt) => solvedBoard.value[d.r]![d.c]!;
+  return movesNow(board, notesEliminations(board, notesBoard.value), gameVariant.value).filter(
+    (m) =>
+      (!m.placement || !answer(m.placement) || answer(m.placement) === m.placement.num) &&
+      m.eliminations.every((e) => answer(e) !== e.num),
+  );
 });
+const boardTechniques = computed(() => [...new Set(boardMoves.value.map((m) => m.technique))]);
 function rightDigits(): Grid {
   return currentBoard.value.map((row, r) =>
     row.map((v, c) => (v && solvedBoard.value[r]![c] && v !== solvedBoard.value[r]![c] ? 0 : v)),
@@ -836,6 +844,16 @@ function handleTriggerHint() {
   say(triggerComplexHint());
 }
 
+// A technique picked from the panel's list: its hint, from "where to look" on. Free to look at,
+// a hint once applied, like any other.
+function handlePeek(id: TechniqueId) {
+  const move = boardMoves.value.find((m) => m.technique === id);
+  if (!move || finishing.value || isPaused.value) return;
+  nudge.value = null;
+  cue("hint");
+  say(engine.peekMove(move));
+}
+
 function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const move = engine.activeMove.value;
@@ -1340,7 +1358,7 @@ onUnmounted(() => {
                 :show-candidates="showCandidates && !activeComplexHint && !nudge"
                 :plain-notes="!noteHighlight"
                 :theme="boardTheme"
-                :nudge="nudge?.unit"
+                :nudge="nudge?.unit ?? engine.lookUnit.value"
                 :marks="spotted?.marks ?? hintMarks"
                 :diagonal="gameVariant === 'x'"
                 :turn="turn"
@@ -1397,6 +1415,7 @@ onUnmounted(() => {
               :learned="lessonsDone"
               :available="boardTechniques"
               @learn="openGameLesson"
+              @peek="handlePeek"
             />
           </div>
         </div>

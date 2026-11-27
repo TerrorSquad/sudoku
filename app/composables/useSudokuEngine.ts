@@ -3,7 +3,7 @@ import { useI18n } from "vue-i18n";
 
 import type { Grid, NotesGrid, CellCoord, HintCoordinate, Variant } from "../types/sudoku";
 
-import { turnCell, turnHas, turnMove } from "../utils/boardTurn";
+import { turnCell, turnHas, turnMove, turnUnit } from "../utils/boardTurn";
 import { narrate } from "../utils/explain";
 import { emptyNotes } from "../utils/gridNav";
 import { circled, patternMarks, strikes, withGhosts, type Mark } from "../utils/patternMarks";
@@ -17,6 +17,8 @@ import {
 import {
   generateGradedPuzzle,
   nextHint,
+  patternUnit,
+  unitNumber,
   type SolveMove,
   type BoardUnit,
   type DigitAt,
@@ -76,6 +78,15 @@ export function useSudokuEngine(
   // the player makes (new game, load, undo, erase, manual entry).
   const activeMove = ref<SolveMove | null>(null);
   const appliedEliminations = ref<DigitAt[]>([]);
+  // The open hint is a technique picked from the panel's list (`peekMove`), not the next hint: it
+  // is told against the player's own pencil marks, and opens a step earlier, on where to look.
+  const peeking = ref(false);
+  /** While a peek is on its first step: the row, column or box to search, for the board to frame. */
+  const lookUnit = computed<BoardUnit | null>(() =>
+    peeking.value && activeMove.value && currentStepIndex.value === 0
+      ? patternUnit(activeMove.value, variant.value)
+      : null,
+  );
 
   // The hint's pattern in pen on the board once a step shows it (what it removes or places only on
   // the step that says so). Applying a hint strikes the removed marks through, or circles the placed
@@ -394,8 +405,14 @@ export function useSudokuEngine(
     const digitsStr = move.digits.map(digit).join(", ");
     // Told against the solver's own marks: the board's candidates less the removals made so far.
     const cands = getGridCandidates(currentBoard.value, variant.value);
+    // A peeked move was found on the player's notes, so a mark they took out is gone here too.
+    const noted = (r: number, c: number, n: number) => {
+      const notes = notesBoard.value[r]![c]!;
+      return !peeking.value || !notes.some(Boolean) || !!notes[n];
+    };
     const has = (r: number, c: number, n: number) =>
       cands[r]![c]!.includes(n) &&
+      noted(r, c, n) &&
       !appliedEliminations.value.some((e) => e.r === r && e.c === c && e.num === n);
     // Told on the board as the player sees it: turned, its rows and columns are named as shown.
     const story = narrate(
@@ -458,10 +475,25 @@ export function useSudokuEngine(
       };
     }
 
+    // A peek starts with only where to look, so the player can try to find it first.
+    const lookStep: ExplanationStep[] = [];
+    if (peeking.value) {
+      const u = turnUnit(patternUnit(move, variant.value), turn.value);
+      lookStep.push({
+        label: t("hint.peek.lookLabel"),
+        description: t("hint.peek.look", {
+          technique: t(`hint.move.${tech}.name`),
+          unit: t(`hint.nudge.unit.${u.kind}`, { n: unitNumber(u) }),
+        }),
+        highlightCoords: [],
+      });
+    }
+
     return {
       title: t(`hint.move.${tech}.name`),
       targetCell,
       steps: [
+        ...lookStep,
         {
           label: t("hint.move.findLabel"),
           description: findDesc,
@@ -498,6 +530,22 @@ export function useSudokuEngine(
     activeComplexHint.value = hint;
     currentStepIndex.value = 0;
     // The selection's yellow would cover a hint cell's colour, so clear it while the hint shows.
+    selectedCell.value = null;
+    updateStepHighlights();
+    return hint.title;
+  }
+
+  /**
+   * Opens `move` (one the list of what's on the board found, on the player's notes) as a hint that
+   * starts at where to look. A wrong entry comes first, as for any hint. Returns the status line.
+   */
+  function peekMove(move: SolveMove): string {
+    if (findWrongEntry()) return triggerComplexHint();
+    peeking.value = true;
+    activeMove.value = move;
+    const hint = buildHintFromMove(move);
+    activeComplexHint.value = hint;
+    currentStepIndex.value = 0;
     selectedCell.value = null;
     updateStepHighlights();
     return hint.title;
@@ -568,6 +616,7 @@ export function useSudokuEngine(
   function cancelComplexHint() {
     activeComplexHint.value = null;
     activeMove.value = null;
+    peeking.value = false;
     currentStepIndex.value = 0;
     activeHintCell.value = null;
     hintTriggers.value = [];
@@ -583,7 +632,8 @@ export function useSudokuEngine(
     }
     const step = activeComplexHint.value.steps[currentStepIndex.value];
     if (!step) return;
-    activeHintCell.value = activeComplexHint.value.targetCell;
+    // Where to look doesn't give the target away.
+    activeHintCell.value = lookUnit.value ? null : activeComplexHint.value.targetCell;
     hintTriggers.value = step.highlightCoords.filter((c) => c.type === "trigger");
     hintEliminations.value = step.highlightCoords.filter((c) => c.type === "elimination");
   }
@@ -634,6 +684,8 @@ export function useSudokuEngine(
     autoFillNotes,
     completedAt,
     triggerComplexHint,
+    peekMove,
+    lookUnit,
     peekHint,
     findWrongEntry,
     nextHintStep,

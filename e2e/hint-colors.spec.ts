@@ -32,3 +32,26 @@ test("the idle hint panel names what applies on the board, and steps aside for a
   await page.getByRole("button", { name: "Hint" }).first().click();
   await expect(list).toBeHidden();
 });
+
+test("a technique picked from the panel's list opens at where to look, then shows and applies", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(FIVE_BLANKS);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  await page.getByTestId("board-techniques").getByRole("button", { name: "Hidden Single" }).click();
+
+  // Step 1 names the unit only: no target yet.
+  await expect(page.getByText("Where to look")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hidden Single" })).toBeVisible();
+  await expect(page.locator(".ring-emerald-500[data-cell]")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.locator(".ring-emerald-500[data-cell]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Apply" }).click();
+  // Applied: one digit in, and the list is back.
+  await expect(page.getByTestId("board-techniques")).toBeVisible();
+  await expect(page.locator('[data-cell][aria-label*="your entry"]')).toHaveCount(1);
+});
