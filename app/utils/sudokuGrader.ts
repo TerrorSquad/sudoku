@@ -1307,6 +1307,20 @@ export function spottedMove(
 }
 
 /**
+ * "Can this go?": the first of `moves` (a peek's, easiest first) that removes pencil mark `mark`,
+ * or null. Only by what the finders see, never by the answer key.
+ */
+// ponytail: each finder reports its first instance only, so a mark only a second X-Wing removes
+// reads as "nothing yet"; collect every instance per finder if that matters.
+export function removerOf(moves: SolveMove[], mark: DigitAt): SolveMove | null {
+  return (
+    moves.find((m) =>
+      m.eliminations.some((e) => e.r === mark.r && e.c === mark.c && e.num === mark.num),
+    ) ?? null
+  );
+}
+
+/**
  * What it took to place `cell` from `board`: the hardest technique the solver used on its way
  * there, or null when it was a single (or the solver got stuck first).
  */

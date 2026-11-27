@@ -14,6 +14,7 @@ import type { BoardTheme } from "./utils/preferenceValues";
 import type { Level, Tier, Week } from "./utils/progression";
 import type { Placement } from "./utils/stuckMoments";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
+import type { Hinted } from "./utils/winRecap";
 
 const { t, locale, locales } = useI18n();
 
@@ -257,7 +258,9 @@ const noNotes = emptyNotes();
 const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
-const techniqueLog = ref<TechniqueId[]>([]);
+// The techniques this game's hints applied, with counts (saved with the game): the win recap.
+const hinted = ref<Hinted>({});
+const techniqueLog = computed(() => Object.keys(hinted.value) as TechniqueId[]);
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
@@ -311,12 +314,10 @@ const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
 });
-// The hint panel's "on this board" list: technique names. Only while the panel is on screen (lg+)
-// and idle; a wrong entry is left out, as the solver takes every digit as true. It reads the
-// player's notes, so a single their marks leave shows up.
-const widePanel = useMediaQuery("(min-width: 1024px)");
-const panelIdle = () =>
-  widePanel.value && !activeComplexHint.value && currentScreen.value === "game";
+// The hint panel's "on this board" list: technique names. Only while no hint is open (below lg the
+// idle panel is just this list, a strip under the numpad); a wrong entry is left out, as the solver
+// takes every digit as true. It reads the player's notes, so a single their marks leave shows up.
+const panelIdle = () => !activeComplexHint.value && currentScreen.value === "game";
 const boardTechniques = computed<TechniqueId[]>(() => {
   if (!panelIdle()) return [];
   const board = rightDigits();
@@ -368,7 +369,7 @@ function showSpotted(move: SolveMove) {
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
 // clears the save — without this guard the save would be re-created immediately.
 watch(
-  [currentBoard, notesBoard, mistakes, hintsUsed],
+  [currentBoard, notesBoard, mistakes, hintsUsed, hinted],
   () => {
     if (currentScreen.value !== "game" || showModal.value || practiceTechnique.value) return;
     if (!currentBoard.value || !initialBoard.value) return;
@@ -381,6 +382,7 @@ watch(
       timerSeconds: timer.timerSeconds.value,
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
+      hinted: hinted.value,
       zen: gameZen.value,
       daily: isDailyMode.value ? dailyDate : undefined,
       variant: gameVariant.value === "x" ? "x" : undefined, // classic saves stay as they were
@@ -504,13 +506,15 @@ function handleModalClose() {
   currentScreen.value = "menu";
 }
 
-// A win-modal chip: straight into the technique's lesson (its Back lands on the Academy card).
-function openLesson(id: TechniqueId) {
+// A win-modal chip: straight into the technique's lesson (its Back lands on the Academy card). A
+// technique the game just needed opens at level 1; the hint recap's, as the Academy does, at the
+// first level not finished.
+function openLesson(id: TechniqueId, level?: Level) {
   handleModalClose();
   academyFromGame.value = false;
   academyFocus.value = id;
   currentScreen.value = "academy";
-  handleLesson(id, 1); // a technique the game just needed: learned from the start, guided
+  handleLesson(id, level);
 }
 
 // Every way into a game: `load` puts the board in; a resumed save brings its counts and clock.
@@ -544,7 +548,7 @@ function beginGame(
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
-  techniqueLog.value = [];
+  hinted.value = { ...save?.hinted };
   spottedSeen.clear();
   spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
@@ -797,7 +801,7 @@ function afterHint(move: SolveMove | null, applied: string, winMsg?: string, fre
   engine.showApplied(move);
   if (placed) logPlacement(placed);
   if (tech) {
-    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    hinted.value[tech] = (hinted.value[tech] ?? 0) + 1;
     techStats.record(tech);
   }
   chargeHint(free);
@@ -864,11 +868,62 @@ function handleTriggerHint() {
 // A technique picked from the panel's list: its hint, from "where to look" on. Free to look at,
 // a hint once applied, like any other.
 function handlePeek(id: TechniqueId) {
-  const move = peekMoves.value.find((m) => m.technique === id);
+  openPeek(peekMoves.value.find((m) => m.technique === id));
+}
+function openPeek(move: SolveMove | null | undefined) {
   if (!move || finishing.value || isPaused.value) return;
   nudge.value = null;
   cue("hint");
   say(engine.peekMove(move));
+}
+
+// "Can this go?": the selected cell's pencil marks, each a question whether anything on the board
+// rules it out: a digit its units already hold, or a move a peek would open (by the solver's
+// candidates, never the answer key, so it can't tell a right guess from a wrong one). Free to ask;
+// opening the move is a peek, a hint once applied.
+// Below lg the idle panel is only the list of what's on the board: up while there is one to show.
+const techniqueStrip = computed(
+  () => boardTechniques.value.length > 0 && !nudge.value && !isPaused.value,
+);
+const canGoDigits = computed(() => {
+  const at = selectedCell.value;
+  if (!at || activeComplexHint.value || isPaused.value || finishing.value) return [];
+  if (currentBoard.value[at.r]![at.c]) return [];
+  return notesBoard.value[at.r]![at.c]!.flatMap((on, n) => (on ? [n] : []));
+});
+const canGo = ref<{ num: number; clash: CellCoord | null; move: SolveMove | null } | null>(null);
+// Any other cell or any change to the board makes the answer stale.
+watch(selectedCell, () => (canGo.value = null));
+watch(boardHistory, () => (canGo.value = null), { deep: 1 });
+const canGoAnswer = computed(() => {
+  if (!canGo.value) return "";
+  const { num, clash, move } = canGo.value;
+  const label = digitLabel(num, colorMode.value, t);
+  if (clash) {
+    const p = turnCell(clash, turn.value);
+    return t("hint.canGo.clash", { num: label, r: p.r + 1, c: p.c + 1 });
+  }
+  return move
+    ? t("hint.canGo.yes", { num: label, name: t(`hint.move.${move.technique}.name`) })
+    : t("hint.canGo.no", { num: label });
+});
+function askCanGo(num: number) {
+  const at = selectedCell.value;
+  if (!at) return;
+  const clash = engine.getConflictCells(at.r, at.c, num)[0] ?? null;
+  canGo.value = {
+    num,
+    clash,
+    move: clash ? null : removerOf(engine.peekMoves(), { ...at, num }),
+  };
+  say(canGoAnswer.value);
+}
+// The strip goes with the selection: hand focus to the opened hint's Next.
+const hintPanel = ref<{ focusNext: () => void } | null>(null);
+async function showCanGo() {
+  openPeek(canGo.value?.move);
+  await nextTick();
+  hintPanel.value?.focusNext();
 }
 
 function handleInstantApplyHint() {
@@ -1417,12 +1472,20 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Right / hint panel — on mobile only takes space once a hint is active -->
+          <!-- Right / hint panel. Below lg it sits under the numpad: the open hint, or while idle
+               just the "on this board" strip (none during a nudge or the pause) and "Can this
+               go?". -->
           <div
-            :class="activeComplexHint ? 'block' : 'hidden lg:block'"
+            :class="
+              activeComplexHint || techniqueStrip || canGoDigits.length
+                ? 'block'
+                : 'hidden lg:block'
+            "
             class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
           >
             <SideExplanationPanel
+              ref="hintPanel"
+              :class="{ 'max-lg:hidden': !activeComplexHint && !techniqueStrip }"
               :active-complex-hint="activeComplexHint"
               :current-step-index="currentStepIndex"
               :current-step="currentStep"
@@ -1436,6 +1499,16 @@ onUnmounted(() => {
               :peekable="peekable"
               @peek="handlePeek"
               :note="engine.peekNote.value"
+            />
+            <CanThisGo
+              v-if="canGoDigits.length"
+              :digits="canGoDigits"
+              :color-mode="colorMode"
+              :asked="canGo?.num ?? null"
+              :answer="canGoAnswer"
+              :can-show="!!canGo?.move"
+              @ask="askCanGo"
+              @show="showCanGo"
             />
           </div>
         </div>
@@ -1544,12 +1617,14 @@ onUnmounted(() => {
         :placements="placements"
         :result="winResult"
         :technique-log="techniqueLog"
+        :hinted="hinted"
         :next-level="nextLevel"
         :next-loading="nextLoading"
         :variant="gameVariant"
         @next="handleNextPuzzle"
         @close="handleModalClose"
-        @lesson="openLesson"
+        @lesson="(id: TechniqueId) => openLesson(id, 1)"
+        @learn="(id: TechniqueId) => openLesson(id)"
         @cue="cue"
         @replay="(frame) => (replayFrame = frame)"
       />

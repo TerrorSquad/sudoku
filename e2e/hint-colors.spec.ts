@@ -102,3 +102,37 @@ test("tapping a peek's pattern on the board finds it, and applying it then costs
   await expect(page.locator(`[data-cell="${cell}"]`)).toHaveAttribute("aria-label", /your entry/);
   await expect.poll(customHints(page)).toBe(0);
 });
+
+test.describe("on a phone", () => {
+  test.use({ viewport: { width: 412, height: 839 } }); // Pixel 7
+
+  test("the list is a strip under the numpad: a pick opens where to look; gone in a hint or pause", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Your puzzle" }).click();
+    await page.locator("textarea").fill(FIVE_BLANKS);
+    await page.getByRole("button", { name: "Play Puzzle" }).click();
+    const strip = page.getByTestId("board-techniques");
+    await expect(strip.getByRole("listitem")).toHaveText(["Naked Single", "Hidden Single"]);
+    await expect(strip).toBeInViewport();
+    // Under the numpad, which stays on screen.
+    const numpad = page.getByTestId("numpad");
+    await expect(numpad).toBeInViewport({ ratio: 1 });
+    const pad = (await numpad.boundingBox())!;
+    expect((await strip.boundingBox())!.y).toBeGreaterThanOrEqual(pad.y + pad.height);
+
+    await page.getByRole("button", { name: "Pause" }).click();
+    await expect(strip).toBeHidden();
+    await page.getByRole("button", { name: "Resume" }).first().click();
+
+    await strip.getByRole("button", { name: "Hidden Single" }).click();
+    await expect(page.getByText("Where to look")).toBeVisible();
+    await expect(strip).toBeHidden();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(strip).toBeVisible();
+
+    await page.getByRole("button", { name: "Hint" }).first().click();
+    await expect(strip).toBeHidden();
+  });
+});

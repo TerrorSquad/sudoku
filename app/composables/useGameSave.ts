@@ -1,5 +1,6 @@
 import type { Grid, NotesGrid, Difficulty, Variant } from "../types/sudoku";
 import type { Placement } from "../utils/stuckMoments";
+import type { Hinted } from "../utils/winRecap";
 
 import { saveSlotOf } from "../utils/progressBackup";
 import { readJSON, removeJSON, writeJSON } from "../utils/safeJson";
@@ -26,6 +27,8 @@ export interface GameSave {
   mistakes: number;
   /** Optional: saves from before hints were persisted restore as 0. */
   hintsUsed?: number;
+  /** The techniques hints applied, for the win modal's recap. Older saves restore as none. */
+  hinted?: Hinted;
   /** Zen game: no timer, mistake limit or score. Older saves restore as false. */
   zen?: boolean;
   /** Set on a Daily: the local date (YYYY-MM-DD) of its puzzle. */
