@@ -13,6 +13,7 @@ import {
 import {
   POSITIONS_KEY,
   REVIEW_KEY,
+  isStuckPosition,
   lessonCard,
   readPositions,
   readReview,
@@ -114,12 +115,13 @@ export function useTechniquePath() {
 
   /** The player's own positions to review on, per technique (unchecked: see lessonFromPosition). */
   const getPositions = () => readPositions(readJSON<unknown>(POSITIONS_KEY, {}));
-  /** Sets (or, with none, removes) a technique's position in the raw entry, keeping the rest. */
+  /** Sets a technique's position in the raw entry (with none, marks it played), keeping the rest. */
   function writePosition(id: TechniqueId, position?: StuckPosition) {
     const raw = readJSON<unknown>(POSITIONS_KEY, {});
     const rest: Record<string, unknown> =
       raw && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
     if (position) rest[id] = position;
+    else if (isStuckPosition(rest[id])) rest[id] = { ...rest[id], played: true };
     else delete rest[id];
     writeJSON(POSITIONS_KEY, rest);
   }

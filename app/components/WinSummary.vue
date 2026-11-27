@@ -9,13 +9,11 @@ defineProps<{
   mistakes: number;
   hintsUsed: number;
   result: WinResult;
-  techniqueLog: TechniqueId[];
 }>();
 const emit = defineEmits<{ lesson: [id: TechniqueId] }>();
 
 const { mistakeLimit } = usePreferences();
 // Lifetime per-technique usage, read as the modal opens.
-const techStatsTotals = useTechniqueStats().getAll();
 </script>
 
 <template>
@@ -92,21 +90,6 @@ const techStatsTotals = useTechniqueStats().getAll();
           </button>
         </li>
       </ul>
-    </div>
-    <div v-if="techniqueLog.length" class="px-3 py-2">
-      <p class="mb-2 text-xs font-semibold text-zinc-500">
-        {{ $t("modal.techniquesUsed") }}
-      </p>
-      <div class="flex flex-wrap gap-1">
-        <span
-          v-for="id in techniqueLog"
-          :key="id"
-          :title="$t('modal.usedTotal', { n: techStatsTotals[id] ?? 1 })"
-          class="border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-semibold text-amber-700 dark:text-amber-400"
-          >{{ $t(`hint.move.${id}.name`) }}
-          <span class="opacity-70">×{{ techStatsTotals[id] ?? 1 }}</span></span
-        >
-      </div>
     </div>
   </div>
 </template>

@@ -118,5 +118,5 @@ test("Daily review: a technique hinted in a game comes up on that game's positio
   // Played: the next review of it gets a fresh position.
   await expect(page.getByTestId("review-done")).toBeVisible();
   const left = await page.evaluate(() => localStorage.getItem("sudoku_v1_review_positions"));
-  expect(JSON.parse(left!)).toEqual({});
+  expect(JSON.parse(left!)).toEqual({ "x-wing": { ...own["x-wing"], played: true } });
 });

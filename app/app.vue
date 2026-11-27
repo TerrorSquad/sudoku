@@ -262,7 +262,6 @@ const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 const hintsUsed = ref<number>(0);
 // The techniques this game's hints applied, with counts (saved with the game): the win recap.
 const hinted = ref<Hinted>({});
-const techniqueLog = computed(() => Object.keys(hinted.value) as TechniqueId[]);
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
@@ -329,8 +328,9 @@ const boardTechniques = computed<TechniqueId[]>(() => {
 // (`handlePeek`). By the solver's own candidates, as hints are: a name only the player's notes
 // put on the list stays text, since their marks may be a guess (and checking them against the
 // answer would tell which guesses are right).
-// ponytail: runs the finders a second time per move; share one pass while the notes rule out
-// nothing the solver hasn't, if it ever shows in a profile.
+// ponytail: runs the finders a second time per move. Measured in Node: one pass is 0.5 ms (Easy)
+// to 1.4 ms (Expert), so both are about 3 ms a move, 11 ms at 4x CPU throttle, on phones too now
+// that the list shows there. Share one pass, or move it off the move's frame, if that grows.
 const peekMoves = computed<SolveMove[]>(() => (panelIdle() ? engine.peekMoves() : []));
 const peekable = computed(() => peekMoves.value.map((m) => m.technique));
 function rightDigits(): Grid {
@@ -963,13 +963,19 @@ const canGoDigits = computed(() => {
   if (currentBoard.value[at.r]![at.c]) return [];
   return notesBoard.value[at.r]![at.c]!.flatMap((on, n) => (on ? [n] : []));
 });
-const canGo = ref<{ num: number; clash: CellCoord | null; move: SolveMove | null } | null>(null);
+const canGo = ref<{
+  num: number;
+  clash: CellCoord | null;
+  move: SolveMove | null;
+  wrong?: boolean;
+} | null>(null);
 // Any other cell or any change to the board makes the answer stale.
 watch(selectedCell, () => (canGo.value = null));
 watch(boardHistory, () => (canGo.value = null), { deep: 1 });
 const canGoAnswer = computed(() => {
   if (!canGo.value) return "";
-  const { num, clash, move } = canGo.value;
+  const { num, clash, move, wrong } = canGo.value;
+  if (wrong) return t("hint.canGo.wrong");
   const label = digitLabel(num, colorMode.value, t);
   if (clash) {
     const p = turnCell(clash, turn.value);
@@ -982,12 +988,18 @@ const canGoAnswer = computed(() => {
 function askCanGo(num: number) {
   const at = selectedCell.value;
   if (!at) return;
+  // A wrong digit on the board makes any answer unsound. Said only where the board already shows
+  // it in red: with "Highlight mistakes" off the answer goes by the board as shown, wrong digit
+  // and all, so asking never tells whether an entry is right.
+  if (highlightErrors.value && engine.findWrongEntry()) {
+    canGo.value = { num, clash: null, move: null, wrong: true };
+    return say(canGoAnswer.value);
+  }
   const clash = engine.getConflictCells(at.r, at.c, num)[0] ?? null;
-  canGo.value = {
-    num,
-    clash,
-    move: clash ? null : removerOf(engine.peekMoves(), { ...at, num }),
-  };
+  const move = clash ? null : removerOf(engine.peekMoves(), { ...at, num });
+  // Told which technique takes the mark out, taking it out isn't spotting it.
+  if (move) spottedSeen.add(move.technique);
+  canGo.value = { num, clash, move };
   say(canGoAnswer.value);
 }
 // The strip goes with the selection: hand focus to the opened hint's Next.
@@ -1725,7 +1737,6 @@ onUnmounted(() => {
         :board="initialBoard"
         :placements="placements"
         :result="winResult"
-        :technique-log="techniqueLog"
         :hinted="hinted"
         :next-level="nextLevel"
         :next-loading="nextLoading"
