@@ -14,6 +14,7 @@ import type { BoardTheme } from "./utils/preferenceValues";
 import type { Level, Tier, Week } from "./utils/progression";
 import type { Placement } from "./utils/stuckMoments";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
+import type { Hinted } from "./utils/winRecap";
 
 const { t, locale, locales } = useI18n();
 
@@ -257,7 +258,9 @@ const noNotes = emptyNotes();
 const pendingResume = ref<{ save: GameSave; level: SaveSlot } | null>(null);
 
 const hintsUsed = ref<number>(0);
-const techniqueLog = ref<TechniqueId[]>([]);
+// The techniques this game's hints applied, with counts (saved with the game): the win recap.
+const hinted = ref<Hinted>({});
+const techniqueLog = computed(() => Object.keys(hinted.value) as TechniqueId[]);
 // Set when a nudge's technique opened the Academy: Back returns to the paused game.
 const academyFromGame = ref(false);
 // Still in the game, for state that should survive those detours (armed digit, nudge).
@@ -368,7 +371,7 @@ function showSpotted(move: SolveMove) {
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
 // clears the save — without this guard the save would be re-created immediately.
 watch(
-  [currentBoard, notesBoard, mistakes, hintsUsed],
+  [currentBoard, notesBoard, mistakes, hintsUsed, hinted],
   () => {
     if (currentScreen.value !== "game" || showModal.value || practiceTechnique.value) return;
     if (!currentBoard.value || !initialBoard.value) return;
@@ -381,6 +384,7 @@ watch(
       timerSeconds: timer.timerSeconds.value,
       mistakes: mistakes.value,
       hintsUsed: hintsUsed.value,
+      hinted: hinted.value,
       zen: gameZen.value,
       daily: isDailyMode.value ? dailyDate : undefined,
       variant: gameVariant.value === "x" ? "x" : undefined, // classic saves stay as they were
@@ -504,13 +508,15 @@ function handleModalClose() {
   currentScreen.value = "menu";
 }
 
-// A win-modal chip: straight into the technique's lesson (its Back lands on the Academy card).
-function openLesson(id: TechniqueId) {
+// A win-modal chip: straight into the technique's lesson (its Back lands on the Academy card). A
+// technique the game just needed opens at level 1; the hint recap's, as the Academy does, at the
+// first level not finished.
+function openLesson(id: TechniqueId, level?: Level) {
   handleModalClose();
   academyFromGame.value = false;
   academyFocus.value = id;
   currentScreen.value = "academy";
-  handleLesson(id, 1); // a technique the game just needed: learned from the start, guided
+  handleLesson(id, level);
 }
 
 // Every way into a game: `load` puts the board in; a resumed save brings its counts and clock.
@@ -544,7 +550,7 @@ function beginGame(
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
-  techniqueLog.value = [];
+  hinted.value = { ...save?.hinted };
   spottedSeen.clear();
   spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
@@ -796,7 +802,7 @@ function afterHint(move: SolveMove | null, applied: string, winMsg?: string) {
   engine.showApplied(move);
   if (placed) logPlacement(placed);
   if (tech) {
-    if (!techniqueLog.value.includes(tech)) techniqueLog.value.push(tech);
+    hinted.value[tech] = (hinted.value[tech] ?? 0) + 1;
     techStats.record(tech);
   }
   chargeHint();
@@ -1529,12 +1535,14 @@ onUnmounted(() => {
         :placements="placements"
         :result="winResult"
         :technique-log="techniqueLog"
+        :hinted="hinted"
         :next-level="nextLevel"
         :next-loading="nextLoading"
         :variant="gameVariant"
         @next="handleNextPuzzle"
         @close="handleModalClose"
-        @lesson="openLesson"
+        @lesson="(id: TechniqueId) => openLesson(id, 1)"
+        @learn="(id: TechniqueId) => openLesson(id)"
         @cue="cue"
         @replay="(frame) => (replayFrame = frame)"
       />
