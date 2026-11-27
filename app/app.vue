@@ -32,6 +32,7 @@ const {
   mistakeLimit,
   highlightErrors,
   hintStyle,
+  announceTechnique,
   showCandidates,
   noteHighlight,
   noteTap,
@@ -341,7 +342,7 @@ function rightDigits(): Grid {
 // "You spotted it": a technique the player finished by hand (its last pencil mark taken out), drawn
 // in pen over the board for a moment and named. Once per technique per game, so a common one
 // doesn't keep interrupting.
-const spotted = ref<{ technique: TechniqueId; marks: Mark[] } | null>(null);
+const spotted = ref<{ technique: TechniqueId; marks: Mark[]; found: boolean } | null>(null);
 const spottedSeen = new Set<TechniqueId>();
 let spottedTimeout: ReturnType<typeof setTimeout> | undefined;
 // Before the mark goes: the move is read off the notes that still hold it.
@@ -351,6 +352,7 @@ function spottedBy(r: number, c: number, num: number): SolveMove | null {
 }
 function showSpotted(move: SolveMove) {
   spottedSeen.add(move.technique);
+  const found = move.technique === featured.value;
   const notes = notesBoard.value;
   const cands = getGridCandidates(currentBoard.value, gameVariant.value);
   const noted = (r: number, c: number) => notes[r]![c]!.some(Boolean);
@@ -359,12 +361,46 @@ function showSpotted(move: SolveMove) {
   spotted.value = {
     technique: move.technique,
     marks: withGhosts(patternMarks(move, has, true), noted),
+    found,
   };
-  say(t("game.spotted", { name: t(`hint.move.${move.technique}.name`) }));
+  say(
+    t(found ? "game.spottedBoard" : "game.spotted", {
+      name: t(`hint.move.${move.technique}.name`),
+    }),
+  );
   cue("unlock");
   clearTimeout(spottedTimeout);
   spottedTimeout = setTimeout(() => (spotted.value = null), 2800);
 }
+
+// "This board hides: X-Wing": the hardest technique the board needs (featuredTechnique), named at
+// the start so there's something to hunt for. Board metadata, like the level: never a hint.
+// New games and Dailies bring it from the worker with the board, a save keeps it; undefined while
+// the worker works it out (a custom board, a save from before it was stored).
+const boardTech = ref<TechniqueId | null | undefined>(null);
+// Over the board's top edge until the first move or ✕; the pause overlay shows it too.
+const boardTechOpen = ref(false);
+const featured = computed(() =>
+  announceTechnique.value && !practiceTechnique.value ? (boardTech.value ?? null) : null,
+);
+let boardTechToken = 0;
+function setBoardTech(known: TechniqueId | null | undefined) {
+  const token = ++boardTechToken;
+  boardTech.value = known;
+  boardTechOpen.value = true;
+  if (known !== undefined) return;
+  // Plain rows: a reactive proxy can't be posted to the worker.
+  const board = initialBoard.value.map((row) => [...row]);
+  featuredOf(board, gameVariant.value).then(
+    (id) => token === boardTechToken && (boardTech.value = id),
+    () => {}, // nothing to name, as for a board that needs none
+  );
+}
+// A save's, if it's one we know (a backup could carry anything); else worked out again.
+const savedTech = (s: GameSave) =>
+  s.technique === null || ACADEMY_TECHNIQUES.some((x) => x.id === s.technique)
+    ? s.technique
+    : undefined;
 
 // Auto-save on every meaningful state change while a game is active.
 // Guard showModal: the watcher fires on the next tick AFTER triggerLocalModal
@@ -388,6 +424,7 @@ watch(
       daily: isDailyMode.value ? dailyDate : undefined,
       variant: gameVariant.value === "x" ? "x" : undefined, // classic saves stay as they were
       placements: placements.value,
+      technique: boardTech.value,
     });
   },
   { deep: true },
@@ -528,12 +565,15 @@ function beginGame(
     practice = null,
     save,
     variant = "classic",
+    technique,
   }: {
     daily?: string;
     zen?: boolean;
     practice?: TechniqueId | null;
     save?: GameSave;
     variant?: Variant;
+    /** The board's featured technique; undefined: work it out. */
+    technique?: TechniqueId | null;
   } = {},
 ) {
   practiceTechnique.value = practice;
@@ -542,6 +582,7 @@ function beginGame(
   dailyDate = daily;
   gameZen.value = zenGame;
   load();
+  setBoardTech(practice ? null : technique); // a practice game names its technique already
   activeDifficulty.value = difficulty;
   mistakes.value = save?.mistakes ?? 0;
   say(t(save ? "game.ready" : "game.newBoard"));
@@ -549,7 +590,12 @@ function beginGame(
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
-  hinted.value = { ...save?.hinted };
+  // Known techniques only: a save can come from an imported backup.
+  hinted.value = Object.fromEntries(
+    Object.entries(save?.hinted ?? {}).filter(
+      ([id, n]) => ACADEMY_TECHNIQUES.some((x) => x.id === id) && Number.isInteger(n) && n > 0,
+    ),
+  );
   spottedSeen.clear();
   spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
@@ -565,6 +611,7 @@ function resumeSavedGame(s: GameSave) {
     zen: s.zen,
     save: s,
     variant: s.variant ?? "classic",
+    technique: savedTech(s),
   });
 }
 
@@ -584,7 +631,11 @@ async function handleStartGame(
   if (token !== startToken) return;
   ready();
   gameSave.clearDifficulty(gameSlot(level, variant));
-  beginGame(level, () => startNewGame(level, generated), { zen: zenGame, variant });
+  beginGame(level, () => startNewGame(level, generated), {
+    zen: zenGame,
+    variant,
+    technique: generated.technique,
+  });
 }
 
 // A difficulty already has a saved game — ask before silently overwriting it. X-Sudoku games
@@ -710,6 +761,7 @@ function handleInputNumber(num: number) {
   const { r, c } = selectedCell.value;
 
   if (initialBoard.value[r]![c] !== 0) return;
+  boardTechOpen.value = false; // read by now: it gives the board back
 
   // Manual entry dismisses any active step-by-step hint and resets the hint
   // chain — the board the hint was reasoning about no longer matches what the
@@ -808,7 +860,8 @@ function afterHint(
   if (tech && stuck) techniquePath.rememberStuck(tech, stuck);
   engine.showApplied(move);
   if (placed) logPlacement(placed);
-  if (tech) {
+  // Not for a pattern the player found themselves on a peek: that wasn't help.
+  if (tech && !free) {
     hinted.value[tech] = (hinted.value[tech] ?? 0) + 1;
     techStats.record(tech);
   }
@@ -1023,10 +1076,10 @@ async function startDaily(level: Difficulty) {
   const token = ++startToken;
   dailyLoading.value = level;
   try {
-    const board = await makeDailyBoard(date, level);
+    const { puzzle, technique } = await makeDailyBoard(date, level);
     if (token !== startToken) return;
     gameSave.clearDifficulty(dailySlot(level));
-    beginGame(level, () => loadCustomBoard(board), { daily: date });
+    beginGame(level, () => loadCustomBoard(puzzle), { daily: date, technique });
   } finally {
     // Not a newer start's: that one is still generating.
     if (token === startToken) dailyLoading.value = null;
@@ -1411,9 +1464,43 @@ onUnmounted(() => {
                   data-testid="spotted"
                   class="pointer-events-none absolute top-2 left-1/2 z-30 -translate-x-1/2 border border-emerald-600/40 bg-emerald-50 px-3 py-1 text-sm font-bold whitespace-nowrap text-emerald-800 shadow-md dark:border-emerald-400/40 dark:bg-emerald-950 dark:text-emerald-200"
                 >
-                  {{ $t("game.spotted", { name: $t(`hint.move.${spotted.technique}.name`) }) }}
+                  {{
+                    $t(spotted.found ? "game.spottedBoard" : "game.spotted", {
+                      name: $t(`hint.move.${spotted.technique}.name`),
+                    })
+                  }}
                 </p>
               </Transition>
+              <!-- On the board's top edge, so it never moves the board; tap for the lesson. -->
+              <div
+                v-if="
+                  featured &&
+                  boardTechOpen &&
+                  !spotted &&
+                  !isPaused &&
+                  !activeComplexHint &&
+                  !showModal
+                "
+                data-testid="board-technique"
+                class="absolute top-0 left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center border border-violet-500/30 bg-zinc-50 text-xs whitespace-nowrap shadow-sm dark:bg-zinc-900"
+              >
+                <button
+                  :aria-label="
+                    $t('game.boardHidesLesson', { name: $t(`hint.move.${featured}.name`) })
+                  "
+                  class="px-2.5 py-1 font-semibold text-violet-700 underline-offset-2 hover:underline dark:text-violet-300"
+                  @click="openGameLesson(featured)"
+                >
+                  {{ $t("game.boardHides", { name: $t(`hint.move.${featured}.name`) }) }}
+                </button>
+                <button
+                  :aria-label="$t('modal.close')"
+                  class="px-1.5 py-1 font-bold text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+                  @click="boardTechOpen = false"
+                >
+                  ✕
+                </button>
+              </div>
               <SudokuGrid
                 v-if="replayFrame && showModal"
                 data-testid="replay-board"
@@ -1485,6 +1572,8 @@ onUnmounted(() => {
 
               <PauseOverlay
                 v-if="isPaused"
+                :technique="featured"
+                @lesson="openGameLesson(featured)"
                 @resume="togglePause()"
                 @settings="openGameSettings"
                 @shortcuts="shortcutsOpen = true"

@@ -4,6 +4,7 @@ import { generateDailyBoard } from "../composables/useDailyPuzzle";
 import { generateLesson } from "../utils/lesson";
 import { generatePracticePuzzle } from "../utils/practice";
 import { makeRng } from "../utils/sudokuCore";
+import { featuredTechnique } from "../utils/sudokuGrader";
 
 // A worker whose generator always throws: it posts {id, error} back, as puzzleWorker.ts does.
 class FailingWorker {
@@ -24,8 +25,9 @@ describe("puzzlePool when the worker's generator fails", () => {
   it("generates the job in place instead of waiting forever", async () => {
     vi.stubGlobal("Worker", FailingWorker);
     const { makeLesson, takePuzzle } = await import("../utils/puzzlePool");
-    const { puzzle } = await takePuzzle("beginner");
+    const { puzzle, technique } = await takePuzzle("beginner");
     expect(puzzle).toHaveLength(9);
+    expect(technique).toBeNull(); // singles only
     const lesson = await makeLesson("hidden-single", 5);
     expect(lesson.technique).toBe("hidden-single");
   });
@@ -57,8 +59,11 @@ describe("puzzlePool's worker and in-place paths", () => {
     const pool = await import("../utils/puzzlePool"); // no Worker in node: in place
     const sameDaily = async (level: "medium" | "master") => {
       const board = generateDailyBoard("2026-06-11", level);
-      expect(await pool.makeDailyBoard("2026-06-11", level)).toEqual(board);
-      expect(await inWorker({ daily: "2026-06-11", level })).toEqual({ puzzle: board });
+      const daily = { puzzle: board, technique: featuredTechnique(board) };
+      expect(await pool.makeDailyBoard("2026-06-11", level)).toEqual(daily);
+      expect(await inWorker({ daily: "2026-06-11", level })).toEqual(daily);
+      expect(await inWorker({ featured: board })).toBe(daily.technique);
+      expect(await pool.featuredOf(board, "classic")).toBe(daily.technique);
     };
     await sameDaily("medium");
     await sameDaily("master");

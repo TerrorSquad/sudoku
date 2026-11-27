@@ -1,5 +1,6 @@
 import type { Grid, NotesGrid, Difficulty, Variant } from "../types/sudoku";
 import type { Placement } from "../utils/stuckMoments";
+import type { TechniqueId } from "../utils/sudokuGrader";
 import type { Hinted } from "../utils/winRecap";
 
 import { saveSlotOf } from "../utils/progressBackup";
@@ -37,6 +38,8 @@ export interface GameSave {
   variant?: Variant;
   /** Correct digits with the clock, for "Where you got stuck". Older saves restore as none. */
   placements?: Placement[];
+  /** The board's featured technique (null: none). Older saves have none: worked out on resume. */
+  technique?: TechniqueId | null;
   savedAt: number;
 }
 

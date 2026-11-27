@@ -16,6 +16,7 @@ const {
   mistakeLimit,
   highlightErrors,
   hintStyle,
+  announceTechnique,
   showCandidates,
   noteHighlight,
   noteTap,
@@ -224,6 +225,14 @@ const style = computed({
             <option value="full">{{ $t("settings.hintFull") }}</option>
             <option value="nudge">{{ $t("settings.hintNudge") }}</option>
           </select>
+        </label>
+
+        <label class="s-row">
+          <span>
+            <span class="s-label">{{ $t("settings.announceTechnique") }}</span>
+            <span class="s-hint">{{ $t("settings.announceTechniqueHint") }}</span>
+          </span>
+          <USwitch v-model="announceTechnique" data-testid="announce-technique" />
         </label>
 
         <!-- Over a game it plays now (app.vue); from the menu it waits for the next game. -->

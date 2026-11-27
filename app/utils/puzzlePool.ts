@@ -13,6 +13,7 @@ import type { TechniqueId } from "./sudokuGrader";
 interface NewPuzzle {
   puzzle: Grid;
   solution: Grid;
+  technique: TechniqueId | null;
 }
 
 let worker: Worker | null | undefined; // undefined: not tried yet; null: unavailable
@@ -91,9 +92,13 @@ export function takePuzzle(difficulty: string, variant: Variant = "classic"): Pr
   return next;
 }
 
-/** The `level` Daily of the date key `daily` (generateDailyBoard). */
+/** The `level` Daily of the date key `daily` (generateDailyBoard), with its featured technique. */
 export const makeDailyBoard = (daily: string, level: Difficulty) =>
-  run<{ puzzle: Grid }>({ daily, level }).then((r) => r.puzzle);
+  run<{ puzzle: Grid; technique: TechniqueId | null }>({ daily, level });
+
+/** A board's featured technique (featuredTechnique), for one that didn't come from a job. */
+export const featuredOf = (board: Grid, variant: Variant) =>
+  run<TechniqueId | null>({ featured: board, variant });
 
 /** A practice puzzle for `technique` (generatePracticePuzzle), the same for the same seed. */
 export const practicePuzzle = (technique: TechniqueId, seed: number) =>

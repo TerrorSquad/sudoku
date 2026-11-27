@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import type { TechniqueId } from "../utils/sudokuGrader";
+
 // Covers the board and controls while the clock is paused, so a pause can't be a free look.
-defineEmits<{ resume: []; settings: []; shortcuts: [] }>();
+// `technique`: the board's featured one ("This board hides: …"), a link to its lesson.
+defineProps<{ technique?: TechniqueId | null }>();
+defineEmits<{ resume: []; settings: []; shortcuts: []; lesson: [] }>();
 </script>
 
 <template>
@@ -12,6 +16,14 @@ defineEmits<{ resume: []; settings: []; shortcuts: [] }>();
     <p class="font-display text-2xl font-bold text-zinc-900 dark:text-zinc-100">
       {{ $t("game.pausedTitle") }}
     </p>
+    <button
+      v-if="technique"
+      data-testid="pause-technique"
+      @click="$emit('lesson')"
+      class="text-sm font-semibold text-violet-700 underline-offset-4 hover:underline dark:text-violet-300"
+    >
+      {{ $t("game.boardHides", { name: $t(`hint.move.${technique}.name`) }) }}
+    </button>
     <button @click="$emit('resume')" class="tile tile-apply px-10 py-4 text-base font-black">
       {{ $t("game.resume") }}
     </button>

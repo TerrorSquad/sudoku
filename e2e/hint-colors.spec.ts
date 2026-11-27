@@ -88,7 +88,20 @@ test("tapping a peek's pattern on the board finds it, and applying it then costs
   const cell = (await target.getAttribute("data-cell"))!;
   await page.getByRole("button", { name: "Cancel" }).click();
 
-  // Looked for afresh on a turned board: taps go by the cell, wherever it shows.
+  // Shown once, that move stays a hint: Cancel and a fresh pick doesn't make finding it free.
+  await peek();
+  await page.locator(`[data-cell="${cell}"]`).click();
+  await expect(note).toHaveText(
+    "That's it. It took a miss or a look at the pattern, so applying it counts as a hint.",
+  );
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  // A new game, looked for on a turned board: taps go by the cell, wherever it shows.
+  await page.evaluate(() => localStorage.removeItem("sudoku_v1_save_custom"));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(FIVE_BLANKS);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
   await page.keyboard.press("r");
   await peek();
   await expect(page.locator("[data-cell].ring-emerald-500")).toHaveCount(0);
