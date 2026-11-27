@@ -31,6 +31,7 @@ import {
 } from "./sudokuCore";
 import {
   nextHint,
+  patternCells,
   unitNumber,
   type BoardUnit,
   type CellRC,
@@ -117,12 +118,8 @@ function lessonAt(board: Grid, elims: DigitAt[], move: SolveMove): Lesson {
       cands.filter((n) => !elims.some((e) => e.r === r && e.c === c && e.num === n)),
     ),
   );
-  // A single's (or BUG+1's) "pattern" in the solver is every filled cell around it; the player
-  // finds the cell itself.
   const p = move.placement;
-  const pattern = p
-    ? [{ r: p.r, c: p.c }]
-    : uniqueCells(move.triggers.map(({ r, c }) => ({ r, c })));
+  const pattern = patternCells(move);
   return {
     technique: move.technique,
     board: cloneGrid(board),

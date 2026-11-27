@@ -1307,6 +1307,20 @@ export function spottedMove(
 }
 
 /**
+ * "Can this go?": the first of `moves` (a peek's, easiest first) that removes pencil mark `mark`,
+ * or null. Only by what the finders see, never by the answer key.
+ */
+// ponytail: each finder reports its first instance only, so a mark only a second X-Wing removes
+// reads as "nothing yet"; collect every instance per finder if that matters.
+export function removerOf(moves: SolveMove[], mark: DigitAt): SolveMove | null {
+  return (
+    moves.find((m) =>
+      m.eliminations.some((e) => e.r === mark.r && e.c === mark.c && e.num === mark.num),
+    ) ?? null
+  );
+}
+
+/**
  * What it took to place `cell` from `board`: the hardest technique the solver used on its way
  * there, or null when it was a single (or the solver got stuck first).
  */
@@ -1385,6 +1399,17 @@ export function patternUnit(move: SolveMove, variant: Variant = "classic"): Boar
           ? "anti"
           : "box";
   return { kind, r: act.r, c: act.c };
+}
+
+/**
+ * The cells a player finds for `move` (a lesson's step 1, a peek's look step): its triggers, but a
+ * placement's (a single's or BUG+1's) is the cell it fills, its triggers being every filled cell around.
+ */
+export function patternCells(move: SolveMove): CellRC[] {
+  const p = move.placement;
+  if (p) return [{ r: p.r, c: p.c }];
+  const cells = move.triggers.map(({ r, c }) => ({ r, c }));
+  return cells.filter((a, i) => cells.findIndex((b) => b.r === a.r && b.c === a.c) === i);
 }
 
 /** A unit's 1-based number: its row, column or box (boxes count across, then down). */

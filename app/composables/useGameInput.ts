@@ -2,7 +2,7 @@ import { ref, watch, type Ref } from "vue";
 
 import type { CellCoord, Grid } from "../types/sudoku";
 
-import { focusCell, stepCell } from "../utils/gridNav";
+import { focusCell, onButton, stepCell } from "../utils/gridNav";
 
 // The player's input on the game screen: the numpad, cell taps and the keyboard (a controller's
 // buttons arrive as keys). What a digit does to the board is the game's (`input`).
@@ -42,6 +42,8 @@ export function useGameInput({
     undo: () => void;
     redo: () => void;
     hint: () => void;
+    /** Enter or Space on the selected cell, as a tap; false when a tap there means nothing. */
+    tap?: (cell: CellCoord) => boolean;
     turn: () => void;
     autoNotes: () => void;
     history: () => void;
@@ -119,6 +121,11 @@ export function useGameInput({
       e.preventDefault();
       focusCell((selectedCell.value = to)); // not handleSelectCell: arrows must never place an armed digit
       pickedDigit.value = null;
+      return;
+    }
+    const at = selectedCell.value;
+    if ((e.key === "Enter" || e.key === " ") && at && !onButton(e) && !e.repeat && act.tap?.(at)) {
+      e.preventDefault();
       return;
     }
     if (e.key >= "1" && e.key <= "9") {
