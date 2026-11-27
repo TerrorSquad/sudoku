@@ -25,6 +25,7 @@ const emit = defineEmits<{
 
 // The picked button goes away with the list: hand its focus to Next.
 const nextButton = ref<HTMLButtonElement | null>(null);
+defineExpose({ focusNext: () => nextButton.value?.focus() });
 async function peek(id: TechniqueId) {
   emit("peek", id);
   await nextTick();
@@ -38,28 +39,32 @@ const isLastStep = computed(() => {
 </script>
 
 <template>
-  <div class="panel flex w-full flex-col p-4 select-none 3xl:mt-12">
-    <!-- Empty state -->
+  <div
+    :class="!activeComplexHint && 'max-lg:p-3'"
+    class="panel flex w-full flex-col p-4 select-none 3xl:mt-12"
+  >
+    <!-- Empty state. Below lg (shown only with a list) it is just the list: one row that scrolls
+         sideways under the numpad, so the controls above never move. -->
     <div
       v-if="!activeComplexHint"
-      class="flex flex-col items-center justify-center p-6 py-10 text-center"
+      class="flex flex-col justify-center lg:items-center lg:p-6 lg:py-10 lg:text-center"
     >
-      <div class="tray mb-4 p-3 text-amber-600 dark:text-amber-400">
+      <div class="tray mb-4 p-3 text-amber-600 max-lg:hidden dark:text-amber-400">
         <AppIcon
           class="h-8 w-8"
           :stroke-width="1.5"
           path="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
         />
       </div>
-      <h3 class="text-sm font-bold text-zinc-600 3xl:text-base dark:text-zinc-400">
+      <h3 class="text-sm font-bold text-zinc-600 max-lg:hidden 3xl:text-base dark:text-zinc-400">
         {{ $t("hint.panelTitle") }}
       </h3>
-      <p class="mt-2 max-w-xs text-xs leading-relaxed text-zinc-500 3xl:text-sm">
+      <p class="mt-2 max-w-xs text-xs leading-relaxed text-zinc-500 max-lg:hidden 3xl:text-sm">
         {{ $t("hint.panelDesc") }}
       </p>
       <div
         v-if="available?.length"
-        class="mt-6 w-full border-t border-zinc-200 pt-4 dark:border-zinc-800"
+        class="w-full border-zinc-200 lg:mt-6 lg:border-t lg:pt-4 dark:border-zinc-800"
         data-testid="board-techniques"
       >
         <p class="text-xs font-bold text-zinc-600 dark:text-zinc-400">
@@ -68,19 +73,19 @@ const isLastStep = computed(() => {
         <p v-if="peekable?.length" class="mt-1 text-[0.6875rem] text-zinc-500">
           {{ $t("hint.peek.pick") }}
         </p>
-        <ul class="mt-3 flex flex-wrap justify-center gap-1.5">
-          <li v-for="id in available" :key="id">
+        <ul class="mt-2 flex gap-1.5 overflow-x-auto lg:mt-3 lg:flex-wrap lg:justify-center">
+          <li v-for="id in available" :key="id" class="shrink-0">
             <button
               v-if="peekable?.includes(id)"
               type="button"
-              class="border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[0.6875rem] font-semibold text-violet-700 hover:bg-violet-500/20 dark:text-violet-300"
+              class="border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-violet-700 hover:bg-violet-500/20 dark:text-violet-300"
               @click="peek(id)"
             >
               {{ $t(`hint.move.${id}.name`) }}
             </button>
             <span
               v-else
-              class="block border border-dashed border-zinc-400/50 px-2.5 py-1.5 text-[0.6875rem] font-semibold text-zinc-600 dark:text-zinc-400"
+              class="block border border-dashed border-zinc-400/50 px-2.5 py-1.5 text-[0.6875rem] font-semibold whitespace-nowrap text-zinc-600 dark:text-zinc-400"
             >
               {{ $t(`hint.move.${id}.name`) }}
             </span>
