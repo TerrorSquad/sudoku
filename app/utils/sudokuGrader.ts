@@ -1401,6 +1401,17 @@ export function patternUnit(move: SolveMove, variant: Variant = "classic"): Boar
   return { kind, r: act.r, c: act.c };
 }
 
+/**
+ * The cells a player finds for `move` (a lesson's step 1, a peek's look step): its triggers, but a
+ * placement's (a single's or BUG+1's) is the cell it fills, its triggers being every filled cell around.
+ */
+export function patternCells(move: SolveMove): CellRC[] {
+  const p = move.placement;
+  if (p) return [{ r: p.r, c: p.c }];
+  const cells = move.triggers.map(({ r, c }) => ({ r, c }));
+  return cells.filter((a, i) => cells.findIndex((b) => b.r === a.r && b.c === a.c) === i);
+}
+
 /** A unit's 1-based number: its row, column or box (boxes count across, then down). */
 export const unitNumber = (u: BoardUnit): number =>
   u.kind === "row"

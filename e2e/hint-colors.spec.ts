@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // A solved grid with the first five cells of row 1 blanked (answers 5 3 4 6 7).
 const FIVE_BLANKS =
@@ -57,6 +57,50 @@ test("a technique picked from the panel's list opens at where to look, then show
   // Applied: one digit in, and the list is back.
   await expect(page.getByTestId("board-techniques")).toBeVisible();
   await expect(page.locator('[data-cell][aria-label*="your entry"]')).toHaveCount(1);
+  // Shown rather than found: a hint, like any other.
+  await expect.poll(customHints(page)).toBe(1);
+});
+
+// The custom board's save: its hint count (null before the first save).
+const customHints = (page: Page) => () =>
+  page.evaluate(
+    () => JSON.parse(localStorage.getItem("sudoku_v1_save_custom") ?? "null")?.hintsUsed,
+  );
+
+test("tapping a peek's pattern on the board finds it, and applying it then costs no hint", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Your puzzle" }).click();
+  await page.locator("textarea").fill(FIVE_BLANKS);
+  await page.getByRole("button", { name: "Play Puzzle" }).click();
+  const peek = () =>
+    page.getByTestId("board-techniques").getByRole("button", { name: "Hidden Single" }).click();
+  const note = page.getByTestId("peek-note");
+
+  // A wrong tap says why and stays on where to look; Next shows the cell (that peek is a hint now).
+  await peek();
+  await page.locator('[data-cell="0-5"]').click(); // a given
+  await expect(note).toHaveText("That cell is already filled.");
+  await expect(page.getByText("Where to look")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  const target = page.locator(".ring-emerald-500[data-cell]");
+  const cell = (await target.getAttribute("data-cell"))!;
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  // Looked for afresh on a turned board: taps go by the cell, wherever it shows.
+  await page.keyboard.press("r");
+  await peek();
+  await expect(page.locator("[data-cell].ring-emerald-500")).toHaveCount(0);
+  await page.locator(`[data-cell="${cell}"]`).click();
+  await expect(note).toHaveText("You found it! Applying it won't count as a hint.");
+  await expect(page.getByText("Spot the pattern")).toBeVisible();
+  // A tap marked the cell, it didn't select it.
+  await expect(page.locator('[data-cell][aria-selected="true"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.locator(`[data-cell="${cell}"]`)).toHaveAttribute("aria-label", /your entry/);
+  await expect.poll(customHints(page)).toBe(0);
 });
 
 test.describe("on a phone", () => {
