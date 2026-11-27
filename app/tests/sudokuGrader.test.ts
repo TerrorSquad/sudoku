@@ -11,6 +11,7 @@ import {
 } from "../utils/sudokuCore";
 import {
   availableTechniques,
+  featuredTechnique,
   movesNow,
   spottedMove,
   techniqueFor,
@@ -148,6 +149,24 @@ describe("sudokuGrader — neededTechniques", () => {
   it("is empty when logic alone can't finish the board", () => {
     const empty: Grid = Array.from({ length: 9 }, () => Array<number>(9).fill(0));
     expect(neededTechniques(empty)).toEqual([]);
+  });
+});
+
+describe("sudokuGrader — featuredTechnique", () => {
+  it("is null when singles finish the board", () => {
+    expect(featuredTechnique(generatePuzzle(20, makeRng(5)).puzzle)).toBeNull();
+  });
+
+  it("is null when logic alone can't finish the board", () => {
+    expect(featuredTechnique(Array.from({ length: 9 }, () => Array<number>(9).fill(0)))).toBeNull();
+  });
+
+  it("names the hardest technique, the later finder on a tie of tiers", () => {
+    // Needs an XY-Wing, a Skyscraper (both tier 4) and an X-Wing: the XY-Wing's finder runs later.
+    const { puzzle } = generateGradedPuzzle("expert", makeRng(4));
+    expect(neededTechniques(puzzle)).toEqual(["xy-wing", "skyscraper", "x-wing"]);
+    expect(featuredTechnique(puzzle)).toBe("xy-wing");
+    expect(featuredTechnique(generateGradedPuzzle("master", makeRng(1)).puzzle)).toBe("xy-chain");
   });
 });
 

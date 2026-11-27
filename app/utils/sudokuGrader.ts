@@ -1629,3 +1629,14 @@ export function neededTechniques(puzzle: Grid, variant: Variant = "classic"): Te
   const hard = all.filter((id) => id !== "naked-single" && id !== "hidden-single");
   return hard.length ? hard : all;
 }
+
+/**
+ * The technique a game names at its start ("This board hides: X-Wing"): the hardest the board's
+ * solve needs, so the win screen's first chip. SOLVER_RANK runs in tier order, so the highest tier
+ * wins and a tie goes to the later finder (the rarer one). Null when singles are enough, or logic
+ * alone can't finish the board.
+ */
+export function featuredTechnique(puzzle: Grid, variant: Variant = "classic"): TechniqueId | null {
+  const [hardest] = neededTechniques(puzzle, variant);
+  return hardest && hardest !== "naked-single" && hardest !== "hidden-single" ? hardest : null;
+}
