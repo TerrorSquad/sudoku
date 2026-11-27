@@ -311,12 +311,10 @@ const lessonsDone = computed(() => {
   void currentScreen.value;
   return techniquePath.getDone();
 });
-// The hint panel's "on this board" list: technique names. Only while the panel is on screen (lg+)
-// and idle; a wrong entry is left out, as the solver takes every digit as true. It reads the
-// player's notes, so a single their marks leave shows up.
-const widePanel = useMediaQuery("(min-width: 1024px)");
-const panelIdle = () =>
-  widePanel.value && !activeComplexHint.value && currentScreen.value === "game";
+// The hint panel's "on this board" list: technique names. Only while no hint is open (below lg the
+// idle panel is just this list, a strip under the numpad); a wrong entry is left out, as the solver
+// takes every digit as true. It reads the player's notes, so a single their marks leave shows up.
+const panelIdle = () => !activeComplexHint.value && currentScreen.value === "game";
 const boardTechniques = computed<TechniqueId[]>(() => {
   if (!panelIdle()) return [];
   const board = rightDigits();
@@ -864,6 +862,10 @@ function openPeek(move: SolveMove | null | undefined) {
 // rules it out: a digit its units already hold, or a move a peek would open (by the solver's
 // candidates, never the answer key, so it can't tell a right guess from a wrong one). Free to ask;
 // opening the move is a peek, a hint once applied.
+// Below lg the idle panel is only the list of what's on the board: up while there is one to show.
+const techniqueStrip = computed(
+  () => boardTechniques.value.length > 0 && !nudge.value && !isPaused.value,
+);
 const canGoDigits = computed(() => {
   const at = selectedCell.value;
   if (!at || activeComplexHint.value || isPaused.value || finishing.value) return [];
@@ -1450,15 +1452,20 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Right / hint panel — on mobile only takes space once a hint is active, or for
-               "Can this go?" (under the numpad there) -->
+          <!-- Right / hint panel. Below lg it sits under the numpad: the open hint, or while idle
+               just the "on this board" strip (none during a nudge or the pause) and "Can this
+               go?". -->
           <div
-            :class="activeComplexHint || canGoDigits.length ? 'block' : 'hidden lg:block'"
+            :class="
+              activeComplexHint || techniqueStrip || canGoDigits.length
+                ? 'block'
+                : 'hidden lg:block'
+            "
             class="text-sm font-medium 3xl:col-span-1 3xl:min-w-0 lg:sticky lg:top-3 lg:max-3xl:col-span-5"
           >
             <SideExplanationPanel
               ref="hintPanel"
-              :class="{ 'max-lg:hidden': !activeComplexHint }"
+              :class="{ 'max-lg:hidden': !activeComplexHint && !techniqueStrip }"
               :active-complex-hint="activeComplexHint"
               :current-step-index="currentStepIndex"
               :current-step="currentStep"
