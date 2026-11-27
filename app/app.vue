@@ -12,6 +12,7 @@ import type { Lesson } from "./utils/lesson";
 import type { Mark } from "./utils/patternMarks";
 import type { BoardTheme } from "./utils/preferenceValues";
 import type { Level, Tier, Week } from "./utils/progression";
+import type { StuckPosition } from "./utils/review";
 import type { Placement } from "./utils/stuckMoments";
 import type { BoardUnit, DigitAt, SolveMove, TechniqueId } from "./utils/sudokuGrader";
 import type { Hinted } from "./utils/winRecap";
@@ -795,9 +796,16 @@ function handleInputNumber(num: number) {
 
 // Stepped through, or applied at once: the hint's move goes in the log and costs a hint, then the
 // game is won or the status line says what changed.
-function afterHint(move: SolveMove | null, applied: string, winMsg?: string, free = false) {
+function afterHint(
+  move: SolveMove | null,
+  stuck: StuckPosition | null,
+  applied: string,
+  winMsg?: string,
+  free = false,
+) {
   const tech = move?.technique; // none for a wrong-entry hint
   const placed = move?.placement;
+  if (tech && stuck) techniquePath.rememberStuck(tech, stuck);
   engine.showApplied(move);
   if (placed) logPlacement(placed);
   if (tech) {
@@ -810,12 +818,23 @@ function afterHint(move: SolveMove | null, applied: string, winMsg?: string, fre
     say(t(!tech ? "game.wrongCleared" : placed ? applied : "game.candidatesCleared"));
 }
 
+// A hint past the singles in a scored or Zen game (custom boards too): the position before it's
+// applied, for the Daily review to play on. Not in practice, and not in X-Sudoku: the review's
+// lessons are classic only.
+function stuckAt(move: SolveMove | null): StuckPosition | null {
+  if (!move || move.tier < 2 || practiceTechnique.value || gameVariant.value !== "classic")
+    return null;
+  return stuckPosition(rightDigits(), engine.appliedEliminations.value, localDateKey());
+}
+
 function handleNextStep() {
   const move = engine.activeMove.value; // gone once the hint is applied
   const free = engine.peekFree.value;
+  const stuck = free ? null : stuckAt(move); // a pattern found by hand isn't one they were stuck on
   nextHintStep(() =>
     afterHint(
       move,
+      stuck,
       "game.cellFilled",
       gameZen.value
         ? undefined
@@ -930,8 +949,9 @@ function handleInstantApplyHint() {
   if (!activeComplexHint.value) return;
   const move = engine.activeMove.value;
   const free = engine.peekFree.value;
+  const stuck = free ? null : stuckAt(move);
   engine.applyComplexHint();
-  afterHint(move, "game.instantApplied", t("modal.winInstantMsg"), free);
+  afterHint(move, stuck, "game.instantApplied", t("modal.winInstantMsg"), free);
 }
 
 // Finish: with only a few cells left, all of them plain singles from here (by the solver, not the

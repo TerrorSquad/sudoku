@@ -10,6 +10,7 @@
 import type { CellCoord } from "../types/sudoku";
 import type { Instance, Lesson } from "../utils/lesson";
 import type { Tier } from "../utils/progression";
+import type { StuckPosition } from "../utils/review";
 import type { SpotResult } from "../utils/spotIt";
 import type { Rng } from "../utils/sudokuCore";
 import type { TechniqueId } from "../utils/sudokuGrader";
@@ -26,8 +27,9 @@ const emit = defineEmits<{
   (e: "lesson", id: TechniqueId): void;
   (e: "cue", kind: "place" | "hint" | "unlock" | "mistake"): void;
 }>();
-const { t } = useI18n();
+const { t, locale, locales } = useI18n();
 const { colorMode, boardTheme: theme } = usePreferences();
+const path = useTechniquePath();
 const digit = (n: number) => digitLabel(n, colorMode.value, t);
 const techName = (id: TechniqueId) => t(`hint.move.${id}.name`);
 
@@ -42,6 +44,19 @@ const shown = ref<Instance | null>(null);
 const found = ref<CellCoord[]>([]);
 const selected = ref<CellCoord | null>(null);
 const misses = ref(0);
+// The day of the player's game this position comes from; null for a generated one.
+const fromGame = ref<string | null>(null);
+const lang = locales.value.find((l) => typeof l === "object" && l.code === locale.value);
+const fromGameDay = computed(() =>
+  fromGame.value
+    ? dayLabel(
+        fromGame.value,
+        localDateKey(),
+        (lang as { language?: string })?.language ?? locale.value,
+        t("review.tomorrow"),
+      )
+    : "",
+);
 const results = ref<SpotResult[]>([]);
 const feedback = ref<{ text: string; ok: boolean } | null>(null);
 const best = ref<number | undefined>();
@@ -50,15 +65,28 @@ const newBest = ref(false);
 // A round: its positions, made in the puzzle worker ahead of the player.
 let round = 0;
 let positions: (Promise<Lesson> | undefined)[] = [];
-let slots: ReturnType<typeof buildRound> = [];
+// A review's slot may carry the player's own position for its technique (from a game's hint).
+type Slot = ReturnType<typeof buildRound>[number] & { own?: StuckPosition };
+let slots: Slot[] = [];
 let rng: Rng; // a rush draws more slots from it as it goes
 const size = ref(ROUND_SIZE);
 let revealTimer: ReturnType<typeof setTimeout> | undefined;
+// An own position that isn't sound (lessonFromPosition) is dropped for a generated one.
+const unsound = (s: Slot) => {
+  path.dropPosition(s.technique);
+  s.own = undefined;
+  return makeLesson(s.technique, s.seed);
+};
 const ensure = (i: number, retry = 0) => {
   const s = slots[i];
   if (!s || (positions[i] && !retry)) return;
   // A retry tries another position of the same technique.
-  const p = makeLesson(s.technique, s.seed + retry);
+  const p =
+    s.own && !retry
+      ? lessonFrom(s.technique, s.own)
+          .catch(() => null)
+          .then((L) => L ?? unsound(s))
+      : makeLesson(s.technique, s.seed + retry);
   p.catch(() => {}); // the look-ahead may fail before load() awaits it; load() handles it
   positions[i] = p;
 };
@@ -98,8 +126,13 @@ function startRound() {
   // A test pins the round with window.spotSeed; players get a fresh one.
   const seed = (window as { spotSeed?: number }).spotSeed ?? Math.floor(Math.random() * 2 ** 31);
   rng = makeRng(seed);
+  const own = reviewing ? path.getPositions() : {};
   slots = props.review
-    ? props.review.map((technique) => ({ technique, seed: Math.floor(rng() * 2 ** 31) }))
+    ? props.review.map((technique) => ({
+        technique,
+        seed: Math.floor(rng() * 2 ** 31),
+        own: own[technique],
+      }))
     : buildRound(props.tier, rng);
   size.value = slots.length;
   positions = [];
@@ -133,6 +166,7 @@ async function load(i: number) {
   }
   if (mine !== round) return; // a new round started, or the screen closed
   lesson.value = L;
+  fromGame.value = slots[i]!.own?.date ?? null;
   instances = instancesOf(L);
   shown.value = null;
   found.value = [];
@@ -192,6 +226,8 @@ function settle(instance: Instance, how: "found" | "skipped" | "out") {
       ...(how === "out" && { out: true }),
     },
   ];
+  // Played on, pass or miss: the next review of it gets a fresh position.
+  if (fromGame.value) path.dropPosition(lesson.value!.technique);
   shown.value = instance;
   phase.value = "reveal";
   if (how === "out") {
@@ -224,7 +260,6 @@ const reviewed = ref<{ technique: TechniqueId; passed: boolean; box: number; nex
 
 function finishRound() {
   if (reviewing) {
-    const path = useTechniquePath();
     reviewed.value = results.value.map(({ technique, misses: m, skipped }) => {
       const passed = reviewPassed(m, skipped);
       return { technique, passed, ...path.recordReview(technique, passed) };
@@ -386,6 +421,13 @@ onUnmounted(() => {
           <template v-if="lesson && phase !== 'loading'">
             · {{ techName(lesson.technique) }}</template
           >
+        </p>
+        <p
+          v-if="fromGame && phase !== 'loading'"
+          class="-mt-2 text-xs text-zinc-600 dark:text-zinc-400"
+          data-testid="review-own"
+        >
+          {{ $t("review.fromGame", { date: fromGameDay }) }}
         </p>
         <p
           v-if="phase === 'loading'"

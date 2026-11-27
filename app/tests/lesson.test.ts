@@ -6,6 +6,7 @@ import type { BoardUnit, CellRC } from "../utils/sudokuGrader";
 import {
   instancesOf,
   lessonFromExample,
+  lessonFromPosition,
   lessonFromPuzzle,
   lessonUnits,
   missReason,
@@ -16,7 +17,8 @@ import {
 } from "../utils/lesson";
 import { generatePracticePuzzle } from "../utils/practice";
 import { ACADEMY_TECHNIQUES } from "../utils/progression";
-import { makeRng, solveBoard } from "../utils/sudokuCore";
+import { stuckPosition } from "../utils/review";
+import { getGridCandidates, makeRng, solveBoard } from "../utils/sudokuCore";
 
 const ALL: CellRC[] = Array.from({ length: 81 }, (_, i) => ({ r: Math.floor(i / 9), c: i % 9 }));
 const covers = (u: BoardUnit, p: CellRC) =>
@@ -350,5 +352,56 @@ describe("on your own (level 3)", () => {
       expectFair(L);
       expect(instancesOf(L, 3).length).toBeGreaterThan(1);
     }
+  });
+});
+
+describe("the player's own position (Daily review)", () => {
+  // Where a game would hint the x-wing: its board, and the removals the chain made before it.
+  async function stuck() {
+    const L = lessonFromPuzzle(
+      (await generatePracticePuzzle("x-wing", makeRng(11))).board,
+      "x-wing",
+    )!;
+    const cands = getGridCandidates(L.board);
+    const elims = ALL.flatMap(({ r, c }) =>
+      cands[r]![c]!.filter((n) => !L.notes[r]![c]!.includes(n)).map((num) => ({ r, c, num })),
+    );
+    return { L, p: stuckPosition(L.board, elims, "2026-11-20") };
+  }
+
+  it("replays a captured position to the same lesson", async () => {
+    const { L, p } = await stuck();
+    expect(p.elims.length % 3).toBe(0);
+    expect(lessonFromPosition(p, "x-wing")).toEqual(L);
+  });
+
+  it("rejects a position that isn't sound, or where the technique never comes", async () => {
+    const { p } = await stuck();
+    const at = p.board.indexOf("0");
+    const solved = solveBoard(lessonFromPosition(p, "x-wing")!.board)!;
+    const answer = solved[Math.floor(at / 9)]![at % 9]!;
+    const r = Math.floor(at / 9);
+    const c = at % 9;
+    const set = (i: number, d: string) => p.board.slice(0, i) + d + p.board.slice(i + 1);
+    // Another digit of its row put in the empty cell: a clash.
+    const clash = p.board.slice(r * 9, r * 9 + 9).replace(/0/g, "")[0]!;
+    expect(lessonFromPosition({ ...p, board: set(at, clash) }, "x-wing")).toBeNull();
+    // Its answer removed: the solver would reason from a falsehood.
+    expect(lessonFromPosition({ ...p, elims: `${r}${c}${answer}` }, "x-wing")).toBeNull();
+    // A removal in a filled cell.
+    const filled = p.board.search(/[1-9]/);
+    expect(
+      lessonFromPosition(
+        { ...p, elims: `${Math.floor(filled / 9)}${filled % 9}${p.board[filled] === "1" ? 2 : 1}` },
+        "x-wing",
+      ),
+    ).toBeNull();
+    // An empty board has many solutions.
+    expect(lessonFromPosition({ ...p, board: "0".repeat(81), elims: "" }, "x-wing")).toBeNull();
+    // A full board: nothing left to find.
+    const full = solved.flat().join("");
+    expect(lessonFromPosition({ ...p, board: full, elims: "" }, "x-wing")).toBeNull();
+    // Not a position at all.
+    expect(lessonFromPosition({ ...p, board: "12" } as never, "x-wing")).toBeNull();
   });
 });

@@ -11,12 +11,15 @@ import {
   type Stars,
 } from "../utils/progression";
 import {
+  POSITIONS_KEY,
   REVIEW_KEY,
   lessonCard,
+  readPositions,
   readReview,
   reviewCard,
   withLearned,
   type Card,
+  type StuckPosition,
 } from "../utils/review";
 import { readJSON, writeJSON } from "../utils/safeJson";
 import { localDateKey } from "../utils/streak";
@@ -109,7 +112,32 @@ export function useTechniquePath() {
     return after;
   }
 
+  /** The player's own positions to review on, per technique (unchecked: see lessonFromPosition). */
+  const getPositions = () => readPositions(readJSON<unknown>(POSITIONS_KEY, {}));
+  /** Sets (or, with none, removes) a technique's position in the raw entry, keeping the rest. */
+  function writePosition(id: TechniqueId, position?: StuckPosition) {
+    const raw = readJSON<unknown>(POSITIONS_KEY, {});
+    const rest: Record<string, unknown> =
+      raw && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
+    if (position) rest[id] = position;
+    else delete rest[id];
+    writeJSON(POSITIONS_KEY, rest);
+  }
+  /**
+   * A hint past the singles in a game: the newest position to review `id` on, and the technique
+   * comes up for review tomorrow if it isn't scheduled yet (a hint is no review miss).
+   */
+  function rememberStuck(id: TechniqueId, position: StuckPosition) {
+    writePosition(id, position);
+    scheduleReview(id);
+  }
+  /** A position reviewed (or found unsound): the next review of `id` gets a fresh one. */
+  const dropPosition = (id: TechniqueId) => writePosition(id);
+
   return {
+    getPositions,
+    rememberStuck,
+    dropPosition,
     getReview,
     scheduleReview,
     recordReview,

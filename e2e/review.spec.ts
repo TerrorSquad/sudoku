@@ -1,8 +1,10 @@
 /* oxlint-disable eslint/no-await-in-loop -- browser steps are inherently sequential */
 import { test, expect } from "@playwright/test";
 
-import { quickLesson } from "../app/utils/lesson";
-import { makeRng } from "../app/utils/sudokuCore";
+import { lessonFromPuzzle, quickLesson } from "../app/utils/lesson";
+import { generatePracticePuzzle } from "../app/utils/practice";
+import { stuckPosition } from "../app/utils/review";
+import { getGridCandidates, makeRng } from "../app/utils/sudokuCore";
 
 // The session the app builds from window.spotSeed: one position per due technique, longest
 // overdue first, each seeded from the same rng. Rebuilt here so the test knows the answers.
@@ -72,4 +74,49 @@ test("Daily review: due techniques on the menu, a pass moves up, a skip goes bac
   );
   await page.getByRole("button", { name: "Menu" }).first().click();
   await expect(page.getByTestId("review-badge")).toHaveCount(0);
+});
+
+test("Daily review: a technique hinted in a game comes up on that game's position", async ({
+  page,
+}) => {
+  // The position a game would hint the x-wing at: its board and the removals made before it.
+  const puzzle = await generatePracticePuzzle("x-wing", makeRng(11));
+  const L = lessonFromPuzzle(puzzle.board, "x-wing")!;
+  const cands = getGridCandidates(L.board);
+  const elims = L.board.flatMap((row, r) =>
+    row.flatMap((_, c) =>
+      cands[r]![c]!.filter((n) => !L.notes[r]![c]!.includes(n)).map((num) => ({ r, c, num })),
+    ),
+  );
+  const own = { "x-wing": stuckPosition(L.board, elims, "2026-11-13") };
+  await page.clock.setFixedTime(new Date("2026-11-15T12:00:00"));
+  await page.addInitScript((positions) => {
+    (window as { spotSeed?: number }).spotSeed = 7;
+    localStorage.setItem(
+      "sudoku_v1_review",
+      JSON.stringify({ "x-wing": { box: 1, next: "2026-11-14" } }),
+    );
+    localStorage.setItem("sudoku_v1_review_positions", JSON.stringify(positions));
+  }, own);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: /^Academy/ }).click();
+  await page.getByTestId("review-panel").getByRole("button", { name: "Review (1)" }).click();
+  await expect(page.getByTestId("spot-progress")).toContainText("Position 1 of 1 · X-Wing");
+  await expect(page.getByTestId("review-own")).toHaveText("From your game on Fri, Nov 13");
+  // The board is the game's, digit for digit.
+  const shown = await page.evaluate(() =>
+    Array.from({ length: 81 }, (_, i) => {
+      const cell = document.querySelector(`[data-cell="${Math.floor(i / 9)}-${i % 9}"]`);
+      return cell?.querySelector(":scope > span")?.textContent?.trim() || "0";
+    }).join(""),
+  );
+  expect(shown).toBe(own["x-wing"].board);
+
+  for (const { r, c } of L.pattern) await page.locator(`[data-cell="${r}-${c}"]`).click();
+  await expect(page.getByTestId("spot-coach").getByRole("status")).toHaveText("Found it!");
+  // Played: the next review of it gets a fresh position.
+  await expect(page.getByTestId("review-done")).toBeVisible();
+  const left = await page.evaluate(() => localStorage.getItem("sudoku_v1_review_positions"));
+  expect(JSON.parse(left!)).toEqual({});
 });
