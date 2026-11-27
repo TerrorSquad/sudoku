@@ -446,6 +446,21 @@ describe("peekMove: a technique picked from the panel's list", () => {
     expect(engine.peekFree.value).toBe(false);
   });
 
+  it("a miss sticks to the move: Cancel and a fresh pick doesn't make it free again", () => {
+    const { engine, pattern } = peekGame();
+    const filled = engine.currentBoard.value
+      .flatMap((row, r) => row.map((v, c) => ({ r, c, v })))
+      .find((p) => p.v)!;
+    engine.tapPeek(filled);
+    engine.cancelComplexHint();
+    // Found again off the board, as a new pick is.
+    const again = engine.peekMoves().find((m) => !m.placement && patternCells(m).length > 1)!;
+    engine.peekMove(again);
+    for (const p of pattern) engine.tapPeek(p);
+    expect(engine.peekNote.value).toBe("hint.peek.foundLate");
+    expect(engine.peekFree.value).toBe(false);
+  });
+
   it("Next shows the pattern instead: tapping it in after going back isn't free", () => {
     const { engine, pattern } = peekGame();
     engine.nextHintStep(() => {});

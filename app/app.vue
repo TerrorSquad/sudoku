@@ -590,7 +590,12 @@ function beginGame(
   flashCells.value = [];
   notesMode.value = false;
   hintsUsed.value = save?.hintsUsed ?? 0;
-  hinted.value = { ...save?.hinted };
+  // Known techniques only: a save can come from an imported backup.
+  hinted.value = Object.fromEntries(
+    Object.entries(save?.hinted ?? {}).filter(
+      ([id, n]) => ACADEMY_TECHNIQUES.some((x) => x.id === id) && Number.isInteger(n) && n > 0,
+    ),
+  );
   spottedSeen.clear();
   spotted.value = null;
   placements.value = save ? restorePlacements(save) : [];
@@ -855,7 +860,8 @@ function afterHint(
   if (tech && stuck) techniquePath.rememberStuck(tech, stuck);
   engine.showApplied(move);
   if (placed) logPlacement(placed);
-  if (tech) {
+  // Not for a pattern the player found themselves on a peek: that wasn't help.
+  if (tech && !free) {
     hinted.value[tech] = (hinted.value[tech] ?? 0) + 1;
     techStats.record(tech);
   }
@@ -1467,7 +1473,14 @@ onUnmounted(() => {
               </Transition>
               <!-- On the board's top edge, so it never moves the board; tap for the lesson. -->
               <div
-                v-if="featured && boardTechOpen && !spotted && !isPaused"
+                v-if="
+                  featured &&
+                  boardTechOpen &&
+                  !spotted &&
+                  !isPaused &&
+                  !activeComplexHint &&
+                  !showModal
+                "
                 data-testid="board-technique"
                 class="absolute top-0 left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center border border-violet-500/30 bg-zinc-50 text-xs whitespace-nowrap shadow-sm dark:bg-zinc-900"
               >

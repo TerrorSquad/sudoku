@@ -96,6 +96,15 @@ export function useSudokuEngine(
   const peekFree = ref(false);
   const peekNote = ref("");
   let peekEarned = true;
+  // Moves whose free apply is gone (a miss, or the pattern shown), until the next board: else
+  // Cancel and a fresh pick would bring it back, and a single could be had by trying each cell.
+  const burnt = new Set<string>();
+  const burnKey = (m: SolveMove) =>
+    JSON.stringify([m.technique, m.digits, m.triggers, m.placement ?? null]);
+  function burn() {
+    peekEarned = false;
+    if (activeMove.value) burnt.add(burnKey(activeMove.value));
+  }
 
   // The hint's pattern in pen on the board once a step shows it (what it removes or places only on
   // the step that says so). Applying a hint strikes the removed marks through, or circles the placed
@@ -231,6 +240,7 @@ export function useSudokuEngine(
     redoHistory.value = [];
     selectedCell.value = null;
     turn.value = 0;
+    burnt.clear();
     cancelComplexHint();
     resetHintChain();
     clearApplied();
@@ -564,6 +574,7 @@ export function useSudokuEngine(
   function peekMove(move: SolveMove): string {
     if (findWrongEntry()) return triggerComplexHint();
     peeking.value = true;
+    peekEarned = !burnt.has(burnKey(move));
     activeMove.value = move;
     const hint = buildHintFromMove(move);
     activeComplexHint.value = hint;
@@ -586,7 +597,7 @@ export function useSudokuEngine(
     if (peekTaps.value.some(same)) peekTaps.value = peekTaps.value.filter((p) => !same(p));
     else if (pattern.some(same)) peekTaps.value = [...peekTaps.value, cell];
     else {
-      peekEarned = false;
+      burn();
       return (peekNote.value = peekMiss(move, pattern, cell));
     }
     if (peekTaps.value.length === pattern.length) {
@@ -634,7 +645,7 @@ export function useSudokuEngine(
   function nextHintStep(onComplete: () => void) {
     if (!activeComplexHint.value) return;
     // Shown the pattern rather than finding it: applying is a hint, even if tapped in later.
-    if (lookUnit.value) peekEarned = false;
+    if (lookUnit.value) burn();
     peekNote.value = "";
 
     if (currentStepIndex.value < activeComplexHint.value.steps.length - 1) {
