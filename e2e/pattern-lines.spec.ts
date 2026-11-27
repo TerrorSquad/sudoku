@@ -30,6 +30,14 @@ test("a hint draws its pattern in pen, and applying it strikes the marks through
   // The removed marks linger in red under a stroke, then the board is clean again.
   await expect(overlay(page).locator(".pm-ghost")).not.toHaveCount(0);
   await expect(overlay(page)).toHaveCount(0, { timeout: 3000 });
+  // Needed in a game: the Daily review plays it on this position, from tomorrow.
+  const [positions, review] = await page.evaluate(() =>
+    ["sudoku_v1_review_positions", "sudoku_v1_review"].map((k) =>
+      JSON.parse(localStorage.getItem(k)!),
+    ),
+  );
+  expect(positions.pointing.board).toBe(POINTING);
+  expect(review.pointing.box).toBe(1);
 });
 
 test("a hint that wins the game leaves no pen marks on the next board", async ({ page }) => {

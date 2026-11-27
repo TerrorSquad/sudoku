@@ -171,6 +171,9 @@ describe("progress backup", () => {
     const card = { box: 9, next: "later" }; // a later version's card: readReview skips it
     expect(bad("sudoku_v1_review", { "new-technique": card })).toMatchObject({ ok: true });
     expect(bad("sudoku_v1_review", [card])).toEqual({ ok: false, error: "invalid" });
+    // Its own positions: checked when played (lessonFromPosition), not here.
+    const own = { "x-wing": { board: "0".repeat(81), elims: "047", date: "2026-11-20" } };
+    expect(bad("sudoku_v1_review_positions", own)).toMatchObject({ ok: true });
     // The basics done: any array (a later version may add lessons), nothing else.
     const basics = "sudoku_v1_basics_done";
     expect(bad(basics, ["rule", "later-lesson"])).toMatchObject({ ok: true });

@@ -7,6 +7,7 @@ import type { Lesson } from "./lesson";
 import type { generatePracticePuzzle } from "./practice";
 import type { Level } from "./progression";
 import type { PuzzleJob } from "./puzzleJobs";
+import type { StuckPosition } from "./review";
 import type { TechniqueId } from "./sudokuGrader";
 
 interface NewPuzzle {
@@ -105,3 +106,7 @@ export const guidedLesson = (technique: TechniqueId, seed: number, level: Level)
 /** A Spot it position for `technique` (quickLesson), the same for the same seed. */
 export const makeLesson = (technique: TechniqueId, seed: number) =>
   run<Lesson>({ lesson: technique, seed, quick: true });
+
+/** A review position for `technique` on the player's own (lessonFromPosition): null if unsound. */
+export const lessonFrom = (technique: TechniqueId, from: StuckPosition) =>
+  run<Lesson | null>({ lesson: technique, from });

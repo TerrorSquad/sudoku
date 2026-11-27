@@ -931,6 +931,7 @@
   "hint.learnAgain": "Replay its lesson",
   "spot.failed": "This position couldn’t be set up. Go back and try again.",
   "review.title": "Daily review",
+  "review.fromGame": "From your game on {date}",
   "review.due": "Due today: {n}. A quick look keeps each technique fresh.",
   "review.caughtUp": "All caught up. Next review: {day}.",
   "review.start": "Review ({n})",

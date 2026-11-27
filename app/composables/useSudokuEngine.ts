@@ -707,6 +707,7 @@ export function useSudokuEngine(
     cancelComplexHint,
     resetHintChain,
     activeMove,
+    appliedEliminations,
     hintMarks,
     showApplied,
   };

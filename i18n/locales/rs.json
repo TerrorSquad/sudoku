@@ -931,6 +931,7 @@
   "hint.learnAgain": "Ponovi lekciju",
   "spot.failed": "Ova pozicija nije mogla da se pripremi. Vrati se i pokušaj ponovo.",
   "review.title": "Dnevno ponavljanje",
+  "review.fromGame": "Iz tvoje igre ({date})",
   "review.due": "Za danas: {n}. Kratko ponavljanje da ne zaboraviš tehnike.",
   "review.caughtUp": "Sve je ponovljeno. Sledeće ponavljanje: {day}.",
   "review.start": "Ponovi ({n})",
