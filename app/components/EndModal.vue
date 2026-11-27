@@ -21,7 +21,6 @@ const props = defineProps<{
   board: Grid; // the givens, for a challenge code and the replay
   placements: Placement[]; // the replay's moves
   result: WinResult | null; // null for a game over
-  techniqueLog: TechniqueId[];
   hinted: Hinted;
   nextLevel: Difficulty | null;
   nextLoading: boolean;
@@ -317,7 +316,6 @@ onMounted(() => {
         :mistakes="mistakes"
         :hints-used="hintsUsed"
         :result="result"
-        :technique-log="techniqueLog"
         @lesson="(id) => emit('lesson', id)"
       />
 

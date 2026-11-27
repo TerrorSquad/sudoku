@@ -196,6 +196,16 @@ describe("the player's own positions", () => {
     expect(mergePositions(null, "junk")).toEqual({});
   });
 
+  it("a played position stays played across a merge with its older, unplayed copy", () => {
+    const [mine, newer] = [p("2026-11-10"), p("2026-11-20")];
+    const done = { ...mine, played: true as const };
+    expect(mergePositions({ "x-wing": done }, { "x-wing": mine })).toEqual({ "x-wing": done });
+    expect(mergePositions({ "x-wing": mine }, { "x-wing": done })).toEqual({ "x-wing": done });
+    // A later game's position isn't played yet; a played one is never read back to review.
+    expect(mergePositions({ "x-wing": done }, { "x-wing": newer })).toEqual({ "x-wing": newer });
+    expect(readPositions({ "x-wing": done })).toEqual({});
+  });
+
   it("a hinted technique joins the schedule in box 1, due tomorrow, and never resets a card", () => {
     // A hint uses the finished lesson's rule (useTechniquePath's rememberStuck).
     expect(lessonCard(undefined, "2026-11-20")).toEqual({ box: 1, next: "2026-11-21" });

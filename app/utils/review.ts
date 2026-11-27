@@ -145,6 +145,8 @@ export interface StuckPosition {
   board: string;
   elims: string;
   date: string;
+  /** Already reviewed: kept only so a cloud merge with an older copy doesn't bring it back. */
+  played?: true;
 }
 
 const BOARD = /^\d{81}$/;
@@ -170,21 +172,23 @@ export function readPositions(raw: unknown): Partial<Record<TechniqueId, StuckPo
   const out: Partial<Record<TechniqueId, StuckPosition>> = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
   for (const [id, p] of Object.entries(raw))
-    if (KNOWN.has(id) && isStuckPosition(p)) out[id as TechniqueId] = p;
+    if (KNOWN.has(id) && isStuckPosition(p) && !p.played) out[id as TechniqueId] = p;
   return out;
 }
 
 /**
- * Two stores as one: per technique the newer position (on the same day, `b`'s). Well-formed
- * entries this version doesn't know pass through, as mergeReview's do.
+ * Two stores as one: per technique the newer position (on the same day, `b`'s, played if either
+ * was). Well-formed entries this version doesn't know pass through, as mergeReview's do.
  */
 export function mergePositions(a: unknown, b: unknown): Record<string, StuckPosition> {
   const out: Record<string, StuckPosition> = {};
   for (const raw of [a, b]) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
     for (const [id, p] of Object.entries(raw))
-      if (isStuckPosition(p) && !(out[id] && out[id].date > p.date))
-        out[id] = { board: p.board, elims: p.elims, date: p.date };
+      if (isStuckPosition(p) && !(out[id] && out[id].date > p.date)) {
+        const played = p.played === true || (out[id]?.date === p.date && out[id].played === true);
+        out[id] = { board: p.board, elims: p.elims, date: p.date, ...(played && { played }) };
+      }
   }
   return out;
 }
